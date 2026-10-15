@@ -94,6 +94,7 @@ const listeners = new Set();
 function say(line, kind) {
   const e = { t: Date.now(), line: String(line).replace(/\s+$/, ''), kind: kind || '' };
   if (!e.line) return;
+  if (MOBILE) console.log(e.line);   // sul telefono finisce nel registro di sistema (logcat / console di Xcode)
   state.log.push(e);
   if (state.log.length > 400) state.log.shift();
   for (const r of listeners) { try { r.write('data: ' + JSON.stringify({ t: 'log', e }) + '\n\n'); } catch {} }
