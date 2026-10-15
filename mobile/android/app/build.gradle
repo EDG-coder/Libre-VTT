@@ -31,9 +31,10 @@ android {
             cmake {
                 // libnode.so è compilata con la libreria C++ condivisa: va messa anche lei nell'APK
                 arguments '-DANDROID_STL=c++_shared'
+                // solo le architetture per cui c'è libnode (con gli APK divisi non si può usare ndk.abiFilters)
+                abiFilters(*architetture)
             }
         }
-        ndk { abiFilters(*architetture) }
     }
 
     externalNativeBuild {
@@ -63,7 +64,7 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig (chiave && file(chiave).exists()) ? signingConfigs.rilascio : signingConfigs.debug
+            signingConfig = (chiave && file(chiave).exists()) ? signingConfigs.rilascio : signingConfigs.debug
         }
     }
 
