@@ -32,6 +32,11 @@ on:
         type: boolean
         required: false
         default: false
+      prova:
+        description: "Prova le app nell'emulatore Android e nel simulatore iPhone (foto e registri nei rami «registri-prova-…»)"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: write
@@ -117,6 +122,39 @@ jobs:
           path: app-android/*
           if-no-files-found: error
 
+  prova-android:
+    name: Prova nell'emulatore Android
+    if: github.event_name == 'workflow_dispatch' && inputs.prova
+    needs: [android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: app-android
+          path: app-android
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: bash mobile/android/prova-emulatore.sh
+      - name: Foto e registri nel ramo «registri-prova-android»
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/reg && cp -R prova/. /tmp/reg/ 2>/dev/null; cd /tmp/reg && git init -q && git checkout -q -b registri-prova-android
+          git -c user.name=ci -c user.email=ci@localhost add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -q -m "prova $GITHUB_RUN_ID" || exit 0
+          git push -q -f "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" registri-prova-android
+
   ios:
     name: iPhone e iPad (IPA e progetto Xcode)
     runs-on: macos-15
@@ -171,6 +209,19 @@ jobs:
           cp mobile/LEGGIMI-Xcode.txt "xcode/LIBRE-VTT-Xcode/LEGGIMI.txt"
           (cd xcode && ditto -c -k --sequesterRsrc --keepParent LIBRE-VTT-Xcode ../app-ios/LIBRE-VTT-Xcode.zip)
           ls -la app-ios
+      - name: Prova nel simulatore iPhone
+        if: github.event_name == 'workflow_dispatch' && inputs.prova
+        working-directory: mobile/ios
+        run: bash prova-simulatore.sh
+      - name: Foto e registri nel ramo «registri-prova-ios»
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.prova
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/regp && cp -R mobile/ios/prova/. /tmp/regp/ 2>/dev/null; cd /tmp/regp && git init -q && git checkout -q -b registri-prova-ios
+          git -c user.name=ci -c user.email=ci@localhost add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -q -m "prova $GITHUB_RUN_ID" || exit 0
+          git push -q -f "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" registri-prova-ios
       - name: Registri per capire cosa non va (ramo «registri-ios»)
         if: failure()
         env:
