@@ -35,7 +35,13 @@ const enc = encodeURIComponent;
 const urlOf = (folder, name) => 'assets/' + (folder ? enc(folder) + '/' : '') + enc(name);
 
 // Nomi sicuri: niente percorsi, niente punti iniziali, solo lettere/numeri/._-
-const clean = s => path.basename(String(s || '')).replace(/[^\p{L}\p{N}._-]+/gu, '_').replace(/^[._]+/, '').slice(0, 60);
+// Le lettere di qualsiasi lingua restano. Il Node dentro le app per telefono (nodejs-mobile) non ha
+// le tabelle Unicode e non capisce \p{L}: lì si tengono le lettere latine, greche e cirilliche.
+const NON_NOME = (() => {
+  try { return new RegExp('[^\\p{L}\\p{N}._-]+', 'gu'); }
+  catch { return /[^A-Za-z0-9\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF._-]+/g; }
+})();
+const clean = s => path.basename(String(s || '')).replace(NON_NOME, '_').replace(/^[._]+/, '').slice(0, 60);
 const isMap = (folder, name) => !folder && name.toLowerCase() === MAP_FILE;
 const okFile = n => n && n === path.basename(n) && !n.startsWith('.') && IMG.has(path.extname(n).toLowerCase());
 
