@@ -11,6 +11,18 @@ NODE_VER=${NODEJS_MOBILE_VERSIONE:-18.20.4}
 ABI=${LIBRE_ABI:-arm64-v8a,armeabi-v7a,x86_64}
 API=24
 muori() { echo "ERRORE: $*" >&2; echo "::error::$*"; exit 1; }
+# esegue un comando; se fallisce, su GitHub mette gli errori in evidenza (i registri non sempre si leggono)
+segnala() {
+  local reg; reg=$(mktemp)
+  if "$@" > >(tee "$reg") 2>&1; then rm -f "$reg"; return 0; fi
+  sleep 1
+  local testo
+  testo=$(grep -E -A12 '^(error|ERROR|fatal|FAILURE|e: |.*: error:)' "$reg" | head -120 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+  [ -n "$testo" ] || testo=$(tail -60 "$reg" | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+  echo "::error title=$1 non riuscito::$testo"
+  rm -f "$reg"
+  return 1
+}
 
 NDK=${ANDROID_NDK_HOME:-${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_ROOT:-}}}
 [ -n "$NDK" ] && [ -d "$NDK" ] || muori "Non trovo l'Android NDK: imposta ANDROID_NDK_HOME"
@@ -69,7 +81,7 @@ for abi in ${ABI//,/ }; do
     export "CARGO_TARGET_${T_ENV}_RUSTFLAGS=-C link-arg=-Wl,-z,max-page-size=16384"
     export "CC_${T//-/_}=$CC_BIN"
     export "AR_${T//-/_}=$TC/llvm-ar"
-    cargo rustc --release --lib --crate-type cdylib --target "$T"
+    segnala cargo rustc --release --lib --crate-type cdylib --target "$T"
   )
   mkdir -p "$QUI/app/src/main/jniLibs/$abi"
   cp "$RADICE/uffa-link/target/$T/release/libuffa_link.so" "$QUI/app/src/main/jniLibs/$abi/"

@@ -81,10 +81,16 @@ jobs:
         working-directory: mobile/android
         env:
           LIBRE_VERSIONE: ${{ inputs.versione || '3.0.0' }}
+        shell: bash
         run: |
+          set -o pipefail
           export LIBRE_VERSIONE="${LIBRE_VERSIONE#v}"
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          if ! ./gradlew assembleRelease --no-daemon 2>&1 | tee gradle.log; then
+            T=$( (grep -E -B2 -A14 "What went wrong|error:|ERROR:|CMake Error|e: " gradle.log || tail -80 gradle.log) | head -150 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Gradle non riuscito::$T"
+            exit 1
+          fi
           mkdir -p "$GITHUB_WORKSPACE/app-android"
           cd app/build/outputs/apk/release
           ls -la
@@ -133,8 +139,8 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             archive 2>&1 | tee build.log | grep -E "error|warning: .*(Swift|swift)|BUILD|ARCHIVE" || true
           if ! grep -q "ARCHIVE SUCCEEDED" build.log; then
-            grep -E "error:" build.log | head -40 | while IFS= read -r r; do echo "::error::$r"; done
-            tail -80 build.log
+            T=$( (grep -E -A6 "error:|ld: |Undefined symbols" build.log || tail -80 build.log) | head -150 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Xcode non riuscito::$T"
             exit 1
           fi
       - name: IPA e progetto Xcode

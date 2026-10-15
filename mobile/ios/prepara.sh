@@ -10,6 +10,18 @@ RADICE=$(cd "$QUI/../.." && pwd)
 NODE_VER=${NODEJS_MOBILE_VERSIONE:-18.20.4}
 FW="$QUI/Frameworks"
 muori() { echo "ERRORE: $*" >&2; echo "::error::$*"; exit 1; }
+# esegue un comando; se fallisce, su GitHub mette gli errori in evidenza (i registri non sempre si leggono)
+segnala() {
+  local reg; reg=$(mktemp)
+  if "$@" > >(tee "$reg") 2>&1; then rm -f "$reg"; return 0; fi
+  sleep 1
+  local testo
+  testo=$(grep -E -A12 '^(error|ERROR|fatal|FAILURE|e: |.*: error:)' "$reg" | head -120 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+  [ -n "$testo" ] || testo=$(tail -60 "$reg" | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+  echo "::error title=$1 non riuscito::$testo"
+  rm -f "$reg"
+  return 1
+}
 [ "$(uname -s)" = Darwin ] || muori "Questo script va lanciato su un Mac"
 mkdir -p "$FW"
 
@@ -48,7 +60,7 @@ cd "$RADICE/uffa-link"
 for T in aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios; do
   echo "→ Compilo il collegamento per $T"
   rustup target add "$T" >/dev/null
-  cargo rustc --release --lib --crate-type staticlib --target "$T"
+  segnala cargo rustc --release --lib --crate-type staticlib --target "$T"
 done
 # le librerie di sistema che vuole il collegamento (le dice il compilatore)
 touch src/lib.rs
