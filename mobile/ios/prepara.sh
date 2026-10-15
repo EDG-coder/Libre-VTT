@@ -65,7 +65,7 @@ done
 # le librerie di sistema che vuole il collegamento (le dice il compilatore)
 touch src/lib.rs
 LIBS=$(cargo rustc --release --lib --crate-type staticlib --target aarch64-apple-ios -- --print native-static-libs 2>&1 \
-  | sed -n 's/.*native-static-libs: //p' | tail -1)
+  | sed -n 's/.*native-static-libs: //p' | tail -1 || true)
 [ -n "$LIBS" ] || LIBS="-framework Security -framework SystemConfiguration -framework CoreFoundation -liconv -lc++"
 echo "UFFA_LINK_LDFLAGS = $LIBS" > "$FW/UffaLink.xcconfig"
 echo "   librerie di sistema: $LIBS"

@@ -63,7 +63,8 @@ jobs:
           export ANDROID_NDK_HOME="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> "$GITHUB_ENV"
           echo "NDK: $ANDROID_NDK_HOME"
-          bash mobile/android/prepara.sh
+          set -o pipefail
+          bash mobile/android/prepara.sh 2>&1 | tee registro-prepara.log
       - name: La chiave per firmare
         env:
           CHIAVE: ${{ secrets.LIBRE_KEYSTORE_B64 }}
@@ -97,6 +98,17 @@ jobs:
           cp *-universale.apk "$GITHUB_WORKSPACE/app-android/LIBRE-VTT-Android.apk"
           cp *-arm64-v8a.apk "$GITHUB_WORKSPACE/app-android/LIBRE-VTT-Android-arm64.apk"
           ls -la "$GITHUB_WORKSPACE/app-android"
+      - name: Registri per capire cosa non va (ramo «registri-android»)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/reg && cd /tmp/reg && git init -q && git checkout -q -b registri-android
+          find "$GITHUB_WORKSPACE" -name '*.log' -not -path '*/node_modules/*' -size -20M -exec cp {} . \; 2>/dev/null || true
+          ls -la
+          git -c user.name=ci -c user.email=ci@localhost add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -q -m "registri $GITHUB_RUN_ID" || exit 0
+          git push -q -f "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" registri-android
       - uses: actions/upload-artifact@v4
         with:
           name: app-android
@@ -118,7 +130,9 @@ jobs:
       - name: Il programma, Node per iOS e il collegamento
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash mobile/ios/prepara.sh
+        run: |
+          set -o pipefail
+          bash mobile/ios/prepara.sh 2>&1 | tee registro-prepara.log
       - name: La versione
         env:
           VERSIONE: ${{ inputs.versione || '3.0.0' }}
@@ -155,6 +169,17 @@ jobs:
           cp mobile/LEGGIMI-Xcode.txt "xcode/LIBRE-VTT-Xcode/LEGGIMI.txt"
           (cd xcode && ditto -c -k --sequesterRsrc --keepParent LIBRE-VTT-Xcode ../app-ios/LIBRE-VTT-Xcode.zip)
           ls -la app-ios
+      - name: Registri per capire cosa non va (ramo «registri-ios»)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/reg && cd /tmp/reg && git init -q && git checkout -q -b registri-ios
+          find "$GITHUB_WORKSPACE" -name '*.log' -not -path '*/node_modules/*' -size -20M -exec cp {} . \; 2>/dev/null || true
+          ls -la
+          git -c user.name=ci -c user.email=ci@localhost add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -q -m "registri $GITHUB_RUN_ID" || exit 0
+          git push -q -f "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" registri-ios
       - uses: actions/upload-artifact@v4
         with:
           name: app-ios
