@@ -19,7 +19,14 @@ def chiave = System.getenv('LIBRE_KEYSTORE')
 android {
     namespace 'app.librevtt'
     compileSdk 35
-    if (System.getenv('ANDROID_NDK_HOME')) ndkPath System.getenv('ANDROID_NDK_HOME')
+    // l'NDK indicato da ANDROID_NDK_HOME (lo stesso usato per compilare il collegamento in Rust)
+    def ndk = System.getenv('ANDROID_NDK_HOME')
+    if (ndk && file("$ndk/source.properties").exists()) {
+        def p = new Properties()
+        file("$ndk/source.properties").withInputStream { p.load(it) }
+        ndkPath ndk
+        ndkVersion p.getProperty('Pkg.Revision')
+    }
 
     defaultConfig {
         applicationId 'app.librevtt'

@@ -60,7 +60,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          export ANDROID_NDK_HOME="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          # l'NDK 27 (quello predefinito del runner), lo stesso per Rust e per Gradle
+          NDK27=$(ls -d "$ANDROID_SDK_ROOT"/ndk/27.* 2>/dev/null | sort -V | tail -1)
+          export ANDROID_NDK_HOME="${NDK27:-${ANDROID_NDK_HOME:-$ANDROID_NDK_LATEST_HOME}}"
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> "$GITHUB_ENV"
           echo "NDK: $ANDROID_NDK_HOME"
           set -o pipefail
