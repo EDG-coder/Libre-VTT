@@ -14,7 +14,11 @@ DIST="${MYVTT_NODE_DIST:-https://nodejs.org/dist/latest-v22.x}"
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 STAGE="$W/stage"; APPD="$STAGE/LIBRE VTT.app"; RES="$APPD/Contents/Resources"; DEST="$RES/app"
 passo() { printf '\n▸ %s\n' "$*"; }
-muori() { printf '\n✘ %s\n' "$*"; exit 1; }
+muori() {
+  printf '\n✘ %s\n' "$*"
+  [ -n "${GITHUB_ACTIONS:-}" ] && printf '::error::%s\n' "$*"   # su GitHub si legge anche fuori dal registro
+  exit 1
+}
 
 passo "Preparo l'app"
 mkdir -p "$APPD/Contents/MacOS" "$DEST/assets/Sfondi" "$DEST/uffa-link/src" || muori "non riesco a creare le cartelle"
@@ -70,6 +74,22 @@ fi
 passo "Creo il .dmg"
 ln -s /Applications "$STAGE/Applicazioni"
 rm -f "$OUT"
-hdiutil create -volname "LIBRE VTT" -srcfolder "$STAGE" -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov "$OUT" >/dev/null \
-  || muori "hdiutil non è riuscito a creare il .dmg"
+# hdiutil a volte risponde «risorsa occupata» (succede anche sui Mac di GitHub): si riprova,
+# e se proprio non va si crea l'immagine con il nostro programma in Python (non compressa, ma uguale).
+FATTO=""
+for TENTATIVO in 1 2 3 4 5; do
+  if ERR="$(hdiutil create -volname "LIBRE VTT" -srcfolder "$STAGE" -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov "$OUT" 2>&1)"; then FATTO=1; break; fi
+  echo "  hdiutil (tentativo $TENTATIVO): $ERR"
+  sleep $((TENTATIVO * 4))
+done
+if [ -z "$FATTO" ]; then
+  echo "  hdiutil non va: creo l'immagine con mac/crea-dmg-senza-mac.py"
+  rm -f "$STAGE/Applicazioni"
+  python3 - "$STAGE" "$OUT" <<'PY' || muori "non sono riuscito a creare il .dmg (hdiutil: $ERR)"
+import importlib.util, sys
+s = importlib.util.spec_from_file_location('c', 'mac/crea-dmg-senza-mac.py'); c = importlib.util.module_from_spec(s); s.loader.exec_module(c)
+import os; os.symlink('/Applications', os.path.join(sys.argv[1], 'Applicazioni'))
+c.scrivi_iso(sys.argv[1], sys.argv[2])
+PY
+fi
 printf '\n✔ Fatto: %s (%s)\n' "$OUT" "$(du -h "$OUT" | cut -f1 | tr -d ' ')"
