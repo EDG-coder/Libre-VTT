@@ -1,0 +1,23 @@
+LIBRE VTT per iPhone e iPad — il progetto di Xcode
+==================================================
+
+Questo progetto è già pronto: dentro ci sono il programma, Node.js per iOS e il collegamento a
+distanza già compilati. Serve un Mac con Xcode (gratis dall'App Store) e un Apple ID (va bene
+anche quello gratuito).
+
+1. Collega l'iPhone (o l'iPad) al Mac con il cavo e sbloccalo.
+2. Apri LibreVTT.xcodeproj (doppio clic).
+3. A sinistra clicca il progetto «LibreVTT» → target «LibreVTT» → scheda «Signing & Capabilities».
+   - «Team»: scegli il tuo Apple ID (se non c'è: «Add an Account…» e accedi).
+   - Se Xcode dice che il «Bundle Identifier» è già usato: apri Config.xcconfig e cambia l'ultima
+     parte di PRODUCT_BUNDLE_IDENTIFIER (per esempio io.github.edg-coder.librevtt.mario).
+4. In alto, accanto al pulsante ▶, scegli il tuo iPhone come destinazione e premi ▶ (Run).
+5. La prima volta, sull'iPhone: Impostazioni → Generali → VPN e gestione dispositivi → il tuo
+   Apple ID → «Autorizza». Su iOS 16 e successivi attiva anche Impostazioni → Privacy e
+   sicurezza → Modalità sviluppatore (l'iPhone si riavvia).
+
+Con l'Apple ID gratuito l'app funziona per 7 giorni: poi basta ricollegare l'iPhone e premere
+di nuovo ▶ (le campagne restano). Con l'Apple Developer Program (a pagamento) dura un anno.
+
+Le campagne stanno nell'app «File» → «Su iPhone» → «LIBRE VTT» → «Campagne»: da lì le puoi
+copiare, salvare su iCloud o passare a un computer.

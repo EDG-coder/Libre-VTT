@@ -1,7 +1,4 @@
-//! Il tubo: porta i byte del gioco da una macchina all'altra passando per iroh.
-//!
-//! Non sa niente del gioco. Da una parte parla con il server locale (TCP), dall'altra con
-//! l'altra macchina (iroh). Tutto quello che entra da un lato esce dall'altro.
+//! Il tubo, come programma per il computer (la logica sta in lib.rs).
 //!
 //!   uffa-link host               resta in ascolto su iroh e stampa l'ID da condividere
 //!   uffa-link join <ID>          si collega a quell'ID e apre la porta locale
@@ -9,28 +6,11 @@
 //! Opzione comune:
 //!   --port <n>    porta locale del server di gioco (predefinita: 4010)
 //!
-//! In «host» ogni connessione che arriva da iroh viene aperta verso 127.0.0.1:<port>.
-//! In «join» ogni connessione che arriva su 127.0.0.1:<port> viene portata all'host.
-//!
-//! Nota: come in iroh-ping, l'ID cambia a ogni avvio. Chi gioca si riconosce per via del
-//! gettone che il server di gioco gli dà la prima volta, non per via dell'ID: i permessi
-//! quindi restano anche se l'ID cambia.
+//! L'ID finisce anche nel file «uffa-link.id» della cartella di lavoro (lo legge il pannello).
 
-use std::net::SocketAddr;
-use std::time::Duration;
+use std::sync::Arc;
 
-use iroh::{
-    Endpoint, EndpointId,
-    endpoint::{Connection, RecvStream, SendStream, presets},
-    protocol::{AcceptError, ProtocolHandler, Router},
-};
-use n0_error::{Result, StdResultExt};
-use tokio::io::AsyncWriteExt;
-use tokio::net::{TcpListener, TcpStream};
-use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
-
-/// Le due parti devono usare lo stesso ALPN, altrimenti non si parlano.
-const ALPN: &[u8] = b"uffa-vtt/1";
+use n0_error::Result;
 
 struct Args {
     mode: String,
@@ -62,145 +42,25 @@ fn usage() -> ! {
     std::process::exit(2)
 }
 
+/// Sul computer le righe vanno sullo schermo, come sempre.
+struct Schermo;
+
+impl uffa_link::Voce for Schermo {
+    fn di(&self, riga: &str) { println!("{riga}"); }
+    fn errore(&self, riga: &str) { eprintln!("{riga}"); }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = match parse_args() { Some(a) => a, None => usage() };
+    let voce: Arc<dyn uffa_link::Voce> = Arc::new(Schermo);
+    let ctrl_c = async { let _ = tokio::signal::ctrl_c().await; };
     match args.mode.as_str() {
-        "host" => host(args).await,
+        "host" => uffa_link::host(args.port, ".".into(), voce, ctrl_c).await,
         "join" => match args.id.clone() {
-            Some(id) => join(args, id).await,
+            Some(id) => uffa_link::join(&id, args.port, voce, ctrl_c).await,
             None => usage(),
         },
         _ => usage(),
     }
-}
-
-// ======================= Lato host =======================
-
-#[derive(Debug, Clone)]
-struct Pipe {
-    local: SocketAddr,
-}
-
-impl ProtocolHandler for Pipe {
-    async fn accept(&self, connection: Connection) -> Result<(), AcceptError> {
-        let who = connection.remote_id();
-        println!("→ si è collegato {who}");
-
-        let (send, recv) = connection.accept_bi().await?;
-
-        let tcp = match TcpStream::connect(self.local).await {
-            Ok(t) => t,
-            Err(e) => {
-                eprintln!("Non riesco a parlare col server di gioco su {}: {e}", self.local);
-                eprintln!("Il server di gioco è acceso? (node game-server.js host)");
-                connection.close(1u32.into(), b"server di gioco spento");
-                return Ok(());
-            }
-        };
-        let _ = tcp.set_nodelay(true);
-        let (tcp_read, mut tcp_write) = tcp.into_split();
-
-        // Prima riga: chi si è collegato. Al server di gioco serve solo per scriverlo nel
-        // registro; il riconoscimento vero avviene col gettone mandato dal browser.
-        let hello = format!("{{\"t\":\"peer\",\"id\":\"{who}\"}}\n");
-        if let Err(e) = tcp_write.write_all(hello.as_bytes()).await {
-            eprintln!("Errore scrivendo al server di gioco: {e}");
-            return Ok(());
-        }
-
-        pump(recv, send, tcp_read, tcp_write).await;
-        println!("← se n'è andato {who}");
-        connection.close(0u32.into(), b"ciao");
-        Ok(())
-    }
-}
-
-async fn host(args: Args) -> Result<()> {
-    let local: SocketAddr = format!("127.0.0.1:{}", args.port).parse().anyerr()?;
-    let endpoint = Endpoint::bind(presets::N0).await?;
-    let router = Router::builder(endpoint).accept(ALPN, Pipe { local }).spawn();
-
-    // Serve per farsi trovare da fuori.
-    router.endpoint().online().await;
-
-    let id = router.endpoint().id();
-    // Il server di gioco legge questo file per mostrare l'ID nel pannello.
-    let _ = std::fs::write("uffa-link.id", id.to_string());
-    println!();
-    println!("  Sessione aperta. Questo è l'ID da dare ai giocatori:");
-    println!();
-    println!("      {id}");
-    println!();
-    println!("  Loro lanceranno:  uffa-link join {id}");
-    println!("  Il gioco gira su 127.0.0.1:{}", args.port);
-    println!("  (Ctrl+C per chiudere la sessione)");
-    println!();
-
-    tokio::signal::ctrl_c().await.anyerr()?;
-    let _ = std::fs::remove_file("uffa-link.id");
-    router.shutdown().await.anyerr()?;
-    Ok(())
-}
-
-// ======================= Lato giocatore =======================
-
-async fn join(args: Args, id: String) -> Result<()> {
-    let remote: EndpointId = id.trim().parse().anyerr()?;
-    let endpoint = Endpoint::bind(presets::N0).await?;
-
-    let listen: SocketAddr = format!("127.0.0.1:{}", args.port).parse().anyerr()?;
-    let listener = TcpListener::bind(listen).await.anyerr()?;
-    println!();
-    println!("  In attesa del gioco su 127.0.0.1:{}", args.port);
-    println!("  Mi collegherò a {remote}");
-    println!("  (Ctrl+C per uscire)");
-    println!();
-
-    loop {
-        let (tcp, _) = tokio::select! {
-            r = listener.accept() => r.anyerr()?,
-            _ = tokio::signal::ctrl_c() => break,
-        };
-        let _ = tcp.set_nodelay(true);
-        let ep = endpoint.clone();
-
-        tokio::spawn(async move {
-            println!("→ mi collego alla sessione…");
-            let conn = match tokio::time::timeout(Duration::from_secs(30), ep.connect(remote, ALPN)).await {
-                Ok(Ok(c)) => c,
-                Ok(Err(e)) => { eprintln!("Non riesco a collegarmi: {e}"); return; }
-                Err(_) => { eprintln!("Non riesco a collegarmi: tempo scaduto (l'host è acceso?)"); return; }
-            };
-            let (send, recv) = match conn.open_bi().await {
-                Ok(x) => x,
-                Err(e) => { eprintln!("Collegamento interrotto: {e}"); return; }
-            };
-            println!("  collegato!");
-
-            let (tcp_read, tcp_write) = tcp.into_split();
-            pump(recv, send, tcp_read, tcp_write).await;
-
-            println!("← collegamento chiuso");
-            conn.close(0u32.into(), b"ciao");
-        });
-    }
-
-    endpoint.close().await;
-    Ok(())
-}
-
-// ======================= Il tubo vero e proprio =======================
-
-/// Copia i byte nei due versi finché uno dei due lati non chiude.
-async fn pump(mut recv: RecvStream, mut send: SendStream, mut tcp_read: OwnedReadHalf, mut tcp_write: OwnedWriteHalf) {
-    let down = async move {
-        let _ = tokio::io::copy(&mut recv, &mut tcp_write).await;   // da iroh al server locale
-        let _ = tcp_write.shutdown().await;
-    };
-    let up = async move {
-        let _ = tokio::io::copy(&mut tcp_read, &mut send).await;    // dal server locale a iroh
-        let _ = send.finish();
-    };
-    tokio::join!(down, up);
 }

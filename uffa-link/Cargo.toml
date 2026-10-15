@@ -1,13 +1,28 @@
 [package]
 name = "uffa-link"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.91"
+
+# La logica sta nella libreria: il programma per il computer (src/main.rs) e le app per
+# telefono (Android: libreria .so; iPhone: libreria statica) la usano allo stesso modo.
+# Per le app la si compila con «cargo rustc --lib --crate-type cdylib|staticlib».
+[lib]
+name = "uffa_link"
+path = "src/lib.rs"
+
+[[bin]]
+name = "uffa-link"
+path = "src/main.rs"
 
 [dependencies]
 iroh = "1.3"
 n0-error = "1"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "time", "net", "io-util"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "time", "net", "io-util", "sync"] }
+
+# Su Android iroh legge i DNS del telefono passando per Java
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
 
 [profile.release]
 opt-level = "s"

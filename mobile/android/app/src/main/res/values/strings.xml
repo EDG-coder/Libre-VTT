@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LIBRE VTT</string>
+    <string name="avvio">Sto preparando il tavolo da gioco…</string>
+    <string name="avvio_lento">Ci sta mettendo un po\'. La prima apertura dopo l\'installazione è la più lenta.</string>
+    <string name="avvio_fallito">LIBRE VTT non è riuscito a partire. Chiudi l\'app dalle app recenti e riaprila; se succede ancora, riavvia il telefono.</string>
+    <string name="canale_partita">Partita in corso</string>
+    <string name="notifica_partita">La partita è aperta. Tocca per tornare al tavolo.</string>
+    <string name="importo">Copio la campagna…</string>
+    <string name="condividi">Condividi…</string>
+    <string name="salva_in">Salva in una cartella…</string>
+    <string name="salvato">Salvato.</string>
+    <string name="non_salvato">Non sono riuscito a salvarlo.</string>
+    <string name="nessuna_app">Non c\'è un\'app per farlo su questo dispositivo.</string>
+    <string name="uso_servizio">Tiene aperta la partita (server di gioco e collegamento con gli altri giocatori) mentre si usa un\'altra app.</string>
+</resources>

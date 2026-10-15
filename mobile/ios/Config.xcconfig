@@ -1,0 +1,15 @@
+// ===== Le impostazioni da cambiare =====
+// L'identificativo dell'app: deve essere unico. Con un Apple ID gratuito, se Xcode dice che
+// è già usato, cambia l'ultima parte (per esempio ...librevtt.mario).
+PRODUCT_BUNDLE_IDENTIFIER = io.github.edg-coder.librevtt
+
+// Il tuo «team»: si sceglie da Xcode (Signing & Capabilities → Team). Lasciare vuoto qui.
+// DEVELOPMENT_TEAM =
+
+MARKETING_VERSION = 3.0.0
+CURRENT_PROJECT_VERSION = 30000
+
+// Le librerie di sistema che servono al collegamento (Rust). Il workflow le aggiorna in
+// Frameworks/UffaLink.xcconfig con quelle che dice il compilatore.
+UFFA_LINK_LDFLAGS = -framework Security -framework SystemConfiguration -framework CoreFoundation -liconv -lc++
+#include? "Frameworks/UffaLink.xcconfig"

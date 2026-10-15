@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Per l'icona «a tema» di Android 13+: lo stesso disegno della notifica, dentro la zona sicura dei 108dp -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_notifica" android:inset="30dp" />

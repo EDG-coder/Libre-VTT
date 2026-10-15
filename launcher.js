@@ -6,10 +6,23 @@
 //   node launcher.js            (ma di solito lo lanciano «LIBRE VTT.app», «LIBRE VTT.vbs», «LIBRE VTT.desktop»)
 
 'use strict';
-const http = require('http'), https = require('https'), fs = require('fs'), os = require('os');
+const http = require('http'), https = require('https'), fs = require('fs'), os = require('os'), net = require('net');
 const path = require('path'), crypto = require('crypto'), { spawn, execFile } = require('child_process');
+const { EventEmitter } = require('events'), { PassThrough } = require('stream');
+const { creaZip, estraiZip } = require('./zip');
 
 const ROOT = __dirname;                                       // i file del programma
+
+// Dentro l'app per Android o per iPhone/iPad (nodejs-mobile) non si possono lanciare altri
+// programmi: il tavolo e il server di gioco girano come «worker» in questo stesso Node, e il
+// collegamento a distanza vive nell'app, che ce lo fa usare da una porta di controllo.
+// L'app ci passa: la cartella dell'utente, quella delle campagne, la porta di controllo del
+// collegamento, un segreto (solo la sua finestra può usare le nostre API) e il file dove
+// scrivere l'indirizzo quando siamo pronti.
+const MOBILE = /^(android|ios)$/.test(process.env.MYVTT_MOBILE || '') ? process.env.MYVTT_MOBILE : null;
+const SEGRETO = MOBILE ? String(process.env.MYVTT_SEGRETO || '') : '';
+const LINK_CTRL = MOBILE ? +process.env.MYVTT_LINK_CONTROLLO || 0 : 0;
+const PRONTO_FILE = process.env.MYVTT_PRONTO_FILE || '';
 // Porte preferite. Se sul computer sono già occupate da altri programmi (3000 e 4000 sono
 // classiche per tanti strumenti) se ne scelgono altre libere e ce le si ricorda: quella del
 // tavolo deve restare la stessa da una volta all'altra, perché il browser tiene l'identità del
@@ -21,7 +34,7 @@ const EXE = WIN ? '.exe' : '';
 
 // Dentro un'app per Mac (il .dmg) il programma sta in sola lettura: lì non si scrive mai.
 // Tutto quello che va scritto finisce in una cartella dell'utente, oppure nella campagna.
-const IN_APP = /\.app[\/\\]Contents[\/\\]/.test(ROOT);
+const IN_APP = /\.app[\/\\]Contents[\/\\]/.test(ROOT) || !!MOBILE;
 const scrivibile = d => {
   if (IN_APP && path.resolve(d).startsWith(ROOT)) return false;
   try { fs.accessSync(d, fs.constants.W_OK); return true; } catch { return false; }
@@ -113,9 +126,10 @@ async function check() {
 function stato() {
   return {
     mode: state.mode, busy: state.busy, error: state.error, sessionId: state.sessionId,
-    link: !!linkBin(), cargo: !!cache.cargo, pronto: !!rilascio(), campagna: state.campagna || null,
+    link: MOBILE ? !!LINK_CTRL : !!linkBin(), cargo: !!cache.cargo, pronto: !!rilascio(), campagna: state.campagna || null,
     porte: { ui: UI_PORT, ...(state.porte || {}) },
-    piattaforma: WIN ? 'Windows' : MAC ? 'macOS' : 'Linux',
+    piattaforma: MOBILE === 'android' ? 'Android' : MOBILE === 'ios' ? 'iPhone e iPad' : WIN ? 'Windows' : MAC ? 'macOS' : 'Linux',
+    mobile: MOBILE, campHome: CAMP_HOME,
     node: process.versions.node
   };
 }
@@ -152,13 +166,79 @@ async function portaLibera(pref, evita = []) {
 }
 
 // ---------- accendere e spegnere i pezzi ----------
+// I pezzi del programma: NODE = uno dei nostri script (sul computer un processo Node a parte,
+// sul telefono un worker), LINK = il collegamento a distanza (sul computer il programma
+// uffa-link, sul telefono la libreria dentro l'app, raggiunta dalla porta di controllo).
+// Dall'esterno si comportano tutti come un processo: stdout, stderr, «exit», kill().
+const NODE = Symbol('node'), LINK = Symbol('link');
+
+/** Uno script nostro in un worker: stesso Node, stessi argomenti e variabili di un processo. */
+class ProcWorker extends EventEmitter {
+  constructor(script, args, env) {
+    super();
+    const { Worker } = require('worker_threads');
+    this.w = new Worker(path.join(ROOT, script), { argv: args, env, stdout: true, stderr: true });
+    this.stdout = this.w.stdout; this.stderr = this.w.stderr;
+    this.w.on('error', e => this.emit('error', e));
+    this.w.on('exit', c => this.emit('exit', c));
+  }
+  kill() { this.w.terminate().catch(() => {}); }
+}
+
+/**
+ * Una sessione del collegamento dentro l'app. La connessione alla porta di controllo dura
+ * quanto la sessione: chiuderla la ferma. Le righe «L»/«E» sono quelle che il programma
+ * scriverebbe sullo schermo (ci si trova l'ID nello stesso modo); «F <n>» = finita da sola.
+ */
+class ProcLink extends EventEmitter {
+  constructor(args) {
+    super();
+    this.stdout = new PassThrough(); this.stderr = new PassThrough();
+    const porta = args[args.indexOf('--port') + 1];
+    const cmd = args[0] === 'host' ? `${SEGRETO} host ${porta} ${USERDIR}` : `${SEGRETO} join ${args[1]} ${porta}`;
+    let codice = null, buf = '', finito = false;
+    const s = this.sock = net.connect(LINK_CTRL, '127.0.0.1');
+    s.setNoDelay(true);
+    s.on('connect', () => s.write(cmd + '\n'));
+    s.on('data', d => {
+      buf += d.toString('utf8');
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const riga = buf.slice(0, i); buf = buf.slice(i + 1);
+        const testo = riga.slice(2);
+        if (riga[0] === 'L') this.stdout.write(testo + '\n');
+        else if (riga[0] === 'E') this.stderr.write(testo + '\n');
+        else if (riga[0] === 'F') codice = parseInt(testo, 10) || 0;
+      }
+    });
+    s.on('error', e => this.emit('error', new Error('collegamento dell\'app non raggiungibile: ' + e.message)));
+    s.on('close', () => {
+      if (finito) return;
+      finito = true; this.stdout.end(); this.stderr.end();
+      this.emit('exit', codice == null ? 1 : codice);
+    });
+  }
+  kill() { try { this.sock.end('stop\n'); } catch {} }
+}
+
+function lancia(cmd, args, opts) {
+  if (cmd === NODE) {
+    if (MOBILE) return new ProcWorker(args[0], args.slice(1), envPulito(opts.env));
+    cmd = process.execPath;
+  } else if (cmd === LINK) {
+    if (MOBILE) return new ProcLink(args);
+    cmd = linkBin();
+  }
+  return spawn(cmd, args, { cwd: opts.cwd || ROOT, env: envPulito(opts.env), stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+}
+
 // opts.keep: se si ferma da solo mentre si gioca, lo si riaccende (con un po' d'attesa che
 // cresce se continua a cadere). Si spegne davvero solo con «ferma» o chiudendo la finestra.
 let gen = 0;                                                   // cambia a ogni avvio/spegnimento
 const restarts = {};
 function run(key, cmd, args, opts = {}) {
   const myGen = gen, born = Date.now();
-  const p = spawn(cmd, args, { cwd: opts.cwd || ROOT, env: envPulito(opts.env), stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  const p = lancia(cmd, args, opts);
   state.procs[key] = p;
   const pipe = (s, kind) => s.on('data', d => String(d).split(/\r?\n/).forEach(l => {
     if (!l.trim()) return;
@@ -183,7 +263,7 @@ function run(key, cmd, args, opts = {}) {
       run(key, cmd, args, opts);
     }, wait);
   });
-  p.on('error', e => say(`[${key}] non parte: ${e.message}`, 'bad'));
+  p.on('error', e => say(`[${key}] ${e.code === 'ENOENT' ? 'non parte' : 'errore'}: ${e.message}`, 'bad'));
   return p;
 }
 function stopAll() {
@@ -215,8 +295,14 @@ async function aspettaPorta(port, secondi = 15) {
 //   campagna.json   il nome (facoltativo)
 // Si può copiare, mettere su una chiavetta, mandare a un amico: chi la apre la conduce lui.
 // La vecchia cartella del gioco (data/ e assets/ accanto ai programmi) è anch'essa una campagna.
+let documentiTrovata = null;
 function cartellaDocumenti() {
+  if (documentiTrovata) return documentiTrovata;
+  return (documentiTrovata = trovaDocumenti());
+}
+function trovaDocumenti() {
   const home = os.homedir();
+  if (MOBILE) return home;
   try {
     if (WIN) {   // può essere stata spostata (OneDrive): la si chiede al registro
       const out = require('child_process').execFileSync('reg', ['query', 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders', '/v', 'Personal'], { encoding: 'utf8', timeout: 3000, windowsHide: true });
@@ -230,8 +316,8 @@ function cartellaDocumenti() {
   for (const n of ['Documents', 'Documenti']) { const d = path.join(home, n); if (fs.existsSync(d)) return d; }
   return home;
 }
-const CAMP_HOME = path.join(cartellaDocumenti(), 'LIBRE VTT', 'Campagne');
-const CAMP_VECCHIE = path.join(cartellaDocumenti(), 'MY VTT', 'Campagne');   // di quando si chiamava «MY VTT»
+const CAMP_HOME = process.env.MYVTT_CAMPAGNE ? path.resolve(process.env.MYVTT_CAMPAGNE) : path.join(cartellaDocumenti(), 'LIBRE VTT', 'Campagne');
+const CAMP_VECCHIE = MOBILE ? null : path.join(cartellaDocumenti(), 'MY VTT', 'Campagne');   // di quando si chiamava «MY VTT»
 
 let conf = { recenti: [] };
 try { conf = { recenti: [], ...JSON.parse(fs.readFileSync(CONF_FILE, 'utf8')) }; } catch {}
@@ -310,10 +396,10 @@ function elencoCampagne() {
     const v = infoCampagna(d);
     if (v.scrivibile && (v.scene || v.schede || fs.existsSync(path.join(d, 'data', 'world.json')))) lista.push(v);
   }
-  // le campagne create quando il programma si chiamava «MY VTT» restano dove sono, e si vedono
-  let vecchie = []; try { vecchie = fs.readdirSync(CAMP_VECCHIE, { withFileTypes: true }).filter(e => e.isDirectory()); } catch {}
-  for (const e of vecchie) {
-    const d = path.join(CAMP_VECCHIE, e.name);
+  // tutte quelle nella cartella delle campagne, anche se non sono ancora state aperte (per esempio
+  // copiate lì a mano, o con l'app File dell'iPhone); e quelle di quando si chiamava «MY VTT»
+  const sotto = d => { try { return fs.readdirSync(d, { withFileTypes: true }).filter(e => e.isDirectory() && !e.name.startsWith('.')).map(e => path.join(d, e.name)); } catch { return []; } };
+  for (const d of [...sotto(CAMP_HOME), ...(CAMP_VECCHIE ? sotto(CAMP_VECCHIE) : [])]) {
     if (visti.has(d)) continue;
     visti.add(d);
     const v = infoCampagna(d);
@@ -322,8 +408,64 @@ function elencoCampagne() {
   return { home: CAMP_HOME, ultima: conf.recenti[0] || null, lista };
 }
 
+// ---------- campagne in un file .zip: per passarle da un dispositivo all'altro ----------
+/** Mette la campagna in un .zip. Sul computer lo si mostra nella sua cartella, sul telefono lo condivide l'app. */
+function esportaCampagna(dir) {
+  const info = infoCampagna(dir);
+  if (!info.esiste || !info.campagna) return { errore: 'Non trovo questa campagna.' };
+  const nome = pulisciNome(info.nome) || 'Campagna';
+  const dove = MOBILE ? path.join(USERDIR, 'esportate') : path.join(path.dirname(CAMP_HOME), 'Esportate');
+  fs.mkdirSync(dove, { recursive: true });
+  // sul telefono le esportazioni vecchie non servono più: le ha già prese chi le doveva prendere
+  if (MOBILE) for (const f of fs.readdirSync(dove)) { try { fs.unlinkSync(path.join(dove, f)); } catch {} }
+  const file = path.join(dove, nome + '.zip');
+  const r = creaZip(info.path, file, { radice: nome });
+  say(`Campagna «${nome}» esportata: ${file} (${r.voci} file)`, 'ok');
+  if (!MOBILE) mostraCartella(dove);
+  return { file, nome: path.basename(file), byte: r.byte };
+}
+
+/**
+ * Prende una campagna arrivata da fuori (un .zip o una cartella che l'app ha appena copiato in
+ * USERDIR/importa) e la mette tra le campagne, con un nome che non c'è ancora.
+ */
+function importaCampagna(sorgente, nomeSuggerito) {
+  const ARRIVI = path.join(USERDIR, 'importa');
+  const src = path.resolve(sorgente || '');
+  if (!src.startsWith(ARRIVI + path.sep) || !fs.existsSync(src)) return { errore: 'Non trovo il file da importare.' };
+  fs.mkdirSync(CAMP_HOME, { recursive: true });
+  const tmp = path.join(CAMP_HOME, '.importo-' + Date.now().toString(36));
+  try {
+    if (fs.statSync(src).isDirectory()) {
+      try { fs.renameSync(src, tmp); } catch { fs.cpSync(src, tmp, { recursive: true }); }   // dischi diversi: si copia
+    } else {
+      estraiZip(src, tmp);
+    }
+    // uno zip fatto a mano ha spesso dentro una cartella sola: la campagna è quella
+    let radice = tmp;
+    const dentro = fs.readdirSync(tmp).filter(n => !n.startsWith('.'));
+    if (dentro.length === 1 && fs.statSync(path.join(tmp, dentro[0])).isDirectory() && !infoCampagna(tmp).campagna) radice = path.join(tmp, dentro[0]);
+    const info = infoCampagna(radice);
+    if (!info.campagna) return { errore: 'Qui dentro non c\'è una campagna di LIBRE VTT (manca la cartella «data»).' };
+    const meta = leggiJson(path.join(radice, 'campagna.json')) || {};
+    const nome = pulisciNome(meta.nome || (radice !== tmp ? path.basename(radice) : String(nomeSuggerito).replace(/\.zip$/i, ''))) || 'Campagna importata';
+    let dest = path.join(CAMP_HOME, nome), i = 2;
+    while (fs.existsSync(dest)) dest = path.join(CAMP_HOME, `${nome} ${i++}`);
+    fs.renameSync(radice, dest);
+    preparaCartella(dest, nome);
+    ricorda(dest);
+    say(`Campagna «${nome}» importata in ${dest}`, 'ok');
+    return { path: dest };
+  } catch (e) {
+    return { errore: e.message };
+  } finally {
+    for (const p of [tmp, src]) { try { fs.rmSync(p, { recursive: true, force: true }); } catch {} }
+  }
+}
+
 /** La finestra del sistema per scegliere una cartella. Dove non c'è, si usa quella fatta da noi. */
 async function scegliCartella(titolo) {
+  if (MOBILE) return { nonSupportato: true };
   const prompt = titolo || 'Scegli la cartella della campagna';
   const esegui1 = (cmd, args, opts = {}) => new Promise(res => {
     execFile(cmd, args, { encoding: 'utf8', timeout: 10 * 60 * 1000, windowsHide: true, ...opts }, (e, out) => res({ e, out: String(out || '').trim() }));
@@ -370,10 +512,13 @@ async function scegliCartella(titolo) {
 function sfoglia(dir) {
   const radici = [];
   const add = (nome, p) => { if (p && fs.existsSync(p) && !radici.some(r => r.path === p)) radici.push({ nome, path: p }); };
-  add('Campagne', CAMP_HOME); add('Documenti', cartellaDocumenti()); add('Scrivania', path.join(os.homedir(), 'Desktop'));
-  add('Download', path.join(os.homedir(), 'Downloads')); add('Casa', os.homedir());
-  if (WIN) for (const l of 'CDEFGHIJ') add(l + ':', l + ':\\');
-  else if (MAC) add('Dischi', '/Volumes'); else add('Dischi', '/media/' + (os.userInfo().username || ''));
+  add('Campagne', CAMP_HOME);
+  if (!MOBILE) {
+    add('Documenti', cartellaDocumenti()); add('Scrivania', path.join(os.homedir(), 'Desktop'));
+    add('Download', path.join(os.homedir(), 'Downloads')); add('Casa', os.homedir());
+    if (WIN) for (const l of 'CDEFGHIJ') add(l + ':', l + ':\\');
+    else if (MAC) add('Dischi', '/Volumes'); else add('Dischi', '/media/' + (os.userInfo().username || ''));
+  }
   let qui = path.resolve(String(dir || '') || (fs.existsSync(CAMP_HOME) ? CAMP_HOME : os.homedir()));
   let voci = [];
   try {
@@ -385,6 +530,7 @@ function sfoglia(dir) {
   return { path: qui, su: path.dirname(qui) !== qui ? path.dirname(qui) : null, voci, radici, qui: infoCampagna(qui) };
 }
 function mostraCartella(dir) {
+  if (MOBILE) return;                                          // sul telefono si esporta (vedi /api/campagna/esporta)
   const cmd = WIN ? 'explorer' : MAC ? 'open' : 'xdg-open';
   try { const p = spawn(cmd, [dir], { detached: true, stdio: 'ignore', windowsHide: false }); p.on('error', () => {}); p.unref(); } catch {}
 }
@@ -422,19 +568,18 @@ async function avvia(mode, id, campagna) {
   salvaConf();
   state.porte = { web: WEB_PORT, game: GAME_PORT };
 
-  run('tavolo', process.execPath, ['server.js'], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP }, keep: true });
+  run('tavolo', NODE, ['server.js'], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP }, keep: true });
   if (!await aspettaPorta(WEB_PORT)) return fallisci('Il tavolo non si è acceso.');
 
   if (mode !== 'solo') {
-    run('regole', process.execPath, ['game-server.js', mode === 'host' ? 'host' : 'join'],
+    run('regole', NODE, ['game-server.js', mode === 'host' ? 'host' : 'join'],
       { env: { PORT: String(GAME_PORT), LINK_PORT: String(LINK_PORT), DATA_DIR: path.join(CAMP, 'data'), LINK_ID_FILE }, keep: true });
     if (!await aspettaPorta(GAME_PORT)) return fallisci('Il server di gioco non si è acceso.');
 
-    const bin = linkBin();
-    if (!bin) return fallisci('Manca il collegamento a distanza: premi «Prepara» e riprova.');
+    if (MOBILE ? !LINK_CTRL : !linkBin()) return fallisci(MOBILE ? 'Il collegamento a distanza dell\'app non è partito: chiudi l\'app e riaprila.' : 'Manca il collegamento a distanza: premi «Prepara» e riprova.');
     // uffa-link scrive l'ID nella sua cartella di lavoro: la nostra, dove si può scrivere
-    if (mode === 'host') run('sessione', bin, ['host', '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR });
-    else run('sessione', bin, ['join', id, '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR });
+    if (mode === 'host') run('sessione', LINK, ['host', '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR });
+    else run('sessione', LINK, ['join', id, '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR });
   }
 
   state.mode = mode; state.busy = null; push();
@@ -645,6 +790,7 @@ async function costruisci() {
 }
 
 async function prepara() {
+  if (MOBILE) { say('Il collegamento a distanza è già dentro l\'app.', 'ok'); return; }
   state.busy = 'Preparo il collegamento a distanza…'; state.error = null; push();
   try {
     if (linkBin()) say('Il collegamento a distanza è già pronto.', 'ok');
@@ -722,10 +868,25 @@ const invia = (res, code, body, type = 'text/plain; charset=utf-8') => {
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, 'http://localhost');
   if (!/^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(req.socket.remoteAddress || '')) return invia(res, 403, 'no');
+  // Sul telefono anche le altre app possono parlare con 127.0.0.1: le nostre API le usa solo la
+  // finestra di LIBRE VTT, che si presenta la prima volta con il segreto avuto dall'app.
+  if (SEGRETO) {
+    if ((u.pathname === '/' || u.pathname === '/index.html') && u.searchParams.get('k') === SEGRETO) {
+      res.writeHead(302, { 'Set-Cookie': `libre_k=${encodeURIComponent(SEGRETO)}; Path=/; HttpOnly; SameSite=Strict`, Location: '/', 'Cache-Control': 'no-store' });
+      return res.end();
+    }
+    const ck = /(?:^|;\s*)libre_k=([^;]*)/.exec(req.headers.cookie || '');
+    let dato = ''; try { dato = ck ? decodeURIComponent(ck[1]) : ''; } catch {}
+    if (u.pathname !== '/api/vivo' && dato !== SEGRETO) return invia(res, 403, 'Questa finestra non è quella di LIBRE VTT.');
+  }
 
   if (u.pathname === '/' || u.pathname === '/index.html') {
     return fs.readFile(path.join(ROOT, 'launcher.html'), (e, d) =>
       e ? invia(res, 500, 'launcher.html non trovato') : invia(res, 200, d, 'text/html; charset=utf-8'));
+  }
+  if (u.pathname === '/nativo.js') {                          // il ponte con le app per telefono (sul computer non fa niente)
+    return fs.readFile(path.join(ROOT, 'nativo.js'), (e, d) =>
+      e ? invia(res, 404, 'no') : invia(res, 200, d, 'text/javascript; charset=utf-8'));
   }
   if (u.pathname === '/api/vivo') { ultimoSegno = Date.now(); res.writeHead(204, { 'Access-Control-Allow-Origin': '*' }); return res.end(); }
   if (u.pathname === '/api/stato') { ultimoSegno = Date.now(); }
@@ -791,6 +952,15 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/api/campagna/mostra' && req.method === 'POST') {
     return corpo(m => { const i = infoCampagna(m.path); if (i.esiste) mostraCartella(i.path); ok({ ok: i.esiste }); });
   }
+  if (u.pathname === '/api/campagna/esporta' && req.method === 'POST') {
+    return corpo(m => ok(esportaCampagna(String(m.path || ''))));
+  }
+  if (u.pathname === '/api/campagna/importa' && req.method === 'POST') {
+    return corpo(m => {
+      const r = importaCampagna(String(m.sorgente || ''), String(m.nome || ''));
+      ok(r.errore ? r : { ...r, ...elencoCampagne() });
+    });
+  }
   invia(res, 404, 'no');
 });
 
@@ -819,19 +989,35 @@ function mostraFinestraEsistente(port) {
   setTimeout(() => process.exit(0), 500);
 }
 server.on('error', e => {
+  if (MOBILE) {                                                // dentro l'app non si esce: si prova un'altra porta
+    say('La finestra non parte: ' + e.message, 'bad');
+    setTimeout(async () => { UI_PORT = await portaLibera(UI_PORT + 1); server.listen(UI_PORT, '127.0.0.1'); }, 300);
+    return;
+  }
   console.error(e.code === 'EADDRINUSE' ? `La porta ${UI_PORT} si è appena occupata: riapri LIBRE VTT.` : e.message);
   process.exit(1);
 });
+/** Sul telefono: l'app aspetta questo file per sapere quale indirizzo aprire nella sua finestra. */
+function segnalaPronto() {
+  const url = `http://127.0.0.1:${UI_PORT}/` + (SEGRETO ? '?k=' + encodeURIComponent(SEGRETO) : '');
+  if (PRONTO_FILE) {
+    try { fs.writeFileSync(PRONTO_FILE + '.tmp', url); fs.renameSync(PRONTO_FILE + '.tmp', PRONTO_FILE); }
+    catch (e) { console.error('Non riesco a scrivere ' + PRONTO_FILE + ': ' + e.message); }
+  }
+  console.log('LIBRE VTT pronto su http://127.0.0.1:' + UI_PORT + '/');
+}
 (async () => {
   conf.porte = conf.porte || {};
   const pref = +(process.env.UI_PORT || conf.porte.ui || PREF.ui);
-  if (await èMyVtt(pref)) return mostraFinestraEsistente(pref);
+  if (!MOBILE && await èMyVtt(pref)) return mostraFinestraEsistente(pref);
   UI_PORT = await portaLibera(pref);
   if (UI_PORT !== pref) console.log(`La porta ${pref} è usata da un altro programma: uso la ${UI_PORT}.`);
   if (!process.env.UI_PORT && conf.porte.ui !== UI_PORT) { conf.porte.ui = UI_PORT; salvaConf(); }
-  server.listen(UI_PORT, '127.0.0.1', async () => {
+  server.on('listening', async () => {
     await check();
+    if (MOBILE) return segnalaPronto();
     console.log('LIBRE VTT: finestra su http://127.0.0.1:' + UI_PORT);
     apriFinestra('http://127.0.0.1:' + UI_PORT + '/');
   });
+  server.listen(UI_PORT, '127.0.0.1');
 })();

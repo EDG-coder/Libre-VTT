@@ -14,3 +14,14 @@ uffa-link.id
 __pycache__/
 node_modules/
 .DS_Store
+# app per telefono: quello che scaricano o compilano i prepara.sh
+/mobile/android/app/libnode/
+/mobile/android/app/src/main/jniLibs/
+/mobile/android/app/build/
+/mobile/android/build/
+/mobile/android/.gradle/
+/mobile/android/local.properties
+/mobile/ios/Frameworks/
+/mobile/ios/LibreVTT/nodejs-project/
+/mobile/ios/build/
+xcuserdata/

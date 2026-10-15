@@ -5,6 +5,7 @@
 #     l'app lo scarica da qui (rilascio.json), invece di doverlo compilare sul computer di chi gioca
 #   - LIBRE-VTT-Setup.exe (Windows), Installa-LIBRE-VTT-Linux.sh, Installa-LIBRE-VTT-Windows.cmd e
 #     LIBRE-VTT.dmg: con dentro anche Node e il collegamento, quindi non scaricano niente.
+#   - le app per Android e iPhone/iPad (vedi app.yml)
 #
 # Si avvia creando un tag che comincia con «v» (es. da GitHub: Releases → Draft a new release →
 # tag «v3.0» → Publish), oppure a mano da Actions → Rilascio → Run workflow: se si scrive una
@@ -157,10 +158,17 @@ jobs:
           name: setup-exe
           path: installatori/LIBRE-VTT-Setup.exe
 
+  app:
+    name: App
+    uses: ./.github/workflows/app.yml
+    with:
+      versione: ${{ inputs.versione || github.ref_name }}
+    secrets: inherit
+
   pubblica:
     name: Pubblica la release
     if: startsWith(github.ref, 'refs/tags/') || inputs.versione
-    needs: [collegamento, mac, installatori, setup-exe]
+    needs: [collegamento, mac, installatori, setup-exe, app]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -173,7 +181,7 @@ jobs:
           TAG: ${{ inputs.versione && format('v{0}', inputs.versione) || github.ref_name }}
         run: |
           mkdir file
-          cp tutto/link-*/* tutto/installatori/* tutto/setup-exe/* tutto/dmg/* file/
+          cp tutto/link-*/* tutto/installatori/* tutto/setup-exe/* tutto/dmg/* tutto/app-android/* tutto/app-ios/* file/
           ls -la file
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" file/* --clobber --repo "$GITHUB_REPOSITORY"

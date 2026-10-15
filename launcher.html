@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>LIBRE VTT</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjOWI4MmZmIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzVhM2ZkNiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHBhdGggZD0iTTMyIDNsMjUgMTQuNXYyOUwzMiA2MSA3IDQ2LjUwMHYtMjl6IiBmaWxsPSJ1cmwoI2cpIiBzdHJva2U9IiMyYjFhODUiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0zMiAxN2wxNSAyNkgxN3oiIGZpbGw9IiNmZmZmZmYyMiIgc3Ryb2tlPSIjZTllM2ZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNMzIgMTdWM00zMiAxN0w3IDE3LjUwME0zMiAxN2wyNSAuNU00NyA0M2wxMCAzLjUwME00NyA0M0wzMiA2MU0xNyA0M0w3IDQ2LjUwME0xNyA0M2wxNSAxOE0xNyA0M0w3IDE3LjUwME00NyA0M2wxMC0yNS41MDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2U5ZTNmZiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9Ii44NSIvPgogIDx0ZXh0IHg9IjMyIiB5PSIzOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmZmIj4yMDwvdGV4dD4KPC9zdmc+Cg==">
 <style>
@@ -122,7 +122,30 @@
   .fbList button { display: flex; width: 100%; gap: 8px; align-items: center; text-align: left; padding: 7px 11px; border: 0; border-bottom: 1px solid var(--line); background: none; color: inherit; font: inherit; font-size: .88rem; cursor: pointer; }
   .fbList button:last-child { border-bottom: 0; }
   .fbList button:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  /* ---------- telefono e tablet ---------- */
+  body { padding: max(28px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+  .soloApp { display: none; }
+  .app .soloApp { display: revert; }
+  .app .soloPc { display: none !important; }
+  @media (pointer: coarse) {
+    button.b { padding: 11px 16px; font-size: .95rem; }
+    .cact button { width: 42px; font-size: 1rem; }
+    .cmain { padding: 13px 14px; }
+    input[type=text] { font-size: 16px; padding: 11px 13px; }     /* sotto i 16px l'iPhone ingrandisce la pagina */
+    * { -webkit-tap-highlight-color: transparent; }
+  }
+  @media (max-width: 520px) {
+    body { align-items: flex-start; padding-top: max(18px, env(safe-area-inset-top)); }
+    header { margin-bottom: 18px; }
+    .logo { font-size: 1.7rem; }
+    .cards { grid-template-columns: 1fr; }
+    .card { flex-direction: row; align-items: center; gap: 14px; padding: 14px; }
+    .card .ic { font-size: 1.9rem; }
+    .card b { display: block; }
+    #prontoRighe input { min-width: 0; width: 100%; }
+  }
 </style>
+<script src="/nativo.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -172,7 +195,9 @@
     </div>
     <div class="row" style="margin-top:12px">
       <button class="b" id="campNuova">＋ Nuova campagna</button>
-      <button class="b" id="campApri">📂 Apri una cartella…</button>
+      <button class="b soloPc" id="campApri">📂 Apri una cartella…</button>
+      <button class="b soloApp" id="campImporta">📥 Importa (.zip)…</button>
+      <button class="b soloApp" id="campImportaCartella">📁 Importa una cartella…</button>
       <span class="sp"></span>
       <button class="b" id="campIndietro">Indietro</button>
     </div>
@@ -210,7 +235,7 @@
     <div class="row" id="prontoRighe"></div>
     <div class="row hide" id="prontoCamp" style="margin-top:10px; font-size:.86rem; color:var(--muted)">
       <span>📜 Campagna: <b id="prontoCampNome" style="color:var(--text)"></b></span>
-      <button class="b" id="prontoCampMostra" style="padding:5px 10px; font-size:.8rem">Mostra la cartella</button>
+      <button class="b soloPc" id="prontoCampMostra" style="padding:5px 10px; font-size:.8rem">Mostra la cartella</button>
     </div>
     <div class="row" style="margin-top:12px">
       <button class="b go" id="vai">Apri il tavolo</button>
@@ -229,6 +254,8 @@
 
 <script>
 const $ = id => document.getElementById(id);
+const NAT = window.LIBRE_NATIVO || { disponibile: false };
+if (NAT.disponibile) document.documentElement.classList.add('app');
 const azione = what => fetch('/api/azione', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(what) });
 let S = {}, codiceInSospeso = null, campagnaInSospeso = null, campModo = null, inPartenza = false;
 
@@ -279,6 +306,12 @@ function disegna() {
         cp.className = 'b go'; cp.textContent = 'Copia';
         cp.onclick = async () => { try { await navigator.clipboard.writeText(S.sessionId); cp.textContent = 'Copiato'; setTimeout(() => cp.textContent = 'Copia', 1400); } catch {} };
         righe.append(inp, cp);
+        if (NAT.disponibile) {
+          const sh = document.createElement('button');
+          sh.className = 'b'; sh.textContent = 'Condividi';
+          sh.onclick = () => NAT.condividiTesto('Ecco il codice per entrare nella partita di LIBRE VTT:\n' + S.sessionId, 'Codice della partita');
+          righe.append(sh);
+        }
       }
     }
   }
@@ -355,18 +388,26 @@ async function apriCampagne(modo) {
 function disegnaCampagne(r) {
   const L = $('campLista');
   L.replaceChildren();
-  $('campNota').textContent = `Le campagne nuove vanno in «${r.home}». Una campagna è una cartella: puoi copiarla, ` +
-    'tenerla su una chiavetta o darla a un amico, che la apre da qui con «Apri una cartella» e la conduce lui.';
+  $('campNota').textContent = NAT.disponibile
+    ? 'Le campagne stanno dentro l\'app. Per portarne una da un computer, o per darla a un amico, usa un file .zip: ' +
+      '📤 la esporta (e la mandi come vuoi), «Importa» la aggiunge qui.' +
+      (NAT.piattaforma === 'ios' ? ' Le trovi anche nell\'app File, in «Sul mio iPhone/iPad › LIBRE VTT › Campagne».' : '')
+    : `Le campagne nuove vanno in «${r.home}». Una campagna è una cartella: puoi copiarla, ` +
+      'tenerla su una chiavetta o darla a un amico, che la apre da qui con «Apri una cartella» e la conduce lui. ' +
+      'Con 📤 la metti in un file .zip, comodo da mandare (anche a un telefono).';
   if (!r.lista.length) {
-    L.append(el('div', 'vuoto', 'Non hai ancora nessuna campagna: creane una nuova, oppure apri la cartella di una campagna che ti hanno dato.'));
+    L.append(el('div', 'vuoto', NAT.disponibile
+      ? 'Non hai ancora nessuna campagna: creane una nuova, oppure importa quella che ti hanno dato (un file .zip o una cartella).'
+      : 'Non hai ancora nessuna campagna: creane una nuova, oppure apri la cartella di una campagna che ti hanno dato.'));
     return;
   }
   r.lista.forEach((c, i) => {
-    const row = el('div', 'crow' + (i === 0 && c.esiste ? ' prima' : ''));
+    const ultima = !!r.ultima && c.path === r.ultima && c.esiste;
+    const row = el('div', 'crow' + (ultima ? ' prima' : ''));
     const main = el('button', 'cmain'); main.type = 'button'; main.disabled = !c.esiste;
     const tx = el('span', 'ctx');
     const nome = el('b', '', c.nome);
-    if (i === 0 && c.esiste && !c.vecchia) nome.append(el('span', 'tag', 'ultima'));
+    if (ultima && !c.vecchia) nome.append(el('span', 'tag', 'ultima'));
     const dett = c.esiste
       ? [conta(c.scene, 'scena', 'scene'), conta(c.schede, 'scheda', 'schede'), conta(c.immagini, 'immagine', 'immagini'), quando(c.modificata)].filter(Boolean).join(' · ') + (c.scrivibile ? '' : ' · sola lettura')
       : 'Cartella non trovata: è stata spostata o cancellata?';
@@ -376,9 +417,15 @@ function disegnaCampagne(r) {
     main.append(el('span', 'cic', c.vecchia ? '🗃' : '📜'), tx, el('span', 'cgo', c.esiste ? 'Apri ›' : ''));
     main.onclick = () => scegliCampagna(c.path);
     const act = el('div', 'cact');
-    const mo = el('button', '', '📂'); mo.type = 'button'; mo.title = 'Mostra la cartella'; mo.disabled = !c.esiste;
-    mo.onclick = () => post('/api/campagna/mostra', { path: c.path });
-    act.append(mo);
+    if (!NAT.disponibile) {
+      const mo = el('button', '', '📂'); mo.type = 'button'; mo.title = 'Mostra la cartella'; mo.disabled = !c.esiste;
+      mo.onclick = () => post('/api/campagna/mostra', { path: c.path });
+      act.append(mo);
+    }
+    const ex = el('button', '', '📤'); ex.type = 'button'; ex.title = 'Esporta in un file .zip (per mandarla a un altro computer o telefono)';
+    ex.disabled = !c.esiste || !c.campagna;
+    ex.onclick = () => esporta(c.path, ex);
+    act.append(ex);
     if (!c.vecchia) {
       const via = el('button', '', '✕'); via.type = 'button'; via.title = 'Togli dall\'elenco (la cartella resta dov\'è)';
       via.onclick = async () => disegnaCampagne(await post('/api/campagna/dimentica', { path: c.path }));
@@ -429,6 +476,28 @@ $('campApri').onclick = async () => {
     else if (r.nonSupportato) apriSfoglia('');
   } finally { $('campApri').disabled = false; }
 };
+// --- esportare e importare (file .zip) ---
+async function esporta(path, btn) {
+  erroreCamp('');
+  if (btn) btn.disabled = true;
+  try {
+    const r = await post('/api/campagna/esporta', { path });
+    if (r.errore) return erroreCamp(r.errore);
+    if (NAT.disponibile) await NAT.condividiFile(r.file, 'application/zip', r.nome);
+  } catch (e) { erroreCamp('Non sono riuscito a esportarla: ' + e.message); }
+  finally { if (btn) btn.disabled = false; }
+}
+async function importa(tipo) {
+  erroreCamp('');
+  const scelto = await NAT.importa(tipo);
+  if (!scelto || !scelto.sorgente) { if (scelto && scelto.errore) erroreCamp(scelto.errore); return; }
+  const r = await post('/api/campagna/importa', scelto);
+  if (r.errore) return erroreCamp(r.errore);
+  disegnaCampagne(r);
+}
+$('campImporta').onclick = () => importa('zip');
+$('campImportaCartella').onclick = () => importa('cartella');
+
 // la finestra per scegliere una cartella fatta da noi (quando il sistema non ne ha una)
 let fbQui = '';
 async function apriSfoglia(path) {
@@ -481,6 +550,12 @@ es.onmessage = ev => {
       setTimeout(() => { if (S.mode) location.href = urlTavolo(); }, 1400);
     }
   }
+};
+// Tasto «indietro» del telefono: chiude quello che è aperto. false = non c'era niente da chiudere.
+window.LIBRE_INDIETRO = () => {
+  if (!$('boxSfoglia').classList.contains('hide')) { mostraSolo('boxCamp'); return true; }
+  for (const id of ['boxJoin', 'boxCamp', 'boxPrep']) if (!$(id).classList.contains('hide')) { mostraSolo('scelte'); return true; }
+  return false;
 };
 carica();
 setInterval(carica, 4000);

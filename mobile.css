@@ -1,0 +1,143 @@
+/* ---------- Telefoni, tablet e DeX (vedi mobile.js) ----------
+   ui-touch  si comanda con le dita: comandi più grandi, niente cose che compaiono solo al passaggio del mouse
+   ui-tel    schermo piccolo: pannelli a tutto schermo, strumenti che salgono dal basso
+   Con il mouse (anche in DeX) e sugli schermi grandi resta tutto come sul computer. */
+
+.soloTocco { display: none !important; }
+.ui-touch .soloTocco { display: revert !important; }
+
+/* tacche, margini e bordi arrotondati dei telefoni */
+#netBar { top: calc(12px + env(safe-area-inset-top)); }
+#dock { margin-bottom: env(safe-area-inset-bottom); }
+#toolDrawer { margin-left: env(safe-area-inset-left); }
+#sideToggle { margin-right: env(safe-area-inset-right); }
+#sideBody { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box; }
+
+/* ======================= Con le dita ======================= */
+.ui-touch, .ui-touch body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.ui-touch #viewport { touch-action: none; }
+.ui-touch #side, .ui-touch #dock, .ui-touch #toolDrawer, .ui-touch .tool, .ui-touch #ctx, .ui-touch .sheetWin .stitle {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.ui-touch img { -webkit-touch-callout: none; }
+.ui-touch input, .ui-touch textarea, .ui-touch [contenteditable="true"] { -webkit-user-select: text; user-select: text; }
+/* sotto i 16px l'iPhone ingrandisce la pagina quando scrivi */
+.ui-touch input[type=text], .ui-touch input[type=number], .ui-touch textarea, .ui-touch select { font-size: max(16px, 1em); }
+
+/* maniglie di ridimensionamento più grandi, ma FUORI dal segnalino: il segnalino si deve poter
+   sempre prendere e trascinare dal centro, anche quando sullo schermo è piccolo */
+.ui-touch .handle[data-d="n"], .ui-touch .handle[data-d="s"] { height: calc(20px * var(--inv, 1)); }
+.ui-touch .handle[data-d="n"] { top: calc(-20px * var(--inv, 1)); }
+.ui-touch .handle[data-d="s"] { bottom: calc(-20px * var(--inv, 1)); }
+.ui-touch .handle[data-d="e"], .ui-touch .handle[data-d="w"] { width: calc(20px * var(--inv, 1)); }
+.ui-touch .handle[data-d="e"] { right: calc(-20px * var(--inv, 1)); }
+.ui-touch .handle[data-d="w"] { left: calc(-20px * var(--inv, 1)); }
+.ui-touch .handle[data-d="nw"], .ui-touch .handle[data-d="ne"], .ui-touch .handle[data-d="sw"], .ui-touch .handle[data-d="se"] {
+  width: calc(26px * var(--inv, 1)); height: calc(26px * var(--inv, 1)); border-radius: 50%;
+}
+.ui-touch .handle[data-d="nw"] { left: calc(-24px * var(--inv, 1)); top: calc(-24px * var(--inv, 1)); }
+.ui-touch .handle[data-d="ne"] { right: calc(-24px * var(--inv, 1)); top: calc(-24px * var(--inv, 1)); }
+.ui-touch .handle[data-d="sw"] { left: calc(-24px * var(--inv, 1)); bottom: calc(-24px * var(--inv, 1)); }
+.ui-touch .handle[data-d="se"] { right: calc(-24px * var(--inv, 1)); bottom: calc(-24px * var(--inv, 1)); }
+
+/* quello che col mouse compare passandoci sopra, con le dita si vede sempre */
+.ui-touch .asset .del, .ui-touch .asset .bgBtn { opacity: 1; width: 28px; height: 28px; font-size: 15px; }
+.ui-touch .sceneRow > button:not(.pick) { opacity: .85; padding: 10px; }
+.ui-touch #dockHandle { opacity: 1; }
+.ui-touch #sideGrip { display: none; }
+
+/* bersagli più comodi */
+.ui-touch #ctx { min-width: 220px; max-width: min(320px, 92vw); max-height: 80vh; overflow-y: auto; }
+.ui-touch #ctx button { padding: 12px 16px; font-size: 15px; }
+.ui-touch .tab { padding: 12px 4px; }
+.ui-touch .seg button, .ui-touch .pane .btn, .ui-touch .chip button { min-height: 40px; }
+.ui-touch .sheetItem { padding: 10px 12px; }
+.ui-touch .sceneRow > button.pick { padding: 12px 10px; }
+.ui-touch .sheetWin .sx { width: 36px; height: 36px; font-size: 18px; border-radius: 10px; }
+.ui-touch .sheetWin .sdot { width: 24px; height: 24px; }
+.ui-touch .sheetWin .rb, .ui-touch .sheetWin .chipRoll { padding: 5px 11px; }
+.ui-touch #dice button:not(#diceToggle) { padding: 10px 11px; }
+.ui-touch .tool.glass button:not(.tgrip) { padding: 10px 11px; }
+.ui-touch .swatches button, .ui-touch .tool.glass .sw { width: 32px; height: 32px; }
+
+/* il pulsante «selezione» nel dock */
+#selArea {
+  width: 44px; height: 44px; border-radius: 22px; font-size: 20px; cursor: pointer; flex: none;
+  background: rgba(18, 21, 28, .55); color: #fff; border: 1px solid rgba(255, 255, 255, .22);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 6px 22px rgba(0, 0, 0, .4);
+}
+#selArea.on { background: rgba(47, 140, 255, .6); box-shadow: 0 0 14px rgba(47, 140, 255, .8); }
+
+/* ======================= Schermo piccolo (telefono) ======================= */
+/* menu laterale: a tutto schermo in verticale; il pallino diventa una X in alto a destra */
+@media (max-width: 599px) {
+  .ui-tel #side { width: 100vw; }
+  .ui-tel #sideToggle {
+    top: calc(10px + env(safe-area-inset-top)); right: 10px; transform: none; width: 44px; height: 44px;
+  }
+  .ui-tel body.menu-open #sideToggle, .ui-tel.menu-open #sideToggle { right: 10px; }
+  .ui-tel body.menu-open .tabs { padding-right: 62px; }
+}
+.ui-tel .pane { margin: 8px; padding: 10px; }
+.ui-tel .tabs { padding: 8px; gap: 6px; }
+.ui-tel #assetGrid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+
+/* strumenti a sinistra: più stretti, e se non ci stanno si scorrono */
+.ui-tel #toolDrawer {
+  top: auto; bottom: calc(76px + env(safe-area-inset-bottom)); transform: none; left: 0;
+  max-height: calc(100vh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
+  /* niente effetti sul contenitore: altrimenti gli strumenti aperti non potrebbero uscirne */
+  -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(18, 21, 28, .82);
+  transition: left .3s cubic-bezier(.22, .8, .3, 1);
+}
+.ui-tel #toolDrawer.closed { transform: none; left: -74px; }
+/* la linguetta resta fuori dal contenitore che scorre (altrimenti sparirebbe con lui) */
+.ui-tel #toolDrawer .dhandle { position: fixed; left: calc(71px + env(safe-area-inset-left)); top: auto; bottom: calc(96px + env(safe-area-inset-bottom)); transform: none; transition: left .3s cubic-bezier(.22, .8, .3, 1); }
+.ui-tel #toolDrawer.closed .dhandle { left: 0; }
+.ui-tel #toolDrawer .slots { gap: 8px; }
+/* uno strumento aperto sale dal basso, largo quanto lo schermo */
+.ui-tel .tool.open, .ui-tel #dice.open, .ui-tel #toolDrawer .slot > .tool.open {
+  position: fixed !important; left: calc(8px + env(safe-area-inset-left)) !important; right: calc(8px + env(safe-area-inset-right)) !important;
+  top: auto !important; bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+  width: auto !important; height: auto !important; max-height: 72vh; max-height: 72dvh;
+  overflow-y: auto; overscroll-behavior: contain; border-radius: 20px; z-index: 100020 !important;
+  background: rgba(18, 21, 28, .94);
+}
+.ui-tel .tool.open .tbody, .ui-tel #dice.open #diceBody { width: auto !important; }
+.ui-tel #zoomBox.open { width: auto !important; height: 52px !important; }
+
+/* in basso: la scena e i livelli in una riga che si scorre */
+.ui-tel #dock {
+  left: calc(8px + env(safe-area-inset-left)); right: calc(8px + env(safe-area-inset-right)); bottom: 8px; transform: none;
+  justify-content: flex-start; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px;
+}
+.ui-tel #dock::-webkit-scrollbar, .ui-tel #toolDrawer::-webkit-scrollbar { display: none; }
+.ui-tel #dock.collapsed { transform: translateY(calc(100% + 24px)); }
+.ui-tel #dockZone { bottom: calc(56px + env(safe-area-inset-bottom)); }
+.ui-tel #dockZone.collapsed { bottom: env(safe-area-inset-bottom); }
+.ui-tel #sceneBtn, .ui-tel #layerSwitch, .ui-tel #targetSwitch, .ui-tel #publicBadge, .ui-tel #selArea { height: 42px; flex: none; }
+.ui-tel #sceneBtn { max-width: 44vw; padding: 0 12px; }
+.ui-tel #layerSwitch button, .ui-tel #targetSwitch button { padding: 0 10px; font-size: 12.5px; }
+.ui-tel #sceneMenu { position: fixed; left: 8px; right: 8px; bottom: calc(60px + env(safe-area-inset-bottom)); min-width: 0; max-height: 60vh; }
+
+/* le schede dei personaggi e le finestre della chat: a tutto schermo */
+.ui-tel .sheetWin:not(.icon):not(.min) {
+  left: 0 !important; top: 0 !important; width: 100vw !important; height: 100vh !important; height: 100dvh !important;
+  max-width: none; max-height: none; min-width: 0; border-radius: 0; border-width: 0; resize: none;
+  padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box;
+}
+.ui-tel .sheetWin .stitle { padding: 8px 12px; }
+.ui-tel .sheetWin .sbody { padding: 10px; }
+.ui-tel .sheetWin .sgrid, .ui-tel .sheetWin .invgrid { grid-template-columns: 1fr; }
+
+/* finestre di dialogo */
+.ui-tel dialog { max-width: calc(100vw - 16px) !important; max-height: 88vh; max-height: 88dvh; overflow-y: auto; box-sizing: border-box; padding: 16px !important; }
+.ui-tel #pickGrid { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+.ui-tel #pickGrid img { width: 100%; height: auto; aspect-ratio: 1; }
+.ui-tel #ctx { max-width: calc(100vw - 16px); }
+.ui-tel #netBar { max-width: calc(100vw - 16px); font-size: 12.5px; }
+
+/* le scorciatoie da tastiera non servono a chi tocca */
+.ui-touch .dHint { display: none; }

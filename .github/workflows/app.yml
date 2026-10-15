@@ -1,0 +1,173 @@
+# Le app per telefono e tablet:
+#   - Android: LIBRE-VTT-Android.apk (va su tutti) e LIBRE-VTT-Android-arm64.apk (più leggero, per
+#     quasi tutti i telefoni di oggi)
+#   - iPhone e iPad: LIBRE-VTT-iOS.ipa (da firmare con Sideloadly/AltStore) e LIBRE-VTT-Xcode.zip
+#     (il progetto di Xcode già pronto, da aprire su un Mac)
+#
+# La usa il workflow «Rilascio» (così una release ha dentro tutto), ma si può anche avviare da sola
+# da Actions → App → Run workflow: con «pubblica» spuntato aggiunge le app alla release della
+# versione indicata (che deve già esistere), altrimenti è una prova e i file restano nella pagina
+# dell'esecuzione.
+#
+# Firma di Android: se nei «secrets» del repository ci sono LIBRE_KEYSTORE_B64 (la chiave .jks in
+# base64) e LIBRE_KEYSTORE_PASSWORD, l'APK è firmato sempre con quella chiave e gli aggiornamenti si
+# installano sopra. Senza, usa una chiave di prova che cambia ogni volta.
+name: App
+
+on:
+  workflow_call:
+    inputs:
+      versione:
+        type: string
+        required: false
+        default: ''
+  workflow_dispatch:
+    inputs:
+      versione:
+        description: 'Versione (es. 3.0.0)'
+        required: false
+        default: ''
+      pubblica:
+        description: 'Aggiungi le app alla release di questa versione'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  NODEJS_MOBILE_VERSIONE: '18.20.4'
+
+jobs:
+  android:
+    name: Android (APK)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: uffa-link
+          key: android
+      - name: Node per Android e il collegamento
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export ANDROID_NDK_HOME="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> "$GITHUB_ENV"
+          echo "NDK: $ANDROID_NDK_HOME"
+          bash mobile/android/prepara.sh
+      - name: La chiave per firmare
+        env:
+          CHIAVE: ${{ secrets.LIBRE_KEYSTORE_B64 }}
+          PAROLA: ${{ secrets.LIBRE_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$CHIAVE" ] && [ -n "$PAROLA" ]; then
+            echo "$CHIAVE" | tr -d ' \r\n' | base64 -d > "$RUNNER_TEMP/libre.jks"
+            echo "LIBRE_KEYSTORE=$RUNNER_TEMP/libre.jks" >> "$GITHUB_ENV"
+            echo "LIBRE_KEYSTORE_PASSWORD=$(printf '%s' "$PAROLA" | tr -d '\r\n')" >> "$GITHUB_ENV"
+            echo "Firmo con la chiave di LIBRE VTT."
+          else
+            echo "::warning::Mancano i secrets LIBRE_KEYSTORE_B64 e LIBRE_KEYSTORE_PASSWORD: l'APK è firmato con una chiave di prova (gli aggiornamenti non si installeranno sopra)."
+          fi
+      - name: Compila gli APK
+        working-directory: mobile/android
+        env:
+          LIBRE_VERSIONE: ${{ inputs.versione || '3.0.0' }}
+        run: |
+          export LIBRE_VERSIONE="${LIBRE_VERSIONE#v}"
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          mkdir -p "$GITHUB_WORKSPACE/app-android"
+          cd app/build/outputs/apk/release
+          ls -la
+          cp *-universale.apk "$GITHUB_WORKSPACE/app-android/LIBRE-VTT-Android.apk"
+          cp *-arm64-v8a.apk "$GITHUB_WORKSPACE/app-android/LIBRE-VTT-Android-arm64.apk"
+          ls -la "$GITHUB_WORKSPACE/app-android"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-android
+          path: app-android/*
+          if-no-files-found: error
+
+  ios:
+    name: iPhone e iPad (IPA e progetto Xcode)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: uffa-link
+          key: ios
+      - name: Il programma, Node per iOS e il collegamento
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash mobile/ios/prepara.sh
+      - name: La versione
+        env:
+          VERSIONE: ${{ inputs.versione || '3.0.0' }}
+        run: |
+          VERSIONE="${VERSIONE#v}"
+          IFS=. read -r a b c <<< "${VERSIONE%%-*}"
+          NUM=$(( ${a:-0} * 10000 + ${b:-0} * 100 + ${c:-0} ))
+          sed -i '' -e "s/^MARKETING_VERSION = .*/MARKETING_VERSION = $VERSIONE/" \
+                    -e "s/^CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $NUM/" mobile/ios/Config.xcconfig
+          grep VERSION mobile/ios/Config.xcconfig
+      - name: Compila l'app (senza firma)
+        working-directory: mobile/ios
+        run: |
+          set -o pipefail
+          xcodebuild -version
+          xcodebuild -project LibreVTT.xcodeproj -scheme LibreVTT -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -archivePath build/LibreVTT.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            archive 2>&1 | tee build.log | grep -E "error|warning: .*(Swift|swift)|BUILD|ARCHIVE" || true
+          if ! grep -q "ARCHIVE SUCCEEDED" build.log; then
+            grep -E "error:" build.log | head -40 | while IFS= read -r r; do echo "::error::$r"; done
+            tail -80 build.log
+            exit 1
+          fi
+      - name: IPA e progetto Xcode
+        run: |
+          mkdir -p app-ios ipa/Payload
+          cp -R mobile/ios/build/LibreVTT.xcarchive/Products/Applications/LibreVTT.app ipa/Payload/
+          (cd ipa && zip -qry ../app-ios/LIBRE-VTT-iOS.ipa Payload)
+          # il progetto: già con dentro il programma, Node e il collegamento compilati
+          mkdir -p xcode
+          rsync -a --exclude build --exclude build.log --exclude prepara.sh --exclude crea-progetto.py \
+            mobile/ios/ "xcode/LIBRE-VTT-Xcode/"
+          cp mobile/LEGGIMI-Xcode.txt "xcode/LIBRE-VTT-Xcode/LEGGIMI.txt"
+          (cd xcode && ditto -c -k --sequesterRsrc --keepParent LIBRE-VTT-Xcode ../app-ios/LIBRE-VTT-Xcode.zip)
+          ls -la app-ios
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-ios
+          path: app-ios/*
+          if-no-files-found: error
+
+  pubblica:
+    name: Aggiungi le app alla release
+    if: github.event_name == 'workflow_dispatch' && inputs.pubblica && inputs.versione
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: tutto
+      - name: Carica
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ inputs.versione }}
+        run: |
+          ls -laR tutto
+          gh release upload "$TAG" tutto/app-android/* tutto/app-ios/* --clobber --repo "$GITHUB_REPOSITORY"
