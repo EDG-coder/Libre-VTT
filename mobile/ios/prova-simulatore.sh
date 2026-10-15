@@ -26,7 +26,11 @@ prova() {   # prova <udid> <nome>
   xcrun simctl boot "$U"; xcrun simctl bootstatus "$U" -b
   xcrun simctl install "$U" "$APP" || return 1
   local BID; BID=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist")
-  xcrun simctl launch --console-pty "$U" "$BID" > "$OUT/$N-console.txt" 2>&1 &
+  sleep 15   # appena acceso il simulatore a volte rifiuta il lancio («server died»)
+  for i in 1 2 3; do
+    xcrun simctl launch "$U" "$BID" > "$OUT/$N-console.txt" 2>&1 && break
+    sleep 15
+  done
   sleep 40; xcrun simctl io "$U" screenshot "$OUT/$N-1-avvio.png"
   sleep 20; xcrun simctl io "$U" screenshot "$OUT/$N-2-dopo.png"
   xcrun simctl spawn "$U" log show --last 3m --style compact --predicate 'process == "LibreVTT"' > "$OUT/$N-log.txt" 2>&1

@@ -72,6 +72,7 @@ public final class MainActivity extends Activity {
         Motore.avvia(this);
         aTuttoSchermo();
         costruisci();
+        iconeBarre();
         inizio = System.currentTimeMillis();
         aspettaNode();
         input = (InputManager) getSystemService(INPUT_SERVICE);
@@ -104,10 +105,10 @@ public final class MainActivity extends Activity {
     @SuppressLint("SetJavaScriptEnabled")
     private void costruisci() {
         radice = new FrameLayout(this);
-        radice.setBackgroundColor(0xFF12151C);
+        radice.setBackgroundColor(colore(R.color.sfondo));
 
         web = new WebView(this);
-        web.setBackgroundColor(0xFF12151C);
+        web.setBackgroundColor(colore(R.color.sfondo));
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -136,11 +137,11 @@ public final class MainActivity extends Activity {
         LinearLayout attesa = new LinearLayout(this);
         attesa.setOrientation(LinearLayout.VERTICAL);
         attesa.setGravity(Gravity.CENTER);
-        attesa.setBackgroundColor(0xFF12151C);
+        attesa.setBackgroundColor(colore(R.color.sfondo));
         attesa.setClickable(true);
         TextView titolo = new TextView(this);
         titolo.setText(R.string.app_name);
-        titolo.setTextColor(Color.WHITE);
+        titolo.setTextColor(colore(R.color.testo));
         titolo.setTextSize(28);
         titolo.setLetterSpacing(0.12f);
         titolo.setGravity(Gravity.CENTER);
@@ -153,7 +154,7 @@ public final class MainActivity extends Activity {
         attesa.addView(giro, lp);
         scritta = new TextView(this);
         scritta.setText(R.string.avvio);
-        scritta.setTextColor(0xB3FFFFFF);
+        scritta.setTextColor(colore(R.color.testo_piano));
         scritta.setTextSize(14);
         scritta.setGravity(Gravity.CENTER);
         scritta.setPadding(dp(24), 0, dp(24), 0);
@@ -184,6 +185,42 @@ public final class MainActivity extends Activity {
             }
         });
         setContentView(radice);
+    }
+
+    @SuppressWarnings("deprecation")
+    private int colore(int id) {
+        return Build.VERSION.SDK_INT >= 23 ? getColor(id) : getResources().getColor(id);
+    }
+
+    private boolean scuro() {
+        return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    /** Icone della barra in alto scure sul tema chiaro, chiare sul tema scuro (come la pagina). */
+    @SuppressWarnings("deprecation")
+    private void iconeBarre() {
+        boolean chiaro = !scuro();
+        Window w = getWindow();
+        if (Build.VERSION.SDK_INT >= 30) {
+            android.view.WindowInsetsController c = w.getInsetsController();
+            if (c != null) {
+                int m = android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                        | android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                c.setSystemBarsAppearance(chiaro ? m : 0, m);
+            }
+        } else if (Build.VERSION.SDK_INT >= 23) {
+            View d = w.getDecorView();
+            int f = d.getSystemUiVisibility();
+            f = chiaro ? f | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : f & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            if (Build.VERSION.SDK_INT >= 26) {
+                f = chiaro ? f | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : f & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            }
+            d.setSystemUiVisibility(f);
+        }
+        if (radice != null) {
+            radice.setBackgroundColor(colore(R.color.sfondo));
+            web.setBackgroundColor(colore(R.color.sfondo));
+        }
     }
 
     private int dp(int x) {
@@ -397,6 +434,7 @@ public final class MainActivity extends Activity {
     @Override
     public void onConfigurationChanged(Configuration c) {
         super.onConfigurationChanged(c);
+        iconeBarre();
         avvisaPagina();
     }
 

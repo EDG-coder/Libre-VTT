@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="sfondo">#12151C</color>
+    <color name="testo">#FFFFFF</color>
+    <color name="testo_piano">#B3FFFFFF</color>
+</resources>

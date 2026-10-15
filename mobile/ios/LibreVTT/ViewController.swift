@@ -16,7 +16,7 @@ final class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate
     private var importaId: Int?
     private var importaCartella = false
 
-    override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
+    override var preferredStatusBarStyle: UIStatusBarStyle { .default }   // segue la modalità chiara/scura, come la pagina
     override var prefersHomeIndicatorAutoHidden: Bool { true }
     override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge { .bottom }
 
@@ -73,13 +73,13 @@ final class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate
 
         let titolo = UILabel()
         titolo.text = "LIBRE VTT"
-        titolo.textColor = .white
+        titolo.textColor = .label
         titolo.font = UIFont.systemFont(ofSize: 30, weight: .heavy)
         let giro = UIActivityIndicatorView(style: .large)
-        giro.color = .white
+        giro.color = .secondaryLabel
         giro.startAnimating()
         scritta.text = "Sto preparando il tavolo da gioco…"
-        scritta.textColor = UIColor(white: 1, alpha: 0.7)
+        scritta.textColor = .secondaryLabel
         scritta.font = UIFont.systemFont(ofSize: 15)
         scritta.numberOfLines = 0
         scritta.textAlignment = .center

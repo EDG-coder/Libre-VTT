@@ -52,6 +52,11 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 }
 
+/// Gli stessi colori della pagina: scuri se l'iPhone è in modalità scura, chiari altrimenti.
 enum Colori {
-    static let sfondo = UIColor(red: 0x12 / 255.0, green: 0x15 / 255.0, blue: 0x1C / 255.0, alpha: 1)
+    static let sfondo = UIColor { t in
+        t.userInterfaceStyle == .dark
+            ? UIColor(red: 0x12 / 255.0, green: 0x15 / 255.0, blue: 0x1C / 255.0, alpha: 1)
+            : UIColor(red: 0xF3 / 255.0, green: 0xF5 / 255.0, blue: 0xF9 / 255.0, alpha: 1)
+    }
 }
