@@ -1,0 +1,13 @@
+[package]
+name = "uffa-link"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91"
+
+[dependencies]
+iroh = "1.3"
+n0-error = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "time", "net", "io-util"] }
+
+[profile.release]
+opt-level = "s"

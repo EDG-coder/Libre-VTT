@@ -1,0 +1,256 @@
+/* ---------- Scheda «Standard»: pagina A4 in scala ---------- */
+/* La pagina ha sempre le stesse misure interne (595.276 x 841.89, i punti di un A4):
+   viene solo ingrandita o rimpicciolita, così il foglio resta identico a qualsiasi dimensione. */
+
+.stdWin .sbody { padding: 0; background: var(--panel-2); }
+
+.stabs {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; gap: 5px;
+  padding: 7px 9px; background: var(--panel-2); color: var(--text);
+  border-bottom: 1px solid var(--line);
+}
+.stabs > button {
+  border: 1px solid var(--line); border-radius: 9px; cursor: pointer;
+  padding: 6px 15px; font: inherit; font-size: .82em; font-weight: 600; letter-spacing: .03em;
+  background: var(--panel); color: var(--text);
+}
+.stabs > button:hover { border-color: var(--sh-accent); }
+.stabs > button.on { background: var(--sh-accent); border-color: transparent; color: var(--sh-on, #fff); }
+.stabs .sZoomWrap { margin-left: auto; display: flex; gap: 4px; }
+.stabs .sZoom { width: 24px; height: 24px; padding: 0; border-radius: 6px; font-size: .9em; }
+
+.spage.stdSheet { padding: 10px; }
+.sPaper { position: relative; width: 100%; overflow: hidden; }
+
+.sPage {
+  --sh-ink: color-mix(in srgb, var(--sh-line), var(--sh-fg) 30%);
+  position: absolute; left: 0; top: 0;
+  width: 595.276px; height: 841.89px;
+  transform: scale(var(--k, 1)); transform-origin: top left;
+  background: var(--sh-bg);
+  color: var(--sh-fg);
+  font-family: var(--sh-font);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .45);
+  /* venatura leggera della carta, disegnata qui */
+  background-image:
+    radial-gradient(120% 90% at 12% 4%, color-mix(in srgb, var(--sh-soft) 55%, transparent), transparent 60%),
+    radial-gradient(100% 80% at 90% 96%, color-mix(in srgb, var(--sh-soft) 45%, transparent), transparent 62%);
+}
+.sPage *, .sPage *::before, .sPage *::after { box-sizing: border-box; }
+.sPage > * { position: absolute; margin: 0; }
+
+/* ---------- Cornici ---------- */
+.sB {
+  border: 1.3px solid var(--sh-line);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--sh-soft) 72%, transparent);
+  pointer-events: none;
+}
+.sB::before {                                   /* seconda linea interna: il «doppio filetto» */
+  content: ''; position: absolute; inset: 2px;
+  border: .6px solid color-mix(in srgb, var(--sh-line) 85%, transparent);
+  border-radius: 2px;
+}
+.sB .sCap {
+  position: absolute; left: 6px; right: 6px; bottom: 1.5px;
+  text-align: center; font-size: 6.2px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: color-mix(in srgb, var(--sh-fg) 78%, transparent);
+  line-height: 1.1;
+}
+.sPanel { background: color-mix(in srgb, var(--sh-soft) 92%, transparent); }
+.sCol { background: color-mix(in srgb, var(--sh-soft) 45%, transparent); border-style: solid; }
+.sBox { border-radius: 4px; }
+.sBanner {                                      /* le fasce della testata, con gli angoli tagliati */
+  border-radius: 0;
+  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  background: color-mix(in srgb, var(--sh-soft) 95%, transparent);
+}
+.sBanner::before { border-radius: 0; }
+.sShield {                                      /* lo scudo delle caratteristiche */
+  border-radius: 10px 10px 16px 16px / 10px 10px 26px 26px;
+  background: color-mix(in srgb, var(--sh-soft) 100%, transparent);
+}
+.sShieldSm { border-radius: 8px 8px 14px 14px / 8px 8px 20px 20px; }
+.sDrop { border-radius: 50% 50% 14px 14px / 42% 42% 16px 16px; }
+.sScroll {                                      /* la banda allungata dei livelli di incantesimo */
+  border-radius: 11px;
+  clip-path: polygon(0 50%, 7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%);
+  background: color-mix(in srgb, var(--sh-soft) 100%, transparent);
+}
+.sScroll::before { display: none; }
+.sCoin { border-radius: 4px 12px 12px 4px; }
+.sOvalFrame { border-radius: 50%; }
+
+/* ---------- Scritte ---------- */
+.sL {
+  font-size: 6.4px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  line-height: 1.15; color: color-mix(in srgb, var(--sh-fg) 80%, transparent); pointer-events: none;
+}
+.sTiny { font-size: 6.4px; }
+.sMicro { font-size: 5.4px; letter-spacing: .05em; }
+.sNano { font-size: 4.4px; letter-spacing: .03em; }
+.sHead { font-size: 7.4px; letter-spacing: .1em; }
+.sStrong { color: var(--sh-fg); }
+.sSk { font-size: 6.2px; text-transform: none; letter-spacing: 0; font-weight: 600; }
+.sSk i { font-style: normal; font-size: .85em; opacity: .6; }
+.sLvl {
+  font-size: 13px; font-weight: 800; letter-spacing: 0; text-transform: none;
+  color: var(--sh-accent); line-height: 1.5;
+}
+.sVert { transform: rotate(-90deg); transform-origin: center; font-size: 5.4px; letter-spacing: .14em; }
+
+/* ---------- Campi ---------- */
+/* La specificità alta serve a scavalcare gli stili generici delle finestre delle schede. */
+.stdWin .sPage input, .stdWin .sPage textarea, .stdWin .sPage output, .stdWin .sPage button {
+  border: 0; background: transparent; color: var(--sh-fg);
+  font-family: inherit; padding: 0; border-radius: 2px; box-shadow: none;
+  -webkit-appearance: none; appearance: none;
+}
+.stdWin .sPage .sF, .stdWin .sPage .sLine input {
+  font-size: 8px; line-height: 1.1;
+  border-bottom: .9px solid var(--sh-ink);
+  background: color-mix(in srgb, var(--sh-fg) 4%, transparent);
+}
+.stdWin .sPage .sF:hover, .stdWin .sPage .sLine input:hover { background: color-mix(in srgb, var(--sh-accent) 16%, transparent); }
+.stdWin .sPage .sF:focus, .stdWin .sPage .sLine input:focus, .stdWin .sPage .sTa textarea:focus {
+  outline: 0; background: color-mix(in srgb, var(--sh-accent) 15%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--sh-accent) 55%, transparent);
+}
+.stdWin .sPage .sF::placeholder { color: color-mix(in srgb, var(--sh-fg) 30%, transparent); font-style: italic; }
+.stdWin .sPage input[type=number] { -moz-appearance: textfield; }
+.stdWin .sPage input[type=number]::-webkit-inner-spin-button { display: none; }
+
+.stdWin .sPage .sBig { font-size: 13px; font-weight: 700; border-bottom: 0; }
+.stdWin .sPage .sScore { text-align: center; font-size: 12px; font-weight: 700; border-bottom: 0; background: color-mix(in srgb, var(--sh-fg) 6%, transparent); border-radius: 3px; }
+.stdWin .sPage .sCell { font-size: 7.4px; padding: 0 2px; }
+.stdWin .sPage .sRule { border-bottom: .9px solid var(--sh-ink); font-size: 7.4px; padding: 0 2px; }
+.sNum { text-align: center; }
+.stdWin .sPage .sBoxed { border: 1px solid var(--sh-line); border-radius: 3px; }
+
+/* valori calcolati */
+.stdWin .sPage .sO {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; color: var(--sh-fg);
+  border: 0; background: transparent; font-family: inherit;
+}
+.stdWin .sPage .sVal {
+  font-size: 8.5px; border: .9px solid var(--sh-ink); border-radius: 3px;
+  background: color-mix(in srgb, var(--sh-fg) 7%, transparent);
+}
+.stdWin .sPage .sOval, .stdWin .sPage .sOvalSm {
+  border: 1.4px solid var(--sh-ink); border-radius: 50%;
+  background: color-mix(in srgb, var(--sh-fg) 10%, var(--sh-bg));
+}
+.stdWin .sPage .sOval { font-size: 10px; }
+.stdWin .sPage button.sO { cursor: pointer; }
+.stdWin .sPage button.sO:hover { background: var(--sh-accent); color: var(--sh-on, #fff); border-color: var(--sh-accent); }
+.stdWin .sPage button.sO:active { transform: scale(.94); }
+
+/* pulsanti dei tiri appiccicati alle righe degli attacchi */
+.stdWin .sPage .sHit {
+  width: 9px; height: 12px; display: flex; align-items: center; justify-content: center;
+  border: .7px solid color-mix(in srgb, var(--sh-accent) 55%, transparent);
+  border-radius: 3px; cursor: pointer; padding: 0;
+  font-size: 7px; line-height: 1;
+  background: color-mix(in srgb, var(--sh-accent) 28%, transparent); color: var(--sh-accent);
+}
+.stdWin .sPage .sHit:hover { background: var(--sh-accent); color: var(--sh-on, #fff); }
+.stdWin .sPage .sBig2 { width: 12px; height: 18px; font-size: 9px; }
+
+/* caselle da spuntare */
+.stdWin .sPage .sK {
+  -webkit-appearance: none; appearance: none; cursor: pointer;
+  border: 1.2px solid var(--sh-ink); border-radius: 50%;
+  background: color-mix(in srgb, var(--sh-fg) 8%, var(--sh-bg));
+}
+.stdWin .sPage .sK.sSq { border-radius: 2px; }
+.stdWin .sPage .sK.sMini { border-width: .8px; }
+.stdWin .sPage .sK:hover { border-color: var(--sh-accent); }
+.stdWin .sPage .sK:checked { background: var(--sh-accent); border-color: var(--sh-accent); box-shadow: inset 0 0 0 1.2px var(--sh-bg); }
+
+/* aree di testo */
+.sTa { border: 0; background: transparent; }
+.stdWin .sPage .sTa textarea {
+  position: absolute; inset: 0; width: 100%; height: 100%; resize: none;
+  font-size: 7.4px; line-height: 1.35; padding: 2px 3px; min-height: 0;
+  background: color-mix(in srgb, var(--sh-fg) 4%, transparent);
+  border: .7px solid color-mix(in srgb, var(--sh-ink) 65%, transparent); border-radius: 3px;
+}
+.stdWin .sPage .sTa .sendRule {
+  position: absolute; right: 1px; top: -2px; width: 10px; height: 10px; padding: 0;
+  border: 0; border-radius: 3px; cursor: pointer; font-size: 6.5px; line-height: 1;
+  background: color-mix(in srgb, var(--sh-accent) 22%, transparent); opacity: .85;
+}
+.sTa:hover .sendRule { opacity: 1; background: var(--sh-accent); }
+
+/* righe con il dado (incantesimi) */
+.sLine { display: block; }
+.stdWin .sPage .sLine input { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0 11px 0 2px; }
+.stdWin .sPage .sLine .sDie {
+  position: absolute; right: 0; top: 1px; width: 10px; height: 10px; padding: 0;
+  border: 0; border-radius: 3px; cursor: pointer; font-size: 6.5px; line-height: 1;
+  background: color-mix(in srgb, var(--sh-accent) 20%, transparent); opacity: .75;
+}
+.sLine:hover .sDie, .sLine input:focus ~ .sDie { opacity: 1; }
+.sLine .sDie:hover { background: var(--sh-accent); }
+
+/* immagini (ritratto e simbolo) */
+.sImg {
+  border: 1px dashed color-mix(in srgb, var(--sh-line) 90%, transparent); border-radius: 4px;
+  background-size: cover; background-position: center; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.sImg > span {
+  position: static; font-size: 6px; text-transform: uppercase; letter-spacing: .08em;
+  color: color-mix(in srgb, var(--sh-fg) 45%, transparent); text-align: center; padding: 0 8px;
+}
+.sImg.has { border-style: solid; }
+.sImg.has > span { display: none; }
+.sImg:hover { border-color: var(--sh-accent); }
+
+/* ---------- La tendina dell'incantesimo ---------- */
+#spellPop {
+  position: fixed; z-index: 160000; width: min(420px, 92vw);
+  display: flex; flex-direction: column; gap: 8px; padding: 12px;
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .5);
+}
+#spellPop[hidden] { display: none; }
+#spellPop header { display: flex; gap: 8px; align-items: center; }
+#spellPop header input {
+  flex: 1; min-width: 0; font: inherit; font-size: 15px; font-weight: 600;
+  padding: 7px 10px; border-radius: 9px;
+  border: 1px solid var(--line); background: var(--panel-2); color: inherit;
+}
+#spellPop header button {
+  border: 0; background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 15px; line-height: 1; padding: 4px 6px; border-radius: 7px;
+}
+#spellPop header button:hover { background: var(--panel-2); color: var(--text); }
+#spellPop textarea {
+  font: inherit; font-size: 13px; line-height: 1.5; min-height: 140px; resize: vertical;
+  padding: 9px 11px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--panel-2); color: inherit;
+}
+#spellPop textarea:focus, #spellPop header input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+#spellPop footer { display: flex; gap: 8px; align-items: center; }
+#spellPop footer button {
+  font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel-2); color: inherit;
+}
+#spellPop footer button:hover { border-color: var(--accent); }
+#spellPop .spellHint { margin-left: auto; font-size: 11.5px; color: var(--muted); }
+
+/* il tastino ▾ della riga */
+.stdWin .sPage .sLine .sMore {
+  position: absolute; right: 11px; top: 1px; width: 9px; height: 10px; padding: 0;
+  border: 0; border-radius: 3px; cursor: pointer; font-size: 6px; line-height: 1;
+  background: color-mix(in srgb, var(--sh-ink) 45%, transparent); color: var(--sh-fg); opacity: .8;
+}
+.stdWin .sPage .sLine .sMore:hover { opacity: 1; background: var(--sh-accent); color: var(--sh-on, #fff); }
+.stdWin .sPage .sLine .sMore.has { background: var(--sh-accent); color: var(--sh-on, #fff); opacity: 1; }
+.stdWin .sPage .sLine input { padding: 0 22px 0 2px; }

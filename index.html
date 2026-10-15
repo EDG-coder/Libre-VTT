@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LIBRE VTT</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta name="theme-color" content="#12151c">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="extras.css">
+<link rel="stylesheet" href="sheet-std.css">
+<link rel="stylesheet" href="token-crop.css">
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+    <div id="boardFill"></div>
+    <div id="bgBox" hidden>
+      <img id="map" alt="Sfondo della scena" draggable="false">
+    </div>
+    <div id="board"></div>
+  </div>
+  <div id="grid"></div>
+  <div id="world"></div>
+</div>
+<div id="pings" aria-hidden="true"></div>
+
+<div id="dice">
+  <button id="diceToggle" type="button" aria-label="Apri o chiudi i dadi" aria-expanded="false">
+    <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+      <path d="M12 2l8.66 5v10L12 22l-8.66-5V7z"/>
+      <path d="M12 7.2L18 17H6z"/>
+      <path d="M12 7.2V2M12 7.2L3.34 7M12 7.2L20.66 7M18 17L20.66 7M18 17H20.66M18 17L12 22M6 17L3.34 7M6 17H3.34M6 17L12 22"/>
+      <text x="12" y="15" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor" stroke="none">20</text>
+    </svg>
+    <span id="diceBadge" hidden></span>
+  </button>
+  <div id="diceBody" inert>
+    <div class="dLabel">Quantità</div>
+    <div class="dRow" id="diceQty"></div>
+    <label class="dRow">Altro numero <input id="diceCount" type="number" min="1" max="100" value="1"></label>
+    <div class="dLabel">Tiro con il d20 <span class="dHint">Maiusc+clic = vantaggio, Alt+clic = svantaggio</span></div>
+    <div class="dRow dSeg" id="diceAdv" role="radiogroup" aria-label="Vantaggio o svantaggio">
+      <button type="button" role="radio" data-adv="none">Normale</button><button type="button" role="radio" data-adv="adv" title="Tira due d20 e tiene il più alto">Vantaggio</button><button type="button" role="radio" data-adv="dis" title="Tira due d20 e tiene il più basso">Svantaggio</button>
+    </div>
+    <div class="dLabel">Chi vede il risultato</div>
+    <div class="dRow dSeg" id="diceVis" role="radiogroup" aria-label="Tiro pubblico o segreto">
+      <button type="button" role="radio" data-vis="public">Tutti</button><button type="button" role="radio" data-vis="secret" title="Il risultato lo vedete solo tu e il master: gli altri vedono solo che hai tirato">🔒 Solo io e il master</button>
+    </div>
+    <div class="dLabel">Dado (un clic tira)</div>
+    <div class="dRow" id="diceTypes"></div>
+    <div class="dRow">Personalizzato&nbsp;d<input id="customSides" type="number" min="2" max="1000" value="7"><button id="customRoll" type="button">Tira</button></div>
+    <p id="diceLast"></p>
+  </div>
+</div>
+
+
+<div id="dock">
+  <div id="sceneWrap">
+    <button id="sceneBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Cambia scena">
+      <span id="sceneIcon">🗺</span><span id="sceneName">Scena</span>
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>
+    </button>
+    <div id="sceneMenu" hidden>
+      <div id="sceneList"></div>
+      <button id="sceneNew" type="button">＋ Nuova scena</button>
+    </div>
+  </div>
+  <div id="layerSwitch" role="group" aria-label="Livello da modificare">
+    <button type="button" data-layer="tokens" class="active" title="Muovi e ridimensiona i segnalini">Segnalini</button>
+    <button type="button" data-layer="hidden" title="Muovi le immagini del livello nascosto">Nascosto</button>
+    <button type="button" data-layer="map" title="Muovi e ridimensiona il rettangolo e lo sfondo">Mappa</button>
+  </div>
+  <div id="targetSwitch" role="group" aria-label="Cosa modificare nel livello Mappa" hidden>
+    <button type="button" data-target="board" class="active" title="Muovi e ridimensiona il rettangolo (si aggancia ai bordi dell'immagine)">Rettangolo</button>
+    <button type="button" data-target="bg" title="Muovi e ridimensiona solo l'immagine">Immagine</button>
+  </div>
+</div>
+
+<div id="zoomBox">
+  <button id="zoomToggle" type="button" aria-label="Apri o chiudi lo zoom" aria-expanded="false">
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.500" cy="10.500" r="6.500"/><path d="M15.500 15.500L21 21"/></svg>
+  </button>
+  <div id="zoomBody" inert>
+    <button id="zoomIn" type="button" aria-label="Ingrandisci" title="Ingrandisci">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.500" cy="10.500" r="6.500"/><path d="M15.500 15.500L21 21M10.500 7.800v5.400M7.800 10.500h5.400"/></svg>
+    </button>
+    <button id="zoomOut" type="button" aria-label="Riduci" title="Riduci">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.500" cy="10.500" r="6.500"/><path d="M15.500 15.500L21 21M7.800 10.500h5.400"/></svg>
+    </button>
+    <button id="zoomFit" type="button" aria-label="Centra la mappa intera" title="Centra la mappa alla massima dimensione, senza tagliarla">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+  </div>
+</div>
+
+<dialog id="sceneDialog">
+  <form method="dialog" id="sceneForm">
+    <h3>Nuova scena</h3>
+    <label class="field">Nome <input id="sceneNameInput" type="text" maxlength="40" placeholder="Es. Taverna del Drago" autocomplete="off"></label>
+    <fieldset class="types">
+      <legend>Tipo</legend>
+      <label class="typeOpt"><input type="radio" name="sceneType" value="map" checked><span><b>🗺 Mappa</b><small>Con la griglia già attiva</small></span></label>
+      <label class="typeOpt"><input type="radio" name="sceneType" value="cinematic"><span><b>🎬 Scena cinematografica</b><small>Senza griglia (si può attivare dopo)</small></span></label>
+    </fieldset>
+    <label class="field">Sfondo (facoltativo) <input id="sceneBgInput" type="file" accept="image/*"></label>
+    <div class="dialogBtns">
+      <button type="button" id="sceneCancel" class="btn ghost">Annulla</button>
+      <button type="submit" id="sceneCreate" class="btn">Crea scena</button>
+    </div>
+  </form>
+</dialog>
+
+<button id="sideToggle" type="button" aria-label="Apri o chiudi il menu" aria-expanded="false">
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+</button>
+
+<aside id="side">
+  <div id="sideGrip" title="Trascina per ridimensionare (doppio clic: larghezza iniziale)"></div>
+  <div id="sideBody" inert>
+    <nav class="tabs">
+      <button class="tab active" type="button" data-tab="chat" style="--aura:#7c5cff" title="Chat"><span class="ic">💬</span><span class="lbl"> Chat</span></button>
+      <button class="tab" type="button" data-tab="assets" style="--aura:#ff9f43" title="Assets"><span class="ic">🎨</span><span class="lbl"> Assets</span></button>
+      <button class="tab" type="button" data-tab="sheets" style="--aura:#ff6fa8" title="Schede"><span class="ic">📜</span><span class="lbl"> Schede</span></button>
+      <button class="tab" type="button" data-tab="settings" style="--aura:#2ee6a6" title="Impostazioni"><span class="ic">⚙️</span><span class="lbl"> Impostazioni</span></button>
+    </nav>
+
+    <section id="tab-chat" class="pane active">
+      <div id="chatTabs" class="seg" hidden></div>
+      <div id="chatLog"></div>
+      <div class="chatForm">
+        <textarea id="chatInput" rows="1" placeholder="Scrivi un messaggio (Maiusc+Invio per andare a capo)" autocomplete="off"></textarea>
+        <button id="chatSend" type="button" class="btn">Invia</button>
+      </div>
+    </section>
+
+    <section id="tab-sheets" class="pane">
+      <div class="row"><button id="sheetNew" type="button" class="btn">＋ Nuova scheda</button></div>
+      <p class="note">Doppio clic per aprire. Trascina una scheda sulla mappa per creare il segnalino collegato; clic destro per altre opzioni.</p>
+      <div id="sheetList"></div>
+    </section>
+
+    <section id="tab-settings" class="pane">
+      <div class="sect" data-sect="look">
+        <h4>Aspetto</h4>
+        <div class="row">Tema
+          <div class="seg" id="themeSeg">
+            <button type="button" data-v="dark">Scuro</button>
+            <button type="button" data-v="light">Chiaro</button>
+            <button type="button" data-v="system">Sistema</button>
+          </div>
+        </div>
+        <label class="check"><input id="autoBg" type="checkbox"> Sfondo della pagina dal colore dello sfondo della scena</label>
+      </div>
+
+      <div class="sect" data-sect="res">
+        <h4>Risoluzione degli assets</h4>
+        <p class="note">Vale per i file caricati da adesso in poi (lato corto dell'immagine).</p>
+        <label class="row">Segnalini <select id="resToken"></select></label>
+        <label class="row">Sfondi <select id="resBg"></select></label>
+      </div>
+
+      <div class="sect" data-sect="grid">
+        <h4>Griglia di <span id="gridSceneName">questa scena</span></h4>
+        <div id="gridScene" class="gridForm"></div>
+      </div>
+
+      <div class="sect" data-sect="gridDefault">
+        <h4>Griglia predefinita</h4>
+        <p class="note">Si applica alle nuove scene.</p>
+        <div id="gridDefault" class="gridForm"></div>
+        <button id="applyDefault" type="button" class="btn ghost">Applica il predefinito a questa scena</button>
+      </div>
+
+      <div class="sect" data-sect="map">
+        <h4>Rettangolo e sfondo di questa scena</h4>
+        <p class="note">Nel livello «Mappa» sposti e ridimensioni il rettangolo (la griglia vive al suo interno) o l'immagine; i bordi si agganciano tra loro.</p>
+        <button id="bgReset" type="button" class="btn ghost">Reimposta misura e posizione</button>
+        <button id="bgFit" type="button" class="btn ghost">Rettangolo grande come l'immagine</button>
+        <button id="bgRemove" type="button" class="btn ghost danger">Rimuovi l'immagine di sfondo</button>
+      </div>
+
+      <div class="sect" data-sect="border">
+        <h4>Bordo del rettangolo</h4>
+        <div id="borderForm" class="gridForm"></div>
+      </div>
+
+      <div class="sect" data-sect="sheets">
+        <h4>Schede</h4>
+        <label class="row">Stile <select id="shPreset">
+          <option value="parchment">Pergamena</option><option value="dark">Scuro</option><option value="light">Chiaro</option><option value="night">Notte</option>
+        </select></label>
+        <label class="row">Carattere <select id="shFont"><option value="serif">Con grazie</option><option value="sans">Senza grazie</option></select></label>
+        <label class="row">Colore principale <input id="shAccent" type="color" value="#8b1e1e"> <button id="shAccentReset" type="button" class="btn ghost">Predefinito</button></label>
+        <label class="row">Dimensione del testo <input id="shScale" type="range" min="80" max="140" step="5"> <output id="shScaleOut"></output>%</label>
+        <label class="row">Chiusura <select id="shClose"><option value="x">X a destra</option><option value="dot">Pallino rosso a sinistra</option></select></label>
+        <p class="note">Nel testo delle schede (e in chat con /r) scrivi <b>[[1d20+5]]</b> o <b>[[2d6+3 | Spada]]</b> per un tiro rapido.</p>
+      </div>
+
+      <div class="sect" data-sect="tools">
+        <h4>Strumenti</h4>
+        <label class="check"><input id="rulerCenter" type="checkbox"> Righello: misura da centro a centro delle caselle</label>
+        <label class="row">Righello <select id="unitSel"><option value="ft">5 ft per casella</option><option value="m">1,5 m per casella</option></select></label>
+        <button id="helpOpen" type="button" class="btn ghost">Mostra la guida dei comandi</button>
+      </div>
+
+      <div class="sect" data-sect="hidden">
+        <h4>Livello nascosto</h4>
+        <label class="check"><input id="hlShow" type="checkbox"> Mostra le immagini nascoste (anche negli altri livelli)</label>
+        <label class="row">Trasparenza <input id="hlOp" type="range" min="10" max="90" step="5"> <output id="hlOpOut"></output>%</label>
+        <p class="note">Le immagini nascoste si spostano solo nel livello «Nascosto». Clic destro su un segnalino per cambiarne il livello.</p>
+      </div>
+
+      <div class="sect" data-sect="chat">
+        <h4>Chat</h4>
+        <label class="check"><input id="chTabRolls" type="checkbox"> Scheda separata solo per i tiri di dado</label>
+        <label class="check"><input id="chTabRules" type="checkbox"> Scheda separata per le regole dei personaggi (💬 sulle schede)</label>
+      </div>
+
+      <div class="sect" data-sect="sessione">
+        <h4>Sessione</h4>
+        <p class="note" id="netState">Stai giocando da solo su questo computer.</p>
+        <label class="row">Il tuo nome <input id="netNameIn" type="text" maxlength="40" placeholder="Come ti chiamano" autocomplete="off"></label>
+        <label class="row">Porta del server <input id="netPortIn" type="number" min="1" max="65535"></label>
+        <div class="row">
+          <button id="netReconnect" type="button" class="btn ghost">Collegati adesso</button>
+          <button id="netLeave" type="button" class="btn ghost" hidden>Scollegati</button>
+          <a class="btn ghost" id="netPanel" href="http://127.0.0.1:4000/" target="_blank" rel="noopener">Pannello della sessione</a>
+          <a class="btn ghost" id="netHome" href="http://127.0.0.1:4100/">Torna all'avvio</a>
+        </div>
+      </div>
+
+      <div class="sect" data-sect="ping">
+        <h4>Ping sulla mappa</h4>
+        <p class="note">Nel livello «Segnalini» tieni premuto su un punto libero della mappa.</p>
+        <div id="pingForm" class="gridForm"></div>
+      </div>
+    </section>
+
+    <section id="tab-assets" class="pane">
+      <div class="row">
+        <label class="btn" for="upload">Carica foto</label>
+        <button id="newFolder" type="button" class="btn ghost">Nuova cartella</button>
+      </div>
+      <input id="upload" type="file" accept="image/*" multiple hidden>
+      <div class="row">Carica come
+        <div class="seg" id="uploadAs">
+          <button type="button" data-v="token" class="active">Segnalino</button>
+          <button type="button" data-v="bg">Sfondo</button>
+        </div>
+      </div>
+      <div id="folderBar"></div>
+      <p class="note">Trascina una miniatura sulla mappa per aggiungerla, o su una cartella per spostarla. Con 🖼 la usi come sfondo della scena.</p>
+      <p id="storeStatus"></p>
+      <div id="assetGrid"></div>
+    </section>
+  </div>
+</aside>
+<dialog id="helpDialog">
+  <h3>Benvenuto in LIBRE VTT</h3>
+  <ul class="helpList">
+    <li><b>Tasto destro</b> trascinando: sposta la vista. <b>Clic destro</b> su qualsiasi cosa: altre opzioni.</li>
+    <li><b>Sinistro</b>: seleziona e sposta i segnalini (bordi blu per ridimensionare). Trascina su un punto libero per selezionarne <b>più di uno</b>.</li>
+    <li><b>Canc</b> elimina, <b>Ctrl/Cmd+C</b> e <b>V</b> copiano e incollano con tutte le impostazioni. <b>Rotellina</b>: zoom.</li>
+    <li><b>Frecce</b> spostano i segnalini selezionati (una casella con l'aggancio alla griglia, Maiusc per spostamenti fini). Lo strumento ◎ crea segnalini con nome, colore, immagine e scheda.</li>
+    <li>Livelli in basso: <b>Segnalini</b>, <b>Nascosto</b> (immagini semitrasparenti, si muovono solo lì) e <b>Mappa</b>. Il menu in basso si chiude con la freccia che compare passando col mouse.</li>
+    <li><b>Tieni premuto</b> su un punto libero della mappa: ping.</li>
+    <li>I pulsanti nel <b>menu a sinistra</b> (dadi, penna, calcolatrice, righello, zoom) si possono trascinare fuori e rimettere a posto.</li>
+    <li>Nelle schede e in chat: <b>[[1d20+5]]</b> o <b>/r 2d6+3</b> per i tiri rapidi.</li>
+    <li>La scheda <b>Standard</b> è la scheda italiana di D&amp;D 5e a tre pagine: clic sui valori tondi, sulle abilità, sui tiri salvezza e sulle armi (◎ colpire, ◆ danni) per tirare subito.</li>
+    <li>Nello strumento <b>Segnalini</b>, «Immagine» apre l'editor di ritaglio: sposti e ingrandisci la foto sotto la maschera, togli lo sfondo con la bacchetta e rifinisci la sagoma con la gomma.</li>
+    <li>La <b>cartella</b> nel menu a sinistra tiene da parte le finestre delle schede: trascinaci sopra la loro barra, e la manopola ne cambia la dimensione.</li>
+    <li>Con <b>Musica</b> incolli un link di YouTube per tutti; il volume però è tuo e non tocca quello degli altri.</li>
+    <li>La <b>Nebbia di guerra</b> è uno strumento del menu: accendila per la scena e dipingi con «scopri» o «copri». Per i giocatori la parte coperta è nera e i segnalini che ci stanno sotto non gli arrivano nemmeno.</li>
+    <li>Per giocare a distanza basta aprire <b>LIBRE VTT</b> e scegliere «Conduco io» o «Mi unisco»: permessi, scena mostrata, schede e provvedimenti si regolano nel pannello su <b>localhost:4000</b>.</li>
+  </ul>
+  <div class="dialogBtns"><button id="helpOk" type="button" class="btn">Ho capito</button></div>
+</dialog>
+<div id="ctx" hidden><button type="button">🗑 Elimina</button></div>
+<script src="script.js"></script>
+<script src="sheets.js"></script>
+<script src="sheet-std.js"></script>
+<script src="extras.js"></script>
+<script src="token-crop.js"></script>
+<script src="win-folder.js"></script>
+<script src="music.js"></script>
+<script src="net.js"></script>
+<script src="fog.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# Non vanno su GitHub: le campagne e le immagini di chi usa il programma…
+/data/
+/assets/*
+!/assets/Sfondi/
+/assets/Sfondi/*
+!/assets/Sfondi/main.webp
+myvtt-avvio.log
+uffa-link.id
+# …e quello che si costruisce
+/uffa-link/target/
+/installatori/
+/installer/windows/stage/
+*.dmg
+__pycache__/
+node_modules/
+.DS_Store

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pannello della sessione · LIBRE VTT</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjOWI4MmZmIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzVhM2ZkNiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHBhdGggZD0iTTMyIDNsMjUgMTQuNXYyOUwzMiA2MSA3IDQ2LjUwMHYtMjl6IiBmaWxsPSJ1cmwoI2cpIiBzdHJva2U9IiMyYjFhODUiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0zMiAxN2wxNSAyNkgxN3oiIGZpbGw9IiNmZmZmZmYyMiIgc3Ryb2tlPSIjZTllM2ZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNMzIgMTdWM00zMiAxN0w3IDE3LjUwME0zMiAxN2wyNSAuNU00NyA0M2wxMCAzLjUwME00NyA0M0wzMiA2MU0xNyA0M0w3IDQ2LjUwME0xNyA0M2wxNSAxOE0xNyA0M0w3IDE3LjUwME00NyA0M2wxMC0yNS41MDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2U5ZTNmZiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9Ii44NSIvPgogIDx0ZXh0IHg9IjMyIiB5PSIzOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmZmIj4yMDwvdGV4dD4KPC9zdmc+Cg==">
+<style>
+  :root {
+    --bg: #14171f; --panel: #1b1f2a; --panel-2: #222736; --panel-3: #2a3040; --line: #2e3545;
+    --text: #e8ecf3; --muted: #97a1b4; --accent: #7c5cff; --ok: #2ee6a6; --warn: #ffb020; --bad: #ff5f6d;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f2f4f8; --panel: #fff; --panel-2: #eef1f6; --panel-3: #e2e7f0; --line: #d4dae6;
+            --text: #1b2230; --muted: #5d6879; --accent: #6a4cf0; color-scheme: light; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 22px 18px 70px; }
+  h1 { font-size: 1.35rem; margin: 0 0 2px; }
+  h2 { font-size: .74rem; letter-spacing: .13em; text-transform: uppercase; color: var(--accent); margin: 0 0 12px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: .9rem; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; margin-bottom: 16px; }
+
+  button, select, input {
+    font: inherit; font-size: .87rem; padding: 6px 12px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--panel-2); color: inherit;
+  }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.go { background: var(--accent); border-color: transparent; color: #fff; }
+  button.bad { color: var(--bad); }
+  button.on { background: var(--accent); border-color: transparent; color: #fff; }
+  button:disabled { opacity: .4; cursor: default; }
+  input[type=number] { width: 72px; }
+
+  .idBox { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .idVal {
+    flex: 1; min-width: 240px; font-family: ui-monospace, Menlo, monospace; font-size: .84rem;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px;
+    overflow-wrap: anywhere; user-select: all;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--muted); flex: none; }
+  .dot.on { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+  .dot.wait { background: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 25%, transparent); }
+
+  .rules { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .rules label { display: inline-flex; align-items: center; gap: 7px; font-size: .86rem; }
+
+  .scenes { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .who { display: flex; flex-direction: column; gap: 12px; }
+  .pRow { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel-2); }
+  .pRow.pend { border-color: var(--warn); }
+  .pRow.ban { opacity: .6; }
+  .pHead { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .pName { font-weight: 600; flex: 1; min-width: 130px; display: flex; align-items: center; gap: 8px; }
+  .pName input { font-weight: 600; background: transparent; border-color: transparent; max-width: 210px; padding: 4px 7px; }
+  .pName input:hover, .pName input:focus { border-color: var(--line); background: var(--panel); outline: 0; }
+  .tag { font-size: .7rem; padding: 2px 8px; border-radius: 99px; background: var(--panel); border: 1px solid var(--line); color: var(--muted); }
+  .tag.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
+  .tag.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); }
+
+  .meta {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 3px 14px;
+    margin: 10px 0 0; font-size: .76rem; color: var(--muted);
+  }
+  .meta b { color: var(--text); font-weight: 600; }
+
+  .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .acts button { font-size: .8rem; padding: 5px 10px; }
+
+  details { margin-top: 10px; }
+  details > summary { cursor: pointer; font-size: .8rem; color: var(--muted); user-select: none; }
+  details > summary:hover { color: var(--text); }
+
+  .perms { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 3px 14px; margin-top: 10px; }
+  .perm { display: flex; align-items: flex-start; gap: 8px; font-size: .84rem; padding: 2px 0; }
+  .perm input { accent-color: var(--accent); margin-top: 4px; }
+  .perm small { color: var(--muted); font-size: .76rem; }
+  .perm.dflt span { color: var(--muted); }
+
+  .grants { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+  .grant { display: flex; align-items: center; gap: 9px; font-size: .84rem; }
+  .grant .gn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; padding: 4px 10px; font-size: .77rem; background: transparent; }
+  .seg button.on { background: var(--accent); color: #fff; }
+
+  .logBox { max-height: 330px; overflow: auto; display: flex; flex-direction: column; gap: 3px; font-size: .81rem; }
+  .logRow { display: flex; gap: 9px; padding: 4px 9px; border-radius: 7px; background: var(--panel-2); align-items: baseline; }
+  .logRow.no { background: color-mix(in srgb, var(--bad) 14%, var(--panel-2)); }
+  .logRow time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .9em; flex: none; }
+  .logRow .lw { font-weight: 600; flex: none; min-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .logRow .lo { font-family: ui-monospace, Menlo, monospace; font-size: .9em; flex: none; }
+  .logRow .ln { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .logHead { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .logHead h2 { margin: 0; }
+
+  .empty { color: var(--muted); font-size: .88rem; }
+  footer { color: var(--muted); font-size: .8rem; margin-top: 26px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pannello della sessione</h1>
+  <p class="sub" id="sub">Caricamento…</p>
+
+  <div class="card" id="idCard">
+    <h2>ID da dare ai giocatori</h2>
+    <div class="idBox">
+      <div class="idVal" id="sessId">—</div>
+      <button id="copyId" class="go">Copia</button>
+    </div>
+    <p class="sub" style="margin:10px 0 0" id="idHint"></p>
+  </div>
+
+  <div class="card" id="rulesCard">
+    <h2>Regole della sessione</h2>
+    <div class="rules">
+      <label><input type="checkbox" id="rLock"> Chiusa a chiave <small class="sub" style="margin:0">(nessun volto nuovo)</small></label>
+      <label><input type="checkbox" id="rAppr"> Chiedi a me prima di far entrare</label>
+      <label><input type="checkbox" id="rPause"> Tutto in pausa</label>
+      <label>Massimo giocatori <input type="number" id="rMax" min="0" max="40" step="1"> <small class="sub" style="margin:0">(0 = senza limite)</small></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Scena che vedono i giocatori</h2>
+    <div class="scenes" id="scenes"><span class="empty">Nessuna scena: apri il VTT.</span></div>
+  </div>
+
+  <div class="card">
+    <h2>Chi c'è</h2>
+    <div class="who" id="who"><span class="empty">Ancora nessuno.</span></div>
+  </div>
+
+  <div class="card">
+    <div class="logHead">
+      <h2>Registro</h2>
+      <label style="font-size:.84rem"><input type="checkbox" id="onlyNo"> solo i rifiuti</label>
+      <button id="clearLog" style="margin-left:auto">Pulisci</button>
+    </div>
+    <div class="logBox" id="log"><span class="empty">Niente per ora.</span></div>
+  </div>
+
+  <footer>Il pannello si apre solo da questo computer. Permessi e provvedimenti restano anche dopo aver spento tutto.</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const post = (p, body) => fetch(p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const mod = (token, action, extra) => post('/api/mod', { token, action, ...extra }).then(load);
+
+const LABEL = {
+  chat: ['Scrivere in chat', ''],
+  roll: ['Tirare i dadi', 'li tira comunque il server'],
+  ping: ['Segnare un punto sulla mappa', ''],
+  draw: ['Disegnare con la penna', ''],
+  moveOwnTokens: ['Spostare i propri segnalini', ''],
+  moveAnyToken: ['Spostare qualsiasi segnalino', 'anche quelli degli altri'],
+  createTokens: ['Creare segnalini', 'solo per i propri personaggi'],
+  uploadTokenImage: ['Usare una foto dal proprio computer', 'solo come segnalino'],
+  uploadAssets: ['Caricare immagini negli assets', 'le vedono tutti'],
+  seeHiddenLayer: ['Vedere il livello nascosto', ''],
+  seeAllScenes: ['Vedere tutte le scene', 'non solo quella in vista'],
+  revealFog: ['Scoprire la nebbia', ''],
+  editScene: ['Cambiare scena, sfondo e griglia', ''],
+  editAnySheet: ['Aprire le schede di chiunque', ''],
+  controlMusic: ['Scegliere la musica per tutti', '']
+};
+const ROLE_IT = { master: 'Master', player: 'Giocatore', spectator: 'Spettatore' };
+
+let S = { perms: [], roster: [], sheets: [], scenes: [], defaults: {}, session: {}, log: [] };
+let logRows = [];
+
+async function load() {
+  try {
+    const r = await fetch('/api/state');
+    S = await r.json();
+    if (S.log && !logRows.length) logRows = S.log.slice();
+    draw();
+  } catch { $('sub').textContent = 'Il server di gioco non risponde.'; }
+}
+
+const durata = sec => sec < 60 ? sec + ' s' : sec < 3600 ? Math.round(sec / 60) + ' min' : (sec / 3600).toFixed(1) + ' h';
+
+function draw() {
+  const host = S.mode === 'host';
+  $('sub').textContent = host
+    ? 'Stai conducendo tu: le regole e i tiri di dado si decidono qui.'
+    : 'Sei collegato come giocatore: i permessi li dà il master dalla sua macchina.';
+  $('idCard').hidden = !host;
+  $('rulesCard').hidden = !host;
+  $('sessId').textContent = S.sessionId || 'Avvia «uffa-link host» per avere l\'ID.';
+  $('idHint').textContent = S.sessionId
+    ? 'I giocatori lo useranno così: uffa-link join ' + S.sessionId.slice(0, 12) + '…'
+    : 'L\'ID compare appena uffa-link è acceso. Cambia a ogni avvio.';
+
+  const se = S.session || {};
+  $('rLock').checked = !!se.locked; $('rAppr').checked = !!se.approval;
+  $('rPause').checked = !!se.paused; $('rMax').value = se.maxPlayers || 0;
+
+  const sc = $('scenes');
+  if (!S.scenes.length) sc.innerHTML = '<span class="empty">Nessuna scena: apri il VTT.</span>';
+  else sc.replaceChildren(...[{ id: null, name: '— nessuna —' }].concat(S.scenes).map(s => {
+    const b = document.createElement('button');
+    b.textContent = s.name || 'Scena';
+    if ((S.publicScene || null) === s.id) b.className = 'on';
+    b.onclick = async () => { await post('/api/scene', { id: s.id }); load(); };
+    return b;
+  }));
+
+  const people = S.roster.filter(r => r.role !== 'master' || r.online);
+  people.sort((a, b) => (b.online - a.online) || String(a.name).localeCompare(String(b.name)));
+  $('who').replaceChildren(...(people.length ? people.map(rowFor) : [Object.assign(document.createElement('span'), { className: 'empty', textContent: 'Ancora nessuno.' })]));
+  drawLog();
+}
+
+function chip(text, cls) {
+  const t = document.createElement('span');
+  t.className = 'tag' + (cls ? ' ' + cls : '');
+  t.textContent = text;
+  return t;
+}
+
+function rowFor(r) {
+  const L = r.live || {};
+  const row = document.createElement('div');
+  row.className = 'pRow' + (L.pending ? ' pend' : '') + (r.banned ? ' ban' : '');
+
+  const head = document.createElement('div');
+  head.className = 'pHead';
+  const dot = document.createElement('span');
+  dot.className = 'dot' + (L.pending ? ' wait' : r.online ? ' on' : '');
+  const nm = document.createElement('span'); nm.className = 'pName';
+  const ni = document.createElement('input'); ni.value = r.name || '(senza nome)'; ni.title = 'Cambia il nome';
+  ni.onchange = () => post('/api/perm', { token: r.token, name: ni.value }).then(load);
+  nm.append(dot, ni);
+  const sel = document.createElement('select');
+  for (const role of ['master', 'player', 'spectator']) {
+    const o = document.createElement('option');
+    o.value = role; o.textContent = ROLE_IT[role]; o.selected = r.role === role;
+    sel.append(o);
+  }
+  sel.onchange = () => post('/api/perm', { token: r.token, role: sel.value }).then(load);
+  head.append(nm, sel);
+  if (L.pending) head.append(chip('in attesa', 'warn'));
+  else head.append(chip(r.online ? 'collegato' : 'non c\'è'));
+  if (r.banned) head.append(chip('bandito', 'bad'));
+  if (r.muted) head.append(chip('silenziato', 'warn'));
+  if (r.frozen) head.append(chip('congelato', 'warn'));
+  row.append(head);
+
+  // --- che cosa sta facendo ---
+  if (r.online) {
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const scena = S.scenes.find(x => x.id === L.viewScene);
+    const add = (k, v) => { const d = document.createElement('div'); d.innerHTML = k + ' <b></b>'; d.querySelector('b').textContent = v; meta.append(d); };
+    add('Ritardo', L.rtt == null ? '—' : L.rtt + ' ms');
+    add('Collegato da', durata(L.onFor || 0));
+    add('Guarda', scena ? scena.name : (L.viewScene ? '(scena sconosciuta)' : '—'));
+    add('Vista', L.viewRect ? `${L.viewRect.x}, ${L.viewRect.y} · ${Math.round(L.viewRect.s * 100)}%` : '—');
+    add('Ultima azione', L.lastOp ? L.lastOp + ' (' + durata(Math.round((Date.now() - L.lastAt) / 1000)) + ' fa)' : '—');
+    add('Richieste', String(L.ops || 0));
+    add('Programma', L.client || '?');
+    add('Arrivo', L.kind === 'link' ? 'da fuori (iroh)' : 'da questo computer');
+    row.append(meta);
+  }
+
+  // --- provvedimenti ---
+  const acts = document.createElement('div');
+  acts.className = 'acts';
+  const btn = (t, fn, cls) => { const b = document.createElement('button'); b.textContent = t; if (cls) b.className = cls; b.onclick = fn; return b; };
+  if (L.pending) {
+    acts.append(btn('✓ Fallo entrare', () => mod(r.token, 'approve'), 'go'));
+    acts.append(btn('✕ Rifiuta', () => mod(r.token, 'refuse'), 'bad'));
+  }
+  if (r.role !== 'master') {
+    acts.append(btn(r.muted ? '🔊 Ridagli la voce' : '🔇 Silenzia', () => mod(r.token, 'mute', { value: !r.muted })));
+    acts.append(btn(r.frozen ? '▶ Scongela' : '❄ Congela', () => mod(r.token, 'freeze', { value: !r.frozen })));
+    acts.append(btn('✎ Cambia nome', () => {
+      const why = prompt('Che cosa gli dico?', 'Scegli un nome più adatto, per favore.');
+      if (why !== null) mod(r.token, 'forceName', { reason: why });
+    }));
+    acts.append(btn('✉ Messaggio', () => {
+      const t = prompt('Messaggio solo per ' + (r.name || 'lui') + ':');
+      if (t) mod(r.token, 'message', { text: t });
+    }));
+    acts.append(btn('↺ Permessi del ruolo', () => mod(r.token, 'resetPerms')));
+  }
+  if (r.role !== 'master') {
+    if (r.online) acts.append(btn('Scollega', () => post('/api/kick', { token: r.token }).then(load)));
+    acts.append(r.banned
+      ? btn('Riammetti', () => mod(r.token, 'unban'), 'go')
+      : btn('⛔ Bandisci', () => { if (confirm('Bandire ' + (r.name || 'questa persona') + '? Non potrà più entrare finché non la riammetti.')) mod(r.token, 'ban'); }, 'bad'));
+  }
+  if (acts.children.length) row.append(acts);
+
+  if (r.role === 'master') return row;
+
+  // --- permessi, chiusi di default per non riempire la pagina ---
+  const det = document.createElement('details');
+  const sum = document.createElement('summary');
+  const n = S.perms.filter(k => !!r.perms[k]).length;
+  sum.textContent = `Permessi (${n} di ${S.perms.length}) e schede`;
+  det.append(sum);
+
+  const box = document.createElement('div'); box.className = 'perms';
+  const dflt = S.defaults[r.role] || {};
+  for (const key of S.perms) {
+    const [label, hint] = LABEL[key] || [key, ''];
+    const wrap = document.createElement('label'); wrap.className = 'perm';
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!r.perms[key];
+    cb.onchange = () => post('/api/perm', { token: r.token, perm: key, value: cb.checked }).then(load);
+    const txt = document.createElement('span');
+    txt.textContent = label;
+    if (hint) { const sm = document.createElement('small'); sm.textContent = ' · ' + hint; txt.append(sm); }
+    if (!!r.perms[key] === !!dflt[key]) wrap.classList.add('dflt');
+    wrap.append(cb, txt);
+    box.append(wrap);
+  }
+  det.append(box);
+
+  if (S.sheets.length) {
+    const g = document.createElement('div'); g.className = 'grants';
+    const h = document.createElement('div'); h.className = 'sub'; h.style.margin = '8px 0 0';
+    h.textContent = 'Schede che può vedere:';
+    g.append(h);
+    for (const sh of S.sheets) {
+      const line = document.createElement('div'); line.className = 'grant';
+      const gn = document.createElement('span'); gn.className = 'gn';
+      gn.textContent = (sh.name || 'Scheda') + (sh.owner === r.token ? ' · è sua' : '');
+      const seg = document.createElement('span'); seg.className = 'seg';
+      const cur = sh.owner === r.token ? 'rw' : (r.sheets && r.sheets[sh.id]) || '';
+      for (const [v, t] of [['', 'niente'], ['r', 'legge'], ['rw', 'modifica']]) {
+        const b = document.createElement('button');
+        b.textContent = t; if (cur === v) b.className = 'on';
+        b.disabled = sh.owner === r.token;
+        b.onclick = () => post('/api/perm', { token: r.token, sheet: sh.id, access: v }).then(load);
+        seg.append(b);
+      }
+      line.append(gn, seg);
+      g.append(line);
+    }
+    det.append(g);
+  }
+  row.append(det);
+  return row;
+}
+
+// ---------- registro ----------
+function drawLog() {
+  const box = $('log');
+  const only = $('onlyNo').checked;
+  const rows = logRows.filter(e => !only || !e.ok).slice(-160).reverse();
+  if (!rows.length) { box.innerHTML = '<span class="empty">Niente per ora.</span>'; return; }
+  box.replaceChildren(...rows.map(e => {
+    const d = document.createElement('div');
+    d.className = 'logRow' + (e.ok ? '' : ' no');
+    const t = document.createElement('time');
+    t.textContent = new Date(e.ts).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const w = document.createElement('span'); w.className = 'lw'; w.textContent = e.who || '-';
+    const o = document.createElement('span'); o.className = 'lo'; o.textContent = e.op;
+    const n = document.createElement('span'); n.className = 'ln'; n.textContent = e.note || (e.ok ? '' : 'rifiutato');
+    d.append(t, w, o, n);
+    return d;
+  }));
+}
+$('onlyNo').onchange = drawLog;
+$('clearLog').onclick = () => { logRows = []; drawLog(); };
+
+// ---------- regole ----------
+const sendRules = () => post('/api/session', {
+  locked: $('rLock').checked, approval: $('rAppr').checked,
+  paused: $('rPause').checked, maxPlayers: +$('rMax').value || 0
+}).then(load);
+for (const id of ['rLock', 'rAppr', 'rPause']) $(id).onchange = sendRules;
+$('rMax').onchange = sendRules;
+
+// ---------- in diretta ----------
+const es = new EventSource('/api/events');
+es.onmessage = e => {
+  let m; try { m = JSON.parse(e.data); } catch { return; }
+  if (m.t === 'log') { logRows.push(m.entry); if (logRows.length > 400) logRows.shift(); drawLog(); return; }
+  if (m.t === 'players' || m.t === 'scene' || m.t === 'session') { load(); return; }
+  if (m.t === 'chat') {
+    const x = m.msg;
+    logRows.push({
+      ts: Date.now(), who: x.by || '-', ok: true,
+      op: x.kind === 'roll' ? 'tiro' : x.kind === 'rule' ? 'regola' : 'chat',
+      note: x.kind === 'roll' ? `${x.label}${x.adv === 'adv' ? ' (vantaggio)' : x.adv === 'dis' ? ' (svantaggio)' : ''}: ${x.total}${x.secret ? ' · 🔒 segreto' : ''}` : (x.text || x.title || '').slice(0, 90)
+    });
+    drawLog();
+  }
+};
+es.onerror = () => {};
+
+$('copyId').onclick = async () => {
+  try { await navigator.clipboard.writeText(S.sessionId || ''); $('copyId').textContent = 'Copiato'; setTimeout(() => $('copyId').textContent = 'Copia', 1400); } catch {}
+};
+
+load();
+setInterval(load, 5000);
+</script>
+</body>
+</html>

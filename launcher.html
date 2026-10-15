@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LIBRE VTT</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjOWI4MmZmIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzVhM2ZkNiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHBhdGggZD0iTTMyIDNsMjUgMTQuNXYyOUwzMiA2MSA3IDQ2LjUwMHYtMjl6IiBmaWxsPSJ1cmwoI2cpIiBzdHJva2U9IiMyYjFhODUiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0zMiAxN2wxNSAyNkgxN3oiIGZpbGw9IiNmZmZmZmYyMiIgc3Ryb2tlPSIjZTllM2ZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNMzIgMTdWM00zMiAxN0w3IDE3LjUwME0zMiAxN2wyNSAuNU00NyA0M2wxMCAzLjUwME00NyA0M0wzMiA2MU0xNyA0M0w3IDQ2LjUwME0xNyA0M2wxNSAxOE0xNyA0M0w3IDE3LjUwME00NyA0M2wxMC0yNS41MDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2U5ZTNmZiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9Ii44NSIvPgogIDx0ZXh0IHg9IjMyIiB5PSIzOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmZmIj4yMDwvdGV4dD4KPC9zdmc+Cg==">
+<style>
+  :root {
+    --bg: #12151c; --panel: #1a1e28; --panel-2: #222836; --line: #2d3443;
+    --text: #e9edf5; --muted: #98a2b5; --accent: #7c5cff; --ok: #2ee6a6; --warn: #ffb020; --bad: #ff5f6d;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f3f5f9; --panel: #fff; --panel-2: #eef1f6; --line: #d6dce7;
+            --text: #1b2230; --muted: #5d6879; --accent: #6a4cf0; color-scheme: light; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex; align-items: center; justify-content: center; padding: 28px 20px;
+  }
+  .wrap { width: min(760px, 100%); }
+  header { text-align: center; margin-bottom: 26px; }
+  .logo { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; margin: 0 0 4px; }
+  .logo span { color: var(--accent); }
+  header p { margin: 0; color: var(--muted); font-size: .95rem; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+    padding: 18px 16px; text-align: left; cursor: pointer; color: inherit; font: inherit;
+    display: flex; flex-direction: column; gap: 6px; transition: border-color .15s, transform .12s;
+  }
+  .card:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-2px); }
+  .card:disabled { opacity: .45; cursor: default; }
+  .card .ic { font-size: 1.6rem; line-height: 1; }
+  .card b { font-size: 1.02rem; }
+  .card small { color: var(--muted); font-size: .83rem; line-height: 1.4; }
+
+  .box {
+    margin-top: 14px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 16px; padding: 16px 18px;
+  }
+  .box h2 { margin: 0 0 10px; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  .row { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
+  input[type=text] {
+    flex: 1; min-width: 180px; font: inherit; font-size: .9rem; padding: 9px 12px;
+    border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: inherit;
+  }
+  input[type=text]:focus { outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); }
+  button.b {
+    font: inherit; font-size: .88rem; padding: 9px 15px; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel-2); color: inherit;
+  }
+  button.b:hover { border-color: var(--accent); }
+  button.b.go { background: var(--accent); border-color: transparent; color: #fff; }
+  button.b:disabled { opacity: .45; cursor: default; }
+
+  .stato { display: flex; gap: 9px; align-items: center; font-size: .88rem; color: var(--muted); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.ok { background: var(--ok); }
+  .dot.warn { background: var(--warn); }
+  .dot.bad { background: var(--bad); }
+
+  .spin { width: 15px; height: 15px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: g 1s linear infinite; }
+  @keyframes g { to { transform: rotate(360deg); } }
+
+  .avviso { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
+  .avviso .t { font-weight: 600; margin-bottom: 4px; }
+  .avviso p { margin: 0 0 12px; color: var(--muted); font-size: .88rem; }
+  .err { color: var(--bad); font-size: .88rem; margin: 8px 0 0; }
+
+  details.log { margin-top: 14px; }
+  details.log summary { cursor: pointer; color: var(--muted); font-size: .84rem; }
+  .logBox {
+    margin-top: 9px; max-height: 240px; overflow: auto;
+    font-family: ui-monospace, Menlo, monospace; font-size: .76rem; line-height: 1.5;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .logBox div.warn { color: var(--warn); }
+  .logBox div.bad { color: var(--bad); }
+  .logBox div.ok { color: var(--ok); }
+  .hide { display: none !important; }
+  footer { text-align: center; color: var(--muted); font-size: .78rem; margin-top: 18px; }
+
+  /* ---------- campagne ---------- */
+  .clist { display: flex; flex-direction: column; gap: 8px; }
+  .crow { display: flex; align-items: stretch; gap: 6px; }
+  .cmain {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; text-align: left;
+    padding: 11px 13px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2);
+    color: inherit; font: inherit; cursor: pointer; transition: border-color .15s, transform .12s;
+  }
+  .cmain:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-1px); }
+  .cmain:disabled { opacity: .5; cursor: default; }
+  .crow.prima .cmain { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
+  .cic { font-size: 1.35rem; line-height: 1; flex: none; }
+  .ctx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .ctx b { font-size: .96rem; }
+  .ctx small { color: var(--muted); font-size: .78rem; }
+  .ctx .cpath { font-family: ui-monospace, Menlo, monospace; font-size: .7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left; }
+  .cgo { color: var(--accent); font-size: .84rem; font-weight: 600; flex: none; }
+  .cact { display: flex; flex-direction: column; gap: 4px; }
+  .cact button {
+    flex: 1; width: 34px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel-2);
+    color: var(--muted); cursor: pointer; font-size: .85rem;
+  }
+  .cact button:hover { color: var(--text); border-color: var(--accent); }
+  .tag { font-size: .68rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); margin-left: 6px; vertical-align: 1px; }
+  .note { color: var(--muted); font-size: .8rem; margin: 12px 0 0; line-height: 1.45; }
+  .vuoto { color: var(--muted); font-size: .9rem; padding: 14px 4px; }
+  .sp { flex: 1; }
+  /* la finestra per scegliere una cartella, quando il sistema non ne ha una sua */
+  .fbPath { font-family: ui-monospace, Menlo, monospace; font-size: .76rem; color: var(--muted); overflow-wrap: anywhere; margin: 2px 0 8px; }
+  .fbRad { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .fbRad button { font: inherit; font-size: .78rem; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; cursor: pointer; }
+  .fbRad button:hover { border-color: var(--accent); }
+  .fbList { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+  .fbList button { display: flex; width: 100%; gap: 8px; align-items: center; text-align: left; padding: 7px 11px; border: 0; border-bottom: 1px solid var(--line); background: none; color: inherit; font: inherit; font-size: .88rem; cursor: pointer; }
+  .fbList button:last-child { border-bottom: 0; }
+  .fbList button:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="logo">LIBRE <span>VTT</span></p>
+    <p id="sottotitolo">Che cosa facciamo?</p>
+  </header>
+
+  <div class="cards" id="scelte">
+    <button class="card" data-go="solo">
+      <span class="ic">🎲</span><b>Gioco da solo</b>
+      <small>Solo questo computer. Non serve altro.</small>
+    </button>
+    <button class="card" data-go="host">
+      <span class="ic">🛡</span><b>Conduco io</b>
+      <small>Apro una partita e invito gli altri con un codice.</small>
+    </button>
+    <button class="card" data-go="join">
+      <span class="ic">🧭</span><b>Mi unisco</b>
+      <small>Ho il codice di chi conduce.</small>
+    </button>
+  </div>
+
+  <div class="box hide" id="boxJoin">
+    <h2>Il codice della partita</h2>
+    <div class="row">
+      <input type="text" id="codice" placeholder="Incolla qui il codice che ti hanno mandato" autocomplete="off" spellcheck="false">
+      <button class="b go" id="entra">Entra</button>
+      <button class="b" id="indietro">Indietro</button>
+    </div>
+  </div>
+
+  <div class="box hide" id="boxCamp">
+    <h2 id="campTit">Quale campagna?</h2>
+    <div class="clist" id="campLista"></div>
+    <div class="row hide" id="campNuovaRiga" style="margin-top:10px">
+      <input type="text" id="campNome" maxlength="60" placeholder="Nome della campagna (es. La miniera perduta)" autocomplete="off">
+      <button class="b go" id="campCrea">Crea</button>
+    </div>
+    <div class="box avviso hide" id="campChiedi" style="margin-top:10px">
+      <div class="t">Questa cartella non sembra una campagna di LIBRE VTT</div>
+      <p id="campChiediTesto"></p>
+      <div class="row">
+        <button class="b go" id="campChiediSi">Usala lo stesso</button>
+        <button class="b" id="campChiediNo">Scegline un'altra</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="b" id="campNuova">＋ Nuova campagna</button>
+      <button class="b" id="campApri">📂 Apri una cartella…</button>
+      <span class="sp"></span>
+      <button class="b" id="campIndietro">Indietro</button>
+    </div>
+    <p class="note" id="campNota"></p>
+  </div>
+
+  <div class="box hide" id="boxSfoglia">
+    <h2>Scegli la cartella della campagna</h2>
+    <div class="fbRad" id="fbRad"></div>
+    <div class="fbPath" id="fbPath"></div>
+    <div class="fbList" id="fbList"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="b go" id="fbUsa">Usa questa cartella</button>
+      <span class="sp"></span>
+      <button class="b" id="fbAnnulla">Annulla</button>
+    </div>
+  </div>
+
+  <div class="box avviso hide" id="boxPrep">
+    <div class="t">Per giocare a distanza manca un pezzo</div>
+    <p id="prepTesto"></p>
+    <div class="row">
+      <button class="b go" id="prepSi">Installa e prepara</button>
+      <button class="b" id="prepNo">Non adesso</button>
+    </div>
+  </div>
+
+  <div class="box hide" id="boxLavoro">
+    <div class="stato"><span class="spin"></span><span id="lavoroTesto">Un attimo…</span></div>
+    <p class="err hide" id="errore"></p>
+  </div>
+
+  <div class="box hide" id="boxPronto">
+    <h2 id="prontoTit">Pronto</h2>
+    <div class="row" id="prontoRighe"></div>
+    <div class="row hide" id="prontoCamp" style="margin-top:10px; font-size:.86rem; color:var(--muted)">
+      <span>📜 Campagna: <b id="prontoCampNome" style="color:var(--text)"></b></span>
+      <button class="b" id="prontoCampMostra" style="padding:5px 10px; font-size:.8rem">Mostra la cartella</button>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="b go" id="vai">Apri il tavolo</button>
+      <button class="b" id="pannello">Pannello della sessione</button>
+      <button class="b" id="ferma">Chiudi la partita</button>
+    </div>
+  </div>
+
+  <details class="log" id="dettagli">
+    <summary>Che cosa sta succedendo</summary>
+    <div class="logBox" id="log"></div>
+  </details>
+
+  <footer id="piede"></footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const azione = what => fetch('/api/azione', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(what) });
+let S = {}, codiceInSospeso = null, campagnaInSospeso = null, campModo = null, inPartenza = false;
+
+function logLine(e) {
+  const d = document.createElement('div');
+  if (e.kind) d.className = e.kind;
+  d.textContent = e.line;
+  $('log').append(d);
+  while ($('log').children.length > 300) $('log').firstChild.remove();
+  $('log').scrollTop = $('log').scrollHeight;
+}
+
+function disegna() {
+  if (S.busy || S.mode || S.error) inPartenza = false;   // da qui in poi decide lo stato vero
+  const lavoro = !!S.busy;
+  const acceso = !!S.mode;
+
+  const aperto = ['boxJoin', 'boxPrep', 'boxCamp', 'boxSfoglia'].some(id => !$(id).classList.contains('hide'));
+  $('scelte').classList.toggle('hide', lavoro || acceso || aperto || inPartenza);
+  if (lavoro || acceso) for (const id of ['boxCamp', 'boxSfoglia']) $(id).classList.add('hide');
+  $('boxLavoro').classList.toggle('hide', !lavoro);
+  $('lavoroTesto').textContent = S.busy || '';
+  $('boxPronto').classList.toggle('hide', !acceso || lavoro);
+
+  $('errore').classList.toggle('hide', !S.error);
+  $('errore').textContent = S.error || '';
+  if (S.error) { $('boxLavoro').classList.remove('hide'); $('boxLavoro').querySelector('.spin').classList.add('hide'); $('lavoroTesto').textContent = 'Non ci siamo.'; }
+  else $('boxLavoro').querySelector('.spin').classList.remove('hide');
+
+  $('sottotitolo').textContent = acceso
+    ? (S.mode === 'solo' ? 'Stai giocando da solo.' : S.mode === 'host' ? 'Stai conducendo tu.' : 'Sei in partita con gli altri.')
+    : 'Che cosa facciamo?';
+
+  if (acceso) {
+    $('prontoTit').textContent = S.mode === 'host' ? 'La partita è aperta' : 'Tutto acceso';
+    $('pannello').classList.toggle('hide', S.mode === 'solo');
+    const righe = $('prontoRighe');
+    righe.replaceChildren();
+    if (S.mode === 'host') {
+      const lab = document.createElement('span');
+      lab.style.cssText = 'font-size:.86rem;color:var(--muted)';
+      lab.textContent = S.sessionId ? 'Codice da mandare ai tuoi:' : 'Sto aprendo la porta verso l\'esterno…';
+      righe.append(lab);
+      if (S.sessionId) {
+        const inp = document.createElement('input');
+        inp.type = 'text'; inp.readOnly = true; inp.value = S.sessionId; inp.onclick = () => inp.select();
+        const cp = document.createElement('button');
+        cp.className = 'b go'; cp.textContent = 'Copia';
+        cp.onclick = async () => { try { await navigator.clipboard.writeText(S.sessionId); cp.textContent = 'Copiato'; setTimeout(() => cp.textContent = 'Copia', 1400); } catch {} };
+        righe.append(inp, cp);
+      }
+    }
+  }
+  $('prontoCamp').classList.toggle('hide', !(acceso && S.campagna));
+  if (S.campagna) $('prontoCampNome').textContent = S.campagna.nome;
+  $('piede').textContent = `${S.piattaforma} · Node ${S.node}` +
+    (S.link ? ' · collegamento a distanza pronto' : ' · collegamento a distanza da preparare');
+}
+
+async function carica() {
+  try {
+    const r = await fetch('/api/stato');
+    S = await r.json();
+    if (S.log) { $('log').replaceChildren(); S.log.forEach(logLine); }
+    disegna();
+  } catch {}
+}
+
+// --- scelte ---
+$('scelte').addEventListener('click', e => {
+  const b = e.target.closest('[data-go]'); if (!b) return;
+  const go = b.dataset.go;
+  if (go === 'join') { $('scelte').classList.add('hide'); $('boxJoin').classList.remove('hide'); $('codice').focus(); return; }
+  apriCampagne(go);                                   // da soli o conducendo: prima si sceglie la campagna
+});
+$('indietro').onclick = () => { $('boxJoin').classList.add('hide'); $('scelte').classList.remove('hide'); };
+$('entra').onclick = () => {
+  const id = $('codice').value.trim();
+  if (!id) { $('codice').focus(); return; }
+  if (!S.link) { codiceInSospeso = id; $('boxJoin').classList.add('hide'); chiediPreparazione('join'); return; }
+  azione({ what: 'join', id });
+  $('boxJoin').classList.add('hide');
+};
+$('codice').addEventListener('keydown', e => { if (e.key === 'Enter') $('entra').click(); });
+
+// --- preparazione ---
+let dopoPrep = null;
+function chiediPreparazione(poi) {
+  dopoPrep = poi;
+  $('prepTesto').textContent = S.pronto
+    ? 'Scarico il collegamento che fa parlare i computer fra loro, già pronto per questo computer (pochi MB, controllato). ' +
+      'Se per qualche motivo non ci fosse, lo costruisco io: scarico gli strumenti che servono (circa 200 MB) in una cartella solo di LIBRE VTT, ' +
+      'senza toccare il resto del computer, e ci vogliono 5-15 minuti. Si fa una volta sola.'
+    : 'Devo costruire il collegamento che fa parlare i computer fra loro. Scarico gli strumenti che servono (Rust e Zig, circa 200 MB) ' +
+      'in una cartella solo di LIBRE VTT, senza toccare il resto del computer né quello che hai già installato, e lo costruisco: 5-15 minuti, una volta sola.';
+  $('prepSi').textContent = S.pronto ? 'Scarica' : 'Scarica e prepara';
+  $('scelte').classList.add('hide');
+  $('boxPrep').classList.remove('hide');
+  $('dettagli').open = true;
+}
+$('prepNo').onclick = () => { $('boxPrep').classList.add('hide'); $('scelte').classList.remove('hide'); dopoPrep = null; campagnaInSospeso = null; };
+$('prepSi').onclick = () => { $('boxPrep').classList.add('hide'); azione({ what: 'prepara' }); };
+
+// --- campagne ---
+const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }).then(r => r.json());
+const quando = t => {
+  if (!t) return '';
+  const g = Math.floor((Date.now() - t) / 86400000);
+  return g <= 0 ? 'modificata oggi' : g === 1 ? 'modificata ieri' : g < 30 ? `modificata ${g} giorni fa` : 'modificata il ' + new Date(t).toLocaleDateString('it-IT');
+};
+const conta = (n, uno, tanti) => (n === 1 ? '1 ' + uno : n + ' ' + tanti);
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const campErr = el('p', 'err hide'); $('campLista').after(campErr);
+const erroreCamp = t => { campErr.textContent = t || ''; campErr.classList.toggle('hide', !t); };
+function mostraSolo(id) { for (const b of ['scelte', 'boxJoin', 'boxCamp', 'boxSfoglia', 'boxPrep']) $(b).classList.toggle('hide', b !== id); }
+
+async function apriCampagne(modo) {
+  campModo = modo;
+  $('campTit').textContent = modo === 'host' ? 'Quale campagna conduci?' : 'Con quale campagna giochi?';
+  $('campNuovaRiga').classList.add('hide'); $('campChiedi').classList.add('hide'); erroreCamp('');
+  mostraSolo('boxCamp');
+  disegnaCampagne(await fetch('/api/campagne').then(r => r.json()));
+}
+function disegnaCampagne(r) {
+  const L = $('campLista');
+  L.replaceChildren();
+  $('campNota').textContent = `Le campagne nuove vanno in «${r.home}». Una campagna è una cartella: puoi copiarla, ` +
+    'tenerla su una chiavetta o darla a un amico, che la apre da qui con «Apri una cartella» e la conduce lui.';
+  if (!r.lista.length) {
+    L.append(el('div', 'vuoto', 'Non hai ancora nessuna campagna: creane una nuova, oppure apri la cartella di una campagna che ti hanno dato.'));
+    return;
+  }
+  r.lista.forEach((c, i) => {
+    const row = el('div', 'crow' + (i === 0 && c.esiste ? ' prima' : ''));
+    const main = el('button', 'cmain'); main.type = 'button'; main.disabled = !c.esiste;
+    const tx = el('span', 'ctx');
+    const nome = el('b', '', c.nome);
+    if (i === 0 && c.esiste && !c.vecchia) nome.append(el('span', 'tag', 'ultima'));
+    const dett = c.esiste
+      ? [conta(c.scene, 'scena', 'scene'), conta(c.schede, 'scheda', 'schede'), conta(c.immagini, 'immagine', 'immagini'), quando(c.modificata)].filter(Boolean).join(' · ') + (c.scrivibile ? '' : ' · sola lettura')
+      : 'Cartella non trovata: è stata spostata o cancellata?';
+    const pth = el('small', 'cpath'); pth.title = c.path;
+    const bdi = el('bdi', '', c.vecchia ? 'nella cartella del gioco, da prima delle campagne' : c.path); bdi.dir = 'ltr'; pth.append(bdi);
+    tx.append(nome, el('small', '', dett), pth);
+    main.append(el('span', 'cic', c.vecchia ? '🗃' : '📜'), tx, el('span', 'cgo', c.esiste ? 'Apri ›' : ''));
+    main.onclick = () => scegliCampagna(c.path);
+    const act = el('div', 'cact');
+    const mo = el('button', '', '📂'); mo.type = 'button'; mo.title = 'Mostra la cartella'; mo.disabled = !c.esiste;
+    mo.onclick = () => post('/api/campagna/mostra', { path: c.path });
+    act.append(mo);
+    if (!c.vecchia) {
+      const via = el('button', '', '✕'); via.type = 'button'; via.title = 'Togli dall\'elenco (la cartella resta dov\'è)';
+      via.onclick = async () => disegnaCampagne(await post('/api/campagna/dimentica', { path: c.path }));
+      act.append(via);
+    }
+    row.append(main, act);
+    L.append(row);
+  });
+}
+function scegliCampagna(path) {
+  erroreCamp('');
+  // per condurre serve anche il collegamento a distanza: lo si prepara e poi si riparte da qui
+  if (campModo === 'host' && !S.link) { campagnaInSospeso = path; chiediPreparazione('host'); $('boxCamp').classList.add('hide'); return; }
+  inPartenza = true;
+  mostraSolo(null);
+  azione({ what: campModo, campagna: path });
+}
+async function usaCartella(path, confermo) {
+  const r = await post('/api/campagna/usa', { path, confermo: !!confermo });
+  if (r.errore) { mostraSolo('boxCamp'); erroreCamp(r.errore); return; }
+  if (r.chiedi) {
+    mostraSolo('boxCamp');
+    $('campChiediTesto').textContent = `«${r.info.nome}» contiene già altri file. Se la usi come campagna, ci creo dentro le cartelle «data» e «assets» e non tocco nient'altro.`;
+    $('campChiedi').classList.remove('hide');
+    $('campChiediSi').onclick = () => { $('campChiedi').classList.add('hide'); usaCartella(path, true); };
+    return;
+  }
+  scegliCampagna(r.path);
+}
+$('campChiediNo').onclick = () => $('campChiedi').classList.add('hide');
+$('campIndietro').onclick = () => mostraSolo('scelte');
+$('campNuova').onclick = () => { $('campNuovaRiga').classList.remove('hide'); $('campNome').focus(); };
+$('campCrea').onclick = async () => {
+  const nome = $('campNome').value.trim();
+  if (!nome) { $('campNome').focus(); return; }
+  const r = await post('/api/campagna/nuova', { nome });
+  if (r.errore) return erroreCamp(r.errore);
+  $('campNome').value = '';
+  scegliCampagna(r.path);
+};
+$('campNome').addEventListener('keydown', e => { if (e.key === 'Enter') $('campCrea').click(); });
+$('campApri').onclick = async () => {
+  erroreCamp('');
+  $('campApri').disabled = true;
+  try {
+    const r = await post('/api/campagna/scegli', { titolo: 'Scegli la cartella della campagna' });
+    if (r.path) usaCartella(r.path);
+    else if (r.nonSupportato) apriSfoglia('');
+  } finally { $('campApri').disabled = false; }
+};
+// la finestra per scegliere una cartella fatta da noi (quando il sistema non ne ha una)
+let fbQui = '';
+async function apriSfoglia(path) {
+  const r = await fetch('/api/sfoglia?path=' + encodeURIComponent(path || '')).then(r => r.json());
+  fbQui = r.path;
+  mostraSolo('boxSfoglia');
+  $('fbRad').replaceChildren(...r.radici.map(x => { const b = el('button', '', x.nome); b.type = 'button'; b.onclick = () => apriSfoglia(x.path); return b; }));
+  $('fbPath').textContent = r.path + (r.qui && r.qui.campagna ? '   — è una campagna' : '');
+  const L = $('fbList');
+  L.replaceChildren();
+  if (r.su) { const b = el('button', '', '⬆  Cartella superiore'); b.type = 'button'; b.onclick = () => apriSfoglia(r.su); L.append(b); }
+  for (const v of r.voci) {
+    const b = el('button', '', (v.campagna ? '📜  ' : '📁  ') + v.nome); b.type = 'button';
+    b.onclick = () => apriSfoglia(v.path);
+    L.append(b);
+  }
+  if (r.errore) L.append(el('div', 'vuoto', r.errore));
+  else if (!r.voci.length) L.append(el('div', 'vuoto', 'Nessuna cartella qui dentro.'));
+}
+$('fbUsa').onclick = () => usaCartella(fbQui);
+$('fbAnnulla').onclick = () => mostraSolo('boxCamp');
+$('prontoCampMostra').onclick = () => S.campagna && post('/api/campagna/mostra', { path: S.campagna.path });
+
+// --- quando è acceso ---
+// le porte le sceglie l'avviatore (se quelle di sempre sono occupate da altri programmi ne usa altre)
+const P = () => S.porte || {};
+const urlTavolo = () => `http://127.0.0.1:${P().web || 3000}/?gs=${S.mode === 'solo' ? 0 : (P().game || 4000)}&ui=${P().ui || location.port}`;
+$('vai').onclick = () => { location.href = urlTavolo(); };
+$('pannello').onclick = () => window.open(`http://127.0.0.1:${P().game || 4000}/`, '_blank');
+$('ferma').onclick = () => { inPartenza = false; window._andato = false; azione({ what: 'ferma' }); setTimeout(carica, 400); };
+
+// --- in diretta ---
+const es = new EventSource('/api/eventi');
+es.onmessage = ev => {
+  let m; try { m = JSON.parse(ev.data); } catch { return; }
+  if (m.t === 'log') { logLine(m.e); return; }
+  if (m.t === 'stato') {
+    const prima = S.link;
+    S = { ...S, ...m.s };
+    disegna();
+    // appena il collegamento è pronto, si riprende da dove eravamo
+    if (!prima && S.link && dopoPrep) {
+      const poi = dopoPrep; dopoPrep = null;
+      if (poi === 'host') { inPartenza = true; azione({ what: 'host', campagna: campagnaInSospeso }); }
+      else if (poi === 'join' && codiceInSospeso) azione({ what: 'join', id: codiceInSospeso });
+    }
+    // Da solo o ospite si va dritti al tavolo; chi conduce resta qui a prendersi il codice.
+    if (S.mode && S.mode !== 'host' && !S.busy && !S.error && !window._andato) {
+      window._andato = true;
+      setTimeout(() => { if (S.mode) location.href = urlTavolo(); }, 1400);
+    }
+  }
+};
+carica();
+setInterval(carica, 4000);
+</script>
+</body>
+</html>

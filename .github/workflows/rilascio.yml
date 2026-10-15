@@ -1,0 +1,176 @@
+# Costruisce tutto quello che serve per distribuire LIBRE VTT e lo pubblica come «release».
+#
+#   - il collegamento a distanza (uffa-link) già compilato per Windows, Linux (x64 e ARM,
+#     statico: gira su qualsiasi distribuzione) e Mac (Apple Silicon + Intel in un file solo);
+#     l'app lo scarica da qui (rilascio.json), invece di doverlo compilare sul computer di chi gioca
+#   - LIBRE-VTT-Setup.exe (Windows), Installa-LIBRE-VTT-Linux.sh, Installa-LIBRE-VTT-Windows.cmd e
+#     LIBRE-VTT.dmg: con dentro anche Node e il collegamento, quindi non scaricano niente.
+#
+# Si avvia creando un tag che comincia con «v» (es. da GitHub: Releases → Draft a new release →
+# tag «v3.0» → Publish), oppure a mano da Actions → Rilascio → Run workflow (in quel caso i file
+# restano scaricabili dalla pagina dell'esecuzione, senza pubblicare niente).
+name: Rilascio
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  collegamento:
+    name: Collegamento ${{ matrix.nome }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { nome: windows-x64, os: windows-latest, target: x86_64-pc-windows-msvc, file: uffa-link.exe, asset: uffa-link-windows-x64.exe, zig: false }
+          - { nome: linux-x64, os: ubuntu-latest, target: x86_64-unknown-linux-musl, file: uffa-link, asset: uffa-link-linux-x64, zig: true }
+          - { nome: linux-arm64, os: ubuntu-latest, target: aarch64-unknown-linux-musl, file: uffa-link, asset: uffa-link-linux-arm64, zig: true }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust
+        shell: bash
+        run: rustup update stable && rustup default stable && rustup target add ${{ matrix.target }}
+      - uses: actions/setup-python@v5
+        if: matrix.zig
+        with:
+          python-version: '3.12'
+      - name: Zig e cargo-zigbuild (Linux statico, anche per ARM)
+        if: matrix.zig
+        run: pip install ziglang cargo-zigbuild
+      - name: Compila
+        shell: bash
+        working-directory: uffa-link
+        run: |
+          if [ "${{ matrix.zig }}" = "true" ]; then cargo zigbuild --release --target ${{ matrix.target }}
+          else cargo build --release --target ${{ matrix.target }}; fi
+          mkdir -p ../out
+          cp "target/${{ matrix.target }}/release/${{ matrix.file }}" "../out/${{ matrix.asset }}"
+          cd ../out && sha256sum "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256" && cat "${{ matrix.asset }}.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: link-${{ matrix.nome }}
+          path: out/*
+
+  mac:
+    name: Mac (collegamento universale e .dmg)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compila per Apple Silicon e Intel
+        working-directory: uffa-link
+        run: |
+          rustup update stable && rustup default stable
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          cargo build --release --target aarch64-apple-darwin
+          cargo build --release --target x86_64-apple-darwin
+          mkdir -p ../out
+          lipo -create -output ../out/uffa-link-macos-universal \
+            target/aarch64-apple-darwin/release/uffa-link target/x86_64-apple-darwin/release/uffa-link
+          codesign --force --sign - ../out/uffa-link-macos-universal
+          cd ../out && shasum -a 256 uffa-link-macos-universal > uffa-link-macos-universal.sha256
+      - name: Crea il .dmg (con Node e il collegamento dentro)
+        env:
+          MYVTT_REPO: ${{ github.repository }}
+          MYVTT_LINK: ${{ github.workspace }}/out/uffa-link-macos-universal
+        run: bash mac/crea-dmg.sh "$PWD/dmg/LIBRE-VTT.dmg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: link-macos-universal
+          path: out/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dmg
+          path: dmg/LIBRE-VTT.dmg
+
+  installatori:
+    name: Installatori Linux e Windows
+    needs: collegamento
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: link-*
+          path: link
+          merge-multiple: true
+      - name: Node per Linux e Windows (controllato)
+        run: |
+          D=https://nodejs.org/dist/latest-v22.x
+          curl -fsSL "$D/SHASUMS256.txt" -o SHASUMS256.txt
+          for f in linux-x64.tar.gz linux-arm64.tar.gz win-x64.zip; do
+            n=$(grep -oE "node-v[0-9]+\.[0-9]+\.[0-9]+-$f" SHASUMS256.txt | head -1)
+            curl -fsSL "$D/$n" -o "$n"
+            grep "  $n\$" SHASUMS256.txt | sha256sum -c -
+            k=$(echo "${f%%.*}" | tr 'a-z-' 'A-Z_')      # linux-x64 → LINUX_X64
+            echo "NODE_$k=$n" >> "$GITHUB_ENV"
+          done
+      - name: Crea gli installatori
+        run: |
+          python3 installer/crea-installer.py out \
+            --node-linux-x64 "$NODE_LINUX_X64" --node-linux-arm64 "$NODE_LINUX_ARM64" --node-win-x64 "$NODE_WIN_X64" \
+            --link-linux-x64 link/uffa-link-linux-x64 --link-linux-arm64 link/uffa-link-linux-arm64 \
+            --link-win-x64 link/uffa-link-windows-x64.exe \
+            --repo "${{ github.repository }}" --stage-windows installer/windows/stage
+          mv "out/Installa LIBRE VTT.cmd" out/Installa-LIBRE-VTT-Windows.cmd
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installatori
+          path: out/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stage-windows
+          path: installer/windows/stage
+
+  setup-exe:
+    name: LIBRE-VTT-Setup.exe
+    needs: installatori
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: stage-windows
+          path: installer/windows/stage
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe' }
+          $v = '${{ github.ref_name }}' -replace '^v', ''
+          if ($v -notmatch '^\d') { $v = '0.0.0' }
+          & $iscc "/DVersione=$v" installer\windows\myvtt.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: setup-exe
+          path: installatori/LIBRE-VTT-Setup.exe
+
+  pubblica:
+    name: Pubblica la release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [collegamento, mac, installatori, setup-exe]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: tutto
+      - name: Carica i file nella release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          mkdir file
+          cp tutto/link-*/* tutto/installatori/* tutto/setup-exe/* tutto/dmg/* file/
+          ls -la file
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" file/* --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" file/* --repo "$GITHUB_REPOSITORY" --title "LIBRE VTT $TAG" \
+              --notes "Windows: LIBRE-VTT-Setup.exe · Linux: Installa-LIBRE-VTT-Linux.sh · Mac: LIBRE-VTT.dmg. Tutto dentro, niente da scaricare a parte."
+          fi

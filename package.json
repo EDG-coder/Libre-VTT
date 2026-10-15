@@ -1,0 +1,5 @@
+{
+  "name": "uffa",
+  "private": true,
+  "scripts": { "start": "node server.js" }
+}
