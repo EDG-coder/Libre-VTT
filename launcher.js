@@ -373,6 +373,11 @@ function preparaCartella(dir, nome) {
   const base = path.join(ROOT, 'assets', 'Sfondi', 'main.webp'), dest = path.join(dir, 'assets', 'Sfondi', 'main.webp');
   const nuova = !fs.existsSync(path.join(dir, 'data', 'board.json')) && !fs.existsSync(path.join(dir, 'data', 'world.json'));
   if (nuova && fs.existsSync(base) && !fs.existsSync(dest)) { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.copyFileSync(base, dest); }
+  // lo sfondo vecchio con scritto «MY VTT», mai cambiato: si sostituisce con quello nuovo
+  try {
+    if (fs.existsSync(base) && fs.statSync(dest).size === 32796 &&
+        require('crypto').createHash('sha1').update(fs.readFileSync(dest)).digest('hex') === 'd5bd0bd05d23ec5f31ed4976d9df10c24e29f6b4') fs.copyFileSync(base, dest);
+  } catch {}
   const meta = path.join(dir, 'campagna.json');
   if (!fs.existsSync(meta) && path.resolve(dir) !== path.resolve(ROOT)) {
     fs.writeFileSync(meta, JSON.stringify({ nome: nome || path.basename(dir), creata: new Date().toISOString(), programma: 'LIBRE VTT' }, null, 2));
