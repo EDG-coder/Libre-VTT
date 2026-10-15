@@ -64,8 +64,10 @@ for T in aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios; do
 done
 # le librerie di sistema che vuole il collegamento (le dice il compilatore)
 touch src/lib.rs
-LIBS=$(cargo rustc --release --lib --crate-type staticlib --target aarch64-apple-ios -- --print native-static-libs 2>&1 \
-  | sed -n 's/.*native-static-libs: //p' | tail -1 || true)
+LIBS=$(CARGO_TERM_COLOR=never cargo rustc --release --lib --crate-type staticlib --target aarch64-apple-ios -- --print native-static-libs 2>&1 \
+  | sed -e $'s/\x1b\\[[0-9;]*m//g' | sed -n 's/.*native-static-libs: //p' | tail -1 || true)
+# senza doppioni (-lSystem e -framework Security ripetuti)
+LIBS=$(echo "$LIBS" | awk '{ out=""; for (i=1; i<=NF; i++) { t=$i; if (t=="-framework") { t=t" "$(++i) } if (!(t in visto)) { visto[t]=1; out=out (out==""?"":" ") t } } print out }')
 [ -n "$LIBS" ] || LIBS="-framework Security -framework SystemConfiguration -framework CoreFoundation -liconv -lc++"
 echo "UFFA_LINK_LDFLAGS = $LIBS" > "$FW/UffaLink.xcconfig"
 echo "   librerie di sistema: $LIBS"
