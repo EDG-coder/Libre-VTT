@@ -1,0 +1,675 @@
+Command line invocation:
+    /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/xcodebuild -project LibreVTT.xcodeproj -scheme LibreVTT -configuration Debug -sdk iphonesimulator -destination "generic/platform=iOS Simulator" -derivedDataPath build/sim CODE_SIGNING_ALLOWED=NO build
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+    SDKROOT = iphonesimulator18.5
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (1 target)
+    Target 'LibreVTT' in project 'LibreVTT' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch arm64 -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ExecuteExternalTool /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -arch x86_64 -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -x c -c /dev/null
+
+Build description signature: 83b4bde6c82abb49f6fd179f2b8fb7f2
+Build description path: /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/XCBuildData/83b4bde6c82abb49f6fd179f2b8fb7f2.xcbuilddata
+ClangStatCache /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT.xcodeproj
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache
+
+CreateBuildDirectory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT.xcodeproj
+    builtin-create-build-directory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products
+
+CreateBuildDirectory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT.xcodeproj
+    builtin-create-build-directory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex
+
+CreateBuildDirectory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT.xcodeproj
+    builtin-create-build-directory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT-8f282c065df823d5d1236637b8414696-VFS-iphonesimulator/all-product-headers.yaml
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT.xcodeproj
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT-8f282c065df823d5d1236637b8414696-VFS-iphonesimulator/all-product-headers.yaml
+
+CreateBuildDirectory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT.xcodeproj
+    builtin-create-build-directory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
+
+ProcessXCFramework /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/Frameworks/UffaLink.xcframework /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/libuffa_link.a ios simulator
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT.xcodeproj
+    builtin-process-xcframework --xcframework /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/Frameworks/UffaLink.xcframework --platform ios --environment simulator --target-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator
+
+ProcessXCFramework /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/Frameworks/NodeMobile.xcframework /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/NodeMobile.framework ios simulator
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT.xcodeproj
+    builtin-process-xcframework --xcframework /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/Frameworks/NodeMobile.xcframework --platform ios --environment simulator --target-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.SwiftFileList (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.SwiftFileList
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT_const_extract_protocols.json (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT_const_extract_protocols.json
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.SwiftConstValuesFileList (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.LinkFileList (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.LinkFileList
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT-OutputFileMap.json (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT-OutputFileMap.json
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/7187679823f38a2a940e0043cdf9d637-common-args.resp (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/7187679823f38a2a940e0043cdf9d637-common-args.resp
+-target x86_64-apple-ios15.0-simulator '-std=gnu17' -fmodules -gmodules '-fmodules-cache-path=/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex' -fpascal-strings -O0 -fno-common '-DDEBUG=1' -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -fasm-blocks -g -iquote /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-generated-files.hmap -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-own-target-headers.hmap -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-all-target-headers.hmap -iquote /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-project-headers.hmap -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/include -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources-normal/x86_64 -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/x86_64 -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources -F/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT_const_extract_protocols.json (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT_const_extract_protocols.json
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.SwiftFileList (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.SwiftFileList
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.SwiftConstValuesFileList (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.LinkFileList (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.LinkFileList
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT-OutputFileMap.json (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT-OutputFileMap.json
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp
+-target arm64-apple-ios15.0-simulator '-std=gnu17' -fmodules -gmodules '-fmodules-cache-path=/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex' -fpascal-strings -O0 -fno-common '-DDEBUG=1' -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -g -iquote /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-generated-files.hmap -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-own-target-headers.hmap -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-all-target-headers.hmap -iquote /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-project-headers.hmap -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/include -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources-normal/arm64 -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/arm64 -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources -F/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT.hmap (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT.hmap
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT.DependencyStaticMetadataFileList (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT.DependencyMetadataFileList (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT.DependencyMetadataFileList
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-project-headers.hmap (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-project-headers.hmap
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-own-target-headers.hmap (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-own-target-headers.hmap
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-generated-files.hmap (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-generated-files.hmap
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-all-target-headers.hmap (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-all-target-headers.hmap
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-all-non-framework-target-headers.hmap (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-all-non-framework-target-headers.hmap
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-DebugDylibPath-normal-x86_64.txt (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-DebugDylibPath-normal-x86_64.txt
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-DebugDylibPath-normal-arm64.txt (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-DebugDylibPath-normal-arm64.txt
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-DebugDylibInstallName-normal-x86_64.txt (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-DebugDylibInstallName-normal-x86_64.txt
+
+WriteAuxiliaryFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-DebugDylibInstallName-normal-arm64.txt (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    write-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-DebugDylibInstallName-normal-arm64.txt
+
+MkDir /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/Frameworks (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /bin/mkdir -p /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/Frameworks
+
+MkDir /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /bin/mkdir -p /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app
+
+Ld /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/Binary/__preview.dylib normal x86_64 (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target x86_64-apple-ios15.0-simulator -dynamiclib -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -F/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -install_name @rpath/LibreVTT.debug.dylib -dead_strip -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT_dependency_info.dat -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/Binary/__preview.dylib
+
+Ld /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/Binary/__preview.dylib normal arm64 (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios15.0-simulator -dynamiclib -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -F/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -install_name @rpath/LibreVTT.debug.dylib -dead_strip -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT_dependency_info.dat -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/Binary/__preview.dylib
+
+MkDir /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_output/unthinned (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /bin/mkdir -p /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_output/unthinned
+
+MkDir /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_output/thinned (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /bin/mkdir -p /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_output/thinned
+
+GenerateAssetSymbols /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/Assets.xcassets (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/actool /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/Assets.xcassets --compile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app --output-format human-readable-text --notices --warnings --export-dependency-info /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_dependencies --output-partial-info-plist /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_generated_info.plist --app-icon AppIcon --compress-pngs --enable-on-demand-resources YES --development-region it --target-device iphone --target-device ipad --minimum-deployment-target 15.0 --platform iphonesimulator --bundle-identifier io.github.edg-coder.librevtt --generate-swift-asset-symbol-extensions NO --generate-swift-asset-symbols /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/GeneratedAssetSymbols.swift --generate-objc-asset-symbols /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/GeneratedAssetSymbols.h --generate-asset-symbol-index /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+/* com.apple.actool.compilation-results */
+/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/GeneratedAssetSymbols.h
+/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/GeneratedAssetSymbols.swift
+
+
+CpResource /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/nodejs-project /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/nodejs-project (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/nodejs-project /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app
+
+CreateUniversalBinary /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/__preview.dylib normal arm64\ x86_64 (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo -create /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/Binary/__preview.dylib /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/Binary/__preview.dylib -output /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/__preview.dylib
+
+CompileAssetCatalogVariant thinned /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/Assets.xcassets (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/actool /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/Assets.xcassets --compile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_output/thinned --output-format human-readable-text --notices --warnings --export-dependency-info /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_dependencies_thinned --output-partial-info-plist /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_generated_info.plist_thinned --app-icon AppIcon --compress-pngs --enable-on-demand-resources YES --development-region it --target-device iphone --target-device ipad --minimum-deployment-target 15.0 --platform iphonesimulator
+/* com.apple.actool.compilation-results */
+/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_generated_info.plist_thinned
+/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_output/thinned/AppIcon60x60@2x.png
+/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_output/thinned/AppIcon76x76@2x~ipad.png
+/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_output/thinned/Assets.car
+
+
+SwiftDriver LibreVTT normal x86_64 com.apple.xcode.tools.swift.compiler (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-SwiftDriver -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name LibreVTT -Onone -enforce-exclusivity\=checked @/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -target x86_64-apple-ios15.0-simulator -g -module-cache-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Index.noindex/DataStore -swift-version 5 -I /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -F /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -output-file-map /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-generated-files.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-own-target-headers.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-project-headers.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources-normal/x86_64 -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/x86_64 -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT-Swift.h -import-objc-header /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/LibreVTT-Bridging-Header.h -pch-output-dir /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/PrecompiledHeaders -working-directory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios -experimental-emit-module-separately -disable-cmo
+
+SwiftDriver LibreVTT normal arm64 com.apple.xcode.tools.swift.compiler (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-SwiftDriver -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name LibreVTT -Onone -enforce-exclusivity\=checked @/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -target arm64-apple-ios15.0-simulator -g -module-cache-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Index.noindex/DataStore -swift-version 5 -I /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -F /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -output-file-map /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-generated-files.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-own-target-headers.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-project-headers.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT-Swift.h -import-objc-header /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/LibreVTT-Bridging-Header.h -pch-output-dir /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/PrecompiledHeaders -working-directory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios -experimental-emit-module-separately -disable-cmo
+
+SwiftGeneratePch normal x86_64 Compiling\ bridging\ header (in target 'LibreVTT' from project 'LibreVTT')
+
+PrecompileSwiftBridgingHeader normal x86_64 (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+
+SwiftGeneratePch normal arm64 Compiling\ bridging\ header (in target 'LibreVTT' from project 'LibreVTT')
+
+PrecompileSwiftBridgingHeader normal arm64 (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+
+SwiftDriverJobDiscovery normal x86_64 Compiling bridging header (in target 'LibreVTT' from project 'LibreVTT')
+
+SwiftEmitModule normal x86_64 Emitting\ module\ for\ LibreVTT (in target 'LibreVTT' from project 'LibreVTT')
+EmitSwiftModule normal x86_64 (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+
+SwiftCompile normal x86_64 Compiling\ Motore.swift /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/Motore.swift (in target 'LibreVTT' from project 'LibreVTT')
+SwiftCompile normal x86_64 /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/Motore.swift (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+
+SwiftDriverJobDiscovery normal arm64 Compiling bridging header (in target 'LibreVTT' from project 'LibreVTT')
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ LibreVTT (in target 'LibreVTT' from project 'LibreVTT')
+EmitSwiftModule normal arm64 (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+
+SwiftCompile normal arm64 Compiling\ AppDelegate.swift,\ ViewController.swift /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/AppDelegate.swift /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/ViewController.swift (in target 'LibreVTT' from project 'LibreVTT')
+SwiftCompile normal arm64 /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/AppDelegate.swift (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/ViewController.swift (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+
+SwiftDriverJobDiscovery normal x86_64 Emitting module for LibreVTT (in target 'LibreVTT' from project 'LibreVTT')
+
+SwiftDriver\ Compilation\ Requirements LibreVTT normal x86_64 com.apple.xcode.tools.swift.compiler (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name LibreVTT -Onone -enforce-exclusivity\=checked @/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -target x86_64-apple-ios15.0-simulator -g -module-cache-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Index.noindex/DataStore -swift-version 5 -I /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -F /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -output-file-map /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-generated-files.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-own-target-headers.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-project-headers.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources-normal/x86_64 -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/x86_64 -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT-Swift.h -import-objc-header /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/LibreVTT-Bridging-Header.h -pch-output-dir /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/PrecompiledHeaders -working-directory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal x86_64 Compiling Motore.swift (in target 'LibreVTT' from project 'LibreVTT')
+
+LinkAssetCatalog /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/Assets.xcassets (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-linkAssetCatalog --thinned /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_output/thinned --thinned-dependencies /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_dependencies_thinned --thinned-info-plist-content /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_generated_info.plist_thinned --unthinned /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_output/unthinned --unthinned-dependencies /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_dependencies_unthinned --unthinned-info-plist-content /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_generated_info.plist_unthinned --output /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app --plist-output /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_generated_info.plist
+note: Emplaced /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/Assets.car (in target 'LibreVTT' from project 'LibreVTT')
+note: Emplaced /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/AppIcon60x60@2x.png (in target 'LibreVTT' from project 'LibreVTT')
+note: Emplaced /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/AppIcon76x76@2x~ipad.png (in target 'LibreVTT' from project 'LibreVTT')
+
+SwiftCompile normal arm64 Compiling\ Motore.swift /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/Motore.swift (in target 'LibreVTT' from project 'LibreVTT')
+
+SwiftCompile normal arm64 /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/Motore.swift (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for LibreVTT (in target 'LibreVTT' from project 'LibreVTT')
+
+Copy /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/x86_64-apple-ios-simulator.swiftmodule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.swiftmodule (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.swiftmodule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/x86_64-apple-ios-simulator.swiftmodule
+
+SwiftDriver\ Compilation\ Requirements LibreVTT normal arm64 com.apple.xcode.tools.swift.compiler (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name LibreVTT -Onone -enforce-exclusivity\=checked @/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -target arm64-apple-ios15.0-simulator -g -module-cache-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Index.noindex/DataStore -swift-version 5 -I /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -F /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -output-file-map /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-generated-files.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-own-target-headers.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-project-headers.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT-Swift.h -import-objc-header /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/LibreVTT-Bridging-Header.h -pch-output-dir /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/PrecompiledHeaders -working-directory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios -experimental-emit-module-separately -disable-cmo
+
+Copy /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/x86_64-apple-ios-simulator.swiftdoc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.swiftdoc (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.swiftdoc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/x86_64-apple-ios-simulator.swiftdoc
+
+Copy /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/x86_64-apple-ios-simulator.abi.json /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.abi.json (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.abi.json /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/x86_64-apple-ios-simulator.abi.json
+
+SwiftMergeGeneratedHeaders /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/LibreVTT-Swift.h /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT-Swift.h /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT-Swift.h (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-swiftHeaderTool -arch arm64 /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT-Swift.h -arch x86_64 /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT-Swift.h -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/LibreVTT-Swift.h
+
+Copy /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/arm64-apple-ios-simulator.swiftmodule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.swiftmodule (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.swiftmodule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/arm64-apple-ios-simulator.swiftmodule
+
+Copy /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/arm64-apple-ios-simulator.swiftdoc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.swiftdoc (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.swiftdoc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/arm64-apple-ios-simulator.swiftdoc
+
+Copy /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/arm64-apple-ios-simulator.abi.json /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.abi.json (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.abi.json /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/arm64-apple-ios-simulator.abi.json
+
+Copy /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/Project/x86_64-apple-ios-simulator.swiftsourceinfo /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.swiftsourceinfo (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.swiftsourceinfo /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/Project/x86_64-apple-ios-simulator.swiftsourceinfo
+
+Copy /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.swiftsourceinfo (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.swiftsourceinfo /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo
+
+SwiftCompile normal x86_64 Compiling\ AppDelegate.swift,\ ViewController.swift /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/AppDelegate.swift /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/ViewController.swift (in target 'LibreVTT' from project 'LibreVTT')
+
+SwiftCompile normal x86_64 /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/AppDelegate.swift (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/ViewController.swift (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+
+SwiftCompile normal x86_64 Compiling\ GeneratedAssetSymbols.swift /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'LibreVTT' from project 'LibreVTT')
+SwiftCompile normal x86_64 /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+
+SwiftDriverJobDiscovery normal arm64 Compiling Motore.swift (in target 'LibreVTT' from project 'LibreVTT')
+
+SwiftCompile normal arm64 Compiling\ GeneratedAssetSymbols.swift /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'LibreVTT' from project 'LibreVTT')
+SwiftCompile normal arm64 /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+
+SwiftDriverJobDiscovery normal x86_64 Compiling AppDelegate.swift, ViewController.swift (in target 'LibreVTT' from project 'LibreVTT')
+
+SwiftDriverJobDiscovery normal arm64 Compiling AppDelegate.swift, ViewController.swift (in target 'LibreVTT' from project 'LibreVTT')
+
+ScanDependencies /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/AvvioNode.o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/AvvioNode.c normal x86_64 c com.apple.compilers.llvm.clang.1_0.compiler (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+    Using response file: /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/7187679823f38a2a940e0043cdf9d637-common-args.resp
+    
+    builtin-ScanDependencies -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/AvvioNode.o.scan -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x c -ivfsstatcache /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -fmessage-length\=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit\=0 -fno-color-diagnostics -fmodules-prune-interval\=86400 -fmodules-prune-after\=345600 -fbuild-session-file\=/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex/Session.modulevalidation -fmodules-validate-once-per-build-session -Wnon-modular-include-in-framework-module -Werror\=non-modular-include-in-framework-module -Wno-trigraphs -Wno-missing-field-initializers -Wno-missing-prototypes -Wno-return-type -Wunreachable-code -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wconditional-uninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wno-float-conversion -Wno-non-literal-null-conversion -Wno-objc-literal-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-implicit-fallthrough -fstrict-aliasing -Wdeprecated-declarations -Wno-sign-conversion -Winfinite-recursion -Wcomma -Wblock-capture-autoreleasing -Wno-strict-prototypes -Wno-semicolon-before-method-body -index-store-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Index.noindex/DataStore @/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/7187679823f38a2a940e0043cdf9d637-common-args.resp -MMD -MT dependencies -MF /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/AvvioNode.d --serialize-diagnostics /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/AvvioNode.dia -c /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/AvvioNode.c -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/AvvioNode.o -index-unit-output-path /LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/AvvioNode.o
+
+ScanDependencies /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/AvvioNode.o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/AvvioNode.c normal arm64 c com.apple.compilers.llvm.clang.1_0.compiler (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+    Using response file: /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp
+    
+    builtin-ScanDependencies -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/AvvioNode.o.scan -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x c -ivfsstatcache /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -fmessage-length\=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit\=0 -fno-color-diagnostics -fmodules-prune-interval\=86400 -fmodules-prune-after\=345600 -fbuild-session-file\=/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex/Session.modulevalidation -fmodules-validate-once-per-build-session -Wnon-modular-include-in-framework-module -Werror\=non-modular-include-in-framework-module -Wno-trigraphs -Wno-missing-field-initializers -Wno-missing-prototypes -Wno-return-type -Wunreachable-code -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wconditional-uninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wno-float-conversion -Wno-non-literal-null-conversion -Wno-objc-literal-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-implicit-fallthrough -fstrict-aliasing -Wdeprecated-declarations -Wno-sign-conversion -Winfinite-recursion -Wcomma -Wblock-capture-autoreleasing -Wno-strict-prototypes -Wno-semicolon-before-method-body -index-store-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Index.noindex/DataStore @/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp -MMD -MT dependencies -MF /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/AvvioNode.d --serialize-diagnostics /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/AvvioNode.dia -c /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/AvvioNode.c -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/AvvioNode.o -index-unit-output-path /LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/AvvioNode.o
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdarg-9ZJMW9RZP7N8FNJHW9EMN8BRT.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdarg-9ZJMW9RZP7N8FNJHW9EMN8BRT.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/ptrcheck-9N770HOOVG9EGBCQPLES79JNX.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/ptrcheck-9N770HOOVG9EGBCQPLES79JNX.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdarg-BKAOZKK6IYN63JJAPYU1PKCTS.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdarg-BKAOZKK6IYN63JJAPYU1PKCTS.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/ptrcheck-AMV37F0U0EMHD43B5DB7GGXBK.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/ptrcheck-AMV37F0U0EMHD43B5DB7GGXBK.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stddef-7XOH6VSHFRW9GFBERL5N530XT.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stddef-7XOH6VSHFRW9GFBERL5N530XT.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stddef-3P374FTE85AQBLPS8MX84M9ZF.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stddef-3P374FTE85AQBLPS8MX84M9ZF.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/os_availability_internal-978GJ06SC093L2JN753AD4KLY.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/os_availability_internal-978GJ06SC093L2JN753AD4KLY.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/os_availability_internal-7YF35SGP7BO708994WTQTGFNQ.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/os_availability_internal-7YF35SGP7BO708994WTQTGFNQ.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/os_availability-6V3Y662XYGQ02E25FKONAG42M.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/os_availability-6V3Y662XYGQ02E25FKONAG42M.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/os_availability-5NU8JBQY8NVIOUPTLOSKLN6I1.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/os_availability-5NU8JBQY8NVIOUPTLOSKLN6I1.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/DarwinFoundation-4TNQL1Y7G83ZGQE9KKCAYTMX6.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/DarwinFoundation-4TNQL1Y7G83ZGQE9KKCAYTMX6.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/DarwinFoundation-CG9CISRLFS072LWY0LRVJEZ39.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/DarwinFoundation-CG9CISRLFS072LWY0LRVJEZ39.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_errno-AK1MLOO9RH7BMH7IEB80DLM56.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_errno-AK1MLOO9RH7BMH7IEB80DLM56.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_strings-2GEUPEVJW2QWPZYWMSDSMEJXG.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_strings-2GEUPEVJW2QWPZYWMSDSMEJXG.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/mach-3FI8ZF24CS4FV0K1GVCP8056N.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/mach-3FI8ZF24CS4FV0K1GVCP8056N.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/runetype-1MYYKREHUF8K0P35N86JT6921.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/runetype-1MYYKREHUF8K0P35N86JT6921.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_strings-CRSYFFHIOBC1N3VI7IIIHUEU3.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_strings-CRSYFFHIOBC1N3VI7IIIHUEU3.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/runetype-5JQFMQ4YZNQXG374TQUEN8TKP.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/runetype-5JQFMQ4YZNQXG374TQUEN8TKP.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/alloca-3R76BTS2BWUV5LLZ5RHHICONK.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/alloca-3R76BTS2BWUV5LLZ5RHHICONK.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/netinet_in-19TNERQ8WJJX6LP6YXGBKFEZN.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/netinet_in-19TNERQ8WJJX6LP6YXGBKFEZN.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_time-80C323UFD4FBSCS0RPN073KUJ.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_time-80C323UFD4FBSCS0RPN073KUJ.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_useconds_t-LDZB9FUR5N0E7NVAZZPAB2JM.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_useconds_t-LDZB9FUR5N0E7NVAZZPAB2JM.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_sys_select-7G5MQIIM10EPNPVBTXKKTMA68.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_sys_select-7G5MQIIM10EPNPVBTXKKTMA68.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_useconds_t-DSNFV3KYFUAO0CEVWDHTPF31X.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_useconds_t-DSNFV3KYFUAO0CEVWDHTPF31X.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_stdint-86WJXQ7R61RJBYJEBWO8HKKG9.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_stdint-86WJXQ7R61RJBYJEBWO8HKKG9.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_sys_select-4MPQUEMS22IJJY6CSRPBFCYEP.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_sys_select-4MPQUEMS22IJJY6CSRPBFCYEP.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdint-C34BAGH80PR79X18V7OOWFGVD.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdint-C34BAGH80PR79X18V7OOWFGVD.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_errno-DO4QNFA1QN4F5PUULIAMJ4KAX.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_errno-DO4QNFA1QN4F5PUULIAMJ4KAX.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_time-2ZBTHECFVNWMIY4NO0KYF66B0.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_time-2ZBTHECFVNWMIY4NO0KYF66B0.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_types-7U666C92Q3QD79R70NO6VCQ46.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_types-7U666C92Q3QD79R70NO6VCQ46.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_stdint-EMNVODWRNJEULS8E1ATAT1IB.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_stdint-EMNVODWRNJEULS8E1ATAT1IB.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_time-32J1H8654XH3ZWO7DK5KOT8PP.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_time-32J1H8654XH3ZWO7DK5KOT8PP.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_resource-8W5SL9FXFYRIKR44DXZDMEEZ7.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_resource-8W5SL9FXFYRIKR44DXZDMEEZ7.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_signal-94267MNIWAV72S2BHMLGQG9Z8.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_signal-94267MNIWAV72S2BHMLGQG9Z8.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdint-1HRJO3PWHO4BVE97AZ9EOQW7Q.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_Builtin_stdint-1HRJO3PWHO4BVE97AZ9EOQW7Q.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_wait-4A71L37PM2R3EYRIBEMWNHS3F.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_wait-4A71L37PM2R3EYRIBEMWNHS3F.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/pthread-7VIJGQAH10D9YHWFF6QBU8G08.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/pthread-7VIJGQAH10D9YHWFF6QBU8G08.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_string-1473G7KK8H5R0JPARZH8TN7Q4.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_string-1473G7KK8H5R0JPARZH8TN7Q4.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/netinet_in-BE1WSIRQX079Z5LAH5FN0YHR1.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/netinet_in-BE1WSIRQX079Z5LAH5FN0YHR1.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/alloca-84N46YA5MONMEOIC7M4MTVDQ6.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/alloca-84N46YA5MONMEOIC7M4MTVDQ6.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/mach-50M36E3R2YGFW530B8B7QA6OL.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/mach-50M36E3R2YGFW530B8B7QA6OL.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_stdlib-41M4CWCJ2YSWMSMV3FZERUJTT.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_stdlib-41M4CWCJ2YSWMSMV3FZERUJTT.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_types-9XRGE42JD8KNP4G3OMJ8X55TB.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_types-9XRGE42JD8KNP4G3OMJ8X55TB.scan
+
+SwiftDriverJobDiscovery normal x86_64 Compiling GeneratedAssetSymbols.swift (in target 'LibreVTT' from project 'LibreVTT')
+
+SwiftDriver\ Compilation LibreVTT normal x86_64 com.apple.xcode.tools.swift.compiler (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-Swift-Compilation -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name LibreVTT -Onone -enforce-exclusivity\=checked @/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -target x86_64-apple-ios15.0-simulator -g -module-cache-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Index.noindex/DataStore -swift-version 5 -I /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -F /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -output-file-map /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-generated-files.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-own-target-headers.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-project-headers.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources-normal/x86_64 -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/x86_64 -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT-Swift.h -import-objc-header /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/LibreVTT-Bridging-Header.h -pch-output-dir /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/PrecompiledHeaders -working-directory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios -experimental-emit-module-separately -disable-cmo
+
+CompileC /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/AvvioNode.o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/AvvioNode.c normal arm64 c com.apple.compilers.llvm.clang.1_0.compiler (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+    Using response file: /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp
+    
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x c -ivfsstatcache /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -fmessage-length\=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit\=0 -fno-color-diagnostics -fmodules-prune-interval\=86400 -fmodules-prune-after\=345600 -fbuild-session-file\=/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex/Session.modulevalidation -fmodules-validate-once-per-build-session -Wnon-modular-include-in-framework-module -Werror\=non-modular-include-in-framework-module -Wno-trigraphs -Wno-missing-field-initializers -Wno-missing-prototypes -Wno-return-type -Wunreachable-code -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wconditional-uninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wno-float-conversion -Wno-non-literal-null-conversion -Wno-objc-literal-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-implicit-fallthrough -fstrict-aliasing -Wdeprecated-declarations -Wno-sign-conversion -Winfinite-recursion -Wcomma -Wblock-capture-autoreleasing -Wno-strict-prototypes -Wno-semicolon-before-method-body -index-store-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Index.noindex/DataStore @/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp -MMD -MT dependencies -MF /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/AvvioNode.d --serialize-diagnostics /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/AvvioNode.dia -c /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/AvvioNode.c -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/AvvioNode.o -index-unit-output-path /LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/AvvioNode.o
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_signal-ALPRA9RWF15PFQEKNRIQHXRNZ.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_signal-ALPRA9RWF15PFQEKNRIQHXRNZ.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_string-7Q9SUK2JYEVNUNZJZ8NQG1SQI.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_string-7Q9SUK2JYEVNUNZJZ8NQG1SQI.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_resource-9TYHHEUB8M7AN59TDHXZ61XX3.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_resource-9TYHHEUB8M7AN59TDHXZ61XX3.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_time-ARGA3OP7YG8HXM9Y2TS3HLZ38.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_time-ARGA3OP7YG8HXM9Y2TS3HLZ38.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_wait-4LQGUMKH5CWSVNVJ4GT2GFQF8.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/sys_wait-4LQGUMKH5CWSVNVJ4GT2GFQF8.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/pthread-BSG0MFF615MUSMSMRAD7UOGIS.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/pthread-BSG0MFF615MUSMSMRAD7UOGIS.scan
+
+PrecompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_stdlib-26SPCPOFE18PBKHH9052YJOTL.scan
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-precompileModule /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/ExplicitPrecompiledModules/_stdlib-26SPCPOFE18PBKHH9052YJOTL.scan
+
+CompileC /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/AvvioNode.o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/AvvioNode.c normal x86_64 c com.apple.compilers.llvm.clang.1_0.compiler (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    
+    Using response file: /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/7187679823f38a2a940e0043cdf9d637-common-args.resp
+    
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x c -ivfsstatcache /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -fmessage-length\=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit\=0 -fno-color-diagnostics -fmodules-prune-interval\=86400 -fmodules-prune-after\=345600 -fbuild-session-file\=/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex/Session.modulevalidation -fmodules-validate-once-per-build-session -Wnon-modular-include-in-framework-module -Werror\=non-modular-include-in-framework-module -Wno-trigraphs -Wno-missing-field-initializers -Wno-missing-prototypes -Wno-return-type -Wunreachable-code -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wconditional-uninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wno-float-conversion -Wno-non-literal-null-conversion -Wno-objc-literal-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-implicit-fallthrough -fstrict-aliasing -Wdeprecated-declarations -Wno-sign-conversion -Winfinite-recursion -Wcomma -Wblock-capture-autoreleasing -Wno-strict-prototypes -Wno-semicolon-before-method-body -index-store-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Index.noindex/DataStore @/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/7187679823f38a2a940e0043cdf9d637-common-args.resp -MMD -MT dependencies -MF /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/AvvioNode.d --serialize-diagnostics /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/AvvioNode.dia -c /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/AvvioNode.c -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/AvvioNode.o -index-unit-output-path /LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/AvvioNode.o
+
+Ld /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/Binary/LibreVTT.debug.dylib normal x86_64 (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target x86_64-apple-ios15.0-simulator -dynamiclib -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -L/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -F/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -F/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -filelist /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.LinkFileList -install_name @rpath/LibreVTT.debug.dylib -Xlinker -rpath -Xlinker @executable_path/Frameworks -dead_strip -Xlinker -object_path_lto -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.swiftmodule -framework Network -framework SystemConfiguration -framework Security -framework CoreFoundation -lSystem -lobjc -framework Foundation -liconv -lc -lm -Xlinker -alias -Xlinker _main -Xlinker ___debug_main_executable_dylib_entry_point -framework NodeMobile -luffa_link -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/Binary/LibreVTT.debug.dylib
+ld: warning: ignoring duplicate libraries: '-lSystem', '-lobjc'
+
+SwiftDriverJobDiscovery normal arm64 Compiling GeneratedAssetSymbols.swift (in target 'LibreVTT' from project 'LibreVTT')
+
+SwiftDriver\ Compilation LibreVTT normal arm64 com.apple.xcode.tools.swift.compiler (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-Swift-Compilation -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name LibreVTT -Onone -enforce-exclusivity\=checked @/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -target arm64-apple-ios15.0-simulator -g -module-cache-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Index.noindex/DataStore -swift-version 5 -I /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -F /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -output-file-map /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-generated-files.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-own-target-headers.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-project-headers.hmap -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT-Swift.h -import-objc-header /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/LibreVTT-Bridging-Header.h -pch-output-dir /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/PrecompiledHeaders -working-directory /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios -experimental-emit-module-separately -disable-cmo
+
+Ld /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/Binary/LibreVTT.debug.dylib normal arm64 (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios15.0-simulator -dynamiclib -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -L/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -F/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -F/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -filelist /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.LinkFileList -install_name @rpath/LibreVTT.debug.dylib -Xlinker -rpath -Xlinker @executable_path/Frameworks -dead_strip -Xlinker -object_path_lto -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.swiftmodule -framework Network -framework SystemConfiguration -framework Security -framework CoreFoundation -lSystem -lobjc -framework Foundation -liconv -lc -lm -Xlinker -alias -Xlinker _main -Xlinker ___debug_main_executable_dylib_entry_point -framework NodeMobile -luffa_link -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/Binary/LibreVTT.debug.dylib
+ld: warning: ignoring duplicate libraries: '-lSystem', '-lobjc'
+
+ConstructStubExecutorLinkFileList /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-ExecutorLinkFileList-normal-x86_64.txt (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    construct-stub-executor-link-file-list /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/Binary/LibreVTT.debug.dylib /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor_no_swift_entry_point.a /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a --output /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-ExecutorLinkFileList-normal-x86_64.txt
+note: Using stub executor library with Swift entry point. (in target 'LibreVTT' from project 'LibreVTT')
+
+CreateUniversalBinary /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/LibreVTT.debug.dylib normal arm64\ x86_64 (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo -create /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/Binary/LibreVTT.debug.dylib /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/Binary/LibreVTT.debug.dylib -output /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/LibreVTT.debug.dylib
+
+ConstructStubExecutorLinkFileList /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-ExecutorLinkFileList-normal-arm64.txt (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    construct-stub-executor-link-file-list /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/Binary/LibreVTT.debug.dylib /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor_no_swift_entry_point.a /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a --output /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-ExecutorLinkFileList-normal-arm64.txt
+note: Using stub executor library with Swift entry point. (in target 'LibreVTT' from project 'LibreVTT')
+
+Ld /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/Binary/LibreVTT normal x86_64 (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target x86_64-apple-ios15.0-simulator -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -F/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -Xlinker -rpath -Xlinker @executable_path -Xlinker -rpath -Xlinker @executable_path/Frameworks -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -e ___debug_blank_executor_main -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_dylib -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-DebugDylibPath-normal-x86_64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_instlnm -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-DebugDylibInstallName-normal-x86_64.txt -Xlinker -filelist -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-ExecutorLinkFileList-normal-x86_64.txt /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/Binary/LibreVTT.debug.dylib -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/Binary/LibreVTT
+
+Ld /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/Binary/LibreVTT normal arm64 (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios15.0-simulator -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -F/Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator -Xlinker -rpath -Xlinker @executable_path -Xlinker -rpath -Xlinker @executable_path/Frameworks -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -e ___debug_blank_executor_main -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_dylib -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-DebugDylibPath-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_instlnm -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-DebugDylibInstallName-normal-arm64.txt -Xlinker -filelist -Xlinker /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT-ExecutorLinkFileList-normal-arm64.txt /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/Binary/LibreVTT.debug.dylib -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/Binary/LibreVTT
+
+CreateUniversalBinary /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/LibreVTT normal arm64\ x86_64 (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo -create /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/Binary/LibreVTT /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/Binary/LibreVTT -output /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/LibreVTT
+
+Copy /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/Frameworks/NodeMobile.framework /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/Frameworks/NodeMobile.xcframework/ios-arm64_x86_64-simulator/NodeMobile.framework (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks -remove-static-executable /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/Frameworks/NodeMobile.xcframework/ios-arm64_x86_64-simulator/NodeMobile.framework /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/Frameworks
+
+ProcessInfoPlistFile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/Info.plist /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/Info.plist (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-infoPlistUtility /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/LibreVTT/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/assetcatalog_generated_info.plist -scanforprivacyfile /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/Frameworks/NodeMobile.framework -o /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/Info.plist
+
+ExtractAppIntentsMetadata (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name LibreVTT --sdk-root /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk --xcode-version 16F6 --platform-family iOS --deployment-target 15.0 --bundle-identifier io.github.edg-coder.librevtt --output /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app --target-triple arm64-apple-ios15.0-simulator --target-triple x86_64-apple-ios15.0-simulator --binary-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/LibreVTT --dependency-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT_dependency_info.dat --dependency-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT_dependency_info.dat --stringsdata-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --stringsdata-file /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.SwiftFileList --source-file-list /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.SwiftFileList --metadata-file-list /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT.DependencyMetadataFileList --static-metadata-file-list /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT.DependencyStaticMetadataFileList --swift-const-vals-list /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/arm64/LibreVTT.SwiftConstValuesFileList --swift-const-vals-list /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/Objects-normal/x86_64/LibreVTT.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-10-15 20:41:02.744 appintentsmetadataprocessor[3805:15342] Starting appintentsmetadataprocessor export
+2026-10-15 20:41:02.747 appintentsmetadataprocessor[3805:15342] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+CopySwiftLibs /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/LibreVTT.debug.dylib --scan-folder /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/Frameworks --scan-folder /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/PlugIns --scan-folder /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/SystemExtensions --scan-folder /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/Extensions --platform iphonesimulator --toolchain /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+Ignoring --strip-bitcode because --sign was not passed
+
+AppIntentsSSUTraining (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsnltrainingprocessor --infoplist-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/Info.plist --temp-dir-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/ssu --bundle-id io.github.edg-coder.librevtt --product-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app --extracted-metadata-path /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app/Metadata.appintents --metadata-file-list /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Intermediates.noindex/LibreVTT.build/Debug-iphonesimulator/LibreVTT.build/LibreVTT.DependencyMetadataFileList --archive-ssu-assets
+2026-10-15 20:41:02.779 appintentsnltrainingprocessor[3806:15343] Parsing options for appintentsnltrainingprocessor
+2026-10-15 20:41:02.780 appintentsnltrainingprocessor[3806:15343] No AppShortcuts found - Skipping.
+
+RegisterExecutionPolicyException /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-RegisterExecutionPolicyException /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app
+
+Validate /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    builtin-validationUtility /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app -infoplist-subpath Info.plist
+
+Touch /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app (in target 'LibreVTT' from project 'LibreVTT')
+    cd /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios
+    /usr/bin/touch -c /Users/runner/work/Libre-VTT/Libre-VTT/mobile/ios/build/sim/Build/Products/Debug-iphonesimulator/LibreVTT.app
+
+** BUILD SUCCEEDED **
+
