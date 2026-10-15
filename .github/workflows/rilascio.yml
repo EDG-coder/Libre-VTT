@@ -7,14 +7,20 @@
 #     LIBRE-VTT.dmg: con dentro anche Node e il collegamento, quindi non scaricano niente.
 #
 # Si avvia creando un tag che comincia con «v» (es. da GitHub: Releases → Draft a new release →
-# tag «v3.0» → Publish), oppure a mano da Actions → Rilascio → Run workflow (in quel caso i file
-# restano scaricabili dalla pagina dell'esecuzione, senza pubblicare niente).
+# tag «v3.0» → Publish), oppure a mano da Actions → Rilascio → Run workflow: se si scrive una
+# versione (es. 3.0.1) alla fine crea lui il tag e la release; se la si lascia vuota è solo una
+# prova, e i file restano scaricabili dalla pagina dell'esecuzione.
 name: Rilascio
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      versione:
+        description: 'Versione da pubblicare (es. 3.0.1). Vuoto = solo una prova, senza pubblicare.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -142,7 +148,7 @@ jobs:
         run: |
           $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
           if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe' }
-          $v = '${{ github.ref_name }}' -replace '^v', ''
+          $v = '${{ inputs.versione || github.ref_name }}' -replace '^v', ''
           if ($v -notmatch '^\d') { $v = '0.0.0' }
           & $iscc "/DVersione=$v" installer\windows\myvtt.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -153,17 +159,18 @@ jobs:
 
   pubblica:
     name: Pubblica la release
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || inputs.versione
     needs: [collegamento, mac, installatori, setup-exe]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: tutto
       - name: Carica i file nella release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.versione && format('v{0}', inputs.versione) || github.ref_name }}
         run: |
           mkdir file
           cp tutto/link-*/* tutto/installatori/* tutto/setup-exe/* tutto/dmg/* file/
@@ -171,6 +178,6 @@ jobs:
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" file/* --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$TAG" file/* --repo "$GITHUB_REPOSITORY" --title "LIBRE VTT $TAG" \
-              --notes "Windows: LIBRE-VTT-Setup.exe · Linux: Installa-LIBRE-VTT-Linux.sh · Mac: LIBRE-VTT.dmg. Tutto dentro, niente da scaricare a parte."
+            gh release create "$TAG" file/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "LIBRE VTT ${TAG#v}" --notes-file .github/note-rilascio.md
           fi
