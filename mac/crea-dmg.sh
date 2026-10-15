@@ -72,6 +72,7 @@ else
 fi
 
 passo "Creo il .dmg"
+mkdir -p "$(dirname "$OUT")" || muori "non riesco a creare la cartella per $OUT"
 ln -s /Applications "$STAGE/Applicazioni"
 rm -f "$OUT"
 # hdiutil a volte risponde «risorsa occupata» (succede anche sui Mac di GitHub): si riprova,
