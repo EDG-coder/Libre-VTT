@@ -26,3 +26,8 @@ jni = "0.21"
 
 [profile.release]
 opt-level = "s"
+
+# iPhone/iPad: libc 0.2.190 ha tolto `in6_ifreq` fuori da macOS e netdev (usato da iroh) non
+# compila più per iOS. Finché netdev non si sistema, si resta alla versione prima.
+[target.'cfg(target_os = "ios")'.dependencies]
+libc = "=0.2.189"
