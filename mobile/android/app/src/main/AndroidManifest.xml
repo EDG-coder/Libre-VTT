@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- per installare gli aggiornamenti scaricati dall'app (Android chiede sempre conferma) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- funziona anche senza schermo touch (DeX sul monitor, Chromebook) -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />

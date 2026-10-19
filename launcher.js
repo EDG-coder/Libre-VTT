@@ -130,7 +130,7 @@ function stato() {
     link: MOBILE ? !!LINK_CTRL : !!linkBin(), cargo: !!cache.cargo, pronto: !!rilascio(), campagna: state.campagna || null,
     porte: { ui: UI_PORT, ...(state.porte || {}) },
     piattaforma: MOBILE === 'android' ? 'Android' : MOBILE === 'ios' ? 'iPhone e iPad' : WIN ? 'Windows' : MAC ? 'macOS' : 'Linux',
-    mobile: MOBILE, campHome: CAMP_HOME,
+    mobile: MOBILE, campHome: CAMP_HOME, versione: VERSIONE,
     node: process.versions.node
   };
 }
@@ -674,6 +674,92 @@ async function scaricaPronto() {
   return true;
 }
 
+// ---------- aggiornamenti ----------
+// All'apertura si guarda su GitHub se c'è una versione più nuova (al massimo ogni 6 ore).
+// Sul computer si scarica l'installatore giusto e lo si avvia; su Android si scarica l'APK e
+// lo installa l'app (Android chiede sempre conferma); su iPhone si può solo avvisare.
+const VERSIONE = String((leggiJson(path.join(ROOT, 'package.json')) || {}).version || '');
+function repoGitHub() {
+  const r = leggiJson(path.join(ROOT, 'rilascio.json')) || {};
+  const repo = String(process.env.MYVTT_REPO || r.repo || 'EDG-coder/Libre-VTT').trim();
+  return /^[\w.-]+\/[\w.-]+$/.test(repo) ? repo : null;
+}
+/** >0 se a è più nuova di b ("3.1.0" contro "3.0.9") */
+function confrontaVersioni(a, b) {
+  const pa = String(a).replace(/^v/, '').split(/[.-]/), pb = String(b).replace(/^v/, '').split(/[.-]/);
+  for (let i = 0; i < 3; i++) { const d = (parseInt(pa[i], 10) || 0) - (parseInt(pb[i], 10) || 0); if (d) return d; }
+  return 0;
+}
+function fileAggiornamento(assets) {
+  const nomi = MOBILE === 'android' ? (process.arch === 'arm64' ? ['LIBRE-VTT-Android-arm64.apk', 'LIBRE-VTT-Android.apk'] : ['LIBRE-VTT-Android.apk'])
+    : MOBILE === 'ios' ? []
+    : WIN ? ['LIBRE-VTT-Setup.exe', 'Installa-LIBRE-VTT-Windows.cmd'] : MAC ? ['LIBRE-VTT.dmg'] : ['Installa-LIBRE-VTT-Linux.sh'];
+  for (const n of nomi) {
+    const a = assets.find(x => x && x.name === n);
+    if (a && a.browser_download_url) return { nome: a.name, url: a.browser_download_url, byte: a.size || 0 };
+  }
+  return null;
+}
+let ultimoControllo = null;
+async function controllaAggiornamento(forza) {
+  if (process.env.MYVTT_NO_AGGIORNAMENTI) return { attuale: VERSIONE, nuova: null };
+  if (!forza && ultimoControllo && Date.now() - ultimoControllo.quando < 6 * 3600e3) return ultimoControllo.dati;
+  const repo = repoGitHub();
+  if (!VERSIONE || !repo) return { attuale: VERSIONE, nuova: null };
+  let j = null;
+  try { j = JSON.parse(await scaricaTesto(process.env.MYVTT_API_RILASCI || `https://api.github.com/repos/${repo}/releases/latest`) || 'null'); } catch {}
+  if (!j || !j.tag_name) return { attuale: VERSIONE, nuova: null, offline: true };
+  const nuova = String(j.tag_name).replace(/^v/, '');
+  const dati = {
+    attuale: VERSIONE, nuova: confrontaVersioni(nuova, VERSIONE) > 0 ? nuova : null,
+    pagina: j.html_url || `https://github.com/${repo}/releases/latest`,
+    file: fileAggiornamento(Array.isArray(j.assets) ? j.assets : []), mobile: MOBILE
+  };
+  ultimoControllo = { quando: Date.now(), dati };
+  if (dati.nuova) say(`C'è una versione nuova di LIBRE VTT: ${dati.nuova} (questa è la ${VERSIONE}).`, 'ok');
+  return dati;
+}
+let aggiornando = false;
+async function installaAggiornamento() {
+  if (aggiornando) return { errore: 'Sto già scaricando l\'aggiornamento.' };
+  const a = await controllaAggiornamento(true);
+  if (a.offline) return { errore: 'Non riesco a raggiungere GitHub: controlla la connessione.' };
+  if (!a.nuova) return { errore: 'Hai già l\'ultima versione.' };
+  if (MOBILE === 'ios' || !a.file) return { pagina: a.pagina };
+  aggiornando = true;
+  try {
+    const scaricati = path.join(os.homedir(), 'Downloads');
+    const dir = MOBILE ? path.join(USERDIR, 'aggiornamenti') : fs.existsSync(scaricati) ? scaricati : os.tmpdir();
+    fs.mkdirSync(dir, { recursive: true });
+    if (MOBILE) for (const f of fs.readdirSync(dir)) { try { fs.unlinkSync(path.join(dir, f)); } catch {} }
+    const dest = path.join(dir, a.file.nome), tmp = dest + '.part';
+    say(`Scarico LIBRE VTT ${a.nuova} (${a.file.nome})…`);
+    state.busy = `Scarico LIBRE VTT ${a.nuova}…`; push();
+    const fatto = await scarica(a.file.url, tmp, `Scarico LIBRE VTT ${a.nuova}`);
+    if (!fatto || (a.file.byte && fs.statSync(tmp).size !== a.file.byte)) {
+      try { fs.unlinkSync(tmp); } catch {}
+      return { errore: 'Lo scaricamento non è andato a buon fine: riprova.' };
+    }
+    try { fs.unlinkSync(dest); } catch {}
+    fs.renameSync(tmp, dest);
+    say(`Scaricato: ${dest}`, 'ok');
+    if (MOBILE === 'android') return { apk: dest };
+    // sul computer si avvia l'installatore; LIBRE VTT si chiude, così i suoi file si possono sostituire
+    if (!WIN) fs.chmodSync(dest, 0o755);
+    const [cmd, args] = WIN ? (dest.endsWith('.cmd') ? ['cmd', ['/c', 'start', '', dest]] : [dest, []])
+      : MAC ? ['open', [dest]] : ['bash', [dest]];
+    const p = spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: false, cwd: dir });
+    p.on('error', e => say('Non riesco ad avviare l\'installatore: ' + e.message, 'bad'));
+    p.unref();
+    say('Installatore avviato: chiudo LIBRE VTT.', 'ok');
+    setTimeout(() => { stopAll(); process.exit(0); }, MAC ? 4000 : 2500);
+    return { avviato: true, file: dest };
+  } finally {
+    aggiornando = false;
+    state.busy = null; push();
+  }
+}
+
 // --- 3. costruito qui, con strumenti privati ---
 const ARCH_CPU = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
 async function rustPrivato() {
@@ -960,6 +1046,10 @@ const server = http.createServer(async (req, res) => {
   }
   if (u.pathname === '/api/campagna/esporta' && req.method === 'POST') {
     return corpo(m => ok(esportaCampagna(String(m.path || ''))));
+  }
+  if (u.pathname === '/api/aggiornamento') return ok(await controllaAggiornamento(u.searchParams.has('ora')));
+  if (u.pathname === '/api/aggiornamento/installa' && req.method === 'POST') {
+    return corpo(async () => ok(await installaAggiornamento()));
   }
   if (u.pathname === '/api/campagna/importa' && req.method === 'POST') {
     return corpo(m => {

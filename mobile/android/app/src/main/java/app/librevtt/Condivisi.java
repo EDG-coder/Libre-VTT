@@ -82,6 +82,7 @@ public final class Condivisi extends ContentProvider {
         int punto = nome.lastIndexOf('.');
         String est = punto < 0 ? "" : nome.substring(punto + 1).toLowerCase(Locale.ROOT);
         if ("zip".equals(est)) return "application/zip";
+        if ("apk".equals(est)) return "application/vnd.android.package-archive";
         String t = MimeTypeMap.getSingleton().getMimeTypeFromExtension(est);
         return t != null ? t : "application/octet-stream";
     }

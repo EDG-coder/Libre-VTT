@@ -68,6 +68,9 @@
   @keyframes g { to { transform: rotate(360deg); } }
 
   .avviso { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
+  #boxAgg { margin: 0 0 14px; border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+  #boxAgg .t { font-weight: 700; margin-bottom: 2px; }
+  #boxAgg p { margin: 0 0 10px; color: var(--muted); font-size: .86rem; }
   .avviso .t { font-weight: 600; margin-bottom: 4px; }
   .avviso p { margin: 0 0 12px; color: var(--muted); font-size: .88rem; }
   .err { color: var(--bad); font-size: .88rem; margin: 8px 0 0; }
@@ -153,6 +156,17 @@
     <p class="logo">LIBRE <span>VTT</span></p>
     <p id="sottotitolo">Che cosa facciamo?</p>
   </header>
+
+  <div class="box hide" id="boxAgg">
+    <div class="t" id="aggTit">C'è una versione nuova di LIBRE VTT</div>
+    <p id="aggTesto"></p>
+    <div class="row">
+      <button class="b go" id="aggSi">Aggiorna</button>
+      <button class="b" id="aggNovita">Novità</button>
+      <button class="b" id="aggNo">Più tardi</button>
+    </div>
+    <p class="err hide" id="aggErr"></p>
+  </div>
 
   <div class="cards" id="scelte">
     <button class="card" data-go="solo">
@@ -317,7 +331,7 @@ function disegna() {
   }
   $('prontoCamp').classList.toggle('hide', !(acceso && S.campagna));
   if (S.campagna) $('prontoCampNome').textContent = S.campagna.nome;
-  $('piede').textContent = `${S.piattaforma} · Node ${S.node}` +
+  $('piede').textContent = `LIBRE VTT ${S.versione || ''} · ${S.piattaforma} · Node ${S.node}` +
     (S.link ? ' · collegamento a distanza pronto' : ' · collegamento a distanza da preparare');
 }
 
@@ -559,6 +573,46 @@ window.LIBRE_INDIETRO = () => {
 };
 carica();
 setInterval(carica, 4000);
+
+// ---------- aggiornamenti ----------
+let AGG = null;
+const aggSaltata = v => { try { return localStorage.getItem('libre_agg_saltata') === v; } catch { return false; } };
+async function controllaAgg() {
+  try { AGG = await fetch('/api/aggiornamento').then(r => r.json()); } catch { return; }
+  if (!AGG || !AGG.nuova || aggSaltata(AGG.nuova)) return;
+  const ios = AGG.mobile === 'ios', android = AGG.mobile === 'android';
+  $('aggTit').textContent = `È uscita LIBRE VTT ${AGG.nuova}`;
+  $('aggTesto').textContent = `Tu hai la ${AGG.attuale}. ` + (ios
+    ? 'Su iPhone e iPad l\'app non si può aggiornare da sola: scarica il progetto nuovo e reinstallala da Xcode o con Sideloadly (le campagne restano).'
+    : android ? 'Scarico il file nuovo e Android ti chiede di confermare l\'installazione. Le campagne restano.'
+    : 'Scarico l\'installatore e lo avvio; LIBRE VTT si chiude per lasciarlo lavorare. Le campagne restano.');
+  $('aggSi').textContent = ios || !AGG.file ? 'Apri la pagina' : 'Aggiorna';
+  $('boxAgg').classList.remove('hide');
+}
+function apriPagina(url) { if (NAT.disponibile) NAT.apriEsterno(url); else window.open(url, '_blank'); }
+$('aggNovita').onclick = () => AGG && apriPagina(AGG.pagina);
+$('aggNo').onclick = () => { try { localStorage.setItem('libre_agg_saltata', AGG.nuova); } catch {} $('boxAgg').classList.add('hide'); };
+$('aggSi').onclick = async () => {
+  if (!AGG) return;
+  $('aggErr').classList.add('hide');
+  if (AGG.mobile === 'ios' || !AGG.file) return apriPagina(AGG.pagina);
+  if (S.mode && !confirm('Aggiornando si chiude la partita in corso. Vado avanti?')) return;
+  $('aggSi').disabled = true;
+  try {
+    const r = await post('/api/aggiornamento/installa');
+    if (r.errore) { $('aggErr').textContent = r.errore; $('aggErr').classList.remove('hide'); return; }
+    if (r.pagina) return apriPagina(r.pagina);
+    if (r.apk) {
+      const x = await NAT.installaApk(r.apk);
+      if (x && x.errore) { $('aggErr').textContent = x.errore; $('aggErr').classList.remove('hide'); }
+      else if (x && x.permesso) { $('aggTesto').textContent = 'Consenti a LIBRE VTT di installare app (l\'interruttore che si è appena aperto) e torna qui: l\'installazione parte da sola.'; }
+      return;
+    }
+    if (r.avviato) { $('aggTesto').textContent = 'Installatore avviato: segui le sue istruzioni. LIBRE VTT si chiude tra un momento.'; $('aggSi').classList.add('hide'); }
+  } catch (e) { $('aggErr').textContent = 'Non sono riuscito ad aggiornare: ' + e.message; $('aggErr').classList.remove('hide'); }
+  finally { $('aggSi').disabled = false; }
+};
+setTimeout(controllaAgg, 1500);
 </script>
 </body>
 </html>

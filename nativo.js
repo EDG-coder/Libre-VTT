@@ -47,7 +47,9 @@
     condividiTesto: function (testo, titolo) { return chiama('condividiTesto', { testo: String(testo), titolo: titolo || '' }); },
     vibra: function (ms) { return chiama('vibra', { ms: ms || 12 }); },
     schermoAcceso: function (si) { return chiama('schermoAcceso', { si: !!si }); },
-    apriEsterno: function (url) { return chiama('apriEsterno', { url: String(url) }); }
+    apriEsterno: function (url) { return chiama('apriEsterno', { url: String(url) }); },
+    /** Android: installa un APK scaricato dall'avviatore (Android chiede conferma). */
+    installaApk: function (file) { return chiama('installaApk', { file: String(file) }); }
   };
 
   // le informazioni iniziali: Android le dà subito, iOS le mette in pagina prima che parta

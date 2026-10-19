@@ -165,10 +165,26 @@ jobs:
       versione: ${{ inputs.versione || github.ref_name }}
     secrets: inherit
 
+  controlla:
+    name: Versione in package.json
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: La versione da pubblicare è quella scritta nel programma?
+        env:
+          TAG: ${{ inputs.versione || github.ref_name }}
+        run: |
+          V=$(node -p "require('./package.json').version")
+          echo "package.json: $V · release: ${TAG#v}"
+          if [ -n "$TAG" ] && [ "${TAG#v}" != "$V" ] && [[ "$TAG" =~ ^v?[0-9] ]]; then
+            echo "::error::package.json dice $V ma si sta pubblicando ${TAG#v}: aggiorna «version» in package.json (serve agli avvisi di aggiornamento)."
+            exit 1
+          fi
+
   pubblica:
     name: Pubblica la release
     if: startsWith(github.ref, 'refs/tags/') || inputs.versione
-    needs: [collegamento, mac, installatori, setup-exe, app]
+    needs: [controlla, collegamento, mac, installatori, setup-exe, app]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

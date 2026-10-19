@@ -1,5 +1,6 @@
 {
-  "name": "uffa",
+  "name": "libre-vtt",
+  "version": "3.0.1",
   "private": true,
   "scripts": { "start": "node server.js" }
 }

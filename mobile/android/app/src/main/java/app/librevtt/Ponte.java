@@ -84,6 +84,9 @@ final class Ponte {
                 case "schermoAcceso":
                     schermoAcceso(m.optBoolean("si"));
                     break;
+                case "installaApk":
+                    installaApk(id, m.optString("file"));
+                    return;
                 case "apriEsterno":
                     att.apriFuori(m.optString("url"));
                     break;
@@ -304,6 +307,60 @@ final class Ponte {
         } catch (ActivityNotFoundException e) {
             Toast.makeText(att, R.string.nessuna_app, Toast.LENGTH_LONG).show();
         }
+    }
+
+    // ------------------------------------------------------------------ aggiornare l'app
+
+    /** L'APK scaricato dall'avviatore, in attesa che l'utente permetta a LIBRE VTT di installare app. */
+    private File apkInAttesa;
+
+    private void installaApk(int id, String percorso) {
+        File f = new File(percorso);
+        File cartella = new File(Motore.utente, "aggiornamenti");
+        try {
+            if (!f.isFile() || !f.getCanonicalPath().startsWith(cartella.getCanonicalPath() + File.separator) || !f.getName().endsWith(".apk")) {
+                rispondi(id, errore("Il file dell'aggiornamento non c'è più: riprova."));
+                return;
+            }
+        } catch (IOException e) {
+            rispondi(id, errore("Il file dell'aggiornamento non si legge: riprova."));
+            return;
+        }
+        // Android 8+: serve il permesso «installa app sconosciute» per LIBRE VTT (si dà una volta sola)
+        if (Build.VERSION.SDK_INT >= 26 && !att.getPackageManager().canRequestPackageInstalls()) {
+            apkInAttesa = f;
+            try {
+                att.startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:" + att.getPackageName())));
+            } catch (ActivityNotFoundException e) {
+                apkInAttesa = null;
+                rispondi(id, errore("Apri Impostazioni → App → LIBRE VTT → Installa app sconosciute, attivalo e riprova."));
+                return;
+            }
+            JSONObject r = new JSONObject();
+            try { r.put("permesso", true); } catch (JSONException ignorata) { /* no */ }
+            rispondi(id, r);
+            return;
+        }
+        apriInstallazione(f);
+        rispondi(id, Boolean.TRUE);
+    }
+
+    /** Dopo aver dato il permesso si torna nell'app: l'installazione riparte da sola. */
+    void riprovaInstallazione() {
+        if (apkInAttesa == null) return;
+        if (Build.VERSION.SDK_INT >= 26 && !att.getPackageManager().canRequestPackageInstalls()) return;
+        File f = apkInAttesa;
+        apkInAttesa = null;
+        if (f.isFile()) apriInstallazione(f);
+    }
+
+    private void apriInstallazione(File f) {
+        Uri u = Condivisi.indirizzo(f);
+        Intent i = new Intent(Intent.ACTION_VIEW).setDataAndType(u, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        i.setClipData(ClipData.newRawUri(f.getName(), u));
+        avvia(i);
     }
 
     // ------------------------------------------------------------------ vibrazione e schermo
