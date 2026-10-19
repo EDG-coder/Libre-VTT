@@ -18,11 +18,26 @@ function setDrawer(open) {
 }
 drawer.querySelector('.dhandle').addEventListener('click', () => { setDrawer(drawer.classList.contains('closed')); scheduleBoardSave(); });
 
+// Con il dito: uno strumento nel menu si stacca tenendolo premuto un attimo (così il menu si può
+// ancora scorrere col dito); uno già fuori si trascina subito. Finché lo si trascina, il browser
+// non deve scorrere la pagina: se ci prova, interrompe il gesto (pointercancel) e lo strumento si ferma.
+const PRESA_DITO = 280;   // ms
 function startToolDrag(e, t) {
   if (e.button !== 0) return;
+  if (drag && drag.timer) clearTimeout(drag.timer);
   const r = t.el.getBoundingClientRect();
-  drag = { t, id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: r.left, oy: r.top, on: false };
+  const nelMenu = t.docked || (t.temp && !!t.slot && t.el.parentElement === t.slot);
+  const d = drag = { t, id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: r.left, oy: r.top, on: false,
+    dito: e.pointerType === 'touch', presa: e.pointerType !== 'touch' || !nelMenu };
+  if (!d.presa) d.timer = setTimeout(() => {
+    if (drag !== d) return;
+    d.presa = true; d.timer = null;
+    t.el.classList.add('preso');
+    try { if (window.LIBRE_NATIVO && LIBRE_NATIVO.disponibile) LIBRE_NATIVO.vibra(15); else if (navigator.vibrate) navigator.vibrate(15); } catch {}
+  }, PRESA_DITO);
 }
+// mentre un dito tiene uno strumento, niente scorrimento della pagina
+addEventListener('touchmove', e => { if (drag && drag.dito && drag.presa) e.preventDefault(); }, { passive: false });
 function registerTool(id, el, grip, name) {
   el.classList.add('tool'); grip.classList.add('tgrip');
   const slot = mk('div', 'slot'); slot.dataset.tool = id;
@@ -65,8 +80,12 @@ function inDrawer(x, y) {                                        // solo l'area 
 addEventListener('pointermove', e => {
   if (!drag || e.pointerId !== drag.id) return;
   const { t } = drag, dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+  if (!drag.presa) {                                             // il dito si è mosso prima di «prendere» lo strumento:
+    if (Math.hypot(dx, dy) > 10) { clearTimeout(drag.timer); drag = null; }   // sta scorrendo il menu
+    return;
+  }
   if (!drag.on) {
-    if (Math.hypot(dx, dy) < 6) return;                          // sotto i 6 px è ancora un clic
+    if (Math.hypot(dx, dy) < (drag.dito ? 3 : 6)) return;        // sotto i 6 px è ancora un clic
     drag.on = true; t.el.classList.add('dragging');
     t.docked = t.docked || (t.temp && !!t.slot && t.el.parentElement === t.slot);
     if (t.docked) floatTool(t, drag.ox, drag.oy);
@@ -83,15 +102,20 @@ addEventListener('pointermove', e => {
 });
 function dragEnd(e) {
   if (!drag || e.pointerId !== drag.id) return;
-  const { t } = drag, was = drag.on;
+  const { t } = drag, was = drag.on, preso = drag.dito && drag.presa && t.el.classList.contains('preso');
+  if (drag.timer) clearTimeout(drag.timer);
   drag = null;
-  if (!was) return;
+  t.el.classList.remove('preso');
+  const eat = ev => { ev.stopPropagation(); ev.preventDefault(); };      // il rilascio non deve contare come clic
+  if (!was) {
+    if (preso) { addEventListener('click', eat, { capture: true, once: true }); setTimeout(() => removeEventListener('click', eat, true), 400); }
+    return;
+  }
   t.el.classList.remove('dragging'); drawer.classList.remove('dropping');
   if (t.slot) t.slot.classList.remove('hot');
   if (e.type === 'pointerup' && inDrawer(e.clientX, e.clientY)) dockTool(t);
   else if (t.ghost) { t.ghost.remove(); t.ghost = null; }
   scheduleBoardSave();
-  const eat = ev => { ev.stopPropagation(); ev.preventDefault(); };      // il rilascio non deve contare come clic
   addEventListener('click', eat, { capture: true, once: true });
   setTimeout(() => removeEventListener('click', eat, true), 0);
 }

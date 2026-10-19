@@ -40,6 +40,11 @@
 .ui-touch .handle[data-d="sw"] { left: calc(-24px * var(--inv, 1)); bottom: calc(-24px * var(--inv, 1)); }
 .ui-touch .handle[data-d="se"] { right: calc(-24px * var(--inv, 1)); bottom: calc(-24px * var(--inv, 1)); }
 
+/* trascinare con il dito: le barre delle finestre e gli strumenti fuori dal menu non fanno scorrere la pagina;
+   uno strumento nel menu si «prende» tenendolo premuto (si ingrandisce un po') */
+.ui-touch .sheetWin .stitle, .ui-touch body > .tool .tgrip, .ui-touch .tool.dragging, .ui-touch .tool.preso { touch-action: none; }
+.tool.preso { transform: scale(1.08); filter: drop-shadow(0 0 10px rgba(124, 92, 255, .9)); transition: transform .12s, filter .12s; }
+
 /* quello che col mouse compare passandoci sopra, con le dita si vede sempre */
 .ui-touch .asset .del, .ui-touch .asset .bgBtn { opacity: 1; width: 28px; height: 28px; font-size: 15px; }
 .ui-touch .sceneRow > button:not(.pick) { opacity: .85; padding: 10px; }

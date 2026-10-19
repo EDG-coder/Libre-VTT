@@ -230,6 +230,7 @@
     const x = e.clientX, y = e.clientY, el = e.target;
     lungoUi = { id: e.pointerId, x, y, timer: setTimeout(() => {
       lungoUi = null;
+      if (typeof drag !== 'undefined' && drag && drag.dito) return;   // sta tenendo uno strumento per spostarlo
       if (menuIn(x, y, el)) { if (typeof drag !== 'undefined') drag = null; }
     }, LUNGO + 50) };
   }, true);
@@ -354,7 +355,8 @@
     li.innerHTML = '<b>Con le dita</b>: un dito su un punto libero sposta la mappa, due dita la ingrandiscono. ' +
       '<b>Tocco lungo</b> su qualsiasi cosa = clic destro (il menu). Tieni premuto su un punto libero: ping. ' +
       'Tocco con due dita: il menu della mappa. Doppio tocco = doppio clic. ⬚ in basso: selezione di più segnalini. ' +
-      'Negli assets e nelle schede basta un tocco per mettere l\'immagine o il personaggio sulla mappa.';
+      'Negli assets e nelle schede basta un tocco per mettere l\'immagine o il personaggio sulla mappa. ' +
+      'Per spostare un pulsante del menu a sinistra <b>tienilo premuto</b> un attimo (si ingrandisce) e poi trascinalo; fuori dal menu si trascina subito.';
     guida.prepend(li);
   }
 })();

@@ -368,6 +368,7 @@ const sheetWinMenu = w => {
     st === 'open' ? { label: 'Riduci a barra', fn: () => setWinState(w, 'min') } : { label: 'Ripristina', fn: () => setWinState(w, 'open') },
     ...(w._sheet && st !== 'icon' ? [{ label: 'Riduci a icona', fn: () => setWinState(w, 'icon') }] : []),
     ...(w._sheet ? [{ label: '🖼 Cambia icona…', fn: () => pickAsset(a => setSheetIcon(w._sheet, a)) }] : []),
+    ...(w._sheet && w._sheet.tpl !== 'simple' ? [{ label: (vistaScheda.get(w._sheet.id) || w._sheet.tpl) === 'standard' ? '📋 Vedi come scheda Open' : '📜 Vedi come scheda Standard', fn: () => cambiaVista(w) }] : []),
     '-', { label: 'Chiudi', fn: () => closeWin(w) }
   ];
 };
@@ -382,7 +383,8 @@ function openSheet(id) {
   w._name.textContent = s.name;
   refreshWinIcon(w);
   w._ic.addEventListener('click', () => { if (w._state !== 'icon') pickAsset(a => setSheetIcon(s, a)); });
-  const std = s.tpl === 'standard';
+  const tpl = vistaScheda.get(id) || s.tpl;       // si può guardare la stessa scheda nell'altro formato
+  const std = tpl === 'standard';
   if (std) {
     stdMigrate(s);
     w.classList.add('stdWin');
@@ -390,7 +392,7 @@ function openSheet(id) {
   }
   const body = w._body;
   body.innerHTML = (std ? '' : '<div class="box nameBox"><label class="lab">Nome del personaggio<input type="text" data-name maxlength="40"></label></div>') +
-    (std ? standardHtml() : s.tpl === 'dnd5e' ? dndHtml() : simpleHtml());
+    (std ? standardHtml() : tpl === 'dnd5e' ? dndHtml() : simpleHtml());
   const ni = body.querySelector('[data-name]');
   if (ni) {
     ni.value = s.name;
@@ -398,7 +400,19 @@ function openSheet(id) {
   }
   bindSheet(body, s);
   if (std) stdSetup(w, body, s);
+  if (tpl === 'dnd5e') openSetup(w, body, s);
   return w;
+}
+// Standard e Open D&D 5e usano gli stessi campi: la stessa scheda si può vedere nei due formati.
+// La scelta vale per questo dispositivo e finché il programma resta aperto.
+const vistaScheda = new Map();
+function cambiaVista(w) {
+  const s = w._sheet, ora = vistaScheda.get(s.id) || s.tpl;
+  vistaScheda.set(s.id, ora === 'standard' ? 'dnd5e' : 'standard');
+  const r = w.getBoundingClientRect();
+  closeWin(w);
+  const n = openSheet(s.id);
+  if (n) { n.style.left = r.left + 'px'; n.style.top = r.top + 'px'; }
 }
 
 // ---------- Contenuto: calcoli e tiri ----------
@@ -458,19 +472,21 @@ function chipsFor(ta, s) {
   }
   box.replaceChildren(...out);
 }
-function bindSheet(root, s) {
-  root.querySelectorAll('[data-f]').forEach(el => {
-    const k = el.dataset.f;
-    if (el.type === 'checkbox') el.checked = !!s.f[k]; else el.value = s.f[k] ?? '';
-    el.addEventListener('input', () => {
-      s.f[k] = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value;
-      recalc(root, s);
-      if (el.tagName === 'TEXTAREA') chipsFor(el, s);
-      if (k === 'hp' || k === 'hpmax') updateTokenBars();
-      scheduleSheets();
-    });
+/** Collega un campo (data-f) al valore della scheda: lo mostra e lo salva quando cambia. */
+function bindField(el, root, s) {
+  const k = el.dataset.f;
+  if (el.type === 'checkbox') el.checked = !!s.f[k]; else el.value = s.f[k] ?? '';
+  el.addEventListener('input', () => {
+    s.f[k] = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value;
+    recalc(root, s);
+    if (el.tagName === 'TEXTAREA') chipsFor(el, s);
+    if (k === 'hp' || k === 'hpmax') updateTokenBars();
+    scheduleSheets();
   });
-  root.querySelectorAll('textarea[data-f]').forEach(t => chipsFor(t, s));
+  if (el.tagName === 'TEXTAREA') chipsFor(el, s);
+}
+function bindSheet(root, s) {
+  root.querySelectorAll('[data-f]').forEach(el => bindField(el, root, s));
   root.addEventListener('click', e => {
     const sr = e.target.closest('.sendRule');          // trascrive il testo (regole, privilegi...) in chat
     if (sr) {
@@ -492,30 +508,7 @@ function bindSheet(root, s) {
 // ---------- Modelli ----------
 const fld = (label, k, type = 'text') => `<label class="lab">${label}<input type="${type}" data-f="${k}"></label>`;
 const area = (label, k, ph = '') => `<div class="box"><h5>${label}<button type="button" class="sendRule" data-send="${k}" title="Invia questo testo in chat">💬</button></h5><textarea data-f="${k}" placeholder="${ph}"></textarea></div>`;
-function dndHtml() {
-  const abil = ABIL.map(([k, sh, nm]) => `<div class="ab"><b title="${nm}">${sh}</b><input type="number" data-f="${k}" aria-label="${nm}"><button type="button" class="rb" data-r="mod:${k}" data-c="mod:${k}" title="Prova di ${nm}"></button></div>`).join('');
-  const saves = ABIL.map(([k, , nm]) => `<div class="rl2"><input type="checkbox" data-f="sp_${k}" title="Competenza"><span>${nm}</span><button type="button" class="rb" data-r="save:${k}" data-c="save:${k}"></button></div>`).join('');
-  const skills = SKILLS.map(([k, nm, a]) => `<div class="rl2"><input type="checkbox" data-f="kp_${k}" title="Competenza"><span>${nm} <small>(${a.toUpperCase()})</small></span><button type="button" class="rb" data-r="skill:${k}" data-c="skill:${k}"></button></div>`).join('');
-  const atk = [0, 1, 2, 3].map(i => `<div class="atk"><input type="text" data-f="an${i}" placeholder="Attacco"><input type="number" data-f="ab${i}" placeholder="Bonus"><input type="text" data-f="ad${i}" placeholder="Danni (1d8+3)"><div class="bt"><button type="button" class="rb" data-r="atk:${i}">Tira per colpire</button><button type="button" class="rb" data-r="dmg:${i}">Tira i danni</button></div></div>`).join('');
-  return `<div class="sgrid">
-    <div class="box full"><div class="hdr">${fld('Classe', 'class')}${fld('Livello', 'level', 'number')}${fld('Razza', 'race')}${fld('Background', 'bg')}${fld('Allineamento', 'align')}${fld('Punti esperienza', 'xp')}${fld('Giocatore', 'player')}</div></div>
-    <div class="box"><h5>Caratteristiche</h5><div class="abil">${abil}</div></div>
-    <div class="box"><h5>Combattimento</h5>
-      <div class="hdr">${fld('Classe armatura', 'ac', 'number')}${fld('Velocità', 'speed')}${fld('Bonus iniziativa', 'initb', 'number')}</div>
-      <div class="hp" style="margin-top:8px">${fld('PF massimi', 'hpmax', 'number')}${fld('PF attuali', 'hp', 'number')}${fld('PF temporanei', 'hpt', 'number')}</div>
-      <div class="hdr" style="margin-top:8px">${fld('Dadi vita', 'hd')}
-        <div class="stat"><span class="lab">Iniziativa</span><button type="button" class="rb" data-r="init" data-c="init"></button></div>
-        <div class="stat"><span class="lab">Competenza</span><output data-c="prof"></output></div>
-        <div class="stat"><span class="lab">Percezione passiva</span><output data-c="pp"></output></div></div></div>
-    <div class="box"><h5>Tiri salvezza</h5>${saves}</div>
-    <div class="box"><h5>Abilità</h5>${skills}</div>
-    <div class="box full"><h5>Attacchi</h5>${atk}</div>
-    ${area('Privilegi e tratti', 'features', 'Es. Attacco furtivo [[2d6 | Furtivo]]')}
-    ${area('Equipaggiamento e monete', 'equip')}
-    ${area('Incantesimi', 'spells', 'Es. Dardo incantato [[3d4+3 | Dardo]]')}
-    ${area('Note e personalità', 'notes')}
-  </div>`;
-}
+// dndHtml(): il modello «Open D&D 5e» sta in sheet-open.js
 const simpleHtml = () => `<div class="sgrid">
   ${area('Descrizione', 'desc')}
   ${area('Tiri rapidi', 'quick', 'Scrivi [[1d20+5 | Attacco]] o [[2d6+3 | Danni]]: sotto compare un pulsante per tirare')}

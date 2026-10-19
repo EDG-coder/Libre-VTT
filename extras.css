@@ -498,3 +498,32 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 #fogDraw:empty { display: none; }
 #fogShapes button.on { background: var(--accent); color: #fff; border-color: transparent; }
 #fogSizeRow[hidden] { display: none; }
+
+/* ======================= Scheda Open D&D 5e ======================= */
+.sheetWin .oInsp { display: flex; justify-content: center; gap: 4px; padding-top: 4px; }
+.sheetWin .oHint { margin: 8px 0 0; font-size: .82em; opacity: .75; }
+.sheetWin .oImg { height: 170px; margin-bottom: 6px; }
+.sheetWin .oImg.oImgSm { height: 110px; margin-top: 6px; }
+.sheetWin .oImg > span { font-size: .75em; }
+.sheetWin .oSlot { display: flex; gap: 8px; margin-bottom: 6px; max-width: 320px; }
+.sheetWin .oSlot > * { flex: 1; }
+.sheetWin .oConta { opacity: .7; font-weight: 400; }
+/* un incantesimo: titolo su una riga, la descrizione si apre sotto */
+.sheetWin .oSp { border-bottom: 1px dashed color-mix(in srgb, var(--sh-line) 70%, transparent); padding: 3px 0; }
+.sheetWin .oSpHead { display: flex; align-items: center; gap: 4px; }
+.sheetWin .oSpHead input[type=text] { flex: 1; min-width: 0; font-weight: 600; }
+.sheetWin .oSpHead button { flex: none; width: 28px; height: 28px; padding: 0; border: 1px solid transparent; border-radius: 7px; background: none; color: inherit; cursor: pointer; font-size: .95em; }
+.sheetWin .oSpHead button:hover { border-color: var(--sh-accent); }
+.sheetWin .oSpHead .oTog { color: var(--sh-accent); font-weight: 700; }
+.sheetWin .oSpHead .oTog.has { background: color-mix(in srgb, var(--sh-accent) 22%, transparent); }
+.sheetWin .oSpHead .oDel { opacity: .45; }
+.sheetWin .oSpHead .oDel:hover { opacity: 1; color: #e5484d; border-color: #e5484d; }
+.sheetWin .oSpBody { padding: 4px 0 6px 34px; }
+.sheetWin .oSpBody textarea { min-height: 90px; resize: vertical; overflow-y: auto; }
+.sheetWin .oAdd { margin-top: 6px; border: 1px dashed var(--sh-accent); border-radius: 8px; background: transparent; color: var(--sh-accent); padding: 5px 10px; font: inherit; font-weight: 600; cursor: pointer; }
+.sheetWin .oAdd:hover { background: color-mix(in srgb, var(--sh-accent) 15%, transparent); }
+.ui-touch .sheetWin .oSpHead button { width: 36px; height: 36px; }
+.ui-tel .sheetWin .oSpBody { padding-left: 0; }
+/* le linguette restano in alto mentre si scorre, con i colori della scheda */
+.sheetWin:not(.stdWin) .stabs { margin: -12px -12px 10px; padding: 8px 12px; background: var(--sh-bg); border-bottom: 1px solid var(--sh-line); }
+.ui-tel .sheetWin:not(.stdWin) .stabs { display: grid; grid-template-columns: 1fr 1fr; margin: -10px -10px 10px; }
