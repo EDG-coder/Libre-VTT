@@ -31,7 +31,7 @@ const DEFAULT_BORDER = { color: '#000000', transparent: false, width: 3 };
 const DEFAULT_PING = { color: '#ff4d4d', size: 2, speed: 8, fade: 2500 };      // size in cm, speed in cm/s, fade in ms
 const SECTIONS = { look: true, res: false, grid: true, gridDefault: false, map: false, border: false, ping: false, sheets: false, tools: false, hidden: false, chat: false };   // sezioni aperte di default
 const RESOLUTIONS = [[480, '480p'], [720, '720p'], [1080, '1080p'], [1440, '1440p'], [0, 'Originale']];
-const settings = { theme: 'dark', autoBg: true, resToken: 720, resBg: 1080, gridDefault: { ...DEFAULT_GRID }, border: { ...DEFAULT_BORDER }, ping: { ...DEFAULT_PING }, sections: {},
+const settings = { theme: 'dark', autoBg: true, fogColor: 'auto', fogVeil: 0.55, resToken: 720, resBg: 1080, gridDefault: { ...DEFAULT_GRID }, border: { ...DEFAULT_BORDER }, ping: { ...DEFAULT_PING }, sections: {},
   tools: {}, drawerOpen: true, publicScene: null, unit: 'ft', sheetClose: 'x', rulerCenter: false, dockOpen: true, hiddenLayer: { show: true, opacity: 45 }, chatTabs: { rolls: false, rules: false },
   sheetStyle: { preset: 'parchment', accent: '', scale: 100, font: 'serif' }, pen: { color: '#ff4d4d', width: 4, tool: 'pen', fill: false } };
 let scenes = [], cur = null;            // cur = scena attiva
@@ -580,6 +580,7 @@ async function updatePageColor() {
   }
   if (color) root.style.setProperty('--page-bg', color); else root.style.removeProperty('--page-bg');
   document.querySelector('meta[name=theme-color]').content = color || getComputedStyle(root).getPropertyValue('--bg').trim();
+  if (typeof fogApply === 'function') fogApply();            // la nebbia «automatica» ha il colore dello sfondo
 }
 
 // ---------- Tema ----------
@@ -853,6 +854,32 @@ for (const [id, key] of [['resToken', 'resToken'], ['resBg', 'resBg']]) {
 }
 $('autoBg').addEventListener('input', e => { settings.autoBg = e.target.checked; updatePageColor(); scheduleBoardSave(); });
 
+// nebbia di guerra: colore (per tutti) e quanto copre per chi conduce
+let fogColorUltimo = '#000000';
+const fogColorReady = () => typeof fogApply === 'function';
+const syncFogColor = segmented($('fogColorSeg'), () => settings.fogColor === 'auto' ? 'auto' : 'custom', v => {
+  settings.fogColor = v === 'auto' ? 'auto' : ($('fogColorIn').value || fogColorUltimo);
+  syncFog(); if (fogColorReady()) fogApply(); scheduleBoardSave();
+});
+$('fogColorIn').addEventListener('input', e => {
+  fogColorUltimo = e.target.value; settings.fogColor = e.target.value;
+  syncFog(); if (fogColorReady()) fogApply(); scheduleBoardSave();
+});
+$('fogVeilIn').addEventListener('input', e => {
+  settings.fogVeil = Math.max(0.1, Math.min(1, +e.target.value / 100));
+  $('fogVeilOut').textContent = e.target.value + '%';
+  if (fogColorReady()) fogApply(); scheduleBoardSave();
+});
+function syncFog() {
+  syncFogColor();
+  const auto = settings.fogColor === 'auto';
+  if (!auto) $('fogColorIn').value = settings.fogColor;
+  $('fogColorIn').classList.toggle('spento', auto);
+  $('fogColorNota').hidden = !auto;
+  const v = Math.round((settings.fogVeil || 0.55) * 100);
+  $('fogVeilIn').value = v; $('fogVeilOut').textContent = v + '%';
+}
+
 $('applyDefault').addEventListener('click', () => {
   const show = grid.show;
   Object.assign(grid, settings.gridDefault, { show });
@@ -880,6 +907,7 @@ $('bgRemove').addEventListener('click', () => {
 function syncSettings() {
   syncTheme(); syncSceneGrid(); syncDefaultGrid(); syncBorder(); syncPingForm(); sects.forEach(f => f());
   $('autoBg').checked = settings.autoBg;
+  syncFog();
   $('resToken').value = settings.resToken; $('resBg').value = settings.resBg;
 }
 
@@ -1336,6 +1364,8 @@ async function loadBoard() {
     settings.ping = { ...DEFAULT_PING, ...s.ping };
     if (!(settings.ping.fade >= 300)) Object.assign(settings.ping, DEFAULT_PING);      // vecchi valori: il ping spariva subito
     for (const k of ['drawerOpen', 'publicScene', 'unit', 'sheetClose', 'rulerCenter', 'dockOpen']) if (s[k] !== undefined) settings[k] = s[k];
+    if (s.fogColor === 'auto' || /^#[0-9a-f]{6}$/i.test(s.fogColor || '')) settings.fogColor = s.fogColor;
+    if (s.fogVeil >= 0.05 && s.fogVeil <= 1) settings.fogVeil = +s.fogVeil;
     for (const k of ['tools', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'park', 'music']) if (s[k] && typeof s[k] === 'object') settings[k] = { ...settings[k], ...s[k] };
     settings.sections = s.sections && typeof s.sections === 'object' ? { ...s.sections } : {};
     paintBorder();

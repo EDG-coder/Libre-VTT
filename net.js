@@ -322,6 +322,7 @@ async function applyWorld(w) {
       if (typeof renderChat === 'function') renderChat();
     }
     settings.publicScene = w.publicScene || null;
+    if (!isMaster()) settings.fogColor = w.fogColor || 'auto';     // il colore della nebbia lo decide chi conduce
 
     if (isMaster()) {
       // Il mondo del master è il suo: dal server prende solo quello che hanno fatto gli altri.
@@ -414,7 +415,7 @@ async function netPushBoard() {
         if (el) el.dataset.gid = ph.gid;
       }
     }
-    intent('board', { board: { active: b.active, publicScene: settings.publicScene, scenes: b.scenes, sheets } });
+    intent('board', { board: { active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, scenes: b.scenes, sheets } });
   } finally { NET.pushing = false; }
 }
 
@@ -519,7 +520,10 @@ addEventListener('input', e => {
   const w = e.target.closest && e.target.closest('.sheetWin');
   if (!w || !w._sheet) return;
   const s = w._sheet;
-  if (!(s._access === 'rw' || (NET.me && s.owner === NET.me.token))) return;
+  // la finestra può tenere la copia di quando la scheda è nata: i permessi si guardano anche su quella del server
+  const srv = sheets.find(x => x.id === s.id);
+  const mia = o => o && (o._access === 'rw' || (NET.me && o.owner === NET.me.token) || o._mia);
+  if (!(mia(s) || mia(srv))) return;
   clearTimeout(NET._shT);
   NET._shT = setTimeout(() => intent('sheet.save', { id: s.id, name: s.name, f: s.f, icon: s.icon }), 400);
 }, true);
@@ -615,6 +619,7 @@ const netAskName = () => askName();
 function onSheetCreated(s) {
   if (!NET.on || NET.applying) return;
   if (isMaster()) { netPushBoard(); return; }
+  s._mia = true;                                  // l'ha creata questo giocatore: può scriverci subito
   intent('sheet.add', { sheet: { id: s.id, name: s.name, tpl: s.tpl, icon: s.icon, f: s.f } });
 }
 function onSheetDeleted(id) {

@@ -35,7 +35,7 @@ import java.util.Locale;
  * la risposta in LIBRE_NATIVO._risposta(id, dati). Vedi nativo.js per l'elenco dei comandi.
  */
 final class Ponte {
-    static final int RICHIESTA_ZIP = 11, RICHIESTA_CARTELLA = 12, RICHIESTA_SALVA = 13;
+    static final int RICHIESTA_ZIP = 11, RICHIESTA_CARTELLA = 12, RICHIESTA_SALVA = 13, RICHIESTA_SALVA_TESTO = 14, RICHIESTA_APRI_TESTO = 15;
 
     private final MainActivity att;
     private final WebView web;
@@ -84,6 +84,18 @@ final class Ponte {
                 case "schermoAcceso":
                     schermoAcceso(m.optBoolean("si"));
                     break;
+                case "salvaFile":
+                    salvaFile(id, m.optString("nome"), m.optString("mime"), m.optString("testo"));
+                    return;
+                case "apriFile":
+                    apriFile(id);
+                    return;
+                case "scriviFile":
+                    scriviFile(id, m.optString("uri"), m.optString("testo"));
+                    return;
+                case "leggiFile":
+                    leggiFile(id, m.optString("uri"));
+                    return;
                 case "installaApk":
                     installaApk(id, m.optString("file"));
                     return;
@@ -140,6 +152,7 @@ final class Ponte {
 
     /** Arriva da MainActivity.onActivityResult. Ritorna true se la richiesta era nostra. */
     boolean risultato(int richiesta, int esito, Intent dati) {
+        if (richiesta == RICHIESTA_SALVA_TESTO || richiesta == RICHIESTA_APRI_TESTO) { risultatoTesto(richiesta, esito, dati); return true; }
         if (richiesta != RICHIESTA_ZIP && richiesta != RICHIESTA_CARTELLA && richiesta != RICHIESTA_SALVA) return false;
         final int id = inAttesa;
         inAttesa = -1;
@@ -306,6 +319,124 @@ final class Ponte {
             att.startActivity(i);
         } catch (ActivityNotFoundException e) {
             Toast.makeText(att, R.string.nessuna_app, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    // ------------------------------------------------------------------ file di testo scelti dall'utente
+    // Le schede si salvano in un file (dove vuole l'utente) e si possono tenere sincronizzate:
+    // Android dà un permesso «persistente» su quel file, così lo si può riscrivere anche dopo.
+
+    private int testoInAttesa = -1;
+    private String testoDaSalvare;
+
+    private void salvaFile(int id, String nome, String mime, String testo) {
+        if (testoInAttesa >= 0) rispondi(testoInAttesa, null);
+        testoInAttesa = id;
+        testoDaSalvare = testo;
+        Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                .setType(mime == null || mime.isEmpty() ? "application/json" : mime)
+                .putExtra(Intent.EXTRA_TITLE, nome == null || nome.isEmpty() ? "scheda.json" : nome);
+        try {
+            att.startActivityForResult(i, RICHIESTA_SALVA_TESTO);
+        } catch (ActivityNotFoundException e) {
+            testoInAttesa = -1;
+            rispondi(id, errore("Su questo dispositivo non c'è un'app per scegliere dove salvare."));
+        }
+    }
+
+    private void apriFile(int id) {
+        if (testoInAttesa >= 0) rispondi(testoInAttesa, null);
+        testoInAttesa = id;
+        testoDaSalvare = null;
+        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
+                .putExtra(Intent.EXTRA_MIME_TYPES, new String[]{ "application/json", "text/plain", "application/octet-stream" })
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        try {
+            att.startActivityForResult(i, RICHIESTA_APRI_TESTO);
+        } catch (ActivityNotFoundException e) {
+            testoInAttesa = -1;
+            rispondi(id, errore("Su questo dispositivo non c'è un'app per scegliere i file."));
+        }
+    }
+
+    /** Si tiene il permesso sul file anche dopo aver chiuso l'app (per la sincronizzazione). */
+    private boolean tieniPermesso(Uri u, Intent dati) {
+        int f = dati.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        try {
+            att.getContentResolver().takePersistableUriPermission(u, f | Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            return true;
+        } catch (Exception e) {
+            try { att.getContentResolver().takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION); } catch (Exception ignorata) { /* solo questa volta */ }
+            return (f & Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0;
+        }
+    }
+
+    private void risultatoTesto(final int richiesta, int esito, final Intent dati) {
+        final int id = testoInAttesa;
+        final String testo = testoDaSalvare;
+        testoInAttesa = -1;
+        testoDaSalvare = null;
+        final Uri u = esito == MainActivity.RESULT_OK && dati != null ? dati.getData() : null;
+        if (u == null) { rispondi(id, null); return; }
+        final boolean scrivibile = tieniPermesso(u, dati);
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    JSONObject r = new JSONObject();
+                    r.put("uri", u.toString());
+                    r.put("nome", nomeDi(u));
+                    r.put("scrivibile", scrivibile || richiesta == RICHIESTA_SALVA_TESTO);
+                    if (richiesta == RICHIESTA_SALVA_TESTO) scrivi(u, testo);
+                    else r.put("testo", leggi(u));
+                    rispondi(id, r);
+                } catch (Exception e) {
+                    Log.e(Motore.TAG, "File", e);
+                    rispondi(id, errore("Non riesco a usare quel file: " + e.getMessage()));
+                }
+            }
+        }, "file").start();
+    }
+
+    private void scriviFile(final int id, final String uri, final String testo) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try { scrivi(Uri.parse(uri), testo); rispondi(id, Boolean.TRUE); }
+                catch (Exception e) { rispondi(id, errore("Non riesco a scrivere il file: " + e.getMessage())); }
+            }
+        }, "scrivi").start();
+    }
+
+    private void leggiFile(final int id, final String uri) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    JSONObject r = new JSONObject();
+                    r.put("testo", leggi(Uri.parse(uri)));
+                    rispondi(id, r);
+                } catch (Exception e) { rispondi(id, errore("Non riesco a leggere il file: " + e.getMessage())); }
+            }
+        }, "leggi").start();
+    }
+
+    private void scrivi(Uri u, String testo) throws IOException {
+        try (OutputStream out = att.getContentResolver().openOutputStream(u, "wt")) {
+            if (out == null) throw new IOException("non si apre");
+            out.write((testo == null ? "" : testo).getBytes("UTF-8"));
+        }
+    }
+
+    private String leggi(Uri u) throws IOException {
+        try (InputStream in = att.getContentResolver().openInputStream(u)) {
+            if (in == null) throw new IOException("non si apre");
+            java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[64 * 1024];
+            int n, tot = 0;
+            while ((n = in.read(buf)) > 0) {
+                tot += n;
+                if (tot > 30 * 1024 * 1024) throw new IOException("il file è troppo grande");
+                b.write(buf, 0, n);
+            }
+            return b.toString("UTF-8");
         }
     }
 

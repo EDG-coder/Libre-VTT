@@ -212,7 +212,7 @@ function openSetup(w, root, s) {
         if (aperti.has(spK(L, j + 1))) aperti.add(spK(L, j)); else aperti.delete(spK(L, j));
       }
       disegnaLivello(box);
-      scheduleSheets();
+      schedaCambiata(s);
     }
   });
   root.addEventListener('input', e => {

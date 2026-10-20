@@ -155,6 +155,20 @@
         <label class="check"><input id="autoBg" type="checkbox"> Sfondo della pagina dal colore dello sfondo della scena</label>
       </div>
 
+      <div class="sect" data-sect="fog" id="fogSect">
+        <h4>Nebbia di guerra</h4>
+        <p class="note">Il colore lo vedono tutti i giocatori. La trasparenza vale solo per te che conduci: i giocatori la nebbia la vedono sempre piena.</p>
+        <div class="row">Colore
+          <div class="seg" id="fogColorSeg">
+            <button type="button" data-v="auto">Automatico</button>
+            <button type="button" data-v="custom">Scelgo io</button>
+          </div>
+          <input type="color" id="fogColorIn" value="#000000" aria-label="Colore della nebbia">
+        </div>
+        <p class="note" id="fogColorNota">Automatico: lo stesso colore dello sfondo della pagina.</p>
+        <label class="row">Quanto copre (per te) <input type="range" id="fogVeilIn" min="10" max="100" step="5"><output id="fogVeilOut"></output></label>
+      </div>
+
       <div class="sect" data-sect="res">
         <h4>Risoluzione degli assets</h4>
         <p class="note">Vale per i file caricati da adesso in poi (lato corto dell'immagine).</p>
@@ -283,6 +297,7 @@
 <script src="sheets.js"></script>
 <script src="sheet-std.js"></script>
 <script src="sheet-open.js"></script>
+<script src="sheet-file.js"></script>
 <script src="extras.js"></script>
 <script src="token-crop.js"></script>
 <script src="win-folder.js"></script>

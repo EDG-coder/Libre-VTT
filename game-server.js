@@ -215,7 +215,7 @@ function viewFor(c) {
     return acc ? { ...s, icon: outUrl(s.icon), _access: acc } : null;
   }).filter(Boolean);
   return {
-    v: world.v, active: p.seeAllScenes ? world.active : pubId, publicScene: world.publicScene,
+    v: world.v, active: p.seeAllScenes ? world.active : pubId, publicScene: world.publicScene, fogColor: world.fogColor || 'auto',
     scenes: scenes.map(s => sceneFor(c, s)),
     sheets, chat: (world.chat || []).slice(-250).map(m => chatFor(c, m)), music: world.music
   };
@@ -351,6 +351,7 @@ function handleIntent(c, m) {
       }
       if ('active' in b) world.active = b.active;
       if ('publicScene' in b) world.publicScene = b.publicScene;
+      if ('fogColor' in b) world.fogColor = /^#[0-9a-f]{6}$/i.test(String(b.fogColor || '')) ? String(b.fogColor) : 'auto';
       scheduleSave(); schedulePush();
       return;
     }

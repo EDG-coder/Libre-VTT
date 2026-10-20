@@ -71,6 +71,8 @@
   #boxAgg { margin: 0 0 14px; border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
   #boxAgg .t { font-weight: 700; margin-bottom: 2px; }
   #boxAgg p { margin: 0 0 10px; color: var(--muted); font-size: .86rem; }
+  #aggNovita2 { margin: 0 0 12px; padding-left: 20px; font-size: .86rem; max-height: 260px; overflow: auto; }
+  #aggNovita2 li { margin-bottom: 5px; }
   .avviso .t { font-weight: 600; margin-bottom: 4px; }
   .avviso p { margin: 0 0 12px; color: var(--muted); font-size: .88rem; }
   .err { color: var(--bad); font-size: .88rem; margin: 8px 0 0; }
@@ -160,6 +162,7 @@
   <div class="box hide" id="boxAgg">
     <div class="t" id="aggTit">C'è una versione nuova di LIBRE VTT</div>
     <p id="aggTesto"></p>
+    <ul id="aggNovita2" class="hide"></ul>
     <div class="row">
       <button class="b go" id="aggSi">Aggiorna</button>
       <button class="b" id="aggNovita">Novità</button>
@@ -587,6 +590,10 @@ async function controllaAgg() {
     : android ? 'Scarico il file nuovo e Android ti chiede di confermare l\'installazione. Le campagne restano.'
     : 'Scarico l\'installatore e lo avvio; LIBRE VTT si chiude per lasciarlo lavorare. Le campagne restano.');
   $('aggSi').textContent = ios || !AGG.file ? 'Apri la pagina' : 'Aggiorna';
+  const lista = $('aggNovita2');
+  lista.replaceChildren(...(AGG.novita || []).map(t => { const li = document.createElement('li'); li.textContent = t; return li; }));
+  lista.classList.toggle('hide', !lista.children.length);
+  $('aggNovita').textContent = lista.children.length ? 'Pagina della versione' : 'Novità';
   $('boxAgg').classList.remove('hide');
 }
 function apriPagina(url) { if (NAT.disponibile) NAT.apriEsterno(url); else window.open(url, '_blank'); }

@@ -197,12 +197,14 @@ jobs:
           TAG: ${{ inputs.versione && format('v{0}', inputs.versione) || github.ref_name }}
         run: |
           mkdir file
+          # le note: prima le novità di questa versione (le mostra anche l'avviso di aggiornamento dell'app), poi quale file scaricare
+          { [ -f .github/novita.md ] && cat .github/novita.md && echo; cat .github/note-rilascio.md; } > note.md
           cp tutto/link-*/* tutto/installatori/* tutto/setup-exe/* tutto/dmg/* tutto/app-android/* tutto/app-ios/* file/
           ls -la file
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" file/* --clobber --repo "$GITHUB_REPOSITORY"
-            gh release edit "$TAG" --notes-file .github/note-rilascio.md --repo "$GITHUB_REPOSITORY"
+            gh release edit "$TAG" --notes-file note.md --repo "$GITHUB_REPOSITORY"
           else
             gh release create "$TAG" file/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-              --title "LIBRE VTT ${TAG#v}" --notes-file .github/note-rilascio.md
+              --title "LIBRE VTT ${TAG#v}" --notes-file note.md
           fi

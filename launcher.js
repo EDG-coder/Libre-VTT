@@ -700,6 +700,20 @@ function fileAggiornamento(assets) {
   }
   return null;
 }
+/** Le righe «- …» della sezione «## Novità» delle note della release, senza il markdown. */
+function novitaDa(testo) {
+  const righe = String(testo || '').split(/\r?\n/);
+  const da = righe.findIndex(r => /^##\s+Novit/i.test(r));
+  if (da < 0) return [];
+  const out = [];
+  for (const r of righe.slice(da + 1)) {
+    if (/^##\s/.test(r)) break;
+    const m = r.match(/^\s*[-*]\s+(.*)$/);
+    if (m) out.push(m[1].replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]*)`/g, '$1').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim().slice(0, 600));
+    if (out.length >= 15) break;
+  }
+  return out;
+}
 let ultimoControllo = null;
 async function controllaAggiornamento(forza) {
   if (process.env.MYVTT_NO_AGGIORNAMENTI) return { attuale: VERSIONE, nuova: null };
@@ -713,7 +727,8 @@ async function controllaAggiornamento(forza) {
   const dati = {
     attuale: VERSIONE, nuova: confrontaVersioni(nuova, VERSIONE) > 0 ? nuova : null,
     pagina: j.html_url || `https://github.com/${repo}/releases/latest`,
-    file: fileAggiornamento(Array.isArray(j.assets) ? j.assets : []), mobile: MOBILE
+    file: fileAggiornamento(Array.isArray(j.assets) ? j.assets : []), mobile: MOBILE,
+    novita: novitaDa(j.body)
   };
   ultimoControllo = { quando: Date.now(), dati };
   if (dati.nuova) say(`C'è una versione nuova di LIBRE VTT: ${dati.nuova} (questa è la ${VERSIONE}).`, 'ok');

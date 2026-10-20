@@ -15,6 +15,9 @@ final class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate
     private var timer: Timer?
     private var importaId: Int?
     private var importaCartella = false
+    /// Il selettore dei documenti serve a tre cose: importare una campagna, salvare o aprire una scheda.
+    private enum Scelta { case importa, salva(Int), apri(Int) }
+    private var scelta: Scelta = .importa
 
     override var preferredStatusBarStyle: UIStatusBarStyle { .default }   // segue la modalità chiara/scura, come la pagina
     override var prefersHomeIndicatorAutoHidden: Bool { true }
@@ -290,6 +293,15 @@ final class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate
         case "condividiFile":
             condividiFile(id: id, percorso: m["file"] as? String ?? "")
             return
+        case "salvaFile":
+            salvaFile(id: id, nome: m["nome"] as? String ?? "scheda.json", testo: m["testo"] as? String ?? "")
+            return
+        case "apriFile":
+            apriFile(id: id)
+            return
+        case "scriviFile", "leggiFile":
+            rispondi(id, ["errore": "Su iPhone e iPad la scheda non si può tenere sincronizzata con un file."])
+            return
         case "condividiTesto":
             condividi([m["testo"] as? String ?? ""])
         case "vibra":
@@ -331,10 +343,55 @@ final class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate
         }
         picker.delegate = self
         picker.allowsMultipleSelection = false
+        scelta = .importa
+        alto().present(picker, animated: true)
+    }
+
+    // MARK: - schede in un file
+
+    private func salvaFile(id: Int, nome: String, testo: String) {
+        let pulito = nome.replacingOccurrences(of: "/", with: "_")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(pulito.isEmpty ? "scheda.json" : pulito)
+        do {
+            try testo.write(to: url, atomically: true, encoding: .utf8)
+        } catch {
+            rispondi(id, ["errore": "Non riesco a preparare il file: \(error.localizedDescription)"])
+            return
+        }
+        let picker = UIDocumentPickerViewController(forExporting: [url], asCopy: true)
+        picker.delegate = self
+        scelta = .salva(id)
+        alto().present(picker, animated: true)
+    }
+
+    private func apriFile(id: Int) {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.json, .plainText, .data], asCopy: true)
+        picker.delegate = self
+        picker.allowsMultipleSelection = false
+        scelta = .apri(id)
         alto().present(picker, animated: true)
     }
 
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        switch scelta {
+        case .salva(let id):
+            scelta = .importa
+            rispondi(id, ["nome": urls.first?.lastPathComponent ?? ""])
+            return
+        case .apri(let id):
+            scelta = .importa
+            guard let u = urls.first else { rispondi(id, nil); return }
+            let accesso = u.startAccessingSecurityScopedResource()
+            defer { if accesso { u.stopAccessingSecurityScopedResource() } }
+            if let testo = try? String(contentsOf: u, encoding: .utf8) {
+                rispondi(id, ["testo": testo, "nome": u.lastPathComponent])
+            } else {
+                rispondi(id, ["errore": "Non riesco a leggere quel file."])
+            }
+            return
+        case .importa:
+            break
+        }
         guard let id = importaId else { return }
         importaId = nil
         guard let u = urls.first else { rispondi(id, nil); return }
@@ -372,6 +429,14 @@ final class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate
     }
 
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        switch scelta {
+        case .salva(let id), .apri(let id):
+            scelta = .importa
+            rispondi(id, nil)
+            return
+        case .importa:
+            break
+        }
         if let id = importaId {
             importaId = nil
             rispondi(id, nil)

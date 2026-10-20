@@ -32,6 +32,18 @@ function fogSet(f, cx, cy, on) {
   return true;
 }
 
+// ---------- Colore e velo ----------
+// Il colore lo sceglie chi conduce e vale per tutti: «auto» = lo stesso colore dello sfondo della
+// pagina (quello che prende dallo sfondo della scena, o quello del tema). Quanto si vede attraverso
+// la nebbia lo decide chi conduce solo per sé: i giocatori la vedono sempre piena.
+function fogColore() {
+  const c = settings.fogColor;
+  if (/^#[0-9a-f]{6}$/i.test(c || '')) return c;
+  const st = getComputedStyle(document.documentElement);
+  return (st.getPropertyValue('--page-bg') || st.getPropertyValue('--bg') || '#000').trim() || '#000';
+}
+const fogVelo = () => (settings.fogVeil >= 0.05 && settings.fogVeil <= 1 ? settings.fogVeil : FOG_VEIL);
+
 // ---------- Disegno ----------
 function fogApply() {
   const f = fogOf(false);
@@ -42,10 +54,10 @@ function fogApply() {
   // un pixel del canvas per casella: lo stiriamo con il css, resta leggerissimo
   if (fogCanvas.width !== f.cols || fogCanvas.height !== f.rows) { fogCanvas.width = f.cols; fogCanvas.height = f.rows; }
   Object.assign(fogCanvas.style, { left: f.x + 'px', top: f.y + 'px', width: w + 'px', height: h + 'px' });
-  fogCanvas.style.opacity = mine ? FOG_VEIL : 1;
+  fogCanvas.style.opacity = mine ? fogVelo() : 1;
   const ctx = fogCanvas.getContext('2d');
   ctx.clearRect(0, 0, f.cols, f.rows);
-  ctx.fillStyle = '#000';
+  ctx.fillStyle = fogColore();
   for (let y = 0; y < f.rows; y++) for (let x = 0; x < f.cols; x++) {
     if (f.cells[fogIdx(f, x, y)] !== '1') ctx.fillRect(x, y, 1, 1);
   }

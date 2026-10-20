@@ -48,6 +48,13 @@
     vibra: function (ms) { return chiama('vibra', { ms: ms || 12 }); },
     schermoAcceso: function (si) { return chiama('schermoAcceso', { si: !!si }); },
     apriEsterno: function (url) { return chiama('apriEsterno', { url: String(url) }); },
+    /** Salva un testo in un file scelto dall'utente. Android risponde { uri } (lo si può riscrivere dopo). */
+    salvaFile: function (nome, testo, mime) { return chiama('salvaFile', { nome: String(nome), testo: String(testo), mime: mime || 'application/json' }); },
+    /** Fa scegliere un file e ne restituisce { testo, nome } (e su Android { uri, scrivibile }). */
+    apriFile: function () { return chiama('apriFile', {}); },
+    /** Android: riscrive / rilegge un file scelto prima. */
+    scriviFile: function (uri, testo) { return chiama('scriviFile', { uri: String(uri), testo: String(testo) }); },
+    leggiFile: function (uri) { return chiama('leggiFile', { uri: String(uri) }); },
     /** Android: installa un APK scaricato dall'avviatore (Android chiede conferma). */
     installaApk: function (file) { return chiama('installaApk', { file: String(file) }); }
   };

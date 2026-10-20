@@ -155,7 +155,7 @@ document.body.insertAdjacentHTML('beforeend', `
     <label class="opt"><input type="radio" name="tpl" value="dnd5e"> Open · D&amp;D 5ª edizione</label>
     <label class="opt"><input type="radio" name="tpl" value="simple"> Open · Semplice (solo testo)</label>
   </fieldset>
-  <div class="dialogBtns"><button type="button" id="sheetCancel" class="btn ghost">Annulla</button><button type="submit" class="btn">Crea</button></div>
+  <div class="dialogBtns"><button type="button" id="sheetImport" class="btn ghost" title="Una scheda salvata prima in un file (anche da un'altra partita)">📂 Importa da un file…</button><span style="flex:1"></span><button type="button" id="sheetCancel" class="btn ghost">Annulla</button><button type="submit" class="btn">Crea</button></div>
 </form></dialog>
 <dialog id="pickDialog"><h3>Scegli l'icona (il segnalino)</h3><div id="pickGrid"></div>
   <div class="dialogBtns"><button type="button" id="pickCancel" class="btn ghost">Annulla</button></div></dialog>`);
@@ -369,6 +369,7 @@ const sheetWinMenu = w => {
     ...(w._sheet && st !== 'icon' ? [{ label: 'Riduci a icona', fn: () => setWinState(w, 'icon') }] : []),
     ...(w._sheet ? [{ label: '🖼 Cambia icona…', fn: () => pickAsset(a => setSheetIcon(w._sheet, a)) }] : []),
     ...(w._sheet && w._sheet.tpl !== 'simple' ? [{ label: (vistaScheda.get(w._sheet.id) || w._sheet.tpl) === 'standard' ? '📋 Vedi come scheda Open' : '📜 Vedi come scheda Standard', fn: () => cambiaVista(w) }] : []),
+    ...(w._sheet && typeof vociFileScheda === 'function' ? vociFileScheda(w) : []),
     '-', { label: 'Chiudi', fn: () => closeWin(w) }
   ];
 };
