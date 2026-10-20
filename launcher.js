@@ -717,12 +717,13 @@ function novitaDa(testo) {
 let ultimoControllo = null;
 async function controllaAggiornamento(forza) {
   if (process.env.MYVTT_NO_AGGIORNAMENTI) return { attuale: VERSIONE, nuova: null };
-  if (!forza && ultimoControllo && Date.now() - ultimoControllo.quando < 6 * 3600e3) return ultimoControllo.dati;
+  // si ricorda per poco «non c'è niente di nuovo» (una versione può uscire mentre l'app è aperta)
+  if (!forza && ultimoControllo && Date.now() - ultimoControllo.quando < (ultimoControllo.dati.nuova ? 6 * 3600e3 : 10 * 60e3)) return ultimoControllo.dati;
   const repo = repoGitHub();
   if (!VERSIONE || !repo) return { attuale: VERSIONE, nuova: null };
   let j = null;
   try { j = JSON.parse(await scaricaTesto(process.env.MYVTT_API_RILASCI || `https://api.github.com/repos/${repo}/releases/latest`) || 'null'); } catch {}
-  if (!j || !j.tag_name) return { attuale: VERSIONE, nuova: null, offline: true };
+  if (!j || !j.tag_name) { say('Controllo degli aggiornamenti: GitHub non risponde (niente connessione?).', 'warn'); return { attuale: VERSIONE, nuova: null, offline: true }; }
   const nuova = String(j.tag_name).replace(/^v/, '');
   const dati = {
     attuale: VERSIONE, nuova: confrontaVersioni(nuova, VERSIONE) > 0 ? nuova : null,

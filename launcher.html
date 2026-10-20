@@ -73,6 +73,8 @@
   #boxAgg p { margin: 0 0 10px; color: var(--muted); font-size: .86rem; }
   #aggNovita2 { margin: 0 0 12px; padding-left: 20px; font-size: .86rem; max-height: 260px; overflow: auto; }
   #aggNovita2 li { margin-bottom: 5px; }
+  #aggRiga { text-align: center; margin: 6px 0 0; font-size: .8rem; }
+  #aggRiga a { color: var(--muted); }
   .avviso .t { font-weight: 600; margin-bottom: 4px; }
   .avviso p { margin: 0 0 12px; color: var(--muted); font-size: .88rem; }
   .err { color: var(--bad); font-size: .88rem; margin: 8px 0 0; }
@@ -267,6 +269,7 @@
   </details>
 
   <footer id="piede"></footer>
+  <p id="aggRiga"><a href="#" id="aggOra">Controlla aggiornamenti</a></p>
 </div>
 
 <script>
@@ -582,6 +585,7 @@ let AGG = null;
 const aggSaltata = v => { try { return localStorage.getItem('libre_agg_saltata') === v; } catch { return false; } };
 async function controllaAgg() {
   try { AGG = await fetch('/api/aggiornamento').then(r => r.json()); } catch { return; }
+  ultimoAgg = Date.now();
   if (!AGG || !AGG.nuova || aggSaltata(AGG.nuova)) return;
   const ios = AGG.mobile === 'ios', android = AGG.mobile === 'android';
   $('aggTit').textContent = `È uscita LIBRE VTT ${AGG.nuova}`;
@@ -620,6 +624,21 @@ $('aggSi').onclick = async () => {
   finally { $('aggSi').disabled = false; }
 };
 setTimeout(controllaAgg, 1500);
+$('aggOra').addEventListener('click', e => controllaOra(e));
+// tornando nell'app (o nella finestra) dopo un po' si ricontrolla
+let ultimoAgg = Date.now();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && Date.now() - ultimoAgg > 10 * 60e3) { ultimoAgg = Date.now(); controllaAgg(); }
+});
+// «Controlla aggiornamenti» in fondo alla pagina: subito, senza aspettare
+async function controllaOra(ev) {
+  ev.preventDefault();
+  const a = ev.currentTarget; a.textContent = 'Controllo…';
+  try { AGG = await fetch('/api/aggiornamento?ora=1').then(r => r.json()); } catch { AGG = null; }
+  try { localStorage.removeItem('libre_agg_saltata'); } catch {}
+  if (AGG && AGG.nuova) { $('boxAgg').classList.add('hide'); await controllaAgg(); a.textContent = 'Controlla aggiornamenti'; }
+  else a.textContent = AGG && AGG.offline ? 'GitHub non risponde: riprova' : `Hai l'ultima versione (${(AGG && AGG.attuale) || '?'})`;
+}
 </script>
 </body>
 </html>
