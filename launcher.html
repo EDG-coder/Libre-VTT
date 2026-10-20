@@ -584,7 +584,7 @@ setInterval(carica, 4000);
 let AGG = null;
 const aggSaltata = v => { try { return localStorage.getItem('libre_agg_saltata') === v; } catch { return false; } };
 async function controllaAgg() {
-  try { AGG = await fetch('/api/aggiornamento').then(r => r.json()); } catch { return; }
+  try { AGG = await fetch('/api/aggiornamento?ora=1').then(r => r.json()); } catch { return; }   // ogni volta, senza ricordi
   ultimoAgg = Date.now();
   if (!AGG || !AGG.nuova || aggSaltata(AGG.nuova)) return;
   const ios = AGG.mobile === 'ios', android = AGG.mobile === 'android';
@@ -625,10 +625,10 @@ $('aggSi').onclick = async () => {
 };
 setTimeout(controllaAgg, 1500);
 $('aggOra').addEventListener('click', e => controllaOra(e));
-// tornando nell'app (o nella finestra) dopo un po' si ricontrolla
+// ogni volta che si torna nell'app (o nella finestra) si ricontrolla (al massimo una volta al minuto)
 let ultimoAgg = Date.now();
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && Date.now() - ultimoAgg > 10 * 60e3) { ultimoAgg = Date.now(); controllaAgg(); }
+  if (document.visibilityState === 'visible' && Date.now() - ultimoAgg > 60e3) { ultimoAgg = Date.now(); controllaAgg(); }
 });
 // «Controlla aggiornamenti» in fondo alla pagina: subito, senza aspettare
 async function controllaOra(ev) {
