@@ -1,0 +1,40 @@
+Applications Memory Usage (in Kilobytes):
+Uptime: 237974 Realtime: 237974
+
+** MEMINFO in pid 6188 [app.librevtt] **
+                   Pss  Private  Private  SwapPss      Rss     Heap     Heap     Heap
+                 Total    Dirty    Clean    Dirty    Total     Size    Alloc     Free
+                ------   ------   ------   ------   ------   ------   ------   ------
+  Native Heap    25052    25016       28       21    26272    35224    29368     2005
+  Dalvik Heap     1273     1252        8       84     2196     5359     2680     2679
+ Dalvik Other     1000     1000        0        3     1256                           
+        Stack     1216     1216        0        0     1224                           
+       Ashmem      289      172        0        0      976                           
+    Other dev       20        8       12        0      260                           
+     .so mmap    35723     2196    31424        2    68320                           
+    .jar mmap     1131        0       24        0    30272                           
+    .apk mmap    26054      428     9688        0    56780                           
+    .ttf mmap       62        0        4        0      488                           
+    .dex mmap      108        8       68        0     1020                           
+    .oat mmap      610        0       36        0    14084                           
+    .art mmap      942      572       60       94    19816                           
+   Other mmap     1608      128      488        0     4120                           
+      Unknown    12254    12252        0        0    12596                           
+        TOTAL   107546    44248    41840      204   239680    40583    32048     4684
+ 
+ App Summary
+                       Pss(KB)                        Rss(KB)
+                        ------                         ------
+           Java Heap:     1884                          22012
+         Native Heap:    25016                          26272
+                Code:    43892                         170996
+               Stack:     1216                           1224
+            Graphics:        0                              0
+       Private Other:    14080
+              System:    21458
+             Unknown:                                   19176
+ 
+           TOTAL PSS:   107546            TOTAL RSS:   239680       TOTAL SWAP PSS:      204
+ 
+ Objects
+               Views:       10         ViewRootImpl:        1

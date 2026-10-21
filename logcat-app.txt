@@ -1,0 +1,70 @@
+--------- beginning of main
+10-21 17:04:33.328  5518  5518 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-21 17:04:33.371  5518  5518 I AndroidRuntime: Using default boot image
+10-21 17:04:33.371  5518  5518 I AndroidRuntime: Leaving lock profiling enabled
+10-21 17:04:33.838  5518  5518 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-21 17:04:34.953  5518  5518 D AndroidRuntime: Shutting down VM
+10-21 17:04:35.956  5555  5555 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-21 17:04:35.965  5555  5555 I AndroidRuntime: Using default boot image
+10-21 17:04:35.965  5555  5555 I AndroidRuntime: Leaving lock profiling enabled
+10-21 17:04:36.167  5555  5555 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-21 17:04:37.237  5555  5555 D AndroidRuntime: Shutting down VM
+10-21 17:04:44.395  5731  5731 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-21 17:04:44.399  5731  5731 I AndroidRuntime: Using default boot image
+10-21 17:04:44.399  5731  5731 I AndroidRuntime: Leaving lock profiling enabled
+10-21 17:04:44.534  5731  5731 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-21 17:04:45.587  5731  5731 D AndroidRuntime: Shutting down VM
+10-21 17:04:46.508  5760  5760 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-21 17:04:46.511  5760  5760 I AndroidRuntime: Using default boot image
+10-21 17:04:46.511  5760  5760 I AndroidRuntime: Leaving lock profiling enabled
+10-21 17:04:46.599  5760  5760 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-21 17:04:47.634  5760  5760 D AndroidRuntime: Shutting down VM
+10-21 17:04:51.609  5827  5827 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-21 17:04:51.618  5827  5827 I AndroidRuntime: Using default boot image
+10-21 17:04:51.618  5827  5827 I AndroidRuntime: Leaving lock profiling enabled
+10-21 17:04:51.709  5827  5827 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-21 17:04:52.813  5827  5827 D AndroidRuntime: Shutting down VM
+10-21 17:04:55.962  5901  5901 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-21 17:04:55.975  5901  5901 I AndroidRuntime: Using default boot image
+10-21 17:04:55.975  5901  5901 I AndroidRuntime: Leaving lock profiling enabled
+10-21 17:04:56.183  5901  5901 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-21 17:04:57.232  5901  5901 D AndroidRuntime: Shutting down VM
+10-21 17:05:23.292  6003  6003 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-21 17:05:23.297  6003  6003 I AndroidRuntime: Using default boot image
+10-21 17:05:23.297  6003  6003 I AndroidRuntime: Leaving lock profiling enabled
+10-21 17:05:23.429  6003  6003 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-21 17:05:24.460  6003  6003 D AndroidRuntime: Shutting down VM
+10-21 17:05:28.948  6037  6037 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-21 17:05:28.951  6037  6037 I AndroidRuntime: Using default boot image
+10-21 17:05:28.951  6037  6037 I AndroidRuntime: Leaving lock profiling enabled
+10-21 17:05:29.027  6037  6037 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-21 17:05:30.111  6037  6037 D AndroidRuntime: Shutting down VM
+10-21 17:05:38.870  6188  6242 E chromium: [ERROR:simple_file_enumerator.cc(21)] opendir /data/user/0/app.librevtt/cache/WebView/Default/HTTP Cache/Code Cache/js: No such file or directory (2)
+10-21 17:05:38.870  6188  6242 E chromium: [ERROR:simple_index_file.cc(614)] Could not reconstruct index from disk
+10-21 17:05:38.872  6188  6240 E chromium: [ERROR:simple_file_enumerator.cc(21)] opendir /data/user/0/app.librevtt/cache/WebView/Default/HTTP Cache/Code Cache/wasm: No such file or directory (2)
+10-21 17:05:38.873  6188  6240 E chromium: [ERROR:simple_index_file.cc(614)] Could not reconstruct index from disk
+10-21 17:06:09.601  6316  6316 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-21 17:06:09.605  6316  6316 I AndroidRuntime: Using default boot image
+10-21 17:06:09.605  6316  6316 I AndroidRuntime: Leaving lock profiling enabled
+10-21 17:06:09.729  6316  6316 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-21 17:06:10.753  6316  6316 D AndroidRuntime: Shutting down VM
+10-21 17:06:11.775  6349  6349 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-21 17:06:11.782  6349  6349 I AndroidRuntime: Using default boot image
+10-21 17:06:11.782  6349  6349 I AndroidRuntime: Leaving lock profiling enabled
+10-21 17:06:11.994  6349  6349 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-21 17:06:13.048  6349  6349 D AndroidRuntime: Shutting down VM
+10-21 17:06:20.271  6384  6384 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-21 17:06:20.275  6384  6384 I AndroidRuntime: Using default boot image
+10-21 17:06:20.275  6384  6384 I AndroidRuntime: Leaving lock profiling enabled
+10-21 17:06:20.399  6384  6384 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-21 17:06:21.420  6384  6384 D AndroidRuntime: Shutting down VM
+10-21 17:06:22.324  6401  6401 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-21 17:06:22.327  6401  6401 I AndroidRuntime: Using default boot image
+10-21 17:06:22.327  6401  6401 I AndroidRuntime: Leaving lock profiling enabled
+10-21 17:06:22.406  6401  6401 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-21 17:06:23.419  6401  6401 D AndroidRuntime: Shutting down VM
+10-21 17:06:49.658  6444  6444 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+10-21 17:06:49.662  6444  6444 I AndroidRuntime: Using default boot image
+10-21 17:06:49.662  6444  6444 I AndroidRuntime: Leaving lock profiling enabled
+10-21 17:06:49.743  6444  6444 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+10-21 17:06:50.763  6444  6444 D AndroidRuntime: Shutting down VM
