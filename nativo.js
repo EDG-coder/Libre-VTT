@@ -55,6 +55,8 @@
     /** Android: riscrive / rilegge un file scelto prima. */
     scriviFile: function (uri, testo) { return chiama('scriviFile', { uri: String(uri), testo: String(testo) }); },
     leggiFile: function (uri) { return chiama('leggiFile', { uri: String(uri) }); },
+    /** Android: scarica l'APK con la rete di Android e apre l'installazione. */
+    scaricaApk: function (url, nome, byte) { return chiama('scaricaApk', { url: String(url), nome: String(nome), byte: +byte || 0 }); },
     /** Android: installa un APK scaricato dall'avviatore (Android chiede conferma). */
     installaApk: function (file) { return chiama('installaApk', { file: String(file) }); }
   };

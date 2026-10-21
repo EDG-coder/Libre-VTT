@@ -130,7 +130,7 @@ function stato() {
     link: MOBILE ? !!LINK_CTRL : !!linkBin(), cargo: !!cache.cargo, pronto: !!rilascio(), campagna: state.campagna || null,
     porte: { ui: UI_PORT, ...(state.porte || {}) },
     piattaforma: MOBILE === 'android' ? 'Android' : MOBILE === 'ios' ? 'iPhone e iPad' : WIN ? 'Windows' : MAC ? 'macOS' : 'Linux',
-    mobile: MOBILE, campHome: CAMP_HOME, versione: VERSIONE,
+    mobile: MOBILE, campHome: CAMP_HOME, versione: VERSIONE, arch: process.arch, repo: repoGitHub(),
     node: process.versions.node
   };
 }
@@ -607,6 +607,7 @@ function esegui(key, cmd, args, opts) {
   });
 }
 /** Scarica seguendo i rimandi; se c'è un'etichetta mostra la percentuale nella finestra. */
+let ultimoErroreRete = '';                 // perché l'ultimo scaricamento non è riuscito (per il registro)
 function scarica(url, dest, etichetta) {
   return new Promise(resolve => {
     let finito = false;
@@ -615,7 +616,7 @@ function scarica(url, dest, etichetta) {
       if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
         r.resume(); return fine(scarica(new URL(r.headers.location, url).href, dest, etichetta));
       }
-      if (r.statusCode !== 200) { r.resume(); return fine(false); }
+      if (r.statusCode !== 200) { ultimoErroreRete = `HTTP ${r.statusCode} da ${new URL(url).host}`; r.resume(); return fine(false); }
       const tot = +r.headers['content-length'] || 0;
       let got = 0, last = 0;
       const f = fs.createWriteStream(dest);
@@ -628,7 +629,7 @@ function scarica(url, dest, etichetta) {
       f.on('finish', () => f.close(() => fine(true)));
       r.pipe(f);
     });
-    req.on('error', () => fine(false));
+    req.on('error', e => { ultimoErroreRete = `${e.code || ''} ${e.message || e}`.trim(); fine(false); });
     req.setTimeout(60000, () => req.destroy());
   });
 }
@@ -723,7 +724,11 @@ async function controllaAggiornamento(forza) {
   if (!VERSIONE || !repo) return { attuale: VERSIONE, nuova: null };
   let j = null;
   try { j = JSON.parse(await scaricaTesto(process.env.MYVTT_API_RILASCI || `https://api.github.com/repos/${repo}/releases/latest`) || 'null'); } catch {}
-  if (!j || !j.tag_name) { say('Controllo degli aggiornamenti: GitHub non risponde (niente connessione?).', 'warn'); return { attuale: VERSIONE, nuova: null, offline: true }; }
+  if (!j || !j.tag_name) {
+    const motivo = ultimoErroreRete || 'risposta non valida';
+    say(`Controllo degli aggiornamenti: GitHub non risponde (${motivo}).`, 'warn');
+    return { attuale: VERSIONE, nuova: null, offline: true, motivo };
+  }
   const nuova = String(j.tag_name).replace(/^v/, '');
   const dati = {
     attuale: VERSIONE, nuova: confrontaVersioni(nuova, VERSIONE) > 0 ? nuova : null,

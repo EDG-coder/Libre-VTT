@@ -583,8 +583,37 @@ setInterval(carica, 4000);
 // ---------- aggiornamenti ----------
 let AGG = null;
 const aggSaltata = v => { try { return localStorage.getItem('libre_agg_saltata') === v; } catch { return false; } };
+// Sul telefono il controllo lo fa la pagina, con la rete e i certificati di Android (come il browser):
+// il Node che gira dentro l'app non sempre riesce a parlare con GitHub. Sul computer lo fa il programma.
+const confrontaV = (a, b) => { const pa = String(a).replace(/^v/, '').split(/[.-]/), pb = String(b).replace(/^v/, '').split(/[.-]/); for (let i = 0; i < 3; i++) { const d = (parseInt(pa[i], 10) || 0) - (parseInt(pb[i], 10) || 0); if (d) return d; } return 0; };
+function novitaDaTesto(testo) {
+  const righe = String(testo || '').split(/\r?\n/), da = righe.findIndex(r => /^##\s+Novit/i.test(r)), out = [];
+  if (da < 0) return out;
+  for (const r of righe.slice(da + 1)) {
+    if (/^##\s/.test(r)) break;
+    const m = r.match(/^\s*[-*]\s+(.*)$/);
+    if (m) out.push(m[1].replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]*)`/g, '$1').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim());
+  }
+  return out.slice(0, 15);
+}
+async function controlloDaApp() {
+  const st = S && S.versione ? S : await fetch('/api/stato').then(r => r.json());
+  const repo = st.repo || 'EDG-coder/Libre-VTT';
+  let j;
+  try {
+    const r = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    j = await r.json();
+  } catch (e) { return { attuale: st.versione, nuova: null, offline: true, motivo: e.message, mobile: st.mobile }; }
+  const nuova = String(j.tag_name || '').replace(/^v/, '');
+  const nomi = st.mobile === 'android' ? (st.arch === 'arm64' ? ['LIBRE-VTT-Android-arm64.apk', 'LIBRE-VTT-Android.apk'] : ['LIBRE-VTT-Android.apk']) : [];
+  let file = null;
+  for (const n of nomi) { const a = (j.assets || []).find(x => x.name === n); if (a) { file = { nome: a.name, url: a.browser_download_url, byte: a.size || 0 }; break; } }
+  return { attuale: st.versione, nuova: nuova && confrontaV(nuova, st.versione) > 0 ? nuova : null, pagina: j.html_url, file, mobile: st.mobile, novita: novitaDaTesto(j.body) };
+}
+const chiediAgg = () => NAT.disponibile ? controlloDaApp() : fetch('/api/aggiornamento?ora=1').then(r => r.json());
 async function controllaAgg() {
-  try { AGG = await fetch('/api/aggiornamento?ora=1').then(r => r.json()); } catch { return; }   // ogni volta, senza ricordi
+  try { AGG = await chiediAgg(); } catch { return; }   // ogni volta, senza ricordi
   ultimoAgg = Date.now();
   if (!AGG || !AGG.nuova || aggSaltata(AGG.nuova)) return;
   const ios = AGG.mobile === 'ios', android = AGG.mobile === 'android';
@@ -609,6 +638,17 @@ $('aggSi').onclick = async () => {
   if (AGG.mobile === 'ios' || !AGG.file) return apriPagina(AGG.pagina);
   if (S.mode && !confirm('Aggiornando si chiude la partita in corso. Vado avanti?')) return;
   $('aggSi').disabled = true;
+  if (NAT.disponibile && AGG.mobile === 'android' && NAT.scaricaApk) {
+    try {
+      window.LIBRE_AGG_PROGRESSO = p => { $('aggTesto').textContent = `Scarico LIBRE VTT ${AGG.nuova}: ${p}%…`; };
+      $('aggTesto').textContent = `Scarico LIBRE VTT ${AGG.nuova}…`;
+      const x = await NAT.scaricaApk(AGG.file.url, AGG.file.nome, AGG.file.byte);
+      if (!x || x.errore) { $('aggErr').textContent = (x && x.errore) || 'Scaricamento interrotto: riprova.'; $('aggErr').classList.remove('hide'); }
+      else if (x.permesso) $('aggTesto').textContent = 'Consenti a LIBRE VTT di installare app (l\'interruttore che si è appena aperto) e torna qui: l\'installazione parte da sola.';
+      else $('aggTesto').textContent = 'Conferma l\'installazione nella finestra di Android. Le campagne restano.';
+    } finally { $('aggSi').disabled = false; }
+    return;
+  }
   try {
     const r = await post('/api/aggiornamento/installa');
     if (r.errore) { $('aggErr').textContent = r.errore; $('aggErr').classList.remove('hide'); return; }
@@ -634,10 +674,10 @@ document.addEventListener('visibilitychange', () => {
 async function controllaOra(ev) {
   ev.preventDefault();
   const a = ev.currentTarget; a.textContent = 'Controllo…';
-  try { AGG = await fetch('/api/aggiornamento?ora=1').then(r => r.json()); } catch { AGG = null; }
+  try { AGG = await chiediAgg(); } catch { AGG = null; }
   try { localStorage.removeItem('libre_agg_saltata'); } catch {}
   if (AGG && AGG.nuova) { $('boxAgg').classList.add('hide'); await controllaAgg(); a.textContent = 'Controlla aggiornamenti'; }
-  else a.textContent = AGG && AGG.offline ? 'GitHub non risponde: riprova' : `Hai l'ultima versione (${(AGG && AGG.attuale) || '?'})`;
+  else a.textContent = AGG && AGG.offline ? `GitHub non risponde (${AGG.motivo || 'niente connessione?'}): riprova` : `Hai l'ultima versione (${(AGG && AGG.attuale) || '?'})`;
 }
 </script>
 </body>
