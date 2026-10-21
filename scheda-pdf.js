@@ -49,7 +49,7 @@
     checkbox29: 'kp_insi', checkbox30: 'kp_inti', checkbox31: 'kp_inve', checkbox32: 'kp_medi', checkbox33: 'kp_natu', checkbox34: 'kp_perception',
     checkbox35: 'kp_perf', checkbox36: 'kp_pers', checkbox37: 'kp_reli', checkbox38: 'kp_slei', checkbox39: 'kp_stea', checkbox40: 'kp_surv'
   };
-  const AREE = new Set(['traits', 'ideals', 'bonds', 'flaws', 'features', 'prof_text1', 'langs1', 'equip', 'faction_text', 'extra', 'notes', 'spells']);
+  const AREE = new Set(['traits', 'ideals', 'bonds', 'flaws', 'features', 'prof_text1', 'langs1', 'equip', 'faction_text', 'extra', 'notes', 'spells', 'classf', 'racial', 'feats']);
 
   let caricata = null;
   function libreria() {
@@ -71,6 +71,14 @@
       if (AREE.has(k) && f[k]) f[k] += '\n' + v; else f[k] = v;
     };
     for (const { nome: n, valore } of campi) {
+      // «libre_<chiave>» (con «__2», «__3»… se lo stesso spazio continua altrove) va dritto nella scheda
+      const diretto = /^libre_([a-z0-9_]+?)(?:__\d+)?$/.exec(String(n));
+      if (diretto) {
+        if (typeof valore === 'boolean') { if (valore) f[diretto[1]] = '1'; continue; }
+        const v = String(valore || '').trim();
+        if (v) metti(diretto[1], v);
+        continue;
+      }
       const k = norm(n);
       if (typeof valore === 'boolean') { if (CASELLE[k] && valore) f[CASELLE[k]] = '1'; continue; }
       const v = String(valore || '').trim();
