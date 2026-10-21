@@ -1,0 +1,9 @@
+pronto: http://127.0.0.1:4100/
+{"path":"/Users/runner/Library/Developer/CoreSimulator/Devices/2EDB2671-090C-4988-822E-421879ECE84C/data/Containers/Data/Application/3275851F-77FD-4336-A6B0-810BC5D6CE7F/Documents/Campagne/Prova iPhone","home":"/Users/runner/Library/Developer/CoreSimulator/Devices/2EDB2671-090C-4988-822E-421879ECE84C/data/Containers/Data/Application/3275851F-77FD-4336-A6B0-810BC5D6CE7F/Documents/Campagne","ultima":null,"lista":[{"path":"/Users/runner/Library/Developer/CoreSimulator/Devices/2EDB2671-090C-4988-822E-421879ECE84C/data/Containers/Data/Application/3275851F-77FD-4336-A6B0-810BC5D6CE7F/Documents/Campagne/Prova iPhone","nome":"Prova iPhone","esiste":true,"campagna":true,"vuota":false,"scrivibile":true,"scene":0,"schede":0,"immagini":1,"modificata":0,"vecchia":false}]}
+cartella: /Users/runner/Library/Developer/CoreSimulator/Devices/2EDB2671-090C-4988-822E-421879ECE84C/data/Containers/Data/Application/3275851F-77FD-4336-A6B0-810BC5D6CE7F/Documents/Campagne/Prova iPhone
+{"ok":true}
+stato: solo | errore: None | busy: None
+   Nuova campagna «Prova iPhone» in /Users/runner/Library/Developer/CoreSimulator/Devices/2EDB2671-090C-4988-822E-421879ECE84C/data/Containers/Data/Application/3275851F-77FD-4336-A6B0-810BC5D6CE7F/Documents/Campagne/Prova iPhone
+   Campagna: «Prova iPhone» (/Users/runner/Library/Developer/CoreSimulator/Devices/2EDB2671-090C-4988-822E-421879ECE84C/data/Containers/Data/Application/3275851F-77FD-4336-A6B0-810BC5D6CE7F/Documents/Campagne/Prova iPhone)
+   [tavolo] Apri http://localhost:3000  (Ctrl+C per fermare)
+   Pronto.
