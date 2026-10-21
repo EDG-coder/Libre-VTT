@@ -17,7 +17,7 @@
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    margin: 0; min-height: 100vh; min-height: 100dvh; background: var(--bg); color: var(--text);
     font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
     display: flex; align-items: center; justify-content: center; padding: 28px 20px;
   }
@@ -49,6 +49,7 @@
     flex: 1; min-width: 180px; font: inherit; font-size: .9rem; padding: 9px 12px;
     border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: inherit;
   }
+  .app input[type=text], .app button.b { font-size: 16px; }   /* sotto i 16px l'iPhone ingrandisce la pagina quando scrivi */
   input[type=text]:focus { outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); }
   button.b {
     font: inherit; font-size: .88rem; padding: 9px 15px; border-radius: 10px; cursor: pointer;
@@ -679,6 +680,20 @@ async function controllaOra(ev) {
   if (AGG && AGG.nuova) { $('boxAgg').classList.add('hide'); await controllaAgg(); a.textContent = 'Controlla aggiornamenti'; }
   else a.textContent = AGG && AGG.offline ? `GitHub non risponde (${AGG.motivo || 'niente connessione?'}): riprova` : `Hai l'ultima versione (${(AGG && AGG.attuale) || '?'})`;
 }
+
+// Windows con lo schermo ingrandito (125%, 150%): la finestra non deve essere più grande dello schermo
+(function adattaFinestra() {
+  if (NAT.disponibile) return;
+  try {
+    const aw = screen.availWidth, ah = screen.availHeight;
+    if (outerHeight <= ah + 2 && outerWidth <= aw + 2) return;
+    const w = Math.min(outerWidth, aw), h = Math.min(outerHeight, ah);
+    resizeTo(w, h);
+    moveTo((screen.availLeft || 0) + Math.max(0, (aw - w) / 2), screen.availTop || 0);
+  } catch {}
+})();
+// e anche qui il pizzico del touchpad non ingrandisce la pagina
+addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
 </script>
 </body>
 </html>

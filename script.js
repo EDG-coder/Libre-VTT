@@ -31,7 +31,7 @@ const DEFAULT_BORDER = { color: '#000000', transparent: false, width: 3 };
 const DEFAULT_PING = { color: '#ff4d4d', size: 2, speed: 8, fade: 2500 };      // size in cm, speed in cm/s, fade in ms
 const SECTIONS = { look: true, res: false, grid: true, gridDefault: false, map: false, border: false, ping: false, sheets: false, tools: false, hidden: false, chat: false };   // sezioni aperte di default
 const RESOLUTIONS = [[480, '480p'], [720, '720p'], [1080, '1080p'], [1440, '1440p'], [0, 'Originale']];
-const settings = { theme: 'dark', autoBg: true, fogColor: 'auto', fogVeil: 0.55, resToken: 720, resBg: 1080, gridDefault: { ...DEFAULT_GRID }, border: { ...DEFAULT_BORDER }, ping: { ...DEFAULT_PING }, sections: {},
+const settings = { theme: 'dark', autoBg: true, fogColor: 'auto', fogVeil: 0.55, caratLibere: false, resToken: 720, resBg: 1080, gridDefault: { ...DEFAULT_GRID }, border: { ...DEFAULT_BORDER }, ping: { ...DEFAULT_PING }, sections: {},
   tools: {}, drawerOpen: true, publicScene: null, unit: 'ft', sheetClose: 'x', rulerCenter: false, dockOpen: true, hiddenLayer: { show: true, opacity: 45 }, chatTabs: { rolls: false, rules: false },
   sheetStyle: { preset: 'parchment', accent: '', scale: 100, font: 'serif' }, pen: { color: '#ff4d4d', width: 4, tool: 'pen', fill: false } };
 let scenes = [], cur = null;            // cur = scena attiva
@@ -153,6 +153,17 @@ viewport.addEventListener('wheel', e => {
   applyView();
   scheduleBoardSave();
 }, { passive: false });
+
+// Pizzico col touchpad (arriva come rotellina con Ctrl): mai lo zoom di tutta la pagina.
+// Sulla mappa ci pensa la mappa; sulla scheda Standard ingrandisce il foglio; altrove non fa niente.
+addEventListener('wheel', e => {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  const w = e.target.closest && e.target.closest('.stdWin');
+  if (w && typeof stdZoom === 'function') stdZoom(w, Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) / 250));
+}, { passive: false, capture: true });
+// Safari / iPad: il pizzico arriva anche come «gesture»
+for (const t of ['gesturestart', 'gesturechange']) addEventListener(t, e => e.preventDefault(), { passive: false });
 
 // ---------- Griglia (disegnata a schermo ma solo dentro il rettangolo, con linee sempre sottili) ----------
 function paintGrid() {
@@ -853,6 +864,13 @@ for (const [id, key] of [['resToken', 'resToken'], ['resBg', 'resBg']]) {
   $(id).addEventListener('change', e => { settings[key] = +e.target.value; scheduleBoardSave(); });
 }
 $('autoBg').addEventListener('input', e => { settings.autoBg = e.target.checked; updatePageColor(); scheduleBoardSave(); });
+$('caratLibere').addEventListener('input', e => {
+  settings.caratLibere = e.target.checked; scheduleBoardSave();
+  document.querySelectorAll('.sheetWin input[type=number]').forEach(i => {
+    if (!CARATTERISTICHE.has(i.dataset.f)) return;
+    if (settings.caratLibere) { i.removeAttribute('min'); i.removeAttribute('max'); } else { i.min = 1; i.max = 30; }
+  });
+});
 
 // nebbia di guerra: colore (per tutti) e quanto copre per chi conduce
 let fogColorUltimo = '#000000';
@@ -907,6 +925,7 @@ $('bgRemove').addEventListener('click', () => {
 function syncSettings() {
   syncTheme(); syncSceneGrid(); syncDefaultGrid(); syncBorder(); syncPingForm(); sects.forEach(f => f());
   $('autoBg').checked = settings.autoBg;
+  $('caratLibere').checked = !!settings.caratLibere;
   syncFog();
   $('resToken').value = settings.resToken; $('resBg').value = settings.resBg;
 }
@@ -1366,6 +1385,7 @@ async function loadBoard() {
     for (const k of ['drawerOpen', 'publicScene', 'unit', 'sheetClose', 'rulerCenter', 'dockOpen']) if (s[k] !== undefined) settings[k] = s[k];
     if (s.fogColor === 'auto' || /^#[0-9a-f]{6}$/i.test(s.fogColor || '')) settings.fogColor = s.fogColor;
     if (s.fogVeil >= 0.05 && s.fogVeil <= 1) settings.fogVeil = +s.fogVeil;
+    if (typeof s.caratLibere === 'boolean') settings.caratLibere = s.caratLibere;
     for (const k of ['tools', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'park', 'music']) if (s[k] && typeof s[k] === 'object') settings[k] = { ...settings[k], ...s[k] };
     settings.sections = s.sections && typeof s.sections === 'object' ? { ...s.sections } : {};
     paintBorder();

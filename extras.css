@@ -156,7 +156,7 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
   --sh-font: Georgia, "Times New Roman", serif; --sh-scale: 1;
 }
 .sheetWin {
-  position: fixed; z-index: 150000; width: 640px; height: 560px; min-width: 300px; min-height: 120px; max-width: 96vw; max-height: 94vh;
+  position: fixed; z-index: 150000; width: 640px; height: 560px; min-width: 300px; min-height: 120px; max-width: 96vw; max-height: 94vh; max-height: 94dvh;
   display: flex; flex-direction: column; resize: both; overflow: hidden;
   border-radius: 12px; border: 2px solid var(--sh-accent); background: var(--sh-bg); color: var(--sh-fg);
   font-family: var(--sh-font); font-size: calc(14px * var(--sh-scale)); box-shadow: 0 16px 50px rgba(0, 0, 0, .55);
@@ -360,7 +360,7 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 .parkGrid {
   --ps: 52px;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--ps), 1fr));
-  gap: 7px; margin: 6px 0; max-height: 46vh; overflow: auto;
+  gap: 7px; margin: 6px 0; max-height: 46vh; max-height: 46dvh; overflow: auto;
 }
 .parkGrid:empty { display: none; }
 .parkChip {
@@ -542,3 +542,4 @@ body.net-player #fogSect { display: none; }
 #importSheetDialog .check { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0; }
 #importSheetDialog .note { font-size: .88em; opacity: .75; }
 #importSheetDialog .err { color: #e5484d; }
+.sheetWin .oInfo { margin-left: 6px; padding: 0; border: 0; background: none; color: inherit; font: italic 400 .95em system-ui, sans-serif; text-transform: none; letter-spacing: 0; text-decoration: underline dotted; cursor: help; opacity: .8; }

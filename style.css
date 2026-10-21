@@ -380,7 +380,7 @@ body.menu-open #sideToggle svg { transform: rotate(180deg); }
 #sceneBtn svg { transition: transform .25s; flex: none; }
 #sceneBtn[aria-expanded="true"] svg { transform: rotate(180deg); }
 #sceneMenu {
-  position: absolute; left: 0; bottom: 54px; min-width: 250px; max-height: 50vh; overflow-y: auto; padding: 6px; border-radius: 16px;
+  position: absolute; left: 0; bottom: 54px; min-width: 250px; max-height: 50vh; max-height: 50dvh; overflow-y: auto; padding: 6px; border-radius: 16px;
   background: var(--panel); color: var(--text); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
   transform-origin: 20% 100%; animation: menuPop .18s ease-out;
 }

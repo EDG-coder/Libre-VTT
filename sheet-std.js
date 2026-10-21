@@ -43,6 +43,9 @@ const line = (k, x, y, w, h, ph = '') =>
   `<button type="button" class="sDie" data-die="${k}" title="Tira, oppure manda in chat">🎲</button></span>`;
 const rep = (n, fn) => Array.from({ length: n }, (_, i) => fn(i)).join('');
 
+// spiegazioni brevi per i campi meno ovvi
+const INFO_FOLLIA = 'Regola facoltativa (Guida del Dungeon Master, «Follia»): quando un personaggio vive qualcosa di sconvolgente il master può dargli un livello di follia, con i suoi effetti (breve, lunga, indefinita). «CD prova abilità» è la difficoltà del tiro salvezza o della prova per resistere. Se al vostro tavolo non la usate, lasciate i campi vuoti.';
+
 // ---------- Elenchi ----------
 // Le abilità nell'ordine della scheda italiana (alfabetico), con la caratteristica abbreviata.
 const STD_SK = [
@@ -121,17 +124,17 @@ function stdPage1() {
   // --- colonna 1-2 in basso: competenze, linguaggi, talenti ---
   h += box(28, 610, 178, 90, 'COMPETENZE', 'sPanel');
   h += lab('ARMATURA', 30, 615, 30, 'r', 'sNano');
-  [['pa_l', 'Leggere', 63, 24], ['pa_m', 'Medie', 96, 24], ['pa_p', 'Pesanti', 129, 24], ['pa_s', 'Scudi', 160, 20]].forEach(([k, t, x, w]) => {
-    h += chk(k, x, 614, 7.5) + lab(t, x + 9, 615, w, 'l', 'sNano');
+  [['pa_l', 'Leggere', 62, 26], ['pa_m', 'Medie', 98, 22], ['pa_p', 'Pesanti', 129, 26], ['pa_s', 'Scudi', 166, 22]].forEach(([k, t, x, w]) => {
+    h += chk(k, x, 614, 7) + lab(t, x + 8.5, 615, w, 'l', 'sNano sNoWrap');
   });
   h += lab('ARMI', 30, 626, 30, 'r', 'sNano');
-  [['pw_s', 'Semplici', 63, 24], ['pw_g', 'Da guerra', 96, 28], ['pw_a', 'Altro', 129, 18]].forEach(([k, t, x, w]) => {
-    h += chk(k, x, 625, 7.5) + lab(t, x + 9, 626, w, 'l', 'sNano');
+  [['pw_s', 'Semplici', 62, 26], ['pw_g', 'Da guerra', 98, 30], ['pw_a', 'Altro', 138, 18]].forEach(([k, t, x, w]) => {
+    h += chk(k, x, 625, 7) + lab(t, x + 8.5, 626, w, 'l', 'sNano sNoWrap');
   });
-  h += inp('pw_other', 146, 623, 54, 11, 'sRule');
-  h += inp('prof_text1', 34, 635, 168, 11, 'sRule') + inp('prof_text2', 34, 647, 168, 11, 'sRule');
-  h += lab('STRUMENTI', 34, 660, 32, 'l', 'sNano');
-  h += inp('tools1', 68, 659, 134, 11, 'sRule') + inp('tools2', 34, 671, 168, 11, 'sRule') + inp('tools3', 34, 683, 168, 11, 'sRule');
+  h += inp('pw_other', 162, 623.5, 40, 10.5, 'sRule');
+  h += inp('prof_text1', 34, 635, 168, 10.5, 'sRule') + inp('prof_text2', 34, 646.5, 168, 10.5, 'sRule');
+  h += lab('STRUMENTI', 34, 659, 32, 'l', 'sNano');
+  h += inp('tools1', 68, 658, 134, 10.5, 'sRule') + inp('tools2', 34, 669.5, 83, 10.5, 'sRule') + inp('tools3', 119, 669.5, 83, 10.5, 'sRule');
 
   h += box(28, 704, 178, 34, 'LINGUAGGI', 'sPanel');
   h += inp('langs1', 32, 707, 152, 11, 'sRule') + inp('langs2', 32, 718, 152, 11, 'sRule');
@@ -163,8 +166,8 @@ function stdPage1() {
 
   h += box(220, 310, 76, 58, 'DADI VITA', 'sPanel');
   h += lab('DV', 226, 313, 20, 'c', 'sNano') + lab('TOTALI', 248, 313, 22, 'c', 'sNano') + lab('USATI', 270, 313, 22, 'c', 'sNano');
-  h += inp('hd', 230, 320, 14, 13, 'sScore') + nmb('hdt', 251, 320, 14, 13, 'sScore') + nmb('hdu', 273, 320, 14, 13, 'sScore');
-  h += inp('hd2', 230, 336, 14, 13, 'sScore') + nmb('hdt2', 251, 336, 14, 13, 'sScore') + nmb('hdu2', 273, 336, 14, 13, 'sScore');
+  h += inp('hd', 226, 320, 22, 13, 'sScore sDv sFit') + nmb('hdt', 251, 320, 16, 13, 'sScore sDv sFit') + nmb('hdu', 272, 320, 16, 13, 'sScore sDv sFit');
+  h += inp('hd2', 226, 336, 22, 13, 'sScore sDv sFit') + nmb('hdt2', 251, 336, 16, 13, 'sScore sDv sFit') + nmb('hdu2', 272, 336, 16, 13, 'sScore sDv sFit');
   h += box(302, 310, 80, 58, 'TS CONTRO MORTE', 'sPanel');
   h += lab('SUCCESSI', 303, 320, 35, 'r', 'sNano') + rep(3, i => chk('ds' + (i + 1), 340 + i * 12.5, 319, 9.5));
   h += lab('FALLIMENTI', 302, 336, 36, 'r', 'sNano') + rep(3, i => chk('df' + (i + 1), 340 + i * 12.5, 335, 9.5));
@@ -199,7 +202,8 @@ function stdPage1() {
   // --- colonna 4: follia, privilegi limitati, tratti razziali, privilegi di classe ---
   h += box(394, 132, 178, 40, '', 'sPanel');
   h += box(398, 137, 30, 28, '', 'sBox') + inp('madness', 401, 140, 24, 21, 'sScore');
-  h += lab('LIVELLO DI FOLLIA', 432, 146, 80, 'c', 'sTiny');
+  h += lab('LIVELLO DI FOLLIA', 432, 142, 80, 'c', 'sTiny');
+  h += `<button type="button" class="sInfo" style="${at(458, 154, 28, 9)}" data-info="follia" title="${eh(INFO_FOLLIA)}">che cos'è?</button>`;
   h += box(518, 133, 52, 38, '', 'sBox') + nmb('madcd', 524, 137, 40, 20, 'sScore');
   h += lab('CD PROVA ABILITÀ', 518, 159, 52, 'c', 'sNano');
 
@@ -331,7 +335,7 @@ function standardHtml() {
       <button type="button" class="on" data-pg="1">Scheda</button>
       <button type="button" data-pg="2">Personaggio</button>
       <button type="button" data-pg="3">Incantesimi</button>
-      <span class="sZoomWrap"><button type="button" class="sZoom" data-z="-">−</button><button type="button" class="sZoom" data-z="+">＋</button></span>
+      <span class="sZoomWrap"><button type="button" class="sZoom" data-z="-" title="Rimpicciolisci" aria-label="Rimpicciolisci"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="sZoom" data-z="+" title="Ingrandisci" aria-label="Ingrandisci"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6h8M6 2v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></span>
     </div>` +
     pages.map((p, i) => `<div class="spage stdSheet" data-pg="${i + 1}"${i ? ' hidden' : ''}>
       <div class="sPaper"><div class="sPage">${p}</div></div></div>`).join('');
@@ -352,6 +356,44 @@ function stdFit(win) {
 const stdObserver = typeof ResizeObserver === 'function'
   ? new ResizeObserver(es => es.forEach(e => { const w = e.target.closest('.sheetWin') || e.target; stdFit(w); }))
   : null;
+
+/** Ingrandisce o rimpicciolisce il foglio (pulsanti − +, pizzico col touchpad o con due dita). */
+function stdZoom(win, fattore) {
+  win._sZoom = clamp((win._sZoom || 1) * fattore, 0.6, 3);
+  stdFit(win);
+}
+// Due dita sul foglio: lo zoom è quello del foglio, non della pagina.
+function stdBindPinch(win, root) {
+  const dita = new Map();
+  let d0 = 0;
+  const dist = () => { const [a, b] = [...dita.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+  root.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch' || !e.target.closest('.sPaper')) return;
+    dita.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (dita.size === 2) d0 = dist();
+  });
+  root.addEventListener('pointermove', e => {
+    if (!dita.has(e.pointerId)) return;
+    dita.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (dita.size === 2 && d0 > 20) { const d = dist(); stdZoom(win, d / d0); d0 = d; e.preventDefault(); }
+  });
+  const via = e => { dita.delete(e.pointerId); if (dita.size < 2) d0 = 0; };
+  root.addEventListener('pointerup', via); root.addEventListener('pointercancel', via);
+}
+
+// I campi stretti (dadi vita): se il testo non ci sta, il carattere si rimpicciolisce invece di tagliarlo.
+function stdAdatta(inp) {
+  inp.style.fontSize = '';
+  const base = parseFloat(getComputedStyle(inp).fontSize) || 9;
+  let f = base;
+  while (f > 4.5 && inp.scrollWidth > inp.clientWidth + 0.5) { f -= 0.5; inp.style.fontSize = f + 'px'; }
+}
+function stdBindFit(root) {
+  const tutti = () => root.querySelectorAll('.sFit').forEach(i => { if (i.offsetParent) stdAdatta(i); });
+  root.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('sFit')) stdAdatta(e.target); });
+  root.addEventListener('click', e => { if (e.target.closest('.stabs')) requestAnimationFrame(tutti); });
+  requestAnimationFrame(() => requestAnimationFrame(tutti));
+}
 
 // Immagini (ritratto e simbolo) della seconda pagina: vengono dagli assets.
 function stdBindImages(root, s) {
@@ -515,11 +557,16 @@ function stdSetup(win, root, s) {
   stdBindImages(root, s);
   stdBindLines(root, s);
   stdBindExpertise(root, s);
+  stdBindFit(root);
+  stdBindPinch(win, root);
+  root.addEventListener('click', e => {
+    const b = e.target.closest('.sInfo');
+    if (b) alert(b.title);                     // anche con il dito (il «title» col mouse si vede passandoci sopra)
+  });
   root.addEventListener('click', e => {
     const z = e.target.closest('.sZoom');
     if (!z) return;
-    win._sZoom = clamp(win._sZoom * (z.dataset.z === '+' ? 1.15 : 1 / 1.15), 0.6, 3);
-    stdFit(win);
+    stdZoom(win, z.dataset.z === '+' ? 1.15 : 1 / 1.15);
   });
   if (stdObserver) root.querySelectorAll('.sPaper').forEach(p => stdObserver.observe(p));
   requestAnimationFrame(() => stdFit(win));

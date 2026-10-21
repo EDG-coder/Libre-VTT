@@ -1,5 +1,16 @@
 # LIBRE VTT
 
+[![Download totali](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/total?label=download%20totali)](https://github.com/EDG-coder/Libre-VTT/releases)
+[![Ultima versione](https://img.shields.io/github/v/release/EDG-coder/Libre-VTT?label=ultima%20versione)](https://github.com/EDG-coder/Libre-VTT/releases/latest)
+
+Download dell'ultima versione:
+![Windows](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Setup.exe?label=Windows)
+![Mac](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT.dmg?label=Mac)
+![Linux](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/Installa-LIBRE-VTT-Linux.sh?label=Linux)
+![Android](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Android.apk?label=Android)
+![Android arm64](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Android-arm64.apk?label=Android%20arm64)
+![iPhone](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-iOS.ipa?label=iPhone%20(IPA))
+
 Tavolo da gioco virtuale che gira sul tuo computer.
 
 ## Come si avvia

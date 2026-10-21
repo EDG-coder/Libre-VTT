@@ -1,12 +1,12 @@
 /* ---------- Editor del segnalino ---------- */
 #cropDialog {
-  width: min(1020px, 96vw); max-width: none; max-height: 94vh;
+  width: min(1020px, 96vw); max-width: none; max-height: 94vh; max-height: 94dvh;
   padding: 0; border: 0; border-radius: 16px; overflow: hidden;
   background: var(--panel); color: var(--text);
   box-shadow: 0 30px 90px rgba(0, 0, 0, .55);
 }
 #cropDialog::backdrop { background: rgba(0, 0, 0, .55); backdrop-filter: blur(3px); }
-#cropForm { display: flex; flex-direction: column; max-height: 94vh; }
+#cropForm { display: flex; flex-direction: column; max-height: 94vh; max-height: 94dvh; }
 
 .cHead { padding: 16px 20px 12px; border-bottom: 1px solid var(--line); }
 .cHead h3 { margin: 0 0 4px; font-size: 1.1rem; }

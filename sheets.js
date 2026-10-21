@@ -446,6 +446,10 @@ function calcValue(s, key) {
 }
 function recalc(root, s) {
   root.querySelectorAll('[data-c]').forEach(o => { const v = calcValue(s, o.dataset.c); o.textContent = ['pp', 'wsum', 'wmax'].includes(o.dataset.c) ? v : sgn(v); });
+  // la percezione passiva dice da dove viene il numero (per confrontarlo con altre schede)
+  const sag = abMod(s, 'wis'), comp = s.f.ke_perception ? profB(s) * 2 : s.f.kp_perception ? profB(s) : 0;
+  const perche = `10 + Saggezza (${sgn(sag)})` + (comp ? ` + ${s.f.ke_perception ? 'maestria' : 'competenza'} in Percezione (${sgn(comp)})` : ' — senza competenza in Percezione: spunta la casella di Percezione se il personaggio ce l\'ha');
+  root.querySelectorAll('[data-c="pp"]').forEach(o => { o.title = perche; });
 }
 function doRoll(s, key) {
   const [t, a] = key.split(':');
@@ -474,10 +478,24 @@ function chipsFor(ta, s) {
   box.replaceChildren(...out);
 }
 /** Collega un campo (data-f) al valore della scheda: lo mostra e lo salva quando cambia. */
+// Le sei caratteristiche stanno tra 1 e 30 (si può togliere il limite nelle impostazioni).
+const CARATTERISTICHE = new Set(['str', 'dex', 'con', 'int', 'wis', 'cha']);
+function limitaCaratteristica(el) {
+  if (settings.caratLibere || el.value === '') return;
+  const v = parseInt(el.value, 10);
+  if (!Number.isFinite(v)) { el.value = ''; return; }
+  const c = Math.max(1, Math.min(30, v));
+  if (String(c) !== el.value) el.value = String(c);
+}
 function bindField(el, root, s) {
   const k = el.dataset.f;
   if (el.type === 'checkbox') el.checked = !!s.f[k]; else el.value = s.f[k] ?? '';
+  if (CARATTERISTICHE.has(k) && el.type === 'number') {
+    if (!settings.caratLibere) { el.min = 1; el.max = 30; }
+    el.step = 1;
+  }
   el.addEventListener('input', () => {
+    if (CARATTERISTICHE.has(k)) limitaCaratteristica(el);
     s.f[k] = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value;
     recalc(root, s);
     if (el.tagName === 'TEXTAREA') chipsFor(el, s);

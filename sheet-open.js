@@ -41,7 +41,7 @@ function openPagina1() {
       <div class="hp" style="margin-top:4px">${fld('Altri dadi vita', 'hd2')}${fld('Totali', 'hdt2', 'number')}${fld('Usati', 'hdu2', 'number')}</div>
       <div class="hdr" style="margin-top:8px">${fld('Affaticamento', 'fatigue')}${fld('Visione', 'vision')}<label class="rl2">${ck('darkv')}<span>Scurovisione</span></label></div>
       <div class="ds"><span>Successi</span>${ck('ds1')}${ck('ds2')}${ck('ds3')}<span>Fallimenti</span>${ck('df1')}${ck('df2')}${ck('df3')}<small>Tiri salvezza contro la morte</small></div>`)}
-    ${oBox('Livello di follia', `<div class="row2">${fld('Livello', 'madness')}${fld('CD prova abilità', 'madcd', 'number')}</div>`)}
+    ${oBox('Livello di follia <button type="button" class="oInfo" title="' + eh(INFO_FOLLIA) + '">che cos\'è?</button>', `<div class="row2">${fld('Livello', 'madness')}${fld('CD prova abilità', 'madcd', 'number')}</div>`)}
     ${oBox('Attacchi', atk + `<h5 style="margin-top:8px">Munizioni</h5>` +
       rows(3, i => `<div class="am"><input type="text" data-f="am${i}n" placeholder="Munizione"><input type="number" data-f="am${i}q" placeholder="Q.tà"></div>`), 'full')}
     ${oBox('Privilegi &amp; tratti limitati <small>(si recuperano con: riposo breve · lungo · all\'alba)</small>', lim, 'full')}
@@ -169,6 +169,8 @@ function openSetup(w, root, s) {
   root.querySelectorAll('.oLiv').forEach(disegnaLivello);
 
   root.addEventListener('click', e => {
+    const info = e.target.closest('.oInfo');
+    if (info) { alert(info.title); return; }
     const box = e.target.closest('.oLiv');
     if (!box) return;
     const L = +box.dataset.liv;
