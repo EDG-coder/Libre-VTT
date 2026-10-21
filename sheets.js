@@ -166,12 +166,12 @@ function newSheet(name, tpl) {
   return { id: uid(), name, tpl, icon: null, f };
 }
 $('sheetNew').addEventListener('click', () => {
-  $('sheetNameIn').value = 'Personaggio ' + (sheets.length + 1);
+  $('sheetNameIn').value = tr('Personaggio') + ' ' + (sheets.length + 1);
   $('sheetDialog').showModal(); $('sheetNameIn').select();
 });
 $('sheetForm').addEventListener('submit', e => {
   e.preventDefault();
-  const s = newSheet($('sheetNameIn').value.trim().slice(0, 40) || 'Personaggio', $('sheetForm').elements.tpl.value);
+  const s = newSheet($('sheetNameIn').value.trim().slice(0, 40) || tr('Personaggio'), $('sheetForm').elements.tpl.value);
   sheets.push(s); renderSheetList(); scheduleSheets();
   if (typeof onSheetCreated === 'function') onSheetCreated(s);
   $('sheetDialog').close(); openSheet(s.id);
@@ -281,6 +281,7 @@ function tokenMenu(el) {
       { label: (lay === 'tokens' ? '✓ ' : '') + 'Segnalini', fn: () => moveLayer(group, 'tokens') },
       { label: (lay === 'hidden' ? '✓ ' : '') + 'Nascosto', fn: () => moveLayer(group, 'hidden') }
     ] },
+    ...(typeof turniVoceMenu === 'function' ? turniVoceMenu(group) : []),
     '-', { label: many ? `Elimina i ${group.length} oggetti` : 'Elimina', danger: true, fn: () => { for (const p of group) p.remove(); setSelection([]); scheduleBoardSave(); } }
   );
   return items;

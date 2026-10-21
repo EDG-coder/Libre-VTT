@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>LIBRE VTT</title>
+<script src="/lingua-en.js"></script>
+<script src="/i18n.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjOWI4MmZmIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzVhM2ZkNiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHBhdGggZD0iTTMyIDNsMjUgMTQuNXYyOUwzMiA2MSA3IDQ2LjUwMHYtMjl6IiBmaWxsPSJ1cmwoI2cpIiBzdHJva2U9IiMyYjFhODUiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0zMiAxN2wxNSAyNkgxN3oiIGZpbGw9IiNmZmZmZmYyMiIgc3Ryb2tlPSIjZTllM2ZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNMzIgMTdWM00zMiAxN0w3IDE3LjUwME0zMiAxN2wyNSAuNU00NyA0M2wxMCAzLjUwME00NyA0M0wzMiA2MU0xNyA0M0w3IDQ2LjUwME0xNyA0M2wxNSAxOE0xNyA0M0w3IDE3LjUwME00NyA0M2wxMC0yNS41MDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2U5ZTNmZiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9Ii44NSIvPgogIDx0ZXh0IHg9IjMyIiB5PSIzOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmZmIj4yMDwvdGV4dD4KPC9zdmc+Cg==">
 <style>
   :root {
@@ -12,9 +14,11 @@
     color-scheme: dark;
   }
   @media (prefers-color-scheme: light) {
-    :root { --bg: #f3f5f9; --panel: #fff; --panel-2: #eef1f6; --line: #d6dce7;
+    :root:not([data-tema=dark]) { --bg: #f3f5f9; --panel: #fff; --panel-2: #eef1f6; --line: #d6dce7;
             --text: #1b2230; --muted: #5d6879; --accent: #6a4cf0; color-scheme: light; }
   }
+  :root[data-tema=light] { --bg: #f3f5f9; --panel: #fff; --panel-2: #eef1f6; --line: #d6dce7;
+          --text: #1b2230; --muted: #5d6879; --accent: #6a4cf0; color-scheme: light; }
   * { box-sizing: border-box; }
   body {
     margin: 0; min-height: 100vh; min-height: 100dvh; background: var(--bg); color: var(--text);
@@ -152,10 +156,67 @@
     .card b { display: block; }
     #prontoRighe input { min-width: 0; width: 100%; }
   }
+  /* ---------- rotellina e impostazioni ---------- */
+  #ingranaggio {
+    position: fixed; z-index: 20; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right));
+    width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer;
+  }
+  #ingranaggio:hover, #ingranaggio:focus-visible { color: var(--text); border-color: var(--accent); }
+  #ingranaggio svg { transition: transform .3s; }
+  #ingranaggio:hover svg { transform: rotate(40deg); }
+  dialog.pref {
+    width: min(440px, calc(100vw - 24px)); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow: auto;
+    border: 1px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--text); padding: 18px 18px 14px;
+  }
+  dialog.pref::backdrop { background: rgb(0 0 0 / .5); }
+  dialog.pref h2 { margin: 0 0 14px; font-size: 1.1rem; }
+  dialog.pref h3 { margin: 16px 0 7px; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg button { flex: 1; min-height: 44px; min-width: 90px; font: inherit; font-size: .92rem; padding: 8px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--panel-2); color: inherit; cursor: pointer; }
+  .seg button[aria-pressed=true] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--panel-2)); font-weight: 600; }
+  .scala { display: flex; align-items: center; gap: 10px; }
+  .scala input { flex: 1; min-height: 44px; accent-color: var(--accent); }
+  .scala output { min-width: 3.5em; text-align: right; font-variant-numeric: tabular-nums; }
+  label.spunta { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; font-size: .92rem; cursor: pointer; }
+  label.spunta input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; accent-color: var(--accent); }
+  dialog.pref .nota { color: var(--muted); font-size: .8rem; margin: 6px 0 0; line-height: 1.4; }
+  dialog.pref .piede { display: flex; justify-content: flex-end; margin-top: 16px; }
+  #sceltaLingua .lingue { flex-direction: column; gap: 8px; }
+  #sceltaLingua .lingue button { min-height: 52px; font-size: 1.05rem; }
 </style>
 <script src="/nativo.js"></script>
 </head>
 <body>
+<button id="ingranaggio" type="button" aria-label="Impostazioni" title="Impostazioni">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.650 1.650 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+</button>
+
+<dialog class="pref" id="sceltaLingua" aria-labelledby="slTit">
+  <h2 id="slTit">Scegli la lingua</h2>
+  <div class="lingue seg" id="slLingue"></div>
+  <p class="nota">Puoi cambiarla quando vuoi dalla rotellina ⚙ nella home.</p>
+</dialog>
+
+<dialog class="pref" id="impostazioni" aria-labelledby="impTit">
+  <h2 id="impTit">Impostazioni</h2>
+  <h3>Lingua</h3>
+  <div class="seg" id="impLingua"></div>
+  <h3>Dimensione dell'interfaccia</h3>
+  <div class="scala"><input type="range" id="impScala" min="70" max="160" step="5" aria-label="Dimensione dell'interfaccia"><output id="impScalaOut"></output></div>
+  <p class="nota soloPc">Sul computer il tavolo prende la nuova dimensione alla prossima apertura della finestra.</p>
+  <h3>Tema</h3>
+  <div class="seg" id="impTema">
+    <button type="button" data-v="dark">Scuro</button><button type="button" data-v="light">Chiaro</button><button type="button" data-v="system">Sistema</button>
+  </div>
+  <h3>Regole facoltative</h3>
+  <label class="spunta"><input type="checkbox" id="impCarat"> <span>Caratteristiche senza limite (normalmente vanno da 1 a 30)</span></label>
+  <label class="spunta"><input type="checkbox" id="impSpareggio"> <span>Spareggio dell'iniziativa con la Destrezza</span></label>
+  <p class="nota">Valgono per le campagne che apri da qui; ogni campagna le ricorda e puoi cambiarle anche dal tavolo.</p>
+  <div class="piede"><button class="b go" type="button" id="impChiudi">Fatto</button></div>
+</dialog>
+
 <div class="wrap">
   <header>
     <p class="logo">LIBRE <span>VTT</span></p>
@@ -346,6 +407,7 @@ async function carica() {
   try {
     const r = await fetch('/api/stato');
     S = await r.json();
+    if (S.pref) prefDaServer(S.pref, S.finestraScala);
     if (S.log) { $('log').replaceChildren(); S.log.forEach(logLine); }
     disegna();
   } catch {}
@@ -391,7 +453,7 @@ const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Typ
 const quando = t => {
   if (!t) return '';
   const g = Math.floor((Date.now() - t) / 86400000);
-  return g <= 0 ? 'modificata oggi' : g === 1 ? 'modificata ieri' : g < 30 ? `modificata ${g} giorni fa` : 'modificata il ' + new Date(t).toLocaleDateString('it-IT');
+  return g <= 0 ? 'modificata oggi' : g === 1 ? 'modificata ieri' : g < 30 ? `modificata ${g} giorni fa` : 'modificata il ' + new Date(t).toLocaleDateString(window.LIBRE_I18N ? LIBRE_I18N.lingua : 'it');
 };
 const conta = (n, uno, tanti) => (n === 1 ? '1 ' + uno : n + ' ' + tanti);
 const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
@@ -545,9 +607,10 @@ $('prontoCampMostra').onclick = () => S.campagna && post('/api/campagna/mostra',
 // --- quando è acceso ---
 // le porte le sceglie l'avviatore (se quelle di sempre sono occupate da altri programmi ne usa altre)
 const P = () => S.porte || {};
-const urlTavolo = () => `http://127.0.0.1:${P().web || 3000}/?gs=${S.mode === 'solo' ? 0 : (P().game || 4000)}&ui=${P().ui || location.port}`;
+const urlTavolo = () => `http://127.0.0.1:${P().web || 3000}/?gs=${S.mode === 'solo' ? 0 : (P().game || 4000)}&ui=${P().ui || location.port}`
+  + `&lang=${I18N.lingua}&pref=${encodeURIComponent(JSON.stringify(PREF))}`;
 $('vai').onclick = () => { location.href = urlTavolo(); };
-$('pannello').onclick = () => window.open(`http://127.0.0.1:${P().game || 4000}/`, '_blank');
+$('pannello').onclick = () => window.open(`http://127.0.0.1:${P().game || 4000}/?lang=${I18N.lingua}`, '_blank');
 $('ferma').onclick = () => { inPartenza = false; window._andato = false; azione({ what: 'ferma' }); setTimeout(carica, 400); };
 
 // --- in diretta ---
@@ -578,6 +641,78 @@ window.LIBRE_INDIETRO = () => {
   for (const id of ['boxJoin', 'boxCamp', 'boxPrep']) if (!$(id).classList.contains('hide')) { mostraSolo('scelte'); return true; }
   return false;
 };
+// ---------- lingua e impostazioni della home ----------
+const I18N = window.LIBRE_I18N;
+let PREF = { lingua: I18N.lingua, scala: 100, tema: 'dark', caratLibere: false, spareggioDes: true, t: 0 };
+let prefPrima = true, finScala = null;
+const mandaPref = m => fetch('/api/pref', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(m) })
+  .then(r => r.json()).then(p => { PREF = p; applicaPref(); }).catch(() => {});
+function prefDaServer(p, fs) {
+  PREF = p; finScala = fs || null;
+  if (prefPrima) {
+    prefPrima = false;
+    // la prima volta sul computer: quanto ingrandisce già il sistema (125%, 150%…)
+    if (!NAT.disponibile && !fs && Math.abs((p.dpr || 0) - devicePixelRatio) > .01) mandaPref({ dpr: devicePixelRatio });
+    if (p.lingua && p.lingua !== I18N.lingua) I18N.imposta(p.lingua);
+    else if (!p.lingua && I18N.scelta) mandaPref({ lingua: I18N.lingua });
+    else if (!p.lingua) chiediLingua();
+  }
+  applicaPref();
+}
+function applicaPref() {
+  document.documentElement.dataset.tema = PREF.tema === 'system' ? '' : (PREF.tema || 'dark');
+  const s = (PREF.scala || 100) / 100;
+  if (NAT.disponibile) {                       // telefono: si ingrandisce la pagina intera, tocchi compresi
+    const v = document.querySelector('meta[name=viewport]');
+    const c = s === 1 ? 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'
+      : `initial-scale=${s}, minimum-scale=${s}, maximum-scale=${s}, user-scalable=no, viewport-fit=cover`;
+    if (v && v.content !== c) v.content = c;
+  } else {                                     // computer: la finestra può essere già aperta più grande (finScala)
+    const gia = finScala && PREF.dpr ? finScala / PREF.dpr : 1, z = s / gia;
+    document.body.style.zoom = Math.abs(z - 1) < .01 ? '' : String(z);
+  }
+  if ($('impostazioni').open) disegnaPref();
+}
+const premuto = (box, v) => box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+function bottoniLingua(box, fn) {
+  box.replaceChildren(...Object.entries(I18N.lingue).map(([k, nome]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.v = k; b.lang = k; b.textContent = nome;
+    b.setAttribute('data-noi18n', '');          // ogni lingua si chiama nella sua lingua
+    b.onclick = () => fn(k);
+    return b;
+  }));
+}
+function scegliLingua(l) {
+  I18N.imposta(l);
+  mandaPref({ lingua: l });
+  premuto($('impLingua'), l); premuto($('slLingue'), l);
+}
+function chiediLingua() {
+  bottoniLingua($('slLingue'), l => { scegliLingua(l); $('sceltaLingua').close(); });
+  premuto($('slLingue'), I18N.lingua);
+  $('sceltaLingua').addEventListener('cancel', e => e.preventDefault());     // una lingua va scelta
+  try { $('sceltaLingua').showModal(); } catch { $('sceltaLingua').setAttribute('open', ''); }
+  const b = $('slLingue').querySelector(`[data-v="${I18N.lingua}"]`); if (b) b.focus();
+}
+function disegnaPref() {
+  premuto($('impLingua'), I18N.lingua);
+  $('impScala').value = PREF.scala || 100; $('impScalaOut').value = (PREF.scala || 100) + '%';
+  premuto($('impTema'), PREF.tema || 'dark');
+  $('impCarat').checked = !!PREF.caratLibere;
+  $('impSpareggio').checked = PREF.spareggioDes !== false;
+}
+bottoniLingua($('impLingua'), scegliLingua);
+$('ingranaggio').onclick = () => { disegnaPref(); $('impostazioni').showModal(); };
+$('impChiudi').onclick = () => $('impostazioni').close();
+$('impostazioni').addEventListener('click', e => { if (e.target === $('impostazioni')) $('impostazioni').close(); });   // tocco fuori
+$('impScala').oninput = () => { $('impScalaOut').value = $('impScala').value + '%'; };
+$('impScala').onchange = () => mandaPref({ scala: +$('impScala').value });
+$('impTema').onclick = e => { const b = e.target.closest('button'); if (b) { PREF.tema = b.dataset.v; applicaPref(); mandaPref({ tema: b.dataset.v }); } };
+$('impCarat').onchange = () => mandaPref({ caratLibere: $('impCarat').checked });
+$('impSpareggio').onchange = () => mandaPref({ spareggioDes: $('impSpareggio').checked });
+addEventListener('lingua', () => carica());     // i testi composti qui si rifanno nella lingua nuova
+
 carica();
 setInterval(carica, 4000);
 

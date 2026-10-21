@@ -323,6 +323,7 @@ async function applyWorld(w) {
     }
     settings.publicScene = w.publicScene || null;
     if (!isMaster()) settings.fogColor = w.fogColor || 'auto';     // il colore della nebbia lo decide chi conduce
+    if (!isMaster() && typeof turniDaMondo === 'function') turniDaMondo(w.turni);
 
     if (isMaster()) {
       // Il mondo del master è il suo: dal server prende solo quello che hanno fatto gli altri.
@@ -387,6 +388,7 @@ function mergeIntoCurrent(w) {
     el.dataset.pid = id;
     for (const k of ['sheet', 'name', 'round', 'ring']) if (p[k]) el.dataset[k] = p[k];
     if (typeof applyLook === 'function') applyLook(el);
+    if (typeof fxDaDati === 'function') fxDaDati(el, p);
   }
   if (sc.fog !== undefined) cur.fog = sc.fog;
   if (typeof updateTokenBars === 'function') updateTokenBars();
@@ -415,7 +417,7 @@ async function netPushBoard() {
         if (el) el.dataset.gid = ph.gid;
       }
     }
-    intent('board', { board: { active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, scenes: b.scenes, sheets } });
+    intent('board', { board: { active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, turni: settings.turni || null, scenes: b.scenes, sheets } });
   } finally { NET.pushing = false; }
 }
 
@@ -641,7 +643,7 @@ function netSyncForm() {
   if (!st) return;
   if (!pi.matches(':focus')) pi.value = NET.port || '';
   pi.placeholder = 'nessuno (da solo)';
-  const pn = $('netPanel'); if (pn && NET.port) pn.href = 'http://127.0.0.1:' + NET.port + '/';
+  const pn = $('netPanel'); if (pn && NET.port) pn.href = 'http://127.0.0.1:' + NET.port + '/?lang=' + (window.LIBRE_I18N ? LIBRE_I18N.lingua : 'it');
   if (!ni.matches(':focus')) ni.value = netName() || (NET.me && NET.me.name) || '';
   st.textContent = NET.retrying
     ? `Collegamento perso: mi sto ricollegando da solo (tentativo ${NET.tries}).`

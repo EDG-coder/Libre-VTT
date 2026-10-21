@@ -146,3 +146,18 @@
 
 /* le scorciatoie da tastiera non servono a chi tocca */
 .ui-touch .dHint { display: none; }
+
+/* Fase 4: con le dita ogni comando è almeno 44×44 (linee guida Apple e Android).
+   Restano più piccoli solo i pallini dentro le schede, che si ingrandiscono col pizzico. */
+@media (pointer: coarse) {
+  .ui-touch .tab, .ui-touch .seg button, .ui-touch .pane .btn, .ui-touch .chip button,
+  .ui-touch #ctx button, .ui-touch .sceneRow > button, .ui-touch #dice button:not(#diceToggle),
+  .ui-touch .tool.glass button:not(.tgrip), .ui-touch dialog button, .ui-touch .chatForm button { min-height: 44px; min-width: 44px; }
+  .ui-touch .sheetWin .sx { width: 44px; height: 44px; }
+  .ui-touch .sheetWin .sdot { width: 28px; height: 28px; }
+  .ui-touch .asset .del, .ui-touch .asset .bgBtn { width: 36px; height: 36px; }
+  .ui-touch .swatches button, .ui-touch .tool.glass .sw { width: 40px; height: 40px; }
+  .ui-touch #sceneBtn, .ui-touch #layerSwitch button, .ui-touch #targetSwitch button { min-height: 44px; }
+  .ui-touch input[type=checkbox], .ui-touch input[type=radio] { min-width: 22px; min-height: 22px; }
+  .ui-touch input[type=range] { min-height: 44px; }
+}

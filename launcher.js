@@ -131,8 +131,33 @@ function stato() {
     porte: { ui: UI_PORT, ...(state.porte || {}) },
     piattaforma: MOBILE === 'android' ? 'Android' : MOBILE === 'ios' ? 'iPhone e iPad' : WIN ? 'Windows' : MAC ? 'macOS' : 'Linux',
     mobile: MOBILE, campHome: CAMP_HOME, versione: VERSIONE, arch: process.arch, repo: repoGitHub(),
-    node: process.versions.node
+    node: process.versions.node, pref: prefCorrenti(), finestraScala
   };
+}
+// Preferenze della home (rotellina): lingua, dimensione dell'interfaccia, tema, regole facoltative.
+// t = quando sono cambiate l'ultima volta: il tavolo le prende solo se sono più nuove delle sue.
+let finestraScala = null;                // il fattore con cui è stata aperta la finestra (sul computer)
+function prefCorrenti() { return { lingua: /^(it|en)$/.test(process.env.MYVTT_LINGUA || '') ? process.env.MYVTT_LINGUA : null, scala: 100, tema: 'dark', caratLibere: false, spareggioDes: true, dpr: null, t: 0, ...(conf.pref || {}) }; }
+function salvaPref(m) {
+  const p = prefCorrenti(), prima = JSON.stringify(p);
+  if (m.lingua === 'it' || m.lingua === 'en') p.lingua = m.lingua;
+  if (Number.isFinite(+m.scala) && +m.scala >= 70 && +m.scala <= 160) p.scala = Math.round(+m.scala / 5) * 5;
+  if (['dark', 'light', 'system'].includes(m.tema)) p.tema = m.tema;
+  if (typeof m.caratLibere === 'boolean') p.caratLibere = m.caratLibere;
+  if (typeof m.spareggioDes === 'boolean') p.spareggioDes = m.spareggioDes;
+  if (Number.isFinite(+m.dpr) && +m.dpr >= 0.5 && +m.dpr <= 5) p.dpr = +m.dpr;
+  const { t, dpr, ...resto } = p, { t: t0, dpr: d0, ...resto0 } = JSON.parse(prima);
+  if (JSON.stringify(resto) !== JSON.stringify(resto0)) p.t = Date.now();
+  conf.pref = p; salvaConf();
+  return p;
+}
+// Sul computer la dimensione dell'interfaccia la decide Chrome all'apertura della finestra
+// (come lo zoom del browser: mappa e trascinamenti restano giusti).
+function argScala() {
+  const p = prefCorrenti();
+  if (!p.dpr || p.scala === 100) return [];
+  finestraScala = +(p.dpr * p.scala / 100).toFixed(3);
+  return ['--force-device-scale-factor=' + finestraScala];
 }
 
 // ---------- un ambiente pulito ----------
@@ -370,7 +395,8 @@ function preparaCartella(dir, nome) {
   fs.mkdirSync(path.join(dir, 'assets'), { recursive: true });
   // lo sfondo di benvenuto che viene col programma, solo per una campagna appena nata
   // (in una campagna già fatta, magari di un amico, non si aggiunge niente)
-  const base = path.join(ROOT, 'assets', 'Sfondi', 'main.webp'), dest = path.join(dir, 'assets', 'Sfondi', 'main.webp');
+  const inglese = prefCorrenti().lingua === 'en' && fs.existsSync(path.join(ROOT, 'assets', 'Sfondi', 'main-en.webp'));
+  const base = path.join(ROOT, 'assets', 'Sfondi', inglese ? 'main-en.webp' : 'main.webp'), dest = path.join(dir, 'assets', 'Sfondi', 'main.webp');
   const nuova = !fs.existsSync(path.join(dir, 'data', 'board.json')) && !fs.existsSync(path.join(dir, 'data', 'world.json'));
   if (nuova && fs.existsSync(base) && !fs.existsSync(dest)) { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.copyFileSync(base, dest); }
   // lo sfondo vecchio con scritto «MY VTT», mai cambiato: si sostituisce con quello nuovo
@@ -952,7 +978,8 @@ function apriFinestra(url) {
     '--app=' + url,
     '--user-data-dir=' + PROFILE,
     '--no-first-run', '--no-default-browser-check',
-    '--window-size=1440,900'
+    '--window-size=1440,900',
+    ...argScala()
   ], { detached: false, stdio: 'ignore' });
   // Chiusa la finestra, si spegne tutto.
   p.on('exit', () => { say('Finestra chiusa: spengo.'); stopAll(); setTimeout(() => process.exit(0), 300); });
@@ -996,6 +1023,10 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/' || u.pathname === '/index.html') {
     return fs.readFile(path.join(ROOT, 'launcher.html'), (e, d) =>
       e ? invia(res, 500, 'launcher.html non trovato') : invia(res, 200, d, 'text/html; charset=utf-8'));
+  }
+  if (u.pathname === '/i18n.js' || /^\/lingua-[a-z]{2}\.js$/.test(u.pathname)) {   // le traduzioni
+    return fs.readFile(path.join(ROOT, u.pathname.slice(1)), (e, d) =>
+      e ? invia(res, 404, 'no') : invia(res, 200, d, 'text/javascript; charset=utf-8'));
   }
   if (u.pathname === '/nativo.js') {                          // il ponte con le app per telefono (sul computer non fa niente)
     return fs.readFile(path.join(ROOT, 'nativo.js'), (e, d) =>
@@ -1068,6 +1099,7 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/api/campagna/esporta' && req.method === 'POST') {
     return corpo(m => ok(esportaCampagna(String(m.path || ''))));
   }
+  if (u.pathname === '/api/pref' && req.method === 'POST') return corpo(m => ok(salvaPref(m || {})));
   if (u.pathname === '/api/aggiornamento') return ok(await controllaAggiornamento(u.searchParams.has('ora')));
   if (u.pathname === '/api/aggiornamento/installa' && req.method === 'POST') {
     return corpo(async () => ok(await installaAggiornamento()));

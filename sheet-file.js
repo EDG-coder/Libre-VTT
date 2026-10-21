@@ -183,7 +183,7 @@ async function controllaFile(s, e) {
   let j;
   try { j = leggiScheda(await leggiCollegato(e)); } catch { return; }
   if (!e.salvata || j.salvata === e.salvata) return;
-  const quando = new Date(j.salvata).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' });
+  const quando = new Date(j.salvata).toLocaleString(window.LIBRE_I18N ? LIBRE_I18N.lingua : 'it', { dateStyle: 'short', timeStyle: 'short' });
   if (confirm(`Il file «${e.nome}» della scheda «${s.name}» è stato cambiato da un'altra parte (${quando}).\n\nOK: carico nella scheda la versione del file.\nAnnulla: tengo questa scheda (e alla prossima modifica il file si aggiorna con questa).`)) {
     applicaFile(s, j, e);
   } else {
@@ -314,7 +314,7 @@ $('sheetImport').addEventListener('click', async () => {
   try { j = leggiScheda(scelto.testo); } catch (err) { alert(err.message); return; }
   daImportare = { j, e: scelto.e };
   const c = contenutoDa(j), modello = { standard: 'Standard', dnd5e: 'Open D&D 5e', simple: 'Open semplice' }[c.tpl];
-  const quando = j.salvata ? new Date(j.salvata).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' }) : '';
+  const quando = j.salvata ? new Date(j.salvata).toLocaleString(window.LIBRE_I18N ? LIBRE_I18N.lingua : 'it', { dateStyle: 'short', timeStyle: 'short' }) : '';
   $('importSheetInfo').textContent = `«${c.name}» · scheda ${modello}` + (c.f.class ? ` · ${c.f.class}${c.f.level ? ' ' + c.f.level : ''}` : '') + (quando ? ` · salvata il ${quando}` : '');
   const puo = !!scelto.e;
   $('importSheetSyncRow').hidden = !puo; $('importSheetSync').checked = puo;

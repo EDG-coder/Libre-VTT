@@ -33,7 +33,7 @@ for f in "$RADICE"/*.html "$RADICE"/*.js "$RADICE"/*.css "$RADICE"/favicon.svg "
   cp "$f" "$P/"
 done
 rm -f "$P/zigwrap.js"
-cp "$RADICE/assets/Sfondi/main.webp" "$P/assets/Sfondi/"
+cp "$RADICE/assets/Sfondi/main.webp" "$RADICE/assets/Sfondi/main-en.webp" "$P/assets/Sfondi/"
 
 # ---------- 2. Node.js per iOS ----------
 if [ ! -d "$FW/NodeMobile.xcframework" ]; then

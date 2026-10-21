@@ -33,7 +33,7 @@ PROGETTO = os.path.dirname(QUI)
 
 # Quello che va installato: i file del programma, non le campagne o i dati di chi lo costruisce.
 PROGRAMMA = ['*.html', '*.js', '*.css', 'favicon.svg', 'package.json', 'icona.png', 'icona.ico']
-EXTRA = ['assets/Sfondi/main.webp', 'uffa-link/Cargo.toml', 'uffa-link/Cargo.lock']
+EXTRA = ['assets/Sfondi/main.webp', 'assets/Sfondi/main-en.webp', 'uffa-link/Cargo.toml', 'uffa-link/Cargo.lock']
 
 
 def file_programma():

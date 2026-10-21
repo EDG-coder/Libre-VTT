@@ -27,7 +27,7 @@ SECTOR = 2048
 # ---------------------------------------------------------------- l'app
 # Quello che va dentro l'app: i file del programma, non le campagne di chi la costruisce.
 PROGRAMMA = ['*.html', '*.js', '*.css', 'favicon.svg', 'package.json']
-EXTRA = [('assets/Sfondi/main.webp', 'assets/Sfondi/main.webp'),     # la schermata di benvenuto
+EXTRA = [('assets/Sfondi/main.webp', 'assets/Sfondi/main.webp'), ('assets/Sfondi/main-en.webp', 'assets/Sfondi/main-en.webp'),     # la schermata di benvenuto
          ('uffa-link/Cargo.toml', 'uffa-link/Cargo.toml'),             # per compilare il collegamento
          ('uffa-link/Cargo.lock', 'uffa-link/Cargo.lock')]
 

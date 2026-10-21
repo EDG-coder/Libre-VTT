@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>LIBRE VTT</title>
+<script src="lingua-en.js"></script>
+<script src="i18n.js"></script>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <meta name="theme-color" content="#12151c">
 <link rel="stylesheet" href="style.css">
@@ -172,6 +174,15 @@
       <div class="sect" data-sect="regole">
         <h4>Regole</h4>
         <label class="check"><input id="caratLibere" type="checkbox"> Caratteristiche senza limite (normalmente vanno da 1 a 30)</label>
+        <label class="check"><input id="spareggioDes" type="checkbox"> Spareggio dell'iniziativa con la Destrezza</label>
+      </div>
+
+      <div class="sect" data-sect="caselle" id="caselleSect">
+        <h4>Caselle dei segnalini</h4>
+        <p class="note">Quando selezioni un segnalino compaiono tre caselle sopra di lui. Scrivi un numero, oppure +5, -3, *2, /2 per cambiare il valore che c'era.</p>
+        <label class="row"><span class="cDot g"></span> Verde <input id="caselleG" type="text" maxlength="14" placeholder="Es. PF"></label>
+        <label class="row"><span class="cDot r"></span> Rossa <input id="caselleR" type="text" maxlength="14" placeholder="Es. PF temporanei"></label>
+        <label class="row"><span class="cDot b"></span> Blu <input id="caselleB" type="text" maxlength="14" placeholder="Es. Mana"></label>
       </div>
 
       <div class="sect" data-sect="res">
@@ -247,7 +258,7 @@
           <button id="netReconnect" type="button" class="btn ghost">Collegati adesso</button>
           <button id="netLeave" type="button" class="btn ghost" hidden>Scollegati</button>
           <a class="btn ghost" id="netPanel" href="http://127.0.0.1:4000/" target="_blank" rel="noopener">Pannello della sessione</a>
-          <a class="btn ghost" id="netHome" href="http://127.0.0.1:4100/">Torna all'avvio</a>
+          <a class="btn ghost" id="netHome" href="http://127.0.0.1:4100/">Torna alla home</a>
         </div>
       </div>
 
@@ -309,6 +320,8 @@
 <script src="music.js"></script>
 <script src="net.js"></script>
 <script src="fog.js"></script>
+<script src="token-fx.js"></script>
+<script src="turni.js"></script>
 <script src="mobile.js"></script>
 </body>
 </html>

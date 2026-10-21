@@ -206,6 +206,27 @@ function sheetVisible(c, s) {
   return rec.sheets && rec.sheets[s.id] ? rec.sheets[s.id] : null;
 }
 
+// L'ordine dei turni: lo decide il master. Ai giocatori non arrivano i nomi dei segnalini nascosti.
+function turniPuliti(t) {
+  if (!t || !Array.isArray(t.righe)) return null;
+  const s = (v, n) => String(v == null ? '' : v).slice(0, n);
+  return {
+    on: !!t.on, round: Math.max(1, Math.min(9999, Math.round(+t.round) || 1)), cur: Math.max(0, Math.round(+t.cur) || 0), iniziato: !!t.iniziato,
+    righe: t.righe.slice(0, 100).map(r => ({ id: s(r.id, 40), nome: s(r.nome, 60), ini: Number.isFinite(+r.ini) && r.ini !== null && r.ini !== '' ? Math.round(+r.ini) : null,
+      sheet: r.sheet ? s(r.sheet, 60) : undefined, pid: r.pid ? s(r.pid, 60) : undefined }))
+  };
+}
+function turniPerChi(c) {
+  const t = world.turni;
+  if (!t) return null;
+  if (permsFor(c).seeHiddenLayer) return t;
+  const nascosti = new Set();
+  for (const sc of world.scenes || []) for (const ph of sc.photos || []) if ((ph.layer || 'tokens') === 'hidden' || (!permsFor(c).revealFog && hiddenByFog(sc, ph) && !isTheirs(c, sc, ph))) nascosti.add(ph.id);
+  const righe = t.righe.filter(r => !(r.pid && nascosti.has(r.pid)));
+  const ora = t.righe[t.cur];
+  return { ...t, righe, cur: Math.max(0, righe.indexOf(ora)) };
+}
+
 function viewFor(c) {
   const p = permsFor(c);
   const pubId = world.publicScene || world.active;
@@ -217,7 +238,8 @@ function viewFor(c) {
   return {
     v: world.v, active: p.seeAllScenes ? world.active : pubId, publicScene: world.publicScene, fogColor: world.fogColor || 'auto',
     scenes: scenes.map(s => sceneFor(c, s)),
-    sheets, chat: (world.chat || []).slice(-250).map(m => chatFor(c, m)), music: world.music
+    sheets, chat: (world.chat || []).slice(-250).map(m => chatFor(c, m)), music: world.music,
+    turni: turniPerChi(c)
   };
 }
 function pushWorld(c) { c.send({ t: 'world', world: viewFor(c) }); }
@@ -351,6 +373,7 @@ function handleIntent(c, m) {
       }
       if ('active' in b) world.active = b.active;
       if ('publicScene' in b) world.publicScene = b.publicScene;
+      if ('turni' in b) world.turni = turniPuliti(b.turni);
       if ('fogColor' in b) world.fogColor = /^#[0-9a-f]{6}$/i.test(String(b.fogColor || '')) ? String(b.fogColor) : 'auto';
       scheduleSave(); schedulePush();
       return;
@@ -955,6 +978,10 @@ function httpHandler(req, res) {
   if (url.pathname === '/' || url.pathname === '/index.html') {
     return fs.readFile(path.join(ROOT, 'panel.html'), (e, d) =>
       e ? sendHttp(res, 404, 'panel.html non trovato') : sendHttp(res, 200, d, 'text/html; charset=utf-8'));
+  }
+  if (url.pathname === '/i18n.js' || /^\/lingua-[a-z]{2}\.js$/.test(url.pathname)) {   // le traduzioni
+    return fs.readFile(path.join(ROOT, url.pathname.slice(1)), (e, d) =>
+      e ? sendHttp(res, 404, 'no') : sendHttp(res, 200, d, 'text/javascript; charset=utf-8'));
   }
   // Le immagini del mondo: /asset/<hash>. In «join», se manca, la si chiede all'host.
   if (url.pathname.startsWith('/asset/')) {

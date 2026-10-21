@@ -543,3 +543,80 @@ body.net-player #fogSect { display: none; }
 #importSheetDialog .note { font-size: .88em; opacity: .75; }
 #importSheetDialog .err { color: #e5484d; }
 .sheetWin .oInfo { margin-left: 6px; padding: 0; border: 0; background: none; color: inherit; font: italic 400 .95em system-ui, sans-serif; text-transform: none; letter-spacing: 0; text-decoration: underline dotted; cursor: help; opacity: .8; }
+
+/* ======================= Effetti sui segnalini e caselle (token-fx.js) ======================= */
+.photo > .tfx {
+  position: absolute; top: calc(-7px * var(--inv, 1)); right: calc(-7px * var(--inv, 1)); display: flex; flex-wrap: nowrap; justify-content: flex-end;
+  align-items: center; gap: calc(2px * var(--inv, 1)); pointer-events: auto; z-index: 2;
+}
+.tfxD { display: inline-block; width: 14px; height: 14px; background: var(--c); box-shadow: 0 0 0 1.5px rgba(0, 0, 0, .7); flex: none; }
+.photo > .tfx .tfxD { width: calc(13px * var(--inv, 1)); height: calc(13px * var(--inv, 1)); box-shadow: 0 0 0 calc(1.5px * var(--inv, 1)) rgba(0, 0, 0, .75); }
+.tfxD.cerchio { border-radius: 50%; }
+.tfxD.quadrato { border-radius: 2px; }
+.tfxD.rombo { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); box-shadow: none; }
+.tfxD.triangolo { clip-path: polygon(50% 0, 100% 100%, 0 100%); box-shadow: none; }
+.tfxD.esagono { clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); box-shadow: none; }
+.tfxD.stella { clip-path: polygon(50% 0, 62% 35%, 100% 38%, 70% 60%, 80% 100%, 50% 76%, 20% 100%, 30% 60%, 0 38%, 38% 35%); box-shadow: none; }
+.tfxPiu { font: 700 calc(10px * var(--inv, 1)) / calc(13px * var(--inv, 1)) system-ui, sans-serif; color: #fff; background: rgba(0, 0, 0, .75);
+  padding: 0 calc(3px * var(--inv, 1)); border-radius: calc(6px * var(--inv, 1)); }
+.photo > .tcross { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.photo > .tcross::before, .photo > .tcross::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 125%; height: calc(5px * var(--inv, 1)); max-height: 14%;
+  background: #ff2a2a; border-radius: 99px; box-shadow: 0 0 0 calc(1px * var(--inv, 1)) rgba(0, 0, 0, .6);
+}
+.photo > .tcross::before { transform: translate(-50%, -50%) rotate(45deg); }
+.photo > .tcross::after { transform: translate(-50%, -50%) rotate(-45deg); }
+
+#tokHud {
+  position: fixed; left: 0; top: 0; z-index: 100030; display: flex; flex-direction: column; gap: 6px; align-items: center;
+  padding: 6px; border-radius: 14px; background: rgba(18, 21, 28, .88); border: 1px solid rgba(255, 255, 255, .16);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: 0 8px 26px rgba(0, 0, 0, .45); color: #fff;
+}
+#tokHud[hidden] { display: none; }
+.thCaselle { display: flex; gap: 6px; }
+.thCas { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.thLab { font: 600 10px system-ui, sans-serif; color: #c9d1e0; max-width: 66px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 12px; }
+.thCas input {
+  width: 62px; height: 34px; box-sizing: border-box; text-align: center; font: 700 16px system-ui, sans-serif; color: #fff;
+  border-radius: 9px; border: 2px solid var(--c); background: color-mix(in srgb, var(--c) 28%, rgba(0, 0, 0, .5)); padding: 0 4px;
+}
+.thCas.g { --c: #2ee66b; } .thCas.r { --c: #ff4d4d; } .thCas.b { --c: #3d7bff; }
+.thCas input:focus { outline: 2px solid #fff; outline-offset: 1px; }
+.thCas input.no { animation: thNo .3s 2; }
+@keyframes thNo { 50% { transform: translateX(4px); } }
+.thFx { display: flex; gap: 4px; }
+.thFx button { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border-radius: 8px; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .18); background: rgba(255, 255, 255, .06); opacity: .55; }
+.thFx button[aria-pressed=true] { opacity: 1; background: rgba(255, 255, 255, .2); border-color: #fff; }
+.thFx button:hover { opacity: 1; }
+.thX { color: #ff3b3b; font: 800 16px system-ui, sans-serif; }
+.ui-touch .thFx button { width: 44px; height: 44px; }
+.ui-touch .thCas input { width: 70px; height: 44px; }
+.cDot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -1px; }
+.cDot.g { background: #2ee66b; } .cDot.r { background: #ff4d4d; } .cDot.b { background: #3d7bff; }
+body.net-player #caselleSect { display: none; }
+
+/* ======================= Ordine dei turni (turni.js) ======================= */
+#turniBox .tbody { width: 260px; }
+.turniTesta b { font-size: 14px; }
+.turniTesta label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.turniLista { max-height: 260px; overflow-y: auto; overscroll-behavior: contain; margin: 4px 0; }
+#turniTab { width: 100%; border-collapse: separate; border-spacing: 0 3px; font-size: 13px; }
+#turniTab td { padding: 4px 6px; background: rgba(255, 255, 255, .06); }
+#turniTab td:first-child { border-radius: 8px 0 0 8px; }
+#turniTab td:last-child { border-radius: 0 8px 8px 0; }
+#turniTab tr.ora td { background: rgba(255, 210, 63, .28); box-shadow: inset 0 1px 0 rgba(255, 210, 63, .7), inset 0 -1px 0 rgba(255, 210, 63, .7); }
+#turniTab tr.ora td:first-child { box-shadow: inset 3px 0 0 #ffd23f, inset 0 1px 0 rgba(255, 210, 63, .7), inset 0 -1px 0 rgba(255, 210, 63, .7); font-weight: 700; }
+#turniTab tr:hover td { background: rgba(255, 255, 255, .12); }
+.tnNome { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+.tnIni { text-align: center; font-variant-numeric: tabular-nums; }
+.tnIni input { width: 44px; text-align: center; font: inherit; font-weight: 700; color: inherit; background: rgba(0, 0, 0, .3); border: 1px solid rgba(255, 255, 255, .2); border-radius: 6px; padding: 2px; }
+.tnX button { border: 0; background: none; color: inherit; opacity: .6; cursor: pointer; padding: 2px 4px; }
+.tnX button:hover { opacity: 1; color: #ff6b6b; }
+#turniBox.daGiocatore .soloMaster { display: none !important; }
+#turniBox .primo { flex: 1; }
+.ui-touch .tnIni input { width: 52px; min-height: 40px; font-size: 16px; }
+.ui-touch .tnX button { min-width: 40px; min-height: 40px; }
+/* il segnalino della riga sotto il cursore (o toccata): cerchio giallo */
+.photo.turnoEvid::after { outline: none; }
+.photo.turnoEvid { outline: calc(4px * var(--inv, 1)) solid #ffd23f; outline-offset: calc(4px * var(--inv, 1)); border-radius: 50%; }

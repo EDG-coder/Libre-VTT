@@ -31,9 +31,28 @@ const DEFAULT_BORDER = { color: '#000000', transparent: false, width: 3 };
 const DEFAULT_PING = { color: '#ff4d4d', size: 2, speed: 8, fade: 2500 };      // size in cm, speed in cm/s, fade in ms
 const SECTIONS = { look: true, res: false, grid: true, gridDefault: false, map: false, border: false, ping: false, sheets: false, tools: false, hidden: false, chat: false };   // sezioni aperte di default
 const RESOLUTIONS = [[480, '480p'], [720, '720p'], [1080, '1080p'], [1440, '1440p'], [0, 'Originale']];
-const settings = { theme: 'dark', autoBg: true, fogColor: 'auto', fogVeil: 0.55, caratLibere: false, resToken: 720, resBg: 1080, gridDefault: { ...DEFAULT_GRID }, border: { ...DEFAULT_BORDER }, ping: { ...DEFAULT_PING }, sections: {},
+const settings = { theme: 'dark', autoBg: true, fogColor: 'auto', fogVeil: 0.55, caratLibere: false, spareggioDes: true, prefT: 0, boxLabels: ['', '', ''], resToken: 720, resBg: 1080, gridDefault: { ...DEFAULT_GRID }, border: { ...DEFAULT_BORDER }, ping: { ...DEFAULT_PING }, sections: {},
   tools: {}, drawerOpen: true, publicScene: null, unit: 'ft', sheetClose: 'x', rulerCenter: false, dockOpen: true, hiddenLayer: { show: true, opacity: 45 }, chatTabs: { rolls: false, rules: false },
   sheetStyle: { preset: 'parchment', accent: '', scale: 100, font: 'serif' }, pen: { color: '#ff4d4d', width: 4, tool: 'pen', fill: false } };
+// Le impostazioni scelte nella home (rotellina): arrivano nell'indirizzo e valgono se sono più nuove
+// di quelle salvate nella campagna. La dimensione dell'interfaccia sul telefono è lo zoom della pagina.
+const PREF_HOME = (() => { try { const p = JSON.parse(new URLSearchParams(location.search).get('pref')); return p && typeof p === 'object' ? p : null; } catch { return null; } })();
+(function scalaPagina() {
+  let sc = PREF_HOME && +PREF_HOME.scala;
+  try { if (sc) localStorage.setItem('libre-scala', String(sc)); else sc = +localStorage.getItem('libre-scala'); } catch {}
+  if (!window.LIBRE_NATIVO || !LIBRE_NATIVO.disponibile || !(sc >= 70 && sc <= 160) || sc === 100) return;
+  const v = document.querySelector('meta[name=viewport]'), k = sc / 100;
+  if (v) v.content = `initial-scale=${k}, minimum-scale=${k}, maximum-scale=${k}, user-scalable=no, viewport-fit=cover`;
+})();
+function prefDallaHome() {
+  const p = PREF_HOME;
+  if (!p || !(+p.t > (settings.prefT || 0))) return false;
+  if (['dark', 'light', 'system'].includes(p.tema)) settings.theme = p.tema;
+  if (typeof p.caratLibere === 'boolean') settings.caratLibere = p.caratLibere;
+  if (typeof p.spareggioDes === 'boolean') settings.spareggioDes = p.spareggioDes;
+  settings.prefT = +p.t;
+  return true;
+}
 let scenes = [], cur = null;            // cur = scena attiva
 let grid = { ...DEFAULT_GRID };         // = cur.grid (stessa referenza)
 
@@ -620,7 +639,8 @@ function captureScene() {
     id: p.dataset.pid && p.dataset.pid !== 'pending' ? p.dataset.pid : (p.dataset.pid = uid()),
     owner: p.dataset.owner || undefined, gid: p.dataset.gid || undefined,
     url: p._shape ? undefined : p.querySelector('img').getAttribute('src'), shape: p._shape, layer: p.dataset.layer, aid: p.dataset.aid === undefined ? undefined : +p.dataset.aid,
-    l: num(p, 'left'), t: num(p, 'top'), w: num(p, 'width'), h: num(p, 'height'), z: +p.style.zIndex, sheet: p.dataset.sheet, name: p.dataset.name, round: p.dataset.round, ring: p.dataset.ring
+    l: num(p, 'left'), t: num(p, 'top'), w: num(p, 'width'), h: num(p, 'height'), z: +p.style.zIndex, sheet: p.dataset.sheet, name: p.dataset.name, round: p.dataset.round, ring: p.dataset.ring,
+    fx: p.dataset.fx || undefined, crossed: p.dataset.crossed ? true : undefined, vals: p.dataset.vals || undefined
   }));
   if (typeof drawSnapshot === 'function') cur.draw = drawSnapshot();
 }
@@ -655,6 +675,7 @@ async function showScene(sc) {
       for (const k of ['sheet', 'name', 'round', 'ring']) if (p[k]) el.dataset[k] = p[k];
       if (p.id) el.dataset.pid = p.id;
       if (p.owner) el.dataset.owner = p.owner;
+      if (typeof fxDaDati === 'function') fxDaDati(el, p);
       const g = p.gid || (String(p.url).startsWith('gs:') ? p.url.slice(3) : '');
       if (g) el.dataset.gid = g;
       applyLook(el);
@@ -736,7 +757,7 @@ const sceneDialog = $('sceneDialog'), sceneForm = $('sceneForm');
 $('sceneNew').addEventListener('click', () => {
   closeSceneMenu();
   sceneForm.reset();
-  $('sceneNameInput').value = 'Scena ' + (scenes.length + 1);
+  $('sceneNameInput').value = tr('Scena') + ' ' + (scenes.length + 1);
   sceneDialog.showModal();
   $('sceneNameInput').select();
 });
@@ -745,7 +766,7 @@ sceneForm.addEventListener('submit', async e => {
   e.preventDefault();
   const btn = $('sceneCreate'); btn.disabled = true;
   const type = sceneForm.elements.sceneType.value;
-  const sc = newScene($('sceneNameInput').value.trim().slice(0, 40) || 'Scena ' + (scenes.length + 1), type);
+  const sc = newScene($('sceneNameInput').value.trim().slice(0, 40) || tr('Scena') + ' ' + (scenes.length + 1), type);
   const file = $('sceneBgInput').files[0];
   if (file) {
     try {
@@ -854,7 +875,7 @@ function segmented(root, get, set) {
   root.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { set(b.dataset.v); sync(); }));
   return sync;
 }
-const syncTheme = segmented($('themeSeg'), () => settings.theme, v => { settings.theme = v; applyTheme(); scheduleBoardSave(); });
+const syncTheme = segmented($('themeSeg'), () => settings.theme, v => { settings.theme = v; settings.prefT = Date.now(); applyTheme(); scheduleBoardSave(); });
 let uploadAs = 'token';
 const syncUploadAs = segmented($('uploadAs'), () => uploadAs, v => { uploadAs = v; });
 syncUploadAs();
@@ -864,8 +885,12 @@ for (const [id, key] of [['resToken', 'resToken'], ['resBg', 'resBg']]) {
   $(id).addEventListener('change', e => { settings[key] = +e.target.value; scheduleBoardSave(); });
 }
 $('autoBg').addEventListener('input', e => { settings.autoBg = e.target.checked; updatePageColor(); scheduleBoardSave(); });
+$('spareggioDes').addEventListener('input', e => { settings.spareggioDes = e.target.checked; settings.prefT = Date.now(); scheduleBoardSave(); if (typeof turniDisegna === 'function') turniDisegna(); });
+['caselleG', 'caselleR', 'caselleB'].forEach((id, i) => $(id).addEventListener('input', e => {
+  settings.boxLabels[i] = e.target.value.slice(0, 14); scheduleBoardSave(); if (typeof hudDisegna === 'function') hudDisegna();
+}));
 $('caratLibere').addEventListener('input', e => {
-  settings.caratLibere = e.target.checked; scheduleBoardSave();
+  settings.caratLibere = e.target.checked; settings.prefT = Date.now(); scheduleBoardSave();
   document.querySelectorAll('.sheetWin input[type=number]').forEach(i => {
     if (!CARATTERISTICHE.has(i.dataset.f)) return;
     if (settings.caratLibere) { i.removeAttribute('min'); i.removeAttribute('max'); } else { i.min = 1; i.max = 30; }
@@ -926,6 +951,8 @@ function syncSettings() {
   syncTheme(); syncSceneGrid(); syncDefaultGrid(); syncBorder(); syncPingForm(); sects.forEach(f => f());
   $('autoBg').checked = settings.autoBg;
   $('caratLibere').checked = !!settings.caratLibere;
+  $('spareggioDes').checked = settings.spareggioDes !== false;
+  ['caselleG', 'caselleR', 'caselleB'].forEach((id, i) => { if (document.activeElement !== $(id)) $(id).value = settings.boxLabels[i] || ''; });
   syncFog();
   $('resToken').value = settings.resToken; $('resBg').value = settings.resBg;
 }
@@ -1386,6 +1413,10 @@ async function loadBoard() {
     if (s.fogColor === 'auto' || /^#[0-9a-f]{6}$/i.test(s.fogColor || '')) settings.fogColor = s.fogColor;
     if (s.fogVeil >= 0.05 && s.fogVeil <= 1) settings.fogVeil = +s.fogVeil;
     if (typeof s.caratLibere === 'boolean') settings.caratLibere = s.caratLibere;
+    if (typeof s.spareggioDes === 'boolean') settings.spareggioDes = s.spareggioDes;
+    if (s.turni && Array.isArray(s.turni.righe)) settings.turni = s.turni;
+    if (Array.isArray(s.boxLabels)) settings.boxLabels = [0, 1, 2].map(i => String(s.boxLabels[i] || '').slice(0, 14));
+    if (+s.prefT > 0) settings.prefT = +s.prefT;
     for (const k of ['tools', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'park', 'music']) if (s[k] && typeof s[k] === 'object') settings[k] = { ...settings[k], ...s[k] };
     settings.sections = s.sections && typeof s.sections === 'object' ? { ...s.sections } : {};
     paintBorder();
@@ -1399,7 +1430,7 @@ async function loadBoard() {
     }));
     first = scenes.find(s => s.id === st.active) || scenes[0];
   } else {
-    first = newScene('Scena 1', 'map');
+    first = newScene(tr('Scena') + ' 1', 'map');
     if (st) {                                  // salvataggio del formato precedente (una sola mappa)
       Object.assign(first.grid, DEFAULT_GRID, st.grid || {});
       first.photos = st.photos || []; first.view = st.view || null;
@@ -1408,9 +1439,12 @@ async function loadBoard() {
     if (first.bg) first.board = { x: first.bg.x, y: first.bg.y, w: first.bg.w, h: first.bg.h };
     scenes = [first];
   }
+  const daHome = prefDallaHome();
   applyTheme();
   await showScene(first);
   boardReady = true;
+  if (daHome) scheduleBoardSave();
+  if (typeof turniDisegna === 'function') turniDisegna();
   if (typeof afterBoardLoad === 'function') afterBoardLoad();
 }
 
