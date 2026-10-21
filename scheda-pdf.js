@@ -120,23 +120,69 @@
     });
   }
 
-  async function importa(file) {
-    let campi;
-    try { campi = await leggiPdf(await file.arrayBuffer()); }
-    catch (e) { alert(tr('Non riesco a leggere questo PDF: {e}', { e: e.message })); return; }
-    if (!campi.some(c => c.valore === true || (typeof c.valore === 'string' && c.valore.trim()))) {
-      alert(tr('Questo PDF non ha campi compilati da leggere. Si importano solo le schede PDF compilabili (quelle in cui si scrive al computer); una scheda stampata o fotografata va ricopiata a mano.'));
-      return;
+  // Il testo delle pagine, con la posizione di ogni pezzo (per le stampe senza campi, es. Roll20)
+  let pdfjs = null;
+  async function testoPagine(buf) {
+    if (!pdfjs) {
+      pdfjs = await import(new URL('pdfjs.min.js', location.href).href);
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs.worker.min.js', location.href).href;
     }
-    const c = schedaDaCampi(campi, file.name);
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(buf), isEvalSupported: false }).promise;
+    const pagine = [];
+    for (let n = 1; n <= Math.min(doc.numPages, 20); n++) {
+      const pg = await doc.getPage(n), vp = pg.getViewport({ scale: 1 }), tc = await pg.getTextContent();
+      pagine.push({ w: vp.width, h: vp.height, items: tc.items.filter(i => i.str && i.str.trim()).map(i => {
+        const fs = Math.hypot(i.transform[2], i.transform[3]) || i.height || 8;
+        return { s: i.str, x0: i.transform[4], x1: i.transform[4] + i.width, y1: vp.height - i.transform[5], y0: vp.height - i.transform[5] - fs };
+      }) });
+    }
+    return pagine;
+  }
+  function crea(c, avviso) {
     const s = { id: uid(), icon: null, name: c.name, tpl: c.tpl, f: c.f };
     sheets.push(s); renderSheetList(); scheduleSheets();
     if (typeof onSheetCreated === 'function') onSheetCreated(s);
     $('sheetDialog').close();
     openSheet(s.id);
-    if (typeof avvisoScheda === 'function') avvisoScheda(c.avanzi
-      ? tr('Scheda «{nome}» importata dal PDF. {n} campi che non so dove mettere sono nelle Note.', { nome: s.name, n: c.avanzi })
-      : tr('Scheda «{nome}» importata dal PDF.', { nome: s.name }));
+    if (typeof avvisoScheda === 'function') avvisoScheda(avviso.replace('{nome}', s.name));
+  }
+
+  async function importa(file) {
+    let buf, campi;
+    try { buf = await file.arrayBuffer(); campi = await leggiPdf(buf.slice(0)); }
+    catch (e) { alert(tr('Non riesco a leggere questo PDF: {e}', { e: e.message })); return; }
+    // 1. un PDF compilabile: si leggono i campi
+    if (campi.some(c => c.valore === true || (typeof c.valore === 'string' && c.valore.trim()))) {
+      const c = schedaDaCampi(campi, file.name);
+      crea(c, c.avanzi ? tr('Scheda «{nome}» importata dal PDF. {n} campi che non so dove mettere sono nelle Note.', { nome: '{nome}', n: c.avanzi })
+        : tr('Scheda «{nome}» importata dal PDF.', { nome: '{nome}' }));
+      return;
+    }
+    // 2. una stampa (senza campi): si legge il testo e si prova a riconoscere la scheda di Roll20
+    let pagine;
+    try { pagine = await testoPagine(buf); }
+    catch (e) { alert(tr('Non riesco a leggere questo PDF: {e}', { e: e.message })); return; }
+    const testo = pagine.map(p => p.items.map(i => i.s).join(' ')).join('\n').trim();
+    if (!testo) {
+      alert(tr('In questo PDF non c\'è testo: probabilmente è una foto o una scansione. Non lo posso leggere; la scheda va ricopiata a mano.'));
+      return;
+    }
+    const r = typeof leggiRoll20 === 'function' ? leggiRoll20(pagine) : null;
+    if (r) {
+      const righe = [tr('Ho riconosciuto una scheda di Roll20 stampata in PDF:'), '',
+        `${r.name} · ${[r.f.class, r.f.level && tr('livello {n}', { n: r.f.level })].filter(Boolean).join(' ')}`,
+        tr('{n} campi letti (caratteristiche, competenze, attacchi, equipaggiamento, privilegi, incantesimi).', { n: r.campi })];
+      if (r.avvisi.length) righe.push('', tr('Da controllare dopo:'), ...r.avvisi.slice(0, 6).map(a => '· ' + a));
+      righe.push('', tr('Le competenze sono ricavate dai numeri (i pallini della stampa non si leggono): dai un\'occhiata alla scheda dopo l\'import.'), '', tr('Importo la scheda?'));
+      if (!confirm(righe.join('\n'))) return;
+      crea(r, tr('Scheda «{nome}» importata dalla stampa di Roll20: controlla che i valori siano giusti.', { nome: '{nome}' }));
+      return;
+    }
+    // 3. un PDF che non so leggere: chiedo prima di fare qualcosa
+    if (!confirm(tr('Questo PDF non ha campi compilabili e non è una stampa di Roll20 che conosco, quindi non so dove mettere i valori.\n\nPosso creare una scheda vuota con tutto il testo del PDF nelle Note, da sistemare a mano. Vuoi farlo?'))) return;
+    crea({ name: String(file.name || '').replace(/\.pdf$/i, '').slice(0, 40) || tr('Personaggio'), tpl: 'dnd5e',
+      f: { level: '1', str: '10', dex: '10', con: '10', int: '10', wis: '10', cha: '10', notes: testo.slice(0, 30000) } },
+      tr('Scheda «{nome}» creata: il testo del PDF è nelle Note.', { nome: '{nome}' }));
   }
 
   // il pulsante nella finestra «Nuova scheda», accanto a «Importa da un file»
@@ -144,7 +190,7 @@
   if (imp) {
     const b = document.createElement('button');
     b.type = 'button'; b.id = 'sheetImportPdf'; b.className = 'btn ghost';
-    b.title = 'Una scheda in PDF compilabile (per esempio la scheda ufficiale di D&D 5e)';
+    b.title = 'Una scheda in PDF: compilabile (come la scheda ufficiale di D&D 5e) o stampata da Roll20';
     b.textContent = '📄 Da un PDF…';
     imp.after(b);
     b.addEventListener('click', () => {

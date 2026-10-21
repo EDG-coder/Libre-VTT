@@ -206,6 +206,19 @@ function sheetVisible(c, s) {
   return rec.sheets && rec.sheets[s.id] ? rec.sheets[s.id] : null;
 }
 
+// Un disegno arrivato da un giocatore: solo i campi che servono, con valori controllati
+// (finisce dentro un SVG sugli schermi di tutti).
+function formaPulita(x) {
+  if (!x || typeof x !== 'object' || !['rect', 'ellipse', 'tri', 'line', 'path', 'text'].includes(x.t)) return null;
+  const n = (v, max) => { const k = +v; return Number.isFinite(k) ? Math.max(0, Math.min(max, k)) : 0; };
+  const c = /^#[0-9a-f]{3,8}$/i.test(String(x.c)) ? String(x.c) : '#ff4d4d';
+  const sh = { t: x.t, c, sw: n(x.sw, 100), vw: n(x.vw, 20000), vh: n(x.vh, 20000) };
+  if (x.t === 'text') { sh.fs = n(x.fs, 400) || 24; sh.txt = String(x.txt || '').slice(0, 2000); }
+  else if (x.t === 'path') { const d = String(x.d || ''); if (d.length > 200000 || !/^[MLl0-9.\s-]+$/.test(d)) return null; sh.d = d; }
+  else { sh.fill = !!x.fill; sh.fx = !!x.fx; sh.fy = !!x.fy; }
+  return sh;
+}
+
 // L'ordine dei turni: lo decide il master. Ai giocatori non arrivano i nomi dei segnalini nascosti.
 function turniPuliti(t) {
   if (!t || !Array.isArray(t.righe)) return null;
@@ -396,6 +409,20 @@ function handleIntent(c, m) {
       return;
     }
     case 'token.add': {
+      // un disegno (penna, forme, testo) non è un segnalino: basta il permesso di disegnare
+      if (m.token && m.token.shape) {
+        if (!p.draw) return deny(c, m.op, 'non puoi disegnare');
+        const sc = findScene(m.scene) || findScene(world.active);
+        if (!sc) return deny(c, m.op, 'scena sconosciuta');
+        const sh = formaPulita(m.token.shape);
+        if (!sh) return deny(c, m.op, 'disegno non valido');
+        const n = v => Number.isFinite(+v) ? +v : 0;
+        const tk = { id: newId('tk'), shape: sh, layer: c.role === 'master' && ['map', 'hidden'].includes(m.token.layer) ? m.token.layer : 'tokens',
+          l: n(m.token.l), t: n(m.token.t), w: Math.max(1, n(m.token.w)), h: Math.max(1, n(m.token.h)), owner: c.role === 'master' ? null : c.token };
+        sc.photos = (sc.photos || []).concat(tk);
+        changed();
+        return;
+      }
       if (!p.createTokens) return deny(c, m.op, 'non puoi creare segnalini');
       const sc = findScene(m.scene) || findScene(world.active);
       if (!sc) return deny(c, m.op, 'scena sconosciuta');
@@ -468,6 +495,16 @@ function handleIntent(c, m) {
       const text = str(m.text, 2000).trim();
       if (!text) return;
       addChat({ kind: 'text', text, by: c.name, byId: c.token });
+      return;
+    }
+    case 'chat.del': {
+      const msg = (world.chat || []).find(x => x.id === m.id);
+      if (!msg) return;
+      if (c.role !== 'master' && msg.byId !== c.token) return deny(c, m.op, 'puoi cancellare solo i tuoi messaggi');
+      world.chat = world.chat.filter(x => x !== msg);
+      scheduleSave();
+      for (const k of clients) k.send({ t: 'chat.del', id: msg.id });
+      panelPush({ t: 'chat.del', id: msg.id });
       return;
     }
     case 'rule': {

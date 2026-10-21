@@ -165,3 +165,5 @@
 .ui-tel #sheetForm .dialogBtns { flex-wrap: wrap; gap: 8px; }
 .ui-tel #sheetForm .dialogBtns > span { flex: 1 0 100% !important; height: 0; }
 .ui-tel #sheetImport, .ui-tel #sheetImportPdf, .ui-tel #sheetCancel, .ui-tel #sheetForm button[type=submit] { flex: 1 1 40%; }
+/* la lente sul telefono: si apre in basso come una barra alta 52px (prima diventava alta 2px e spariva) */
+.ui-tel #toolDrawer .slot > #zoomBox.open, .ui-tel body > #zoomBox.open { height: 52px !important; width: auto !important; border-radius: 26px; }

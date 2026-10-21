@@ -143,6 +143,7 @@ function setSheetIcon(s, a) {
   s.icon = { url: a.url, aid: a.id };
   renderSheetList(); wins.get(s.id) && refreshWinIcon(wins.get(s.id));
   scheduleSheets();
+  if (typeof onSheetIcon === 'function') onSheetIcon(s);     // in partita l'icona nuova va anche agli altri
 }
 
 // ---------- Nuova scheda ----------
@@ -514,9 +515,9 @@ function bindSheet(root, s) {
       if (txt) addChat({ kind: 'rule', title: `${s.name} · ${sr.parentElement.firstChild.textContent.trim()}`, text: txt });
       return;
     }
-    const pg = e.target.closest('.stabs button');                     // pagine della scheda Standard
+    const pg = e.target.closest('.stabs button[data-pg]');            // pagine (non i pulsanti − + dello zoom)
     if (pg) {
-      root.querySelectorAll('.stabs button').forEach(b => b.classList.toggle('on', b === pg));
+      root.querySelectorAll('.stabs button[data-pg]').forEach(b => b.classList.toggle('on', b === pg));
       root.querySelectorAll('.spage').forEach(p => { p.hidden = p.dataset.pg !== pg.dataset.pg; });
       return;
     }

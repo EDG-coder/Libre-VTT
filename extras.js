@@ -44,6 +44,8 @@ function registerTool(id, el, grip, name) {
   slotsEl.appendChild(slot); slot.appendChild(el);               // all'inizio tutti stanno nel menu
   const t = { id, el, grip, slot, name, docked: true };
   TOOLS.push(t);
+  const body = el.querySelector('.tbody');
+  if (body && osservaPannelli) for (const c of body.children) osservaPannelli.observe(c);
   grip.addEventListener('pointerdown', e => startToolDrag(e, t));
   return t;
 }
@@ -125,8 +127,33 @@ addEventListener('resize', () => TOOLS.forEach(t => { if (!t.docked) { const r =
 
 function toggleOpen(box, open) {                                 // pannello che si allarga (penna, calcolatrice)
   const body = box.querySelector('.tbody');
-  if (open) box.style.setProperty('--dh', body.scrollHeight + 'px');
+  if (open) misuraPannello(box);
   box.classList.toggle('open', open); body.inert = !open;
+  if (open) chiudiSovrapposti(box);
+}
+// Alto quanto il contenuto, ma mai oltre il fondo della finestra: quello che non ci sta si scorre.
+function misuraPannello(box) {
+  const body = box.querySelector('.tbody');
+  if (!body) return;
+  const top = Math.max(0, box.getBoundingClientRect().top), spazio = innerHeight - top - 10;
+  box.style.setProperty('--dh', Math.max(120, Math.min(body.scrollHeight, spazio)) + 'px');
+}
+// Il contenuto può crescere mentre è aperto (una scaletta, un testo che va a capo): si rimisura.
+const osservaPannelli = typeof ResizeObserver === 'function'
+  ? new ResizeObserver(es => es.forEach(e => { const b = e.target.closest('.tool'); if (b && b.classList.contains('open')) misuraPannello(b); }))
+  : null;
+addEventListener('resize', () => document.querySelectorAll('.tool.glass.open').forEach(misuraPannello));
+// Aprendo un pannello, quelli già aperti che gli finirebbero sotto si chiudono.
+function chiudiSovrapposti(box) {
+  const r = box.getBoundingClientRect(), body = box.querySelector('.tbody, #diceBody, #zoomBody');
+  const w = Math.max(r.width, parseFloat(getComputedStyle(box).getPropertyValue('--tw')) || 0, body ? body.scrollWidth : 0);
+  const h = Math.max(r.height, parseFloat(box.style.getPropertyValue('--dh')) || 0);
+  const mio = { l: r.left, t: r.top, r: r.left + w, b: r.top + h };
+  for (const t of TOOLS) {
+    if (t.el === box || !t.el.classList.contains('open')) continue;
+    const q = t.el.getBoundingClientRect();
+    if (q.left < mio.r && q.right > mio.l && q.top < mio.b && q.bottom > mio.t) t.grip.click();
+  }
 }
 
 // ======================= Penna, forme e testo =======================
@@ -764,13 +791,15 @@ function renderChatTabs() {
   bar.replaceChildren(...ids.map(id => {
     const b = mk('button', (id === chatTab ? 'active ' : '') + (unread.has(id) ? 'dot' : ''));
     b.type = 'button'; b.textContent = CH_NAMES[id];
-    b.addEventListener('click', () => { chatTab = id; unread.delete(id); renderChatTabs(); renderChat(); });
+    b.addEventListener('click', () => { chatTab = id; unread.delete(id); renderChatTabs(); renderChat.cambio = true; renderChat(); });
     return b;
   }));
 }
 function renderChat() {
+  const giu = chatInFondo(), su = chatLog.scrollTop;
   chatLog.replaceChildren(...chat.filter(chatVisible).map(msgEl));
-  chatLog.scrollTop = chatLog.scrollHeight;
+  if (giu || renderChat.cambio) chatGiu(); else chatLog.scrollTop = su;      // ridisegnata: resta dove stavi leggendo
+  renderChat.cambio = false;
 }
 
 let channels = [], chanTimer = 0;
@@ -794,7 +823,7 @@ function openChatWin(id) {
   w._ic.style.display = 'none'; w._name.textContent = '💬 ' + c.name;
   w._chat = c; w._onClose = () => chatWins.delete(id); chatWins.set(id, w);
   Object.assign(w.style, { width: '340px', height: '380px' });
-  w._body.innerHTML = '<div class="clog"></div><textarea rows="1" placeholder="Scrivi (Maiusc+Invio per andare a capo)"></textarea>';
+  w._body.innerHTML = '<div class="clog"></div><textarea rows="1" placeholder="Scrivi…" title="Invio manda il messaggio, Maiusc+Invio va a capo"></textarea>';
   const log = w._body.querySelector('.clog'), ta = w._body.querySelector('textarea');
   w._redraw = () => { log.replaceChildren(...c.msgs.map(msgEl)); log.scrollTop = log.scrollHeight; };
   w._redraw();
@@ -810,7 +839,12 @@ function msgMenu(el) {
   const items = [{ label: 'Copia il testo', fn: () => copyText(el.textContent) }];
   const win = el.closest('.chatWin');
   if (win) items.push('-', { label: 'Elimina il messaggio', danger: true, fn: () => { win._chat.msgs = win._chat.msgs.filter(m => m.id !== el.dataset.id); win._redraw(); saveChans(); } });
-  else items.push('-', { label: 'Nuova finestra di chat…', fn: newChannel }, { label: 'Elimina il messaggio', danger: true, fn: () => deleteChat(el.dataset.id) });
+  else {
+    items.push('-', { label: 'Nuova finestra di chat…', fn: newChannel });
+    const m = chat.find(x => x.id === el.dataset.id);
+    // in partita: i propri messaggi, e tutti per chi conduce
+    if (m && (typeof chatPuoCancellare !== 'function' || chatPuoCancellare(m))) items.push({ label: 'Elimina il messaggio', danger: true, fn: () => deleteChat(el.dataset.id) });
+  }
   return items;
 }
 const chatPaneMenu = () => [

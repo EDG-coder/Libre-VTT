@@ -124,7 +124,7 @@
 
 .stdWin .sPage .sBig { font-size: 13px; font-weight: 700; border-bottom: 0; }
 .stdWin .sPage .sScore { text-align: center; font-size: 12px; font-weight: 700; border-bottom: 0; background: color-mix(in srgb, var(--sh-fg) 6%, transparent); border-radius: 3px; }
-.stdWin .sPage .sCell { font-size: 7.4px; padding: 0 2px; }
+.stdWin .sPage .sCell { font-size: 7.4px; padding: 0 2px; text-overflow: ellipsis; }   /* testo lungo: «…» e il nome intero nel suggerimento */
 .stdWin .sPage .sRule { border-bottom: .9px solid var(--sh-ink); font-size: 7.4px; padding: 0 2px; }
 .sNum { text-align: center; }
 .stdWin .sPage .sBoxed { border: 1px solid var(--sh-line); border-radius: 3px; }

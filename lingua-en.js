@@ -1267,3 +1267,32 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Solo questo dispositivo.": "Just this device.",
 "Non serve altro.": "Nothing else needed.",
 });
+Object.assign(window.LIBRE_LINGUE.en, {
+"Questa immagine c'è solo sul tuo computer: gli altri vedranno l'icona di prima.": "This image only exists on your computer: the others will see the previous icon.",
+});
+Object.assign(window.LIBRE_LINGUE.en, {
+"non puoi disegnare": "you can't draw",
+"disegno non valido": "invalid drawing",
+});
+Object.assign(window.LIBRE_LINGUE.en, {
+"Scrivi un messaggio…": "Write a message…",
+"Scrivi…": "Write…",
+"Invio manda il messaggio, Maiusc+Invio va a capo": "Enter sends the message, Shift+Enter adds a new line",
+"Nuovi messaggi ↓": "New messages ↓",
+"puoi cancellare solo i tuoi messaggi": "you can only delete your own messages",
+});
+Object.assign(window.LIBRE_LINGUE.en, {
+"📄 Da un PDF…": "📄 From a PDF…",
+"Una scheda in PDF: compilabile (come la scheda ufficiale di D&D 5e) o stampata da Roll20": "A PDF sheet: fillable (like the official D&D 5e sheet) or printed from Roll20",
+"In questo PDF non c'è testo: probabilmente è una foto o una scansione. Non lo posso leggere; la scheda va ricopiata a mano.": "This PDF has no text: it's probably a photo or a scan. I can't read it; the sheet has to be copied by hand.",
+"Ho riconosciuto una scheda di Roll20 stampata in PDF:": "I recognized a Roll20 sheet printed to PDF:",
+"livello {n}": "level {n}",
+"{n} campi letti (caratteristiche, competenze, attacchi, equipaggiamento, privilegi, incantesimi).": "{n} fields read (abilities, proficiencies, attacks, equipment, features, spells).",
+"Da controllare dopo:": "To check afterwards:",
+"Le competenze sono ricavate dai numeri (i pallini della stampa non si leggono): dai un'occhiata alla scheda dopo l'import.": "Proficiencies are worked out from the numbers (the printed dots can't be read): take a look at the sheet after importing.",
+"Importo la scheda?": "Import the sheet?",
+"Scheda «{nome}» importata dalla stampa di Roll20: controlla che i valori siano giusti.": "Sheet «{nome}» imported from the Roll20 printout: check that the values are right.",
+"Questo PDF non ha campi compilabili e non è una stampa di Roll20 che conosco, quindi non so dove mettere i valori.\n\nPosso creare una scheda vuota con tutto il testo del PDF nelle Note, da sistemare a mano. Vuoi farlo?": "This PDF has no fillable fields and isn't a Roll20 printout I know, so I don't know where to put the values.\n\nI can create an empty sheet with all the PDF's text in the Notes, to fix by hand. Do you want that?",
+"Scheda «{nome}» creata: il testo del PDF è nelle Note.": "Sheet «{nome}» created: the PDF's text is in the Notes.",
+"il nome dell'attacco «{n}» è tagliato nella stampa di Roll20": "the attack name «{n}» is cut off in the Roll20 printout",
+});

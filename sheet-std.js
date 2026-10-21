@@ -178,8 +178,8 @@ function stdPage1() {
   h += rep(6, i => {
     const y = 391.89 + i * 18.2;
     return inp('an' + i, 218, y, 60, 14, 'sCell') + nmb('ab' + i, 281, y, 28, 14, 'sCell') + inp('ad' + i, 312, y, 56, 14, 'sCell') +
-      `<button type="button" class="sHit" data-r="atk:${i}" style="${at(370, y + 1)}" title="Tira per colpire">◎</button>` +
-      `<button type="button" class="sHit sDmg" data-r="dmg:${i}" style="${at(378, y + 1)}" title="Tira i danni">◆</button>`;
+      `<button type="button" class="sHit" data-r="atk:${i}" style="${at(369.5, y, 8.5, 14)}" title="Tira per colpire">◎</button>` +
+      `<button type="button" class="sHit sDmg" data-r="dmg:${i}" style="${at(378.5, y, 8.5, 14)}" title="Tira i danni">◆</button>`;
   });
   h += lab('MUNIZIONI', 219, 502, 51, 'c', 'sMicro') + lab('Q.TÀ', 275, 502, 19, 'c', 'sMicro');
   h += rep(3, i => inp('am' + i + 'n', 219, 509.89 + i * 18, 51, 14, 'sCell') + nmb('am' + i + 'q', 275, 509.89 + i * 18, 19, 14, 'sCell'));
@@ -389,6 +389,10 @@ function stdAdatta(inp) {
   while (f > 4.5 && inp.scrollWidth > inp.clientWidth + 0.5) { f -= 0.5; inp.style.fontSize = f + 'px'; }
 }
 function stdBindFit(root) {
+  // nelle celle strette (armi, munizioni) il testo lungo finisce con «…»: passandoci sopra si legge tutto
+  const titolo = i => { if (i.type === 'text') i.title = i.value; };
+  requestAnimationFrame(() => root.querySelectorAll('.sCell').forEach(titolo));
+  root.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('sCell')) titolo(e.target); });
   const tutti = () => root.querySelectorAll('.sFit').forEach(i => { if (i.offsetParent) stdAdatta(i); });
   root.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('sFit')) stdAdatta(e.target); });
   root.addEventListener('click', e => { if (e.target.closest('.stabs')) requestAnimationFrame(tutti); });

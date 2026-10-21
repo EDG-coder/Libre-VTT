@@ -964,6 +964,7 @@ $('zoomToggle').addEventListener('click', () => {
   zoomBox.classList.toggle('open', open);
   $('zoomBody').inert = !open;
   $('zoomToggle').setAttribute('aria-expanded', open);
+  if (open && typeof chiudiSovrapposti === 'function') chiudiSovrapposti(zoomBox);
 });
 $('zoomIn').addEventListener('click', () => zoomBy(BTN_STEP));
 $('zoomOut').addEventListener('click', () => zoomBy(1 / BTN_STEP));
@@ -1110,10 +1111,19 @@ function msgEl(m) {
   }
   return d;
 }
+// La chat scorre da sola solo se eri già in fondo (o quasi); altrimenti compare «Nuovi messaggi ↓».
+const chatInFondo = () => chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 48;
+function chatGiu() { chatLog.scrollTop = chatLog.scrollHeight; $('chatNuovi').hidden = true; }
+$('chatNuovi').addEventListener('click', chatGiu);
+chatLog.addEventListener('scroll', () => { if (chatInFondo()) $('chatNuovi').hidden = true; });
 function addChat(m) {
-  m.id = Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+  m.id = m.id || Date.now() + '-' + Math.random().toString(36).slice(2, 7);   // quelli del server hanno già il loro (serve per cancellarli)
   chat.push(m);
-  if (typeof chatVisible !== 'function' || chatVisible(m)) { chatLog.appendChild(msgEl(m)); chatLog.scrollTop = chatLog.scrollHeight; }
+  if (typeof chatVisible !== 'function' || chatVisible(m)) {
+    const giu = chatInFondo();
+    chatLog.appendChild(msgEl(m));
+    if (giu) chatGiu(); else $('chatNuovi').hidden = false;      // chi sta leggendo più su non viene spostato
+  }
   else if (typeof chatUnread === 'function') chatUnread(m);
   if (chatReady) persist.save('chat', chat);
 }
@@ -1550,6 +1560,7 @@ diceToggle.addEventListener('click', () => {
   dice.classList.toggle('open', open);
   diceBody.inert = !open;
   diceToggle.setAttribute('aria-expanded', open);
+  if (open && typeof chiudiSovrapposti === 'function') chiudiSovrapposti(dice);
 });
 
 

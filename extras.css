@@ -620,3 +620,8 @@ body.net-player #caselleSect { display: none; }
 /* il segnalino della riga sotto il cursore (o toccata): cerchio giallo */
 .photo.turnoEvid::after { outline: none; }
 .photo.turnoEvid { outline: calc(4px * var(--inv, 1)) solid #ffd23f; outline-offset: calc(4px * var(--inv, 1)); border-radius: 50%; }
+/* pannelli degli strumenti: se il contenuto non ci sta, si scorre (non si taglia) */
+.tool.glass.open .tbody { max-height: var(--dh, 240px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+/* l'icona dello strumento sempre al centro del suo cerchio, qualunque sia lo stato del pannello */
+.tool.glass > .tgrip { width: 52px !important; height: 52px !important; display: flex; align-items: center; justify-content: center; }
+.tool.glass > .tgrip > svg { display: block; flex: none; margin: 0; }

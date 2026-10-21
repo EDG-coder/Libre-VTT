@@ -184,8 +184,12 @@
   };
 
   // ---------- dal server (giocatori) e dal salvataggio ----------
+  let eraAcceso = null;
   window.turniDaMondo = function (t) {
     T = t && Array.isArray(t.righe) ? t : nuovo();
+    // quando il master avvia i turni, il pannello si apre da solo anche ai giocatori (solo lettura)
+    if (eraAcceso !== true && T.on && !box.classList.contains('open')) { toggleOpen(box, true); }
+    eraAcceso = !!T.on;
     disegna();
   };
   window.turniDaSalvataggio = function (t) {

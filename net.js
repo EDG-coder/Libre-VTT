@@ -191,6 +191,7 @@ function netHandle(m) {
     case 'world': applyWorld(m.world); return;
     case 'players': NET.players = m.list || []; return;
     case 'chat': netChat(m.msg); return;
+    case 'chat.del': netFromServer = true; try { deleteChat(m.id); } finally { netFromServer = false; } return;
     case 'ping': {
       const x = m.x * view.s + view.x, y = m.y * view.s + view.y;
       netFromServer = true;
@@ -624,6 +625,22 @@ function onSheetCreated(s) {
   s._mia = true;                                  // l'ha creata questo giocatore: può scriverci subito
   intent('sheet.add', { sheet: { id: s.id, name: s.name, tpl: s.tpl, icon: s.icon, f: s.f } });
 }
+// L'icona di una scheda cambiata dal menu: senza questo restava solo su questo computer,
+// e chi trascinava la scheda sulla mappa (o ricaricava) vedeva ancora quella di prima.
+function onSheetIcon(s) {
+  if (!NET.on || NET.applying) return;
+  if (isMaster()) { netPushBoard(); return; }
+  // un giocatore manda solo immagini che gli altri possono vedere (quelle della sessione)
+  const u = s.icon && (s.icon.gid ? 'gs:' + s.icon.gid : String(s.icon.url || ''));
+  if (u && !/^(gs:|data:image\/)/.test(u)) { netSay('Questa immagine c\'è solo sul tuo computer: gli altri vedranno l\'icona di prima.', 'warn'); return; }
+  intent('sheet.save', { id: s.id, name: s.name, f: s.f, icon: u ? { url: u, gid: s.icon.gid } : null });
+}
+// Messaggi cancellati: lo decide il server, che lo dice a tutti.
+function chatPuoCancellare(m) { return !NET.on || isMaster() || (!!m.byId && !!NET.me && m.byId === NET.me.token); }
+var deleteChat = (prev => function (id) {
+  if (NET.on && !netFromServer) { intent('chat.del', { id }); return; }
+  prev(id);
+})(deleteChat);
 function onSheetDeleted(id) {
   if (!NET.on || NET.applying) return;
   intent('sheet.del', { id });
