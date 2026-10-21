@@ -39,8 +39,8 @@
     feattraits: 'extra', backstory: 'notes', storiadelpersonaggio: 'notes', treasure: 'equip', tesoro: 'equip',
     spellcastingclass2: 'sc_class', classedaincantatore: 'sc_class', spellcastingability2: 'sc_ab',
     spellsavedc2: 'spcd', spellatkbonus2: 'spatk', attacksspellcasting: 'features',
-    wpnname: 'an1', wpn1atkbonus: 'ab1', wpn1damage: 'ad1', wpnname2: 'an2', wpn2atkbonus: 'ab2', wpn2damage: 'ad2',
-    wpnname3: 'an3', wpn3atkbonus: 'ab3', wpn3damage: 'ad3'
+    wpnname: 'an0', wpn1atkbonus: 'ab0', wpn1damage: 'ad0', wpnname2: 'an1', wpn2atkbonus: 'ab1', wpn2damage: 'ad1',
+    wpnname3: 'an2', wpn3atkbonus: 'ab2', wpn3damage: 'ad2'
   };
   // le caselle della scheda ufficiale: tiri salvezza e abilità
   const CASELLE = {
