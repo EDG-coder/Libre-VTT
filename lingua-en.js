@@ -1255,3 +1255,15 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "✓ {x}": "✓ {x}",
 "Spareggio dell'iniziativa con la Destrezza": "Break initiative ties with Dexterity",
 });
+Object.assign(window.LIBRE_LINGUE.en, {
+"📄 Da un PDF…": "📄 From a PDF…",
+"Una scheda in PDF compilabile (per esempio la scheda ufficiale di D&D 5e)": "A fillable PDF sheet (for example the official D&D 5e sheet)",
+"non riesco a caricare il lettore di PDF": "I can't load the PDF reader",
+"Non riesco a leggere questo PDF: {e}": "I can't read this PDF: {e}",
+"Questo PDF non ha campi compilati da leggere. Si importano solo le schede PDF compilabili (quelle in cui si scrive al computer); una scheda stampata o fotografata va ricopiata a mano.": "This PDF has no filled-in fields to read. Only fillable PDF sheets (the ones you type into on a computer) can be imported; a printed or photographed sheet has to be copied by hand.",
+"Scheda «{nome}» importata dal PDF. {n} campi che non so dove mettere sono nelle Note.": "Sheet «{nome}» imported from the PDF. {n} fields I couldn't place are in the Notes.",
+"Scheda «{nome}» importata dal PDF.": "Sheet «{nome}» imported from the PDF.",
+"Solo questo computer.": "Just this computer.",
+"Solo questo dispositivo.": "Just this device.",
+"Non serve altro.": "Nothing else needed.",
+});

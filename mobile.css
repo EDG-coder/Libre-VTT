@@ -161,3 +161,7 @@
   .ui-touch input[type=checkbox], .ui-touch input[type=radio] { min-width: 22px; min-height: 22px; }
   .ui-touch input[type=range] { min-height: 44px; }
 }
+/* «Nuova scheda» sul telefono: gli import su una riga, Annulla e Crea sotto */
+.ui-tel #sheetForm .dialogBtns { flex-wrap: wrap; gap: 8px; }
+.ui-tel #sheetForm .dialogBtns > span { flex: 1 0 100% !important; height: 0; }
+.ui-tel #sheetImport, .ui-tel #sheetImportPdf, .ui-tel #sheetCancel, .ui-tel #sheetForm button[type=submit] { flex: 1 1 40%; }
