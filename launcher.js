@@ -419,6 +419,7 @@ function infoCampagna(dir) {
   out.vuota = nomi.length === 0;
   const meta = leggiJson(path.join(dir, 'campagna.json'));
   if (meta) { out.campagna = true; if (meta.nome) out.nome = String(meta.nome).slice(0, 60); }
+  out.sistema = meta && meta.sistema && meta.sistema.id ? { id: String(meta.sistema.id), nome: String(meta.sistema.nome || meta.sistema.id).slice(0, 60) } : null;
   const D = path.join(dir, 'data');
   const b = leggiJson(path.join(D, 'board.json')), sh = leggiJson(path.join(D, 'sheets.json')), w = leggiJson(path.join(D, 'world.json'));
   if (b || sh || w) out.campagna = true;
@@ -458,6 +459,63 @@ function preparaCartella(dir, nome) {
     fs.writeFileSync(meta, JSON.stringify({ nome: nome || path.basename(dir), creata: new Date().toISOString(), programma: 'LIBRE VTT' }, null, 2));
   }
 }
+// ---------- il sistema di gioco della campagna ----------
+// Sta in campagna.json: { sistema: { id, nome } }. I sistemi che vengono col programma sono in
+// sistemi/<id>/ (5e 2014 e 5.5 2024); uno personalizzato è una copia dentro la campagna, in
+// <campagna>/sistema/, che si può modificare ed esportare. Lo si sceglie una volta, quando la
+// campagna nasce (o la prima volta che si apre una campagna di prima).
+const SISTEMI = path.join(ROOT, 'sistemi');
+function sistemiDisponibili() {
+  let nomi = []; try { nomi = fs.readdirSync(SISTEMI); } catch {}
+  return nomi.filter(n => n !== 'vuoto').map(n => leggiJson(path.join(SISTEMI, n, 'sistema.json'))).filter(Boolean)
+    .map(j => ({ id: j.id, nome: j.nome, edizione: j.edizione || '', licenza: j.licenza || '' }));
+}
+const SISTEMI_ARRIVATI = path.join(USERDIR, 'sistemi-arrivati');
+/** Un sistema caricato da un file (.libresistema o .zip): lo si estrae e si controlla. */
+function sistemaDaFile(id) {
+  const f = path.join(SISTEMI_ARRIVATI, String(id || '').replace(/[^\w-]/g, '') + '.zip');
+  if (!fs.existsSync(f)) throw new Error('Non trovo il file del sistema: caricalo di nuovo.');
+  const tmp = path.join(SISTEMI_ARRIVATI, 'x-' + Date.now().toString(36));
+  estraiZip(f, tmp);
+  let radice = tmp;
+  const dentro = fs.readdirSync(tmp).filter(n => !n.startsWith('.'));
+  if (!fs.existsSync(path.join(tmp, 'sistema.json')) && dentro.length === 1 && fs.existsSync(path.join(tmp, dentro[0], 'sistema.json'))) radice = path.join(tmp, dentro[0]);
+  const j = leggiJson(path.join(radice, 'sistema.json'));
+  if (!j || j.formato !== 'libre-vtt-sistema') { fs.rmSync(tmp, { recursive: true, force: true }); throw new Error('Questo file non è un sistema di LIBRE VTT (manca sistema.json).'); }
+  return { radice, tmp, f };
+}
+function impostaSistema(dir, scelta, fileId) {
+  const metaF = path.join(dir, 'campagna.json'), meta = leggiJson(metaF) || { nome: path.basename(dir), programma: 'LIBRE VTT' };
+  scelta = String(scelta || 'dnd5e-2014');
+  const dest = path.join(dir, 'sistema');
+  const metti = sorgente => {
+    if (fs.existsSync(dest)) fs.renameSync(dest, path.join(dir, 'sistema-precedente-' + Date.now().toString(36)));   // mai buttare via un sistema
+    fs.cpSync(sorgente, dest, { recursive: true });
+    const j = leggiJson(path.join(dest, 'sistema.json')) || {};
+    j.id = 'personalizzato';
+    fs.writeFileSync(path.join(dest, 'sistema.json'), JSON.stringify(j, null, 2));
+    return { id: 'personalizzato', nome: String(j.nome || 'Sistema personalizzato').slice(0, 60) };
+  };
+  let sis;
+  const interno = id => sistemiDisponibili().some(x => x.id === id) || id === 'vuoto';
+  if (scelta.startsWith('copia:') && interno(scelta.slice(6))) {
+    sis = metti(path.join(SISTEMI, scelta.slice(6)));
+    const j = leggiJson(path.join(dest, 'sistema.json')); j.nome = j.nome + ' (personalizzato)'; sis.nome = j.nome;
+    fs.writeFileSync(path.join(dest, 'sistema.json'), JSON.stringify(j, null, 2));
+  } else if (scelta === 'vuoto') sis = metti(path.join(SISTEMI, 'vuoto'));
+  else if (scelta === 'file') {
+    const { radice, tmp, f } = sistemaDaFile(fileId);
+    try { sis = metti(radice); } finally { fs.rmSync(tmp, { recursive: true, force: true }); fs.rmSync(f, { force: true }); }
+  } else if (interno(scelta)) {
+    const j = leggiJson(path.join(SISTEMI, scelta, 'sistema.json'));
+    sis = { id: scelta, nome: j.nome };
+  } else throw new Error('Sistema sconosciuto: ' + scelta);
+  meta.sistema = sis;
+  fs.writeFileSync(metaF, JSON.stringify(meta, null, 2));
+  say(`Sistema della campagna: ${sis.nome}`, 'ok');
+  return sis;
+}
+
 function nuovaCampagna(nomeGrezzo) {
   const nome = pulisciNome(nomeGrezzo) || 'Nuova campagna';
   fs.mkdirSync(CAMP_HOME, { recursive: true });
@@ -1157,7 +1215,9 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST') {
     const o = req.headers.origin;
     if (o && o !== `http://127.0.0.1:${UI_PORT}` && o !== `http://localhost:${UI_PORT}`) return invia(res, 403, 'no');
-    if (!/^application\/json/.test(req.headers['content-type'] || '')) return invia(res, 415, 'no');
+    // JSON e basta (un altro sito non può mandarlo senza chiedere il permesso al browser); lo zip di un sistema solo dove serve
+    const ct = req.headers['content-type'] || '';
+    if (!/^application\/json/.test(ct) && !(u.pathname === '/api/sistema/carica' && /^application\/zip/.test(ct))) return invia(res, 415, 'no');
   }
   const corpo = fn => {
     let body = '';
@@ -1186,8 +1246,35 @@ const server = http.createServer(async (req, res) => {
     return corpo(m => {
       // la lingua è una sola: quella delle preferenze, che la finestra mostra; se la finestra ne manda un'altra, vince quella che vedi
       if ((m.lingua === 'it' || m.lingua === 'en') && prefCorrenti().lingua !== m.lingua) salvaPref({ lingua: m.lingua });
-      ok({ path: nuovaCampagna(m.nome), ...elencoCampagne() });
+      const dir = nuovaCampagna(m.nome);
+      try { if (m.sistema) impostaSistema(dir, m.sistema, m.file); }
+      catch (e) { return ok({ path: dir, errore: e.message, ...elencoCampagne() }); }
+      ok({ path: dir, ...elencoCampagne() });
     });
+  }
+  if (u.pathname === '/api/sistemi' && req.method === 'GET') return ok({ sistemi: sistemiDisponibili() });
+  if (u.pathname === '/api/campagna/sistema' && req.method === 'POST') {
+    return corpo(m => {
+      const info = infoCampagna(m.path);
+      if (!info.esiste || !info.campagna) return ok({ errore: 'Non trovo la campagna.' });
+      try { ok({ sistema: impostaSistema(info.path, m.sistema, m.file) }); } catch (e) { ok({ errore: e.message }); }
+    });
+  }
+  // un file di sistema (.libresistema / .zip) che arriva dalla finestra: lo si tiene finché non si sceglie
+  if (u.pathname === '/api/sistema/carica' && req.method === 'POST') {
+    const parti = []; let n = 0, troppo = false;
+    req.on('data', d => { n += d.length; if (n > 60 * 1024 * 1024) { troppo = true; req.destroy(); } else parti.push(d); });
+    req.on('end', () => {
+      if (troppo) return;
+      const b = Buffer.concat(parti);
+      if (b.length < 4 || b.readUInt32LE(0) !== 0x04034b50) return ok({ errore: 'Non è un file .zip / .libresistema.' });
+      fs.mkdirSync(SISTEMI_ARRIVATI, { recursive: true });
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      fs.writeFileSync(path.join(SISTEMI_ARRIVATI, id + '.zip'), b);
+      try { const { tmp, radice } = sistemaDaFile(id); const j = leggiJson(path.join(radice, 'sistema.json')); fs.rmSync(tmp, { recursive: true, force: true }); ok({ file: id, nome: j.nome || 'Sistema' }); }
+      catch (e) { ok({ errore: e.message }); }
+    });
+    return;
   }
   if (u.pathname === '/api/campagna/scegli' && req.method === 'POST') {
     return corpo(async m => ok(await scegliCartella(m.titolo)));

@@ -29,7 +29,7 @@ fs.mkdirSync(DATA, { recursive: true });
 // Il mondo la cita con «gs:<hash>», e il ponte del giocatore se la fa mandare dall'host.
 const ASSETS = path.join(DATA, 'assets');
 fs.mkdirSync(ASSETS, { recursive: true });
-const MIME_EXT = { 'image/webp': '.webp', 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/avif': '.avif', 'image/svg+xml': '.svg', 'image/bmp': '.bmp' };
+const MIME_EXT = { 'application/json': '.json', 'image/webp': '.webp', 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/avif': '.avif', 'image/svg+xml': '.svg', 'image/bmp': '.bmp' };
 const EXT_MIME = Object.fromEntries(Object.entries(MIME_EXT).map(([m, e]) => [e, m]));
 const MAX_ASSET = 12 * 1024 * 1024;
 const isHash = h => typeof h === 'string' && /^[a-f0-9]{64}$/.test(h);
@@ -253,6 +253,8 @@ function viewFor(c) {
     scenes: scenes.map(s => sceneFor(c, s)),
     sheets, chat: (world.chat || []).slice(-250).map(m => chatFor(c, m)).filter(Boolean), music: world.music,
     notes: world.notes || { text: '', editable: false },
+    sistema: world.sistema || null,
+    compendio: world.compendio || null,
     turni: turniPerChi(c)
   };
 }
@@ -383,6 +385,16 @@ function handleIntent(c, m) {
           return ph;
         });
       }
+      // il compendio che vedono i giocatori: l'elenco dei pacchetti (e per quelli della campagna l'hash del file)
+      if (b.compendio && typeof b.compendio === 'object' && Array.isArray(b.compendio.pacchetti)) {
+        const t = JSON.stringify(b.compendio);
+        if (t.length < 2000000) world.compendio = JSON.parse(t);
+      }
+      // il sistema di gioco della campagna (regole e formule): lo usano anche i giocatori
+      if (b.sistema && typeof b.sistema === 'object' && b.sistema.dati) {
+        const t = JSON.stringify(b.sistema);
+        if (t.length < 400000) world.sistema = JSON.parse(t);
+      }
       if (Array.isArray(b.sheets)) {
         // Il master aggiorna e aggiunge, ma non cancella: le schede si tolgono solo con sheet.del,
         // altrimenti basterebbe un salvataggio partito prima per far sparire quella di un giocatore.
@@ -497,6 +509,7 @@ function handleIntent(c, m) {
       if (!r) return deny(c, m.op, 'tiro non valido');
       const msg = { kind: 'roll', label: str(m.label || m.expr, 80), by: c.name, byId: c.token, ...r };
       if (m.secret) msg.secret = true;
+      if (m.doppio && r.rolls && r.rolls.length === 2) msg.doppio = true;   // due tiri mostrati alla pari (scheda in vantaggio/svantaggio)
       addChat(msg);
       return;
     }

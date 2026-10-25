@@ -1,0 +1,79 @@
+{
+  "formato": "libre-vtt-formule",
+  "versione": 1,
+  "sistema": "dnd5e-2024",
+  "nome": "D&D 5.5 (2024)",
+  "nota": "Le formule delle schede. Si scrivono con numeri, nomi, + - * / e parentesi; funzioni: floor, ceil, round, abs, max, min e se(condizione, sì, no), dove la condizione vale «sì» se non è 0. Ogni formula riceve solo i nomi elencati in «usa».",
+  "formule": {
+    "modificatore": {
+      "usa": [
+        "punteggio"
+      ],
+      "formula": "floor((punteggio - 10) / 2)"
+    },
+    "competenza": {
+      "usa": [
+        "livello",
+        "manuale",
+        "scritta"
+      ],
+      "formula": "se(scritta, manuale, 2 + floor((max(1, livello) - 1) / 4))"
+    },
+    "tiroSalvezza": {
+      "usa": [
+        "mod",
+        "competente",
+        "competenza"
+      ],
+      "formula": "mod + se(competente, competenza, 0)"
+    },
+    "abilita": {
+      "usa": [
+        "mod",
+        "competente",
+        "maestria",
+        "competenza"
+      ],
+      "formula": "mod + se(maestria, competenza * 2, se(competente, competenza, 0))"
+    },
+    "iniziativa": {
+      "usa": [
+        "modDes",
+        "bonus"
+      ],
+      "formula": "modDes + bonus"
+    },
+    "percezionePassiva": {
+      "usa": [
+        "percezione"
+      ],
+      "formula": "10 + percezione"
+    },
+    "cdIncantesimi": {
+      "usa": [
+        "competenza",
+        "mod"
+      ],
+      "formula": "8 + competenza + mod"
+    },
+    "attaccoIncantesimi": {
+      "usa": [
+        "competenza",
+        "mod"
+      ],
+      "formula": "competenza + mod"
+    },
+    "caricoMassimo": {
+      "usa": [
+        "forza"
+      ],
+      "formula": "forza * 7.5"
+    },
+    "caSenzaArmatura": {
+      "usa": [
+        "modDes"
+      ],
+      "formula": "10 + modDes"
+    }
+  }
+}

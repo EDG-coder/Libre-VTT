@@ -1,0 +1,53 @@
+{
+  "formato": "libre-vtt-sistema",
+  "versione": 1,
+  "id": "personalizzato",
+  "nome": "Il mio sistema",
+  "edizione": "1",
+  "autore": "",
+  "licenza": "",
+  "caratteristiche": [
+    {
+      "id": "c1",
+      "sigla": "FOR",
+      "nome": "Forza"
+    },
+    {
+      "id": "c2",
+      "sigla": "AGI",
+      "nome": "Agilità"
+    },
+    {
+      "id": "c3",
+      "sigla": "MEN",
+      "nome": "Mente"
+    }
+  ],
+  "abilita": [],
+  "valute": [
+    {
+      "id": "m",
+      "nome": "Monete",
+      "sigla": "mo",
+      "valore": 1
+    }
+  ],
+  "tipiDanno": [],
+  "condizioni": [],
+  "unita": {
+    "distanza": "m",
+    "casella": 1.5,
+    "peso": "kg"
+  },
+  "schede": [
+    "generica",
+    "simple"
+  ],
+  "regole": {
+    "sfinimento": "nessuno",
+    "spareggioIniziativa": "",
+    "caratteristicaIniziativa": "c2"
+  },
+  "etichette": {},
+  "compendio": []
+}

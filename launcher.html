@@ -83,6 +83,13 @@
   .avviso .t { font-weight: 600; margin-bottom: 4px; }
   .avviso p { margin: 0 0 12px; color: var(--muted); font-size: .88rem; }
   .err { color: var(--bad); font-size: .88rem; margin: 8px 0 0; }
+  .sceltaSis { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .sceltaSis .lab { font-size: .8rem; color: var(--muted); }
+  .sceltaSis label.op { display: flex; gap: 9px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+  .sceltaSis label.op:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .sceltaSis label.op small { display: block; color: var(--muted); font-size: .8rem; }
+  .sceltaSis select { font: inherit; font-size: .88rem; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; margin-top: 6px; }
+  .sceltaSis .fileSis { font-size: .82rem; margin-top: 6px; }
 
   details.log { margin-top: 14px; }
   details.log summary { cursor: pointer; color: var(--muted); font-size: .84rem; }
@@ -263,9 +270,21 @@
   <div class="box hide" id="boxCamp">
     <h2 id="campTit">Quale campagna?</h2>
     <div class="clist" id="campLista"></div>
-    <div class="row hide" id="campNuovaRiga" style="margin-top:10px">
-      <input type="text" id="campNome" maxlength="60" placeholder="Nome della campagna (es. La miniera perduta)" autocomplete="off">
-      <button class="b go" id="campCrea">Crea</button>
+    <div class="hide" id="campNuovaRiga" style="margin-top:10px">
+      <div class="row">
+        <input type="text" id="campNome" maxlength="60" placeholder="Nome della campagna (es. La miniera perduta)" autocomplete="off">
+        <button class="b go" id="campCrea">Crea</button>
+      </div>
+      <div class="sceltaSis" id="sisNuova"></div>
+    </div>
+    <div class="box avviso hide" id="campSistema" style="margin-top:10px">
+      <div class="t">Con quale sistema di gioco si gioca «<span id="campSisNome"></span>»?</div>
+      <p>Si sceglie una volta sola e resta salvato nella campagna. Le campagne fatte prima di adesso sono di solito D&amp;D 5e (2014).</p>
+      <div class="sceltaSis" id="sisVecchia"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="b go" id="campSisOk">Continua</button>
+        <button class="b" id="campSisNo">Annulla</button>
+      </div>
     </div>
     <div class="box avviso hide" id="campChiedi" style="margin-top:10px">
       <div class="t">Questa cartella non sembra una campagna di LIBRE VTT</div>
@@ -480,6 +499,7 @@ function percorsoLeggibile(p, home) {
   return [...dove, 'LIBRE VTT', (window.tr || (x => x))('Campagne'), ...resto].join(' › ');
 }
 function disegnaCampagne(r) {
+  ultimaLista = r.lista || [];
   const L = $('campLista');
   L.replaceChildren();
   const tr = window.tr || (x => x);
@@ -504,7 +524,7 @@ function disegnaCampagne(r) {
     const tr = window.tr || (x => x);
     if (ultima && !c.vecchia) nome.append(el('span', 'tag', tr('ultima')));
     const dett = c.esiste
-      ? [conta(c.scene, 'scena', 'scene'), conta(c.schede, 'scheda', 'schede'), conta(c.immagini, 'immagine', 'immagini'), quando(c.modificata)].filter(Boolean).map(x => tr(x)).join(' · ') + (c.scrivibile ? '' : ' · ' + tr('sola lettura'))
+      ? [conta(c.scene, 'scena', 'scene'), conta(c.schede, 'scheda', 'schede'), conta(c.immagini, 'immagine', 'immagini'), quando(c.modificata)].filter(Boolean).map(x => tr(x)).join(' · ') + (c.scrivibile ? '' : ' · ' + tr('sola lettura')) + (c.sistema ? ' · ' + c.sistema.nome : '')
       : 'Cartella non trovata: è stata spostata o cancellata?';
     const pth = el('small', 'cpath'); pth.title = c.path;
     const bdi = el('bdi', '', c.vecchia ? 'nella cartella del gioco, da prima delle campagne' : percorsoLeggibile(c.path, r.home)); bdi.dir = 'ltr'; pth.append(bdi);
@@ -547,6 +567,8 @@ async function eliminaCampagna(c) {
 }
 function scegliCampagna(path) {
   erroreCamp('');
+  const c = ultimaLista.find(x => x.path === path);
+  if (c && c.campagna && !c.sistema && !c.vecchia && (campModo === 'solo' || campModo === 'host')) { chiediSistema(c); return; }
   // per condurre serve anche il collegamento a distanza: lo si prepara e poi si riparte da qui
   if (campModo === 'host' && !S.link) { campagnaInSospeso = path; chiediPreparazione('host'); $('boxCamp').classList.add('hide'); return; }
   inPartenza = true;
@@ -567,15 +589,72 @@ async function usaCartella(path, confermo) {
 }
 $('campChiediNo').onclick = () => $('campChiedi').classList.add('hide');
 $('campIndietro').onclick = () => mostraSolo('scelte');
-$('campNuova').onclick = () => { $('campNuovaRiga').classList.remove('hide'); $('campNome').focus(); };
+// ---------- il sistema di gioco: si sceglie quando nasce la campagna ----------
+let elencoSistemi = null;
+async function sceltaSistema(box) {
+  const tr = window.tr || (x => x);
+  if (!elencoSistemi) { try { elencoSistemi = (await fetch('/api/sistemi').then(r => r.json())).sistemi || []; } catch { elencoSistemi = []; } }
+  const nomeGruppo = 'sis-' + box.id;
+  box.replaceChildren(el('span', 'lab', tr('Sistema di gioco')));
+  const op = (val, tit, sotto) => {
+    const l = el('label', 'op'), i = el('input'); i.type = 'radio'; i.name = nomeGruppo; i.value = val;
+    const t = el('span', '', ''); t.append(el('b', '', tit), el('small', '', sotto));
+    l.append(i, t); box.append(l); return { l, i, t };
+  };
+  const SRD = { 'dnd5e-2014': 'Regole e contenuti dell\'SRD 5.1', 'dnd5e-2024': 'Regole e contenuti dell\'SRD 5.2' };
+  elencoSistemi.forEach((x, k) => { const o = op(x.id, x.nome, tr(SRD[x.id] || x.edizione || '')); if (!k) o.i.checked = true; });
+  const p = op('personalizzato', tr('Sistema personalizzato'), tr('Parte da uno vuoto o da una copia, oppure lo importi da un file. Lo modifichi dal tavolo.'));
+  const sel = el('select'); sel.setAttribute('aria-label', tr('Da dove parte il sistema personalizzato'));
+  sel.append(new Option(tr('Vuoto'), 'vuoto'), ...elencoSistemi.map(x => new Option(tr('Copia di {nome}', { nome: x.nome }), 'copia:' + x.id)), new Option(tr('Da un file (.libresistema)…'), 'file'));
+  const file = el('input'); file.type = 'file'; file.accept = '.libresistema,.zip'; file.className = 'fileSis hide';
+  const nota = el('small', '', '');
+  p.t.append(sel, file, nota);
+  sel.onchange = () => { file.classList.toggle('hide', sel.value !== 'file'); p.i.checked = true; };
+  file.onchange = async () => {
+    nota.textContent = ''; box._file = null;
+    const f = file.files[0]; if (!f) return;
+    nota.textContent = tr('Lo controllo…');
+    const r = await fetch('/api/sistema/carica', { method: 'POST', headers: { 'Content-Type': 'application/zip' }, body: f }).then(x => x.json()).catch(() => ({ errore: tr('Non sono riuscito a leggerlo.') }));
+    if (r.errore) { nota.textContent = '⚠ ' + r.errore; return; }
+    box._file = r.file; nota.textContent = '✓ ' + r.nome;
+  };
+  box._valore = () => {
+    const v = box.querySelector(`input[name="${nomeGruppo}"]:checked`).value;
+    if (v !== 'personalizzato') return { sistema: v };
+    if (sel.value === 'file') return box._file ? { sistema: 'file', file: box._file } : { errore: tr('Scegli il file del sistema.') };
+    return { sistema: sel.value };
+  };
+}
+$('campNuova').onclick = () => { $('campNuovaRiga').classList.remove('hide'); sceltaSistema($('sisNuova')); $('campNome').focus(); };
 $('campCrea').onclick = async () => {
   const nome = $('campNome').value.trim();
   if (!nome) { $('campNome').focus(); return; }
-  const r = await post('/api/campagna/nuova', { nome, lingua: I18N.lingua });
-  if (r.errore) return erroreCamp(r.errore);
+  const v = $('sisNuova')._valore ? $('sisNuova')._valore() : {};
+  if (v.errore) return erroreCamp(v.errore);
+  const r = await post('/api/campagna/nuova', { nome, lingua: I18N.lingua, ...v });
+  if (r.errore && !r.path) return erroreCamp(r.errore);
   $('campNome').value = '';
+  if (r.errore) { erroreCamp(r.errore); disegnaCampagne(r); return; }
   scegliCampagna(r.path);
 };
+// una campagna di prima, senza sistema: lo si chiede la prima volta che la si apre
+let ultimaLista = [];
+async function chiediSistema(c) {
+  $('campSisNome').textContent = c.nome;
+  await sceltaSistema($('sisVecchia'));
+  $('campSistema').classList.remove('hide');
+  $('campSistema').scrollIntoView({ block: 'nearest' });
+  $('campSisNo').onclick = () => $('campSistema').classList.add('hide');
+  $('campSisOk').onclick = async () => {
+    const v = $('sisVecchia')._valore();
+    if (v.errore) return erroreCamp(v.errore);
+    const r = await post('/api/campagna/sistema', { path: c.path, ...v });
+    if (r.errore) return erroreCamp(r.errore);
+    c.sistema = r.sistema;
+    $('campSistema').classList.add('hide');
+    scegliCampagna(c.path);
+  };
+}
 $('campNome').addEventListener('keydown', e => { if (e.key === 'Enter') $('campCrea').click(); });
 $('campApri').onclick = async () => {
   erroreCamp('');

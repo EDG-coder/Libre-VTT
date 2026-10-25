@@ -127,6 +127,7 @@
       <button class="tab active" type="button" data-tab="chat" style="--aura:#7c5cff" title="Chat"><span class="ic">💬</span><span class="lbl"> Chat</span></button>
       <button class="tab" type="button" data-tab="assets" style="--aura:#ff9f43" title="Assets"><span class="ic">🎨</span><span class="lbl"> Assets</span></button>
       <button class="tab" type="button" data-tab="sheets" style="--aura:#ff6fa8" title="Schede"><span class="ic">📜</span><span class="lbl"> Schede</span></button>
+      <button class="tab" type="button" data-tab="comp" style="--aura:#3db8ff" title="Compendio"><span class="ic">📚</span><span class="lbl"> Compendio</span></button>
       <button class="tab" type="button" data-tab="settings" style="--aura:#2ee6a6" title="Impostazioni"><span class="ic">⚙️</span><span class="lbl"> Impostazioni</span></button>
     </nav>
 
@@ -144,6 +145,22 @@
       <div class="row"><button id="sheetNew" type="button" class="btn">＋ Nuova scheda</button></div>
       <p class="note"><span class="soloMouse">Doppio clic per aprire. Trascina una scheda sulla mappa per creare il segnalino collegato; clic destro per altre opzioni.</span><span class="soloTocco">Tocca una scheda per aprirla. Tienila premuta per le altre opzioni, anche per metterla sulla mappa.</span></p>
       <div id="sheetList"></div>
+    </section>
+
+    <section id="tab-comp" class="pane">
+      <div class="compCerca">
+        <input id="compQ" type="search" placeholder="Cerca (anche in inglese)…" autocomplete="off" aria-label="Cerca nel compendio">
+        <select id="compTipo" aria-label="Tipo"></select>
+      </div>
+      <div class="compFiltri" id="compFiltri"></div>
+      <div class="row compAzioni">
+        <button id="compNuova" type="button" class="btn ghost">＋ Nuova voce</button>
+        <button id="compImporta" type="button" class="btn ghost">📥 Importa…</button>
+        <button id="compOpen5e" type="button" class="btn ghost">🌐 Open5e…</button>
+        <button id="compPacchetti" type="button" class="btn ghost">📦 Pacchetti…</button>
+      </div>
+      <p class="note" id="compStato"></p>
+      <div id="compLista" role="list"></div>
     </section>
 
     <section id="tab-settings" class="pane">
@@ -171,6 +188,17 @@
         </div>
         <p class="note" id="fogColorNota">Automatico: lo stesso colore dello sfondo della pagina.</p>
         <label class="row">Quanto copre (per te) <input type="range" id="fogVeilIn" min="10" max="100" step="5"><output id="fogVeilOut"></output></label>
+      </div>
+
+      <div class="sect" data-sect="sistema" id="sistemaSect">
+        <h4>Sistema di gioco</h4>
+        <p class="note"><b id="sisNome">—</b> <span id="sisTipo"></span></p>
+        <p class="note">Le regole delle schede (formule, caratteristiche, abilità, condizioni…) vengono dal sistema della campagna. Si sceglie quando nasce la campagna.</p>
+        <div class="row soloMasterSis">
+          <button id="sisModifica" type="button" class="btn ghost">✎ Modifica…</button>
+          <button id="sisPersonalizza" type="button" class="btn ghost" title="Copia il sistema dentro la campagna, così puoi cambiarlo">Rendilo personalizzato</button>
+          <a id="sisEsporta" class="btn ghost" href="api/sistema/esporta" download>📤 Esporta (.libresistema)</a>
+        </div>
       </div>
 
       <div class="sect" data-sect="regole">
@@ -306,6 +334,8 @@
     <li>La <b>cartella</b> nel menu a sinistra tiene da parte le finestre delle schede: trascinaci sopra la loro barra, e la manopola ne cambia la dimensione.</li>
     <li>Con <b>Musica</b> incolli un link di YouTube per tutti; il volume però è tuo e non tocca quello degli altri.</li>
     <li>La <b>Nebbia di guerra</b> è uno strumento del menu: accendila per la scena e dipingi con «scopri» o «copri». Per i giocatori la parte coperta è nera e i segnalini che ci stanno sotto non gli arrivano nemmeno.</li>
+    <li>Il <b>📚 Compendio</b> (nel pannello di destra) ha mostri, incantesimi, oggetti, classi e regole dell'SRD: trascina un mostro sulla mappa per avere segnalino e scheda, un oggetto o un incantesimo su una scheda per aggiungerlo. In chat <b>@Palla di fuoco</b> diventa un link.</li>
+    <li>In cima a ogni scheda scegli <b>Pubblico/Privato</b> e <b>Svantaggio/Normale/Vantaggio</b>: con due d20 vedi tutti e due i risultati. «Nuova scheda» → <b>🧭 Crea passo passo</b> costruisce il personaggio; <b>⬆ Livello</b> lo fa salire.</li>
     <li>Per giocare a distanza basta aprire <b>LIBRE VTT</b> e scegliere «Conduco io» o «Mi unisco»: permessi, scena mostrata, schede e provvedimenti si regolano nel pannello su <b>localhost:4000</b>.</li>
   </ul>
   <div class="dialogBtns"><button id="helpOk" type="button" class="btn">Ho capito</button></div>
@@ -329,6 +359,13 @@
 <script src="turni.js"></script>
 <script src="undo.js"></script>
 <script src="note.js"></script>
+<script src="scene-mini.js"></script>
+<script src="sheet-gen.js"></script>
+<script src="sistema.js"></script>
+<script src="compendio.js"></script>
+<script src="compendio-import.js"></script>
+<script src="tiri-scheda.js"></script>
+<script src="creazione.js"></script>
 <script src="mobile.js"></script>
 </body>
 </html>

@@ -156,6 +156,225 @@ function saveState(req, res, q) {
   });
 }
 
+// ---------- il sistema di gioco della campagna ----------
+// campagna.json → sistema.id: uno di quelli del programma (sistemi/<id>/) oppure «personalizzato»,
+// che sta nella campagna (sistema/) e si può modificare dal tavolo. Il browser lo legge da /sistema/….
+const META = path.join(CAMP, 'campagna.json');
+const leggiMeta = () => { try { return JSON.parse(fs.readFileSync(META, 'utf8')) || {}; } catch { return {}; } };
+function cartellaSistema() {
+  const m = leggiMeta(), id = m.sistema && m.sistema.id;
+  if (id === 'personalizzato' && fs.existsSync(path.join(CAMP, 'sistema', 'sistema.json'))) return { dir: path.join(CAMP, 'sistema'), id, mio: true };
+  const nome = /^[\w.-]+$/.test(id || '') && fs.existsSync(path.join(ROOT, 'sistemi', id, 'sistema.json')) ? id : 'dnd5e-2014';
+  return { dir: path.join(ROOT, 'sistemi', nome), id: nome, mio: false, scelto: !!id };
+}
+function infoSistema(res) {
+  const c = cartellaSistema();
+  let j = {}; try { j = JSON.parse(fs.readFileSync(path.join(c.dir, 'sistema.json'), 'utf8')); } catch {}
+  json(res, 200, { id: c.id, nome: j.nome || c.id, personalizzato: c.mio, scelto: c.scelto !== false });
+}
+// salva un file del sistema personalizzato (solo sistema.json, formule.json e lingue/*.json)
+function salvaSistema(req, res, q) {
+  const c = cartellaSistema();
+  if (!c.mio) return send(res, 409, 'Il sistema della campagna non è personalizzato');
+  const nome = String(q.get('file') || '');
+  if (!/^(sistema|formule)\.json$|^lingue\/[a-z]{2}\.json$/.test(nome)) return send(res, 400, 'File non valido');
+  const parti = []; let n = 0, troppo = false;
+  req.on('data', d => { n += d.length; if (n > 2 * 1024 * 1024) { troppo = true; send(res, 413, 'Troppo grande'); req.destroy(); } else parti.push(d); });
+  req.on('end', () => {
+    if (troppo) return;
+    let j; try { j = JSON.parse(Buffer.concat(parti).toString('utf8')); } catch { return send(res, 400, 'Non è JSON valido'); }
+    if (nome === 'sistema.json') { if (j.formato !== 'libre-vtt-sistema') return send(res, 400, 'Manca «formato»'); j.id = 'personalizzato'; }
+    if (nome === 'formule.json' && j.formato !== 'libre-vtt-formule') return send(res, 400, 'Manca «formato»');
+    const f = path.join(c.dir, nome);
+    fs.mkdirSync(path.dirname(f), { recursive: true });
+    fs.writeFileSync(f + '.tmp', JSON.stringify(j, null, 2)); fs.renameSync(f + '.tmp', f);
+    if (nome === 'sistema.json') { const m = leggiMeta(); m.sistema = { id: 'personalizzato', nome: String(j.nome || 'Sistema personalizzato').slice(0, 60) }; fs.writeFileSync(META, JSON.stringify(m, null, 2)); }
+    json(res, 200, { ok: true });
+  });
+}
+// «rendilo personalizzato»: copia il sistema del programma dentro la campagna, per poterlo cambiare
+function personalizzaSistema(res) {
+  const c = cartellaSistema();
+  if (c.mio) return json(res, 200, { ok: true });
+  const dest = path.join(CAMP, 'sistema');
+  if (fs.existsSync(dest)) fs.renameSync(dest, path.join(CAMP, 'sistema-precedente-' + Date.now().toString(36)));
+  fs.cpSync(c.dir, dest, { recursive: true });
+  const j = JSON.parse(fs.readFileSync(path.join(dest, 'sistema.json'), 'utf8'));
+  j.id = 'personalizzato'; j.nome = j.nome + ' (personalizzato)';
+  fs.writeFileSync(path.join(dest, 'sistema.json'), JSON.stringify(j, null, 2));
+  const m = leggiMeta(); m.sistema = { id: 'personalizzato', nome: j.nome }; fs.writeFileSync(META, JSON.stringify(m, null, 2));
+  json(res, 200, { ok: true });
+}
+// esporta il sistema come .libresistema (uno zip della sua cartella)
+function esportaSistema(res) {
+  const c = cartellaSistema();
+  const { creaZip } = require('./zip');
+  const tmp = path.join(require('os').tmpdir(), 'libre-sistema-' + Date.now().toString(36) + '.zip');
+  try {
+    creaZip(c.dir, tmp, { radice: '' });
+    const b = fs.readFileSync(tmp);
+    let nome = 'sistema'; try { nome = JSON.parse(fs.readFileSync(path.join(c.dir, 'sistema.json'), 'utf8')).nome || nome; } catch {}
+    res.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(nome.replace(/[\\/:*?"<>|]+/g, ' ').trim() + '.libresistema')}`, 'Cache-Control': 'no-store' });
+    res.end(b);
+  } catch (e) { send(res, 500, 'Non riesco a esportarlo: ' + e.message); }
+  finally { fs.rm(tmp, { force: true }, () => {}); }
+}
+
+// ---------- il compendio ----------
+// I pacchetti di base vengono col sistema (sistema/compendio/<id>/); quelli importati o fatti a mano
+// stanno nella campagna (compendio/<id>/). Ogni pacchetto: pacchetto.json + voci/<tipo>.json (+ immagini/).
+// compendio/visibilita.json: { pacchetti: { id: 'tutti'|'master' }, voci: { 'pacchetto|voce': 'master'|'tutti' }, giocatoriImportano: bool }
+const COMP = path.join(CAMP, 'compendio');
+const ID_PACK = /^[\w.-]{1,60}$/;
+function leggiJsonF(f, d = null) { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } }
+function elencoCompendio(res) {
+  const out = [];
+  const giro = (dir, base, dove) => {
+    let nomi = []; try { nomi = fs.readdirSync(dir); } catch {}
+    for (const n of nomi) {
+      if (!ID_PACK.test(n) || n.startsWith('.')) continue;
+      const j = leggiJsonF(path.join(dir, n, 'pacchetto.json'));
+      if (!j || j.formato !== 'libre-vtt-pacchetto') continue;
+      let tipi = []; try { tipi = fs.readdirSync(path.join(dir, n, 'voci')).filter(f => f.endsWith('.json')).map(f => f.slice(0, -5)); } catch {}
+      out.push({ ...j, id: n, base, url: dove + n + '/', tipi });
+    }
+  };
+  giro(path.join(cartellaSistema().dir, 'compendio'), true, 'sistema/compendio/');
+  giro(COMP, false, 'compendio/');
+  json(res, 200, { pacchetti: out, visibilita: leggiJsonF(path.join(COMP, 'visibilita.json'), { pacchetti: {}, voci: {} }) });
+}
+const corpoBin = (req, res, max, fn) => {
+  const parti = []; let n = 0, troppo = false;
+  req.on('data', d => { n += d.length; if (n > max) { troppo = true; send(res, 413, 'Troppo grande'); req.destroy(); } else parti.push(d); });
+  req.on('end', () => { if (!troppo) fn(Buffer.concat(parti)); });
+};
+const idLibero = base => { let id = String(base || 'pacchetto').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'pacchetto', i = 2, x = id; while (fs.existsSync(path.join(COMP, x))) x = id + '-' + i++; return x; };
+// un .librepack (zip) da importare
+function importaPacchetto(req, res) {
+  corpoBin(req, res, 80 * 1024 * 1024, b => {
+    if (b.length < 4 || b.readUInt32LE(0) !== 0x04034b50) return send(res, 400, 'Non è un file .librepack (zip)');
+    const { estraiZip } = require('./zip');
+    const tmpZ = path.join(require('os').tmpdir(), 'libre-pack-' + Date.now().toString(36) + '.zip'), tmp = tmpZ + '.d';
+    try {
+      fs.writeFileSync(tmpZ, b);
+      estraiZip(tmpZ, tmp, { maxByte: 300 * 1024 * 1024, maxVoci: 20000 });
+      let radice = tmp;
+      if (!fs.existsSync(path.join(tmp, 'pacchetto.json'))) { const d = fs.readdirSync(tmp).filter(n => !n.startsWith('.')); if (d.length === 1 && fs.existsSync(path.join(tmp, d[0], 'pacchetto.json'))) radice = path.join(tmp, d[0]); }
+      const j = leggiJsonF(path.join(radice, 'pacchetto.json'));
+      if (!j || j.formato !== 'libre-vtt-pacchetto') return send(res, 400, 'Manca pacchetto.json: non è un pacchetto di LIBRE VTT');
+      fs.mkdirSync(COMP, { recursive: true });
+      const id = idLibero(j.id || j.nome);
+      fs.renameSync(radice, path.join(COMP, id));
+      j.id = id; delete j.base;
+      fs.writeFileSync(path.join(COMP, id, 'pacchetto.json'), JSON.stringify(j, null, 2));
+      json(res, 200, { ok: true, id, nome: j.nome });
+    } catch (e) { send(res, 400, 'Non riesco a importarlo: ' + e.message); }
+    finally { fs.rm(tmpZ, { force: true }, () => {}); fs.rm(tmp, { recursive: true, force: true }, () => {}); }
+  });
+}
+// un pacchetto (o delle voci da aggiungere) in JSON: { pacchetto: {...}, voci: { tipo: [voce…] }, unisci: id? }
+function salvaPacchetto(req, res) {
+  corpoBin(req, res, 60 * 1024 * 1024, b => {
+    let m; try { m = JSON.parse(b.toString('utf8')); } catch { return send(res, 400, 'JSON non valido'); }
+    const p = m.pacchetto || {};
+    fs.mkdirSync(COMP, { recursive: true });
+    const id = m.unisci && ID_PACK.test(m.unisci) && fs.existsSync(path.join(COMP, m.unisci, 'pacchetto.json')) ? m.unisci : idLibero(p.id || p.nome);
+    const dir = path.join(COMP, id);
+    fs.mkdirSync(path.join(dir, 'voci'), { recursive: true });
+    const vecchio = leggiJsonF(path.join(dir, 'pacchetto.json'), {});
+    const pk = { ...vecchio, ...p, formato: 'libre-vtt-pacchetto', versione: 1, id };
+    delete pk.base;
+    const conta = { ...(vecchio.voci || {}) };
+    for (const [tipo, arr] of Object.entries(m.voci || {})) {
+      if (!/^[a-z]{2,20}$/.test(tipo) || !Array.isArray(arr)) continue;
+      const f = path.join(dir, 'voci', tipo + '.json');
+      const prima = new Map((leggiJsonF(f, []) || []).map(v => [v.id, v]));
+      for (const v of arr) { if (!v || !v.nome) continue; v.tipo = tipo; v.id = v.id || tipo + ':' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); if (v._via) prima.delete(v.id); else prima.set(v.id, v); }
+      const tutte = [...prima.values()].filter(v => !v._via).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'it'));
+      fs.writeFileSync(f, JSON.stringify(tutte));
+      conta[tipo] = tutte.length;
+    }
+    pk.voci = conta;
+    fs.writeFileSync(path.join(dir, 'pacchetto.json'), JSON.stringify(pk, null, 2));
+    json(res, 200, { ok: true, id });
+  });
+}
+function eliminaPacchetto(res, q) {
+  const id = String(q.get('id') || '');
+  if (!ID_PACK.test(id) || !fs.existsSync(path.join(COMP, id))) return send(res, 404, 'Pacchetto sconosciuto');
+  const via = path.join(COMP, '.eliminati'); fs.mkdirSync(via, { recursive: true });
+  fs.renameSync(path.join(COMP, id), path.join(via, id + '-' + Date.now().toString(36)));     // si può recuperare a mano
+  json(res, 200, { ok: true });
+}
+function esportaPacchetto(res, q) {
+  const id = String(q.get('id') || '');
+  let dir = path.join(COMP, id);
+  if (!ID_PACK.test(id)) return send(res, 400, 'no');
+  if (!fs.existsSync(dir)) dir = path.join(cartellaSistema().dir, 'compendio', id);
+  if (!fs.existsSync(path.join(dir, 'pacchetto.json'))) return send(res, 404, 'Pacchetto sconosciuto');
+  const { creaZip } = require('./zip');
+  const tmp = path.join(require('os').tmpdir(), 'libre-pack-' + Date.now().toString(36) + '.zip');
+  try {
+    creaZip(dir, tmp, { radice: '' });
+    const j = leggiJsonF(path.join(dir, 'pacchetto.json'), {});
+    res.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(String(j.nome || id).replace(/[\\/:*?"<>|]+/g, ' ').trim() + '.librepack')}`, 'Cache-Control': 'no-store' });
+    res.end(fs.readFileSync(tmp));
+  } catch (e) { send(res, 500, e.message); } finally { fs.rm(tmp, { force: true }, () => {}); }
+}
+function salvaVisibilita(req, res) {
+  corpoBin(req, res, 4 * 1024 * 1024, b => {
+    let j; try { j = JSON.parse(b.toString('utf8')); } catch { return send(res, 400, 'JSON non valido'); }
+    fs.mkdirSync(COMP, { recursive: true });
+    fs.writeFileSync(path.join(COMP, 'visibilita.json'), JSON.stringify({ pacchetti: j.pacchetti || {}, voci: j.voci || {}, giocatoriImportano: !!j.giocatoriImportano }, null, 1));
+    json(res, 200, { ok: true });
+  });
+}
+
+// ---------- Open5e: la sua API (v2) letta passando da qui ----------
+// Il tavolo chiede /api/open5e?percorso=creatures/&search=…: solo GET, solo api.open5e.com/v2 e solo
+// gli elenchi che servono al compendio. (Dal browser direttamente non sempre si può, e così si
+// controlla cosa esce.)
+const OPEN5E_OK = new Set(['documents/', 'creatures/', 'spells/', 'items/', 'magicitems/', 'weapons/', 'armor/', 'feats/', 'species/', 'backgrounds/', 'conditions/', 'classes/', 'rules/']);
+function open5e(res, q) {
+  const percorso = String(q.get('percorso') || '');
+  if (!OPEN5E_OK.has(percorso)) return send(res, 400, 'Elenco non permesso');
+  const u = new URL('https://api.open5e.com/v2/' + percorso);
+  for (const [k, v] of q) if (k !== 'percorso' && /^[\w_]{1,40}$/.test(k)) u.searchParams.set(k, String(v).slice(0, 200));
+  u.searchParams.set('format', 'json');
+  const r = require('https').get(u, { timeout: 20000, headers: { 'User-Agent': 'LIBRE VTT' } }, x => {
+    if (x.statusCode !== 200) { x.resume(); return send(res, 502, 'Open5e ha risposto ' + x.statusCode); }
+    const parti = []; let n = 0;
+    x.on('data', d => { n += d.length; if (n > 30 * 1024 * 1024) { x.destroy(); } else parti.push(d); });
+    x.on('end', () => send(res, 200, Buffer.concat(parti), MIME['.json']));
+  });
+  r.on('timeout', () => r.destroy(new Error('tempo scaduto')));
+  r.on('error', e => { if (!res.headersSent) send(res, 502, 'Open5e non risponde (' + e.message + '): sei collegato a internet?'); });
+}
+
+// Miniature delle scene: data/miniature/<id scena>.webp (le fa il browser quando lasci una scena)
+const MINI = path.join(DATA, 'miniature');
+const miniFile = q => { const id = String(q.get('id') || ''); return /^[\w-]{1,80}$/.test(id) ? path.join(MINI, id + '.webp') : null; };
+function getMini(res, q) {
+  const f = miniFile(q); if (!f) return send(res, 400, 'Scena non valida');
+  fs.readFile(f, (e, d) => e ? send(res, 404, 'Non c\'è') : (res.writeHead(200, { 'Content-Type': 'image/webp', 'Cache-Control': 'no-cache' }), res.end(d)));
+}
+function saveMini(req, res, q) {
+  const f = miniFile(q); if (!f) return send(res, 400, 'Scena non valida');
+  const chunks = []; let size = 0, tooBig = false;
+  req.on('data', c => { size += c.length; if (size > 400 * 1024) { tooBig = true; send(res, 413, 'Troppo grande'); req.destroy(); } else chunks.push(c); });
+  req.on('end', () => {
+    if (tooBig) return;
+    const b = Buffer.concat(chunks);
+    if (b.length < 12 || b.toString('ascii', 0, 4) !== 'RIFF' || b.toString('ascii', 8, 12) !== 'WEBP') return send(res, 400, 'Non è un\'immagine webp');
+    try { fs.mkdirSync(MINI, { recursive: true }); fs.writeFileSync(f + '.tmp', b); fs.renameSync(f + '.tmp', f); json(res, 200, { ok: true }); }
+    catch { send(res, 500, 'Non riesco a salvarla'); }
+  });
+}
+function deleteMini(res, q) {
+  const f = miniFile(q); if (!f) return send(res, 400, 'Scena non valida');
+  fs.rm(f, { force: true }, () => json(res, 200, { ok: true }));
+}
+
 function createFolder(res, q) {
   const name = clean(q.get('name'));
   if (!name) return send(res, 400, 'Nome non valido');
@@ -198,6 +417,20 @@ function handle(req, res) {
     if (route === 'GET /api/boot') return json(res, 200, { boot: BOOT });
     if (route === 'GET /api/state') return getState(res, q);
     if (route === 'PUT /api/state') return saveState(req, res, q);
+    if (route === 'GET /api/miniatura') return getMini(res, q);
+    if (route === 'GET /api/sistema') return infoSistema(res);
+    if (route === 'GET /api/compendio') return elencoCompendio(res);
+    if (route === 'GET /api/open5e') return open5e(res, q);
+    if (route === 'POST /api/compendio/importa') return importaPacchetto(req, res);
+    if (route === 'POST /api/compendio/pacchetto') return salvaPacchetto(req, res);
+    if (route === 'DELETE /api/compendio') return eliminaPacchetto(res, q);
+    if (route === 'GET /api/compendio/esporta') return esportaPacchetto(res, q);
+    if (route === 'PUT /api/compendio/visibilita') return salvaVisibilita(req, res);
+    if (route === 'PUT /api/sistema') return salvaSistema(req, res, q);
+    if (route === 'POST /api/sistema/personalizza') return personalizzaSistema(res);
+    if (route === 'GET /api/sistema/esporta') return esportaSistema(res);
+    if (route === 'PUT /api/miniatura') return saveMini(req, res, q);
+    if (route === 'DELETE /api/miniatura') return deleteMini(res, q);
     return send(res, 405, 'Richiesta non consentita');
   }
   if (req.method !== 'GET') return send(res, 405, 'Metodo non consentito');
@@ -214,6 +447,19 @@ function handle(req, res) {
     if (!info) return send(res, 404, 'Non trovato');
     return fs.readFile(path.join(DATA, 'assets', dep[1] + (info.ext || '')), (err, d) => err ? send(res, 404, 'Non trovato')
       : (res.writeHead(200, { 'Content-Type': info.mime || 'application/octet-stream', 'Cache-Control': 'public, max-age=31536000, immutable' }), res.end(d)));
+  }
+  // i pacchetti del compendio della campagna
+  if (rel.startsWith('/compendio/')) {
+    const file = path.join(COMP, rel.slice(11)), type = MIME[path.extname(file).toLowerCase()];
+    if (!file.startsWith(COMP + path.sep) || !type || rel.includes('/.')) return send(res, 404, 'Non trovato');
+    return fs.readFile(file, (err, d) => err ? send(res, 404, 'Non trovato') : send(res, 200, d, type));
+  }
+  // i file del sistema di gioco della campagna (sistema.json, formule.json, compendio, lingue)
+  if (rel.startsWith('/sistema/')) {
+    const dir = cartellaSistema().dir, file = path.join(dir, rel.slice(9));
+    const type = MIME[path.extname(file).toLowerCase()];
+    if (!file.startsWith(dir + path.sep) || !type) return send(res, 404, 'Non trovato');
+    return fs.readFile(file, (err, d) => err ? send(res, 404, 'Non trovato') : send(res, 200, d, type));
   }
   // le immagini vengono dalla campagna, tutto il resto dal programma
   const base = rel.startsWith('/assets/') ? CAMP : ROOT;

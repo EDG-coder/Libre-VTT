@@ -32,7 +32,7 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 PROGETTO = os.path.dirname(QUI)
 
 # Quello che va installato: i file del programma, non le campagne o i dati di chi lo costruisce.
-PROGRAMMA = ['*.html', '*.js', '*.css', 'favicon.svg', 'package.json', 'formule.json', 'icona.png', 'icona.ico']
+PROGRAMMA = ['*.html', '*.js', '*.css', 'favicon.svg', 'package.json', 'icona.png', 'icona.ico']
 EXTRA = ['assets/Sfondi/main.webp', 'assets/Sfondi/main-en.webp', 'uffa-link/Cargo.toml', 'uffa-link/Cargo.lock']
 
 
@@ -47,6 +47,11 @@ def file_programma():
         p = os.path.join(PROGETTO, rel)
         if os.path.isfile(p):
             out.append((p, rel))
+    # i sistemi di gioco (regole, formule, compendio di base): tutta la cartella
+    for radice, _, nomi in sorted(os.walk(os.path.join(PROGETTO, 'sistemi'))):
+        for nome in sorted(nomi):
+            p = os.path.join(radice, nome)
+            out.append((p, os.path.relpath(p, PROGETTO).replace(os.sep, '/')))
     src = os.path.join(PROGETTO, 'uffa-link', 'src')
     for nome in sorted(os.listdir(src)):
         out.append((os.path.join(src, nome), 'uffa-link/src/' + nome))

@@ -1,6 +1,6 @@
 // ---------- Le formule del sistema di gioco (formule.json) ----------
 // Le regole che le schede calcolano (modificatore, competenza, abilità, CD degli incantesimi…)
-// stanno in formule.json, così un altro sistema potrà averne di sue senza toccare il codice.
+// stanno in formule.json del sistema della campagna (sistemi/<id>/formule.json), così un altro sistema potrà averne di sue senza toccare il codice.
 // Qui c'è un interprete piccolo e sicuro: niente eval, solo numeri, i nomi che la formula
 // dichiara in «usa», + - * / tra parentesi e poche funzioni.
 // Finché il file non è arrivato (o se manca, o se una formula è scritta male) si usa il calcolo
@@ -104,11 +104,8 @@
       return true;
     }
   };
-  // si legge subito; quando arriva, le schede aperte si ricalcolano (con gli stessi numeri)
-  if (typeof fetch === 'function' && typeof location !== 'undefined' && /^https?:/.test(location.protocol)) {
-    fetch('formule.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).then(j => {
-      if (!FORMULE.leggi(j)) return;
-      if (typeof wins !== 'undefined' && typeof recalc === 'function') for (const w of wins.values()) { try { recalc(w._body || w.querySelector('.sbody') || w, w._sheet); } catch {} }
-    }).catch(() => {});
-  }
+  // il file lo legge sistema.js (sistema/formule.json, quello della campagna); poi si ricalcolano le schede aperte
+  window.FORMULE.ricalcola = () => {
+    if (typeof wins !== 'undefined' && typeof recalc === 'function') for (const w of wins.values()) { try { if (w._sheet) recalc(w._body, w._sheet); } catch {} }
+  };
 })();

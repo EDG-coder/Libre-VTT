@@ -267,9 +267,13 @@
 .stdWin .sbody { touch-action: pan-x pan-y; }
 
 /* attacchi: il riquadro scorre quando le righe sono più di sei */
-.sPage .sAtk { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; overscroll-behavior: contain; }
+.sPage .sAtk { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; overscroll-behavior: contain; }
+.sPage .sAtk::-webkit-scrollbar { display: none; }   /* la barra coprirebbe i dadi: si scorre con rotella o dito */
 .sPage .sAtk > * { position: absolute; margin: 0; }
 /* valori calcolati (CA senza armatura, CD e attacco degli incantesimi): si leggono, ma più chiari */
 .stdWin .sPage .sF[data-f="ac"]::placeholder, .stdWin .sPage .sF[data-f="spcd"]::placeholder, .stdWin .sPage .sF[data-f="spatk"]::placeholder {
   color: color-mix(in srgb, var(--sh-fg) 55%, transparent); font-style: normal;
 }
+.sPage .sAtk .sAtkPiu { border: 1px dashed color-mix(in srgb, var(--sh-accent) 60%, transparent); border-radius: 4px; background: transparent;
+  color: var(--sh-accent); font-size: 10px; line-height: 1; padding: 0; cursor: pointer; }
+.sPage .sAtk .sAtkPiu:hover { background: color-mix(in srgb, var(--sh-accent) 15%, transparent); }

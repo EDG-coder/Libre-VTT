@@ -323,6 +323,8 @@ async function applyWorld(w) {
   try {
     mergeSheets(w.sheets);
     if (w.notes && typeof noteDalServer === 'function') noteDalServer(w.notes, false);
+    if (w.sistema && typeof sistemaDalMaster === 'function') sistemaDalMaster(w.sistema);
+    if (w.compendio && typeof compendioDalMaster === 'function') compendioDalMaster(w.compendio);
     if (Array.isArray(w.chat)) {
       chat = w.chat;
       if (typeof renderChat === 'function') renderChat();
@@ -423,7 +425,8 @@ async function netPushBoard() {
         if (el) el.dataset.gid = ph.gid;
       }
     }
-    intent('board', { board: { active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, turni: settings.turni || null, scenes: b.scenes, sheets } });
+    const compendio = typeof COMPENDIO !== 'undefined' && COMPENDIO.perRete ? await COMPENDIO.perRete().catch(() => null) : null;
+    intent('board', { board: { compendio, active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, turni: settings.turni || null, scenes: b.scenes, sheets, sistema: typeof SISTEMA !== 'undefined' && SISTEMA.perRete ? SISTEMA.perRete() : null } });
   } finally { NET.pushing = false; }
 }
 
@@ -499,7 +502,7 @@ var rollExpr = (prev => function (expr, label) {
   if (!can('roll')) { netSay('Non puoi tirare i dadi.', 'warn'); return true; }
   const d = diceApply(expr);
   if (!parseExpr(d.expr)) return false;                     // si vede subito se è scritto male
-  intent('roll', { expr: d.expr, label: label || String(expr).replace(/\s+/g, ''), secret: d.secret });
+  intent('roll', { expr: d.expr, label: label || String(expr).replace(/\s+/g, ''), secret: d.secret, doppio: !!window.tiroDoppio });
   diceLast.textContent = 'Tiro mandato al server…';
   return true;
 })(rollExpr);

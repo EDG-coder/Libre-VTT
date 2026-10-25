@@ -1,0 +1,22 @@
+{
+  "formato": "libre-vtt-formule",
+  "versione": 1,
+  "sistema": "personalizzato",
+  "nome": "Il mio sistema",
+  "nota": "Le formule delle schede. Si scrivono con numeri, nomi, + - * / e parentesi; funzioni: floor, ceil, round, abs, max, min e se(condizione, sì, no), dove la condizione vale «sì» se non è 0. Ogni formula riceve solo i nomi elencati in «usa».",
+  "formule": {
+    "modificatore": {
+      "usa": [
+        "punteggio"
+      ],
+      "formula": "floor((punteggio - 10) / 2)"
+    },
+    "iniziativa": {
+      "usa": [
+        "modDes",
+        "bonus"
+      ],
+      "formula": "modDes + bonus"
+    }
+  }
+}
