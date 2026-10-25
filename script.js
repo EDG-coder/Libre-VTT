@@ -634,20 +634,32 @@ function captureScene() {
   if (!cur) return;
   cur.view = { x: view.x, y: view.y, s: view.s };
   cur.board = rectOf(board);
-  cur.bg = bgBox.hidden ? null : { ...rectOf(bgBox), url: bgBox.dataset.url, gid: bgBox.dataset.gid || undefined, aid: bgBox.dataset.aid === '' ? undefined : +bgBox.dataset.aid };
+  cur.bg = bgBox.hidden ? null : { ...rectOf(bgBox), url: rifImmagine(bgBox.dataset.url, bgBox.dataset.gid), gid: bgBox.dataset.gid || undefined, aid: bgBox.dataset.aid === '' ? undefined : +bgBox.dataset.aid };
   cur.photos = [...world.querySelectorAll('.photo')].map(p => ({
     id: p.dataset.pid && p.dataset.pid !== 'pending' ? p.dataset.pid : (p.dataset.pid = uid()),
     owner: p.dataset.owner || undefined, gid: p.dataset.gid || undefined,
-    url: p._shape ? undefined : p.querySelector('img').getAttribute('src'), shape: p._shape, layer: p.dataset.layer, aid: p.dataset.aid === undefined ? undefined : +p.dataset.aid,
+    url: p._shape ? undefined : rifImmagine(p.querySelector('img').getAttribute('src'), p.dataset.gid), shape: p._shape, layer: p.dataset.layer, aid: p.dataset.aid === undefined ? undefined : +p.dataset.aid,
     l: num(p, 'left'), t: num(p, 'top'), w: num(p, 'width'), h: num(p, 'height'), z: +p.style.zIndex, sheet: p.dataset.sheet, name: p.dataset.name, round: p.dataset.round, ring: p.dataset.ring,
     fx: p.dataset.fx || undefined, crossed: p.dataset.crossed ? true : undefined, vals: p.dataset.vals || undefined
   }));
   if (typeof drawSnapshot === 'function') cur.draw = drawSnapshot();
 }
 
+// Un'immagine si salva sempre con il suo riferimento stabile («gs:<hash>» per il deposito della
+// partita, «assets/…» per quelle della campagna), mai con l'indirizzo calcolato per mostrarla
+// (http://127.0.0.1:<porta>/asset/<hash>): la porta cambia a ogni avvio e l'immagine sparirebbe.
+// Le campagne salvate così dalle versioni prima si sistemano da sole quando si rileggono.
+function rifImmagine(url, gid) {
+  if (gid) return 'gs:' + gid;
+  const m = /^https?:\/\/(?:127\.0\.0\.1|localhost):\d+\/asset\/([a-f0-9]{64})/.exec(String(url || ''));
+  if (m) return 'gs:' + m[1];
+  const a = /^https?:\/\/(?:127\.0\.0\.1|localhost):\d+\/(assets\/.+)$/.exec(String(url || ''));
+  return a ? decodeURI(a[1]) : url;
+}
 // i link blob: durano solo una sessione: in modalità "solo browser" si ritrovano tramite l'id dell'asset
 function resolveUrl(o) {
   if (!o || !o.url) return null;
+  if (!o.gid && /^https?:/.test(o.url)) { const r = rifImmagine(o.url); if (r !== o.url) o = { ...o, url: r }; }
   // «gs:<hash>» è un file del deposito della sessione: lo serve il server di gioco locale
   const gid = o.gid || (o.url.startsWith('gs:') ? o.url.slice(3) : null);
   if (gid && typeof netAssetUrl === 'function') return netAssetUrl(gid);
@@ -1107,9 +1119,31 @@ function msgEl(m) {
   } else {
     d.className = 'msg';
     if (who) d.append(who);
-    d.append(document.createTextNode(m.text));
+    if (m.whisper) {                                   // sussurro: lo vedono solo i due e chi conduce
+      d.classList.add('whisper');
+      const w = document.createElement('span'); w.className = 'wh';
+      w.textContent = tr('🤫 sussurro a {nome}', { nome: m.whisper.toName });
+      w.title = tr('Lo vedete solo voi due e il master');
+      d.append(w, ' ');
+    }
+    d.append(...testoConTiri(m.text));
   }
   return d;
+}
+// [[1d20+5]] o [[2d6+3 | Danni]] dentro un messaggio: diventa un pulsante che tira (come nelle schede)
+function testoConTiri(t) {
+  const out = [], re = /\[\[\s*([^\]|]+?)\s*(?:\|\s*([^\]]+?)\s*)?\]\]/g;
+  let da = 0, m;
+  while ((m = re.exec(String(t)))) {
+    if (m.index > da) out.push(document.createTextNode(t.slice(da, m.index)));
+    const b = document.createElement('button'), expr = m[1], nome = m[2] || m[1];
+    b.type = 'button'; b.className = 'chipRoll'; b.textContent = '🎲 ' + nome; b.title = expr;
+    b.addEventListener('click', () => { if (typeof rollExpr === 'function' && !rollExpr(expr, nome)) addChat({ kind: 'text', text: 'Tiro non valido: ' + expr }); });
+    out.push(b);
+    da = re.lastIndex;
+  }
+  if (da < String(t).length) out.push(document.createTextNode(String(t).slice(da)));
+  return out;
 }
 // La chat scorre da sola solo se eri già in fondo (o quasi); altrimenti compare «Nuovi messaggi ↓».
 const chatInFondo = () => chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 48;
@@ -1284,8 +1318,8 @@ const localStore = (() => {
 
 let store = serverStore, data = { folders: [], items: [] }, current = '';
 
-async function reload() {
-  try { data = await store.list(); } catch (err) { setStatus('❌ ' + err.message); return; }
+async function reload(gia) {
+  try { data = gia || await store.list(); } catch (err) { setStatus('❌ ' + err.message); return; }
   if (current && !data.folders.some(f => f.name === current)) current = '';
   render();
 }
@@ -1506,6 +1540,27 @@ function diceShowLast(m) {
   diceLast.textContent = `${m.label}${tag}: ` + (kept.length === 1 && !m.mod && !drop.size ? m.total : (parts ? parts + ' → ' : '') + m.total) +
     (m.secret ? ' · 🔒 segreto' : '');
   fitDice();
+  diceMostraGrande(m, tag);
+}
+// Con la chat chiusa il risultato si vedeva solo nella riga piccola dei dadi: compare anche grande,
+// in alto al centro, per qualche secondo (un tocco lo chiude).
+let dicePopTimer = 0;
+function diceMostraGrande(m, tag) {
+  const chatVista = document.body.classList.contains('menu-open') && $('tab-chat') && $('tab-chat').classList.contains('active');
+  if (chatVista) return;
+  let pop = $('dicePop');
+  if (!pop) {
+    pop = document.createElement('div'); pop.id = 'dicePop'; pop.setAttribute('role', 'status');
+    pop.addEventListener('click', () => { pop.classList.remove('on'); });
+    document.body.appendChild(pop);
+  }
+  const lab = document.createElement('span'), tot = document.createElement('b');
+  lab.textContent = m.label + tag + (m.secret ? ' · 🔒' : '');
+  tot.textContent = m.total;
+  pop.replaceChildren(lab, tot);
+  pop.classList.remove('on'); void pop.offsetWidth; pop.classList.add('on');
+  clearTimeout(dicePopTimer);
+  dicePopTimer = setTimeout(() => pop.classList.remove('on'), 4500);
 }
 function diceSyncModes() {
   for (const b of $('diceAdv').children) { const on = b.dataset.adv === diceMode.adv; b.classList.toggle('active', on); b.setAttribute('aria-checked', on); }
@@ -1565,13 +1620,14 @@ diceToggle.addEventListener('click', () => {
 
 
 addEventListener('DOMContentLoaded', async () => {      // dopo che sheets.js ed extras.js sono stati letti
-  try { await serverStore.list(); online = true; modeMsg = 'Le foto vengono salvate nella cartella assets/.'; }
+  let primo = null;
+  try { primo = await serverStore.list(); online = true; modeMsg = 'Le foto vengono salvate nella cartella assets/.'; }
   catch {
     store = localStore;
     modeMsg = 'Server spento: le foto restano solo in questo browser. Per salvarle nella cartella assets/ avvia "node server.js" e apri http://localhost:3000.';
   }
   setStatus();
-  await reload();       // l'elenco degli assets serve per ritrovare le immagini delle scene
+  await reload(primo);  // l'elenco degli assets (già letto qui sopra) serve per ritrovare le immagini delle scene
   loadChat();
   loadBoard();
 });

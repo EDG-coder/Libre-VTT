@@ -20,7 +20,7 @@ const MIME = {
 };
 
 const DATA = path.join(CAMP, 'data');           // chat e stato della mappa (restano anche se spegni il server)
-const STATE_KEYS = new Set(['board', 'chat', 'sheets', 'chats']);
+const STATE_KEYS = new Set(['board', 'chat', 'sheets', 'chats', 'notes']);
 const BOOT = Date.now();               // cambia a ogni avvio del server (serve per mostrare la guida una volta)
 
 fs.mkdirSync(ASSETS, { recursive: true });
@@ -173,7 +173,17 @@ function deleteFolder(res, q) {
   } catch { send(res, 409, 'La cartella non è vuota'); }
 }
 
+// Contro il «DNS rebinding»: un sito aperto nel browser potrebbe far puntare il suo nome a
+// 127.0.0.1 e leggere le nostre risposte. Il browser però manda il suo nome nell'intestazione Host:
+// accettiamo solo 127.0.0.1, localhost o [::1], con la nostra porta.
+function hostLocale(req, porta) {
+  const h = String(req.headers.host || '').toLowerCase();
+  if (!h) return true;
+  const m = /^(127\.0\.0\.1|localhost|\[::1\])(?::(\d+))?$/.exec(h);
+  return !!m && (!m[2] || +m[2] === +porta);
+}
 function handle(req, res) {
+  if (!hostLocale(req, PORT)) return send(res, 403, 'Host non permesso');
   const url = new URL(req.url, 'http://localhost'), q = url.searchParams, p = url.pathname;
   if (p.startsWith('/api/')) {
     const origin = req.headers.origin;
@@ -194,6 +204,17 @@ function handle(req, res) {
   let rel;
   try { rel = decodeURIComponent(p); } catch { return send(res, 400, 'Richiesta non valida'); }
   if (rel.startsWith('/data/')) return send(res, 404, 'Non trovato');
+  // /asset/<hash>: le immagini del deposito della partita (data/assets), per giocare da soli
+  // una campagna nata in rete: senza server di gioco nessun altro le darebbe
+  const dep = /^\/asset\/([a-f0-9]{64})$/.exec(rel);
+  if (dep) {
+    let idx = {};
+    try { idx = JSON.parse(fs.readFileSync(path.join(DATA, 'assets.json'), 'utf8')) || {}; } catch {}
+    const info = idx[dep[1]];
+    if (!info) return send(res, 404, 'Non trovato');
+    return fs.readFile(path.join(DATA, 'assets', dep[1] + (info.ext || '')), (err, d) => err ? send(res, 404, 'Non trovato')
+      : (res.writeHead(200, { 'Content-Type': info.mime || 'application/octet-stream', 'Cache-Control': 'public, max-age=31536000, immutable' }), res.end(d)));
+  }
   // le immagini vengono dalla campagna, tutto il resto dal programma
   const base = rel.startsWith('/assets/') ? CAMP : ROOT;
   const file = path.join(base, rel === '/' ? 'index.html' : rel);

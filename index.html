@@ -68,6 +68,7 @@
     <div id="sceneMenu" hidden>
       <div id="sceneList"></div>
       <button id="sceneNew" type="button">＋ Nuova scena</button>
+      <a id="sceneHome" href="http://127.0.0.1:4100/" hidden>🏠 Torna alla home</a>
     </div>
   </div>
   <div id="layerSwitch" role="group" aria-label="Livello da modificare">
@@ -141,7 +142,7 @@
 
     <section id="tab-sheets" class="pane">
       <div class="row"><button id="sheetNew" type="button" class="btn">＋ Nuova scheda</button></div>
-      <p class="note">Doppio clic per aprire. Trascina una scheda sulla mappa per creare il segnalino collegato; clic destro per altre opzioni.</p>
+      <p class="note"><span class="soloMouse">Doppio clic per aprire. Trascina una scheda sulla mappa per creare il segnalino collegato; clic destro per altre opzioni.</span><span class="soloTocco">Tocca una scheda per aprirla. Tienila premuta per le altre opzioni, anche per metterla sulla mappa.</span></p>
       <div id="sheetList"></div>
     </section>
 
@@ -252,7 +253,7 @@
 
       <div class="sect" data-sect="sessione">
         <h4>Sessione</h4>
-        <p class="note" id="netState">Stai giocando da solo su questo computer.</p>
+        <p class="note" id="netState"></p>
         <label class="row">Il tuo nome <input id="netNameIn" type="text" maxlength="40" placeholder="Come ti chiamano" autocomplete="off"></label>
         <label class="row">Porta del server <input id="netPortIn" type="number" min="1" max="65535"></label>
         <div class="row">
@@ -292,14 +293,14 @@
 <dialog id="helpDialog">
   <h3>Benvenuto in LIBRE VTT</h3>
   <ul class="helpList">
-    <li><b>Tasto destro</b> trascinando: sposta la vista. <b>Clic destro</b> su qualsiasi cosa: altre opzioni.</li>
-    <li><b>Sinistro</b>: seleziona e sposta i segnalini (bordi blu per ridimensionare). Trascina su un punto libero per selezionarne <b>più di uno</b>.</li>
-    <li><b>Canc</b> elimina, <b>Ctrl/Cmd+C</b> e <b>V</b> copiano e incollano con tutte le impostazioni. <b>Rotellina</b>: zoom.</li>
-    <li><b>Frecce</b> spostano i segnalini selezionati (una casella con l'aggancio alla griglia, Maiusc per spostamenti fini). Lo strumento ◎ crea segnalini con nome, colore, immagine e scheda.</li>
+    <li class="soloMouse"><b>Tasto destro</b> trascinando: sposta la vista. <b>Clic destro</b> su qualsiasi cosa: altre opzioni.</li>
+    <li class="soloMouse"><b>Sinistro</b>: seleziona e sposta i segnalini (bordi blu per ridimensionare). Trascina su un punto libero per selezionarne <b>più di uno</b>.</li>
+    <li class="soloMouse"><b>Canc</b> elimina, <b>Ctrl/Cmd+C</b> e <b>V</b> copiano e incollano con tutte le impostazioni, <b>Ctrl/Cmd+Z</b> annulla (Maiusc per ripetere). <b>Rotellina</b>: zoom.</li>
+    <li class="soloMouse"><b>Frecce</b> spostano i segnalini selezionati (una casella con l'aggancio alla griglia, Maiusc per spostamenti fini). Lo strumento ◎ crea segnalini con nome, colore, immagine e scheda.</li>
     <li>Livelli in basso: <b>Segnalini</b>, <b>Nascosto</b> (immagini semitrasparenti, si muovono solo lì) e <b>Mappa</b>. Il menu in basso si chiude con la freccia che compare passando col mouse.</li>
-    <li><b>Tieni premuto</b> su un punto libero della mappa: ping.</li>
-    <li>I pulsanti nel <b>menu a sinistra</b> (dadi, penna, calcolatrice, righello, zoom) si possono trascinare fuori e rimettere a posto.</li>
-    <li>Nelle schede e in chat: <b>[[1d20+5]]</b> o <b>/r 2d6+3</b> per i tiri rapidi.</li>
+    <li class="soloMouse"><b>Tieni premuto</b> su un punto libero della mappa: ping.</li>
+    <li class="soloMouse">I pulsanti nel <b>menu a sinistra</b> (dadi, penna, calcolatrice, righello, zoom) si possono trascinare fuori e rimettere a posto.</li>
+    <li>Nelle schede e in chat: <b>[[1d20+5]]</b> o <b>/r 2d6+3</b> per i tiri rapidi. In chat <b>/w Nome messaggio</b> sussurra: lo vedete solo voi due e il master.</li>
     <li>La scheda <b>Standard</b> è la scheda italiana di D&amp;D 5e a tre pagine: clic sui valori tondi, sulle abilità, sui tiri salvezza e sulle armi (◎ colpire, ◆ danni) per tirare subito.</li>
     <li>Nello strumento <b>Segnalini</b>, «Immagine» apre l'editor di ritaglio: sposti e ingrandisci la foto sotto la maschera, togli lo sfondo con la bacchetta e rifinisci la sagoma con la gomma.</li>
     <li>La <b>cartella</b> nel menu a sinistra tiene da parte le finestre delle schede: trascinaci sopra la loro barra, e la manopola ne cambia la dimensione.</li>
@@ -311,6 +312,7 @@
 </dialog>
 <div id="ctx" hidden><button type="button">🗑 Elimina</button></div>
 <script src="script.js"></script>
+<script src="formule.js"></script>
 <script src="sheets.js"></script>
 <script src="sheet-std.js"></script>
 <script src="sheet-open.js"></script>
@@ -325,6 +327,8 @@
 <script src="fog.js"></script>
 <script src="token-fx.js"></script>
 <script src="turni.js"></script>
+<script src="undo.js"></script>
+<script src="note.js"></script>
 <script src="mobile.js"></script>
 </body>
 </html>

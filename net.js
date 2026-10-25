@@ -21,7 +21,7 @@ try {
 } catch {}
 try {
   const g = localStorage.getItem('uffa-gs-port');
-  NET.port = g == null ? 4000 : Math.max(0, +g || 0);            // 0: da soli, nessun server da cercare
+  NET.port = g == null ? 0 : Math.max(0, +g || 0);               // 0: da soli, nessun server da cercare (senza indirizzo non si prova a indovinarlo)
   NET.uiPort = +(localStorage.getItem('uffa-ui-port') || 4100) || 4100;
 } catch { NET.uiPort = 4100; }
 try { NET.views = JSON.parse(localStorage.getItem('uffa-views') || '{}') || {}; } catch { NET.views = {}; }
@@ -198,6 +198,9 @@ function netHandle(m) {
       try { startPing(x, y); } finally { netFromServer = false; }
       return;
     }
+    case 'notes':
+      if (typeof noteDalServer === 'function' && m.notes) noteDalServer(m.notes, m.from === (NET.me && NET.me.id));
+      return;
     case 'music':
       if (typeof musicApply === 'function' && m.state) musicApply(m.state);
       return;
@@ -244,7 +247,8 @@ NET.assetHash = new Map();      // indirizzo locale -> hash
 NET.assetKnown = new Set();     // hash che il server ha già
 NET.assetWait = new Map();      // id del caricamento -> promessa
 
-const netAssetUrl = hash => 'http://127.0.0.1:' + NET.port + '/asset/' + hash;
+// Da soli non c'è il server di gioco: le immagini del deposito della campagna le dà il tavolo stesso.
+const netAssetUrl = hash => NET.port ? 'http://127.0.0.1:' + NET.port + '/asset/' + hash : 'asset/' + hash;
 
 const toHex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 function b64(bytes) {
@@ -318,6 +322,7 @@ async function applyWorld(w) {
   NET.applying = true;
   try {
     mergeSheets(w.sheets);
+    if (w.notes && typeof noteDalServer === 'function') noteDalServer(w.notes, false);
     if (Array.isArray(w.chat)) {
       chat = w.chat;
       if (typeof renderChat === 'function') renderChat();
@@ -438,7 +443,7 @@ function netPushPlayerChanges() {
     } else if (!id) {
       const img = el.querySelector('img');
       intent('token.add', { scene: cur.id, token: {
-        url: img ? img.getAttribute('src') : undefined, shape: el._shape,
+        url: img ? rifImmagine(img.getAttribute('src'), el.dataset.gid) : undefined, shape: el._shape,
         layer: 'tokens', ...box, sheet: el.dataset.sheet, name: el.dataset.name,
         round: el.dataset.round, ring: el.dataset.ring
       } });
@@ -473,7 +478,7 @@ var addChat = (prev => function (m) {
     return;
   }
   if (NET.on && !netFromServer) {
-    if (m.kind === 'text') return intent('chat', { text: m.text });
+    if (m.kind === 'text') return intent('chat', m.to ? { text: m.text, to: m.to } : { text: m.text });
     if (m.kind === 'rule') return intent('rule', { title: m.title, text: m.text });
     if (m.kind === 'roll') return;               // i tiri passano da rollExpr / rollDice
   }
@@ -669,7 +674,7 @@ function netSyncForm() {
       : NET.manual
         ? 'Ti sei scollegato a mano: non riprovo finché non premi «Collegati adesso».'
         : !NET.on
-          ? 'Non collegato: stai giocando da solo su questo computer.'
+          ? (document.documentElement.classList.contains('ui-touch') ? 'Non collegato: stai giocando da solo su questo dispositivo.' : 'Non collegato: stai giocando da solo su questo computer.')
           : NET.me.role === 'master'
             ? `Stai conducendo tu. Collegati adesso: ${NET.players.length}.`
             : `Sei un giocatore in questa sessione (${NET.me.name}).`;
@@ -677,12 +682,13 @@ function netSyncForm() {
   if (lv) lv.hidden = !(NET.on || NET.retrying || NET.hostDown);
 }
 // Il collegamento «torna all'avvio» ha senso solo se sei partito dall'app.
+// Sta anche nel menu delle scene, dove si trova subito.
 if ($('netHome')) {
-  $('netHome').hidden = true;
-  $('netHome').href = 'http://127.0.0.1:' + NET.uiPort + '/';
+  const home = [$('netHome'), $('sceneHome')].filter(Boolean);
+  for (const a of home) { a.hidden = true; a.href = 'http://127.0.0.1:' + NET.uiPort + '/'; }
   fetch('http://127.0.0.1:' + NET.uiPort + '/api/vivo').then(r => {
     if (!r.ok) return;
-    $('netHome').hidden = false;
+    for (const a of home) a.hidden = false;
     // aperti dall'avviatore: gli si dice ogni tanto che la pagina c'è ancora
     setInterval(() => fetch('http://127.0.0.1:' + NET.uiPort + '/api/vivo').catch(() => {}), 20000);
   }).catch(() => {});

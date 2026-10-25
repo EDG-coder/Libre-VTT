@@ -265,3 +265,11 @@
 .stabs .sZoom svg { display: block; width: 12px; height: 12px; }
 /* con due dita il foglio si ingrandisce da solo (non la pagina): il browser può solo scorrere */
 .stdWin .sbody { touch-action: pan-x pan-y; }
+
+/* attacchi: il riquadro scorre quando le righe sono più di sei */
+.sPage .sAtk { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; overscroll-behavior: contain; }
+.sPage .sAtk > * { position: absolute; margin: 0; }
+/* valori calcolati (CA senza armatura, CD e attacco degli incantesimi): si leggono, ma più chiari */
+.stdWin .sPage .sF[data-f="ac"]::placeholder, .stdWin .sPage .sF[data-f="spcd"]::placeholder, .stdWin .sPage .sF[data-f="spatk"]::placeholder {
+  color: color-mix(in srgb, var(--sh-fg) 55%, transparent); font-style: normal;
+}

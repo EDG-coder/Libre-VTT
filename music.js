@@ -117,7 +117,12 @@ function musicMakePlayer() {
         if (e.data === YT.PlayerState.ENDED && musicIsMaster()) musicNext();
         musicRefresh();
       },
-      onError: () => musicWarn('Questo video non si può riprodurre (potrebbe essere bloccato dall\'autore).')
+      // 101 e 150: l'autore non permette di usare il video fuori da YouTube (spesso per i diritti d'autore)
+      onError: e => musicWarn(e && (e.data === 101 || e.data === 150)
+        ? 'L\'autore non permette di usare questo video fuori da YouTube (di solito per i diritti d\'autore): prova un\'altra canzone o un altro caricamento.'
+        : e && (e.data === 100) ? 'Questo video non esiste più o è privato.'
+        : e && (e.data === 2) ? 'Il link di questo video non è valido.'
+        : 'Questo video non si può riprodurre (potrebbe essere bloccato dall\'autore).')
     }
   });
 }

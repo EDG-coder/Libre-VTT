@@ -62,7 +62,10 @@ const SPELL_LINES = [8, 13, 13, 13, 9, 9, 9, 9, 7, 7];   // righe per livello, d
 
 // ---------- Calcoli: aggiungo la competenza doppia (il pallino piccolo) ----------
 const SK_AB = Object.fromEntries(SKILLS.map(x => [x[0], x[2]]));
-const stdSkill = (s, k) => abMod(s, SK_AB[k]) + profB(s) * (s.f['ke_' + k] ? 2 : s.f['kp_' + k] ? 1 : 0);
+const stdSkill = (s, k) => {
+  const mod = abMod(s, SK_AB[k]), comp = profB(s), ke = !!s.f['ke_' + k], kp = !!s.f['kp_' + k];
+  return regola('abilita', { mod, competente: kp ? 1 : 0, maestria: ke ? 1 : 0, competenza: comp }, () => mod + comp * (ke ? 2 : kp ? 1 : 0));
+};
 var calcValue = (prev => function (s, key) {
   const [t, a] = key.split(':');
   if (t === 'skill') return stdSkill(s, a);
@@ -175,12 +178,8 @@ function stdPage1() {
   // attacchi
   h += box(212, 376, 174, 206, 'ATTACCHI & INCANTESIMI', 'sPanel');
   h += lab('ARMA', 218, 385, 60, 'c', 'sNano') + lab('BONUS ATT.', 281, 385, 28, 'c', 'sNano') + lab('DANNI / TIPO', 312, 385, 56, 'c', 'sNano');
-  h += rep(6, i => {
-    const y = 391.89 + i * 18.2;
-    return inp('an' + i, 218, y, 60, 14, 'sCell') + nmb('ab' + i, 281, y, 28, 14, 'sCell') + inp('ad' + i, 312, y, 56, 14, 'sCell') +
-      `<button type="button" class="sHit" data-r="atk:${i}" style="${at(369.5, y, 8.5, 14)}" title="Tira per colpire">◎</button>` +
-      `<button type="button" class="sHit sDmg" data-r="dmg:${i}" style="${at(378.5, y, 8.5, 14)}" title="Tira i danni">◆</button>`;
-  });
+  // le righe stanno in un riquadro che scorre: sotto l'ultima piena ce n'è sempre una vuota
+  h += `<div class="sAtk" style="${at(ATK_X, ATK_Y, 172, 108)}">${rep(6, stdRigaAttacco)}</div>`;
   h += lab('MUNIZIONI', 219, 502, 51, 'c', 'sMicro') + lab('Q.TÀ', 275, 502, 19, 'c', 'sMicro');
   h += rep(3, i => inp('am' + i + 'n', 219, 509.89 + i * 18, 51, 14, 'sCell') + nmb('am' + i + 'q', 275, 509.89 + i * 18, 19, 14, 'sCell'));
   h += box(300, 520, 82, 34, '', 'sBox');
@@ -382,6 +381,38 @@ function stdBindPinch(win, root) {
 }
 
 // I campi stretti (dadi vita): se il testo non ci sta, il carattere si rimpicciolisce invece di tagliarlo.
+// ---------- Attacchi: quanti ne servono ----------
+const ATK_X = 216, ATK_Y = 391;
+const ATK_RE = /^a[nbd](\d+)$/;
+function quantiAttacchi(s) {                       // righe usate: l'ultima che ha qualcosa scritto
+  let n = 0;
+  for (const k of Object.keys(s.f)) {
+    const m = ATK_RE.exec(k);
+    if (m && String(s.f[k] ?? '').trim()) n = Math.max(n, +m[1] + 1);
+  }
+  return Math.min(n, 200);
+}
+function stdRigaAttacco(i) {
+  const y = 0.89 + i * 18.2, x = -ATK_X;
+  return inp('an' + i, 218 + x, y, 60, 14, 'sCell') + inp('ab' + i, 281 + x, y, 28, 14, 'sCell sNum') + inp('ad' + i, 312 + x, y, 56, 14, 'sCell') +
+    `<button type="button" class="sHit" data-r="atk:${i}" style="${at(369.5 + x, y, 8.5, 14)}" title="Tira per colpire">◎</button>` +
+    `<button type="button" class="sHit sDmg" data-r="dmg:${i}" style="${at(378.5 + x, y, 8.5, 14)}" title="Tira i danni">◆</button>`;
+}
+function stdBindAttacchi(root, s) {
+  const box = root.querySelector('.sAtk');
+  if (!box) return;
+  const righe = () => box.querySelectorAll('[data-f^="an"]').length;
+  const aggiungi = fino => {
+    let n = righe();
+    if (n >= fino) return;
+    box.insertAdjacentHTML('beforeend', rep(fino - n, j => stdRigaAttacco(n + j)));
+    box.querySelectorAll('[data-f]').forEach(el => { if (!el._legato) bindField(el, root, s); el._legato = 1; });
+  };
+  box.querySelectorAll('[data-f]').forEach(el => { el._legato = 1; });
+  aggiungi(Math.max(6, quantiAttacchi(s) + 1));
+  box.addEventListener('input', () => aggiungi(Math.min(200, Math.max(6, quantiAttacchi(s) + 1))));
+}
+
 function stdAdatta(inp) {
   inp.style.fontSize = '';
   const base = parseFloat(getComputedStyle(inp).fontSize) || 9;
@@ -559,6 +590,7 @@ function stdSetup(win, root, s) {
     });
   });
   stdBindImages(root, s);
+  stdBindAttacchi(root, s);
   stdBindLines(root, s);
   stdBindExpertise(root, s);
   stdBindFit(root);

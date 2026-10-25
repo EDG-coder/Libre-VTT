@@ -149,6 +149,12 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page-b
 }
 #sideToggle:hover { background: var(--panel-3); color: var(--text); }
 body.menu-open #sideToggle { right: calc(min(var(--side-w, 340px), 92vw) + 18px); }
+/* La linguetta sta attaccata al bordo (dello schermo o del pannello), stretta e un po' trasparente:
+   così non copre i segnalini che stanno sul lato destro della mappa. */
+#sideToggle { right: 0; width: 30px; height: 64px; border-radius: 16px 0 0 16px; border-right: 0; opacity: .78; }
+#sideToggle:hover, #sideToggle:focus-visible { opacity: 1; }
+body.menu-open #sideToggle { right: min(var(--side-w, 340px), 92vw); }
+.ui-touch #sideToggle { width: 38px; }
 body.side-resizing #sideToggle, body.side-resizing #side { transition: none; }
 body.side-resizing { cursor: ew-resize; user-select: none; -webkit-user-select: none; }
 
@@ -241,7 +247,7 @@ body.menu-open #sideToggle svg { transform: rotate(180deg); }
   box-shadow: 0 6px 22px rgba(0, 0, 0, .4), 0 0 18px rgba(124, 92, 255, .35);
   transition: width .5s cubic-bezier(.22, .9, .3, 1), height .5s cubic-bezier(.22, .9, .3, 1), border-radius .5s ease;
 }
-#dice.open { width: 296px; height: var(--dh, 320px); border-radius: 20px; }
+#dice.open { width: 296px; height: var(--dh, 320px); border-radius: 20px; background: rgba(18, 21, 28, .9); }   /* aperto: sotto non si devono vedere le icone */
 #diceToggle {
   position: absolute; left: 0; top: 0; width: 52px; height: 52px; padding: 0;
   display: grid; place-items: center; border: 0; background: none; color: inherit; cursor: pointer;
@@ -287,6 +293,9 @@ body.menu-open #sideToggle svg { transform: rotate(180deg); }
 #dice .dSeg button.active:not(#diceToggle) { background: rgba(124, 92, 255, .5); border-color: #a58bff; box-shadow: inset 0 0 0 1px #a58bff; }
 #dice #diceAdv button[data-adv="adv"].active { background: rgba(46, 200, 140, .45); border-color: #3ddc97; box-shadow: inset 0 0 0 1px #3ddc97; }
 #dice #diceAdv button[data-adv="dis"].active { background: rgba(230, 80, 80, .45); border-color: #ff6b6b; box-shadow: inset 0 0 0 1px #ff6b6b; }
+/* «Tutti» stretto, «🔒 Solo io e il master» prende il resto e se non ci sta va a capo */
+#dice #diceVis button[data-vis="public"]:not(#diceToggle) { flex: 0 0 auto; padding-inline: 12px; }
+#dice #diceVis button[data-vis="secret"]:not(#diceToggle) { white-space: normal; line-height: 1.15; overflow-wrap: anywhere; }
 #dice #diceVis button[data-vis="secret"].active { background: rgba(255, 176, 32, .38); border-color: #ffb020; box-shadow: inset 0 0 0 1px #ffb020; }
 /* a vassoio chiuso: si vede lo stesso che un modo è acceso */
 #diceBadge {
@@ -401,6 +410,9 @@ body.menu-open #sideToggle svg { transform: rotate(180deg); }
 .sceneRow > button:hover { background: var(--panel-3); }
 #sceneNew { display: block; width: 100%; margin-top: 4px; padding: 9px 10px; border: 1px dashed var(--line); border-radius: 10px; background: none; color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
 #sceneNew:hover { background: var(--panel-3); }
+#sceneHome { display: block; margin-top: 4px; padding: 9px 10px; border-radius: 10px; color: var(--muted); font-size: 14px; text-decoration: none; text-align: center; }
+#sceneHome[hidden] { display: none; }
+#sceneHome:hover { background: var(--panel-3); color: var(--text); }
 #targetSwitch[hidden] { display: none; }
 #layerSwitch, #targetSwitch { display: flex; padding: 4px; gap: 2px; background: rgba(18, 21, 28, .55); -webkit-backdrop-filter: blur(10px) saturate(1.5); backdrop-filter: blur(10px) saturate(1.5); border: 1px solid rgba(255, 255, 255, .22); box-shadow: 0 6px 22px rgba(0, 0, 0, .4); box-sizing: border-box; }
 #layerSwitch button, #targetSwitch button { border: 0; border-radius: 18px; padding: 0 14px; background: none; color: #d6dbe7; font: inherit; font-size: 13px; cursor: pointer; transition: background .2s, box-shadow .2s; }
@@ -486,3 +498,23 @@ body.menu-open #sideToggle svg { transform: rotate(180deg); }
   background: var(--accent, #7c5cff); color: #fff; box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
 }
 #chatNuovi[hidden] { display: none; }
+/* con il pannello di destra aperto, la barra in basso si centra nello spazio che resta (non copre la chat) */
+html:not(.ui-tel) body.menu-open #dock { left: calc((100vw - min(var(--side-w, 340px), 92vw)) / 2); max-width: calc(100vw - min(var(--side-w, 340px), 92vw) - 24px); }
+html:not(.ui-tel) body.menu-open #dockZone { left: calc((100vw - min(var(--side-w, 340px), 92vw)) / 2); }
+
+/* risultato grande del tiro, quando la chat è chiusa */
+#dicePop {
+  position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top)); z-index: 100004; transform: translate(-50%, -140%);
+  display: flex; align-items: baseline; gap: 12px; max-width: min(520px, calc(100vw - 32px)); padding: 10px 20px;
+  border-radius: 16px; background: rgba(18, 21, 28, .94); color: #fff; border: 1px solid rgba(165, 139, 255, .7);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5), 0 0 22px rgba(124, 92, 255, .4); cursor: pointer;
+  opacity: 0; pointer-events: none; transition: transform .3s cubic-bezier(.22, .9, .3, 1.1), opacity .25s;
+}
+#dicePop.on { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+#dicePop span { font-size: 15px; color: #d9d2ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#dicePop b { font-size: 34px; line-height: 1; }
+@media (prefers-reduced-motion: reduce) { #dicePop { transition: none; } }
+
+/* sussurri */
+.msg.whisper { border-left: 3px solid #b48cff; background: color-mix(in srgb, #b48cff 12%, transparent); font-style: italic; }
+.msg.whisper .wh { font-style: normal; font-size: 12px; color: #c9b2ff; }

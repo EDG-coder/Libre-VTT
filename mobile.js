@@ -38,6 +38,7 @@
     const w = innerWidth, h = innerHeight;
     R.classList.toggle('ui-tel', w < 600 || (h < 500 && w < 1000));
     R.classList.toggle('ui-vert', h >= w);
+    if (typeof netSyncForm === 'function') netSyncForm();        // «su questo computer» / «dispositivo»
   }
   aggiorna();
   addEventListener('resize', aggiorna);
@@ -345,6 +346,22 @@
       const ora = !!(typeof NET !== 'undefined' && (NET.on || NET.retrying));
       if (ora !== acceso) { acceso = ora; NAT.schermoAcceso(ora); }
     }, 3000);
+  }
+
+  // ======================= Tastiera sullo schermo =======================
+  // Quando esce la tastiera (iPad, iPhone) la pagina scorre in su e il pannello di destra finiva
+  // sotto la barra di stato: il pannello segue la parte di schermo che si vede davvero.
+  const vv = window.visualViewport;
+  if (vv) {
+    const segui = () => {
+      const st = R.style;
+      if (!toccoOra()) { st.removeProperty('--vv-top'); st.removeProperty('--vv-h'); return; }
+      st.setProperty('--vv-top', Math.max(0, vv.offsetTop) + 'px');
+      st.setProperty('--vv-h', vv.height + 'px');
+    };
+    vv.addEventListener('resize', segui);
+    vv.addEventListener('scroll', segui);
+    segui();
   }
 
   // ======================= La guida: anche i gesti =======================

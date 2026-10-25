@@ -472,12 +472,28 @@ function refreshTokSheets() {
   sel.value = sheets.some(s => s.id === tok.sheet) ? tok.sheet : '';
   tok.sheet = sel.value;
 }
+// «Goblin» aggiunto quando c'è già un «Goblin»: il primo diventa «Goblin 1», il nuovo «Goblin 2»
+function numeraNome(nm, altri) {
+  const base = nm.replace(/\s+\d+$/, ''), re = new RegExp('^' + base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s+(\\d+))?$');
+  const stessi = altri.filter(o => re.test(o.dataset.name || ''));
+  if (!stessi.length) return nm;
+  let max = 0;
+  for (const o of stessi) { const m = re.exec(o.dataset.name); max = Math.max(max, m[1] ? +m[1] : 0); }
+  const senza = stessi.filter(o => o.dataset.name === base);
+  if (senza.length === 1 && !stessi.some(o => /\s1$/.test(o.dataset.name))) { senza[0].dataset.name = base + ' 1'; max = Math.max(max, 1); }
+  else if (!max) max = senza.length;
+  return base + ' ' + (max + 1);
+}
 function makeToken(wx, wy) {
   if (layer === 'map') setLayer('tokens');
   const size = tok.size * (grid.show ? grid.size : 60), p = snapPoint(wx - size / 2, wy - size / 2);
+  // se lì c'è già un segnalino, una casella più in là (così non finiscono uno sopra l'altro)
+  const altri = [...world.querySelectorAll('.photo')].filter(o => !o._shape && (o.dataset.layer || 'tokens') !== 'map');
+  const passo = grid.show ? grid.size : size;
+  for (let n = 0; n < 40 && altri.some(o => Math.abs(num(o, 'left') - p.x) < 1 && Math.abs(num(o, 'top') - p.y) < 1); n++) p.x += passo;
   const el = createPhoto(tokUrl(), size, size, p.x, p.y, tok.img ? tok.img.id : undefined, false, layer === 'hidden' ? 'hidden' : 'tokens');
   const sh = sheets.find(s => s.id === tok.sheet), nm = tok.name.trim() || (sh ? sh.name : '');
-  if (nm) el.dataset.name = nm;
+  if (nm) el.dataset.name = numeraNome(nm, altri);
   if (tok.img && !tok.baked) { if (tok.round) el.dataset.round = '1'; if (!tok.noRing) el.dataset.ring = tok.ring; }
   if (sh) el.dataset.sheet = sh.id;
   applyLook(el); updateTokenBars(); scheduleBoardSave();
@@ -717,7 +733,7 @@ addEventListener('contextmenu', e => { if (!e.target.closest(NATIVE)) e.preventD
 
 // ======================= Copia e incolla (Ctrl/Cmd+C, X, V e dal menu) =======================
 let clip = [];
-const recOf = p => ({ shape: p._shape && { ...p._shape }, url: p.querySelector('img') && p.querySelector('img').getAttribute('src'),
+const recOf = p => ({ shape: p._shape && { ...p._shape }, url: p.querySelector('img') && rifImmagine(p.querySelector('img').getAttribute('src'), p.dataset.gid),
   l: num(p, 'left'), t: num(p, 'top'), w: num(p, 'width'), h: num(p, 'height'), data: { ...p.dataset } });
 function copySel() { clip = selection.map(recOf); }
 function pasteClip(at) {                                          // conserva misure, livello, collegamento alla scheda, forma...

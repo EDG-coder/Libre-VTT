@@ -476,6 +476,7 @@ function cropExistingToken(el) {
     onDone: rec => {
       img.src = rec.url;
       el.dataset.aid = rec.id ?? '';
+      delete el.dataset.gid;                               // l'immagine nuova non è più quella del deposito
       delete el.dataset.round; delete el.dataset.ring;     // forma e bordo sono già nell'immagine
       applyLook(el); scheduleBoardSave();
     }

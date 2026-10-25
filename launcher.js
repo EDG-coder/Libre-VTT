@@ -78,7 +78,8 @@ const linkBin = () => LINK_CANDIDATES.find(p => fs.existsSync(p)) || null;
 const ARCH = process.arch === 'arm64' ? 'arm64' : 'x64';
 const PIATTAFORMA = WIN ? 'windows-x64' : MAC ? 'macos-universal' : `linux-${ARCH}`;   // Windows ARM usa quello x64
 const LINK_ASSET = `uffa-link-${PIATTAFORMA}${EXE}`;                                       // il nome nelle uscite su GitHub
-const PROFILE = path.join(os.tmpdir(), 'myvtt-finestra');
+// il profilo della finestra (lingua della pagina, permessi, cache) sta con le preferenze: la cartella temporanea macOS la svuota
+const PROFILE = path.join(USERDIR, 'finestra');
 
 const state = {
   mode: null,            // null | 'solo' | 'host' | 'join'
@@ -268,8 +269,10 @@ function run(key, cmd, args, opts = {}) {
   state.procs[key] = p;
   const pipe = (s, kind) => s.on('data', d => String(d).split(/\r?\n/).forEach(l => {
     if (!l.trim()) return;
-    say(`[${key}] ${l}`, kind);
     const m = l.match(/^\s{6}([a-z0-9]{40,})\s*$/i);          // l'ID stampato da uffa-link
+    // nel registro della finestra: niente istruzioni da terminale, e l'ID accorciato (quello intero è nel riquadro «Codice»)
+    const daTerminale = /Ctrl\+C|uffa-link\/target|Ora avvia anche|uffa-link (host|join)\b|Il VTT si collega a ws:/.test(l);
+    if (!daTerminale) say(`[${key}] ${m ? '      ' + m[1].slice(0, 8) + '…' + m[1].slice(-4) : l}`, kind);
     if (m) {
       if (state.sessionId && state.sessionId !== m[1]) say('Il codice della sessione è cambiato: rimandalo ai giocatori.', 'warn');
       state.sessionId = m[1]; push();
@@ -352,9 +355,55 @@ function ricorda(dir) {
   conf.recenti = [path.resolve(dir), ...conf.recenti.filter(d => path.resolve(d) !== path.resolve(dir))].slice(0, 12);
   salvaConf();
 }
+// ---------- Elimina campagna: nel Cestino, non per sempre ----------
+// Computer: il Cestino del sistema. Telefono (dove il Cestino non c'è): una cartella «Cestino» accanto a
+// «Campagne», che l'elenco non legge; su iPhone/iPad si vede dall'app File e da lì si recupera.
+const prova = (cmd, args) => new Promise(res => execFile(cmd, args, { timeout: 30000, windowsHide: true }, e => res(!e)));
+function nomeLibero(cartella, nome) {
+  let n = nome, i = 2;
+  while (fs.existsSync(path.join(cartella, n))) n = `${nome} ${i++}`;
+  return path.join(cartella, n);
+}
+async function nelCestino(dir) {
+  const nome = path.basename(dir);
+  if (MOBILE) {
+    const cest = path.join(path.dirname(CAMP_HOME), 'Cestino');
+    fs.mkdirSync(cest, { recursive: true });
+    fs.renameSync(dir, nomeLibero(cest, nome));
+    return;
+  }
+  if (WIN) {
+    const q = s => "'" + String(s).replace(/'/g, "''") + "'";
+    if (await prova('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
+      `Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory(${q(dir)}, 'OnlyErrorDialogs', 'SendToRecycleBin')`]) && !fs.existsSync(dir)) return;
+    throw new Error('il Cestino di Windows non ha accettato la cartella');
+  }
+  if (MAC) {
+    try { fs.renameSync(dir, nomeLibero(path.join(os.homedir(), '.Trash'), nome)); return; } catch {}
+    if (await prova('osascript', ['-e', `tell application "Finder" to delete (POSIX file ${JSON.stringify(dir)} as alias)`]) && !fs.existsSync(dir)) return;
+    throw new Error('il Cestino del Mac non ha accettato la cartella');
+  }
+  if (await prova('gio', ['trash', dir]) && !fs.existsSync(dir)) return;
+  // Linux senza gio: il Cestino secondo le regole di freedesktop
+  const base = path.join(process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'), 'Trash');
+  fs.mkdirSync(path.join(base, 'files'), { recursive: true }); fs.mkdirSync(path.join(base, 'info'), { recursive: true });
+  const dest = nomeLibero(path.join(base, 'files'), nome);
+  fs.writeFileSync(path.join(base, 'info', path.basename(dest) + '.trashinfo'), `[Trash Info]\nPath=${encodeURI(dir)}\nDeletionDate=${new Date().toISOString().slice(0, 19)}\n`);
+  fs.renameSync(dir, dest);
+}
+async function eliminaCampagna(dir) {
+  const info = infoCampagna(dir);
+  if (!dir || !info.esiste || !info.campagna || info.vecchia) throw new Error('non è una cartella di campagna');
+  if (state.mode && state.campagna && path.resolve(state.campagna.path) === path.resolve(dir)) throw new Error('la partita è aperta: chiudila prima');
+  if (path.resolve(dir) === path.resolve(ROOT) || path.resolve(dir) === path.resolve(CAMP_HOME)) throw new Error('questa cartella non si può eliminare');
+  await nelCestino(path.resolve(dir));
+  dimentica(dir);
+  say(`Campagna «${info.nome}» spostata nel Cestino.`, 'ok');
+}
 function dimentica(dir) { conf.recenti = conf.recenti.filter(d => path.resolve(d) !== path.resolve(dir)); salvaConf(); }
 
-const pulisciNome = s => String(s || '').replace(/[\u0000-\u001f<>:"/\\|?*]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/^\.+/, '').slice(0, 60);
+// niente caratteri vietati nei nomi di cartella, niente spazi o punti all'inizio e alla fine
+const pulisciNome = s => String(s || '').replace(/[\u0000-\u001f<>:"/\\|?*]+/g, ' ').replace(/\s+/g, ' ').replace(/^[\s.]+/, '').slice(0, 60).replace(/[\s.]+$/, '');
 const leggiJson = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
 
 /** Che cosa c'è in quella cartella: serve per l'elenco e per capire se è una campagna. */
@@ -437,7 +486,7 @@ function elencoCampagne() {
     const v = infoCampagna(d);
     if (v.campagna) lista.push(v);
   }
-  return { home: CAMP_HOME, ultima: conf.recenti[0] || null, lista };
+  return { home: CAMP_HOME, ultima: conf.recenti[0] || null, lista, icloud: campagneSuICloud() };
 }
 
 // ---------- campagne in un file .zip: per passarle da un dispositivo all'altro ----------
@@ -568,6 +617,56 @@ function mostraCartella(dir) {
 }
 
 // ---------- i tre modi ----------
+// ---------- iCloud (Mac) ----------
+// Con «Ottimizza spazio» macOS può togliere dal Mac i file di Documenti e lasciarli «solo su iCloud»:
+// il file c'è, ma vuoto finché non lo si riscarica. Prima di aprire la partita si riscaricano le
+// immagini della campagna (leggerle basta a farle scaricare), così non risultano rotte al tavolo.
+// Un file tolto dal Mac da iCloud è «senza dati» (c'è ma occupa 0 blocchi) oppure, sui macOS più
+// vecchi, è sparito e al suo posto c'è un segnaposto nascosto «.nome.icloud».
+const stubICloud = f => path.join(path.dirname(f), '.' + path.basename(f) + '.icloud');
+const suICloud = f => {
+  if (!MAC) return false;
+  try { const st = fs.statSync(f); return st.size > 0 && st.blocks === 0; } catch { return fs.existsSync(stubICloud(f)); }
+};
+function immaginiCampagna(dir) {
+  const out = [];
+  const giro = (d, prof) => {
+    let voci = []; try { voci = fs.readdirSync(d, { withFileTypes: true }); } catch { return; }
+    for (const v of voci) {
+      const f = path.join(d, v.name);
+      if (v.isDirectory() && prof < 3) giro(f, prof + 1);
+      else if (v.isFile() && /\.(webp|png|jpe?g|gif|svg|bmp|avif)$/i.test(v.name) || v.isFile() && /^[a-f0-9]{64}\.\w+$/.test(v.name)) out.push(f);
+      else if (v.isFile() && /^\..+\.icloud$/.test(v.name)) out.push(path.join(d, v.name.slice(1, -7)));   // segnaposto di iCloud
+    }
+  };
+  giro(path.join(dir, 'assets'), 0); giro(path.join(dir, 'data', 'assets'), 0);
+  return out;
+}
+async function scaricaDaICloud(dir) {
+  if (!MAC) return;
+  const lontani = immaginiCampagna(dir).filter(suICloud);
+  if (!lontani.length) return;
+  say(`${lontani.length} immagini della campagna sono solo su iCloud: le riscarico sul Mac (in Finder, clic destro sulla cartella → «Mantieni scaricato» per non farle più togliere).`, 'warn');
+  let n = 0;
+  for (const f of lontani) {
+    state.busy = `Sto scaricando le immagini da iCloud… (${++n} di ${lontani.length})`; push();
+    if (fs.existsSync(f)) await new Promise(ok => { const t = setTimeout(ok, 30000); fs.readFile(f, () => { clearTimeout(t); ok(); }); });
+    else {                                              // c'è solo il segnaposto: lo si chiede a iCloud e si aspetta
+      execFile('brctl', ['download', f], () => {});
+      for (let i = 0; i < 60 && !fs.existsSync(f); i++) await new Promise(ok => setTimeout(ok, 500));
+    }
+  }
+  const ancora = lontani.filter(suICloud).length;
+  if (ancora) say(`${ancora} immagini non si sono scaricate da iCloud (sei senza internet?): al tavolo risulteranno mancanti.`, 'warn');
+  state.busy = 'Accendo…'; push();
+}
+// la cartella delle campagne è dentro Documenti sincronizzati con iCloud?
+function campagneSuICloud() {
+  if (!MAC) return false;
+  const docICloud = path.join(os.homedir(), 'Library', 'Mobile Documents', 'com~apple~CloudDocs', 'Documents');
+  return CAMP_HOME.includes('Mobile Documents') || (fs.existsSync(docICloud) && CAMP_HOME.startsWith(path.join(os.homedir(), 'Documents')));
+}
+
 async function avvia(mode, id, campagna) {
   if (state.mode) stopAll();
   state.error = null;
@@ -587,6 +686,7 @@ async function avvia(mode, id, campagna) {
     ricorda(CAMP);
     state.campagna = { path: CAMP, nome: infoCampagna(CAMP).nome };
     say(`Campagna: «${state.campagna.nome}» (${CAMP})`);
+    await scaricaDaICloud(CAMP);
   }
 
   // le porte: quelle di sempre se sono libere, altrimenti altre (e ce le si ricorda)
@@ -1005,8 +1105,18 @@ const invia = (res, code, body, type = 'text/plain; charset=utf-8') => {
   res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' });
   res.end(body);
 };
+// Contro il «DNS rebinding»: un sito aperto nel browser potrebbe far puntare il suo nome a
+// 127.0.0.1 e leggere le nostre risposte. Il browser però manda il suo nome nell'intestazione Host:
+// accettiamo solo 127.0.0.1, localhost o [::1], con la nostra porta.
+function hostLocale(req, porta) {
+  const h = String(req.headers.host || '').toLowerCase();
+  if (!h) return true;
+  const m = /^(127\.0\.0\.1|localhost|\[::1\])(?::(\d+))?$/.exec(h);
+  return !!m && (!m[2] || +m[2] === +porta);
+}
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url, 'http://localhost');
+  if (!hostLocale(req, UI_PORT)) return invia(res, 403, 'no');
   if (!/^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(req.socket.remoteAddress || '')) return invia(res, 403, 'no');
   // Sul telefono anche le altre app possono parlare con 127.0.0.1: le nostre API le usa solo la
   // finestra di LIBRE VTT, che si presenta la prima volta con il segreto avuto dall'app.
@@ -1073,7 +1183,11 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/api/sfoglia') return ok(sfoglia(u.searchParams.get('path') || ''));
   if (u.pathname === '/api/campagna/info') return ok(infoCampagna(u.searchParams.get('path') || ''));
   if (u.pathname === '/api/campagna/nuova' && req.method === 'POST') {
-    return corpo(m => ok({ path: nuovaCampagna(m.nome), ...elencoCampagne() }));
+    return corpo(m => {
+      // la lingua è una sola: quella delle preferenze, che la finestra mostra; se la finestra ne manda un'altra, vince quella che vedi
+      if ((m.lingua === 'it' || m.lingua === 'en') && prefCorrenti().lingua !== m.lingua) salvaPref({ lingua: m.lingua });
+      ok({ path: nuovaCampagna(m.nome), ...elencoCampagne() });
+    });
   }
   if (u.pathname === '/api/campagna/scegli' && req.method === 'POST') {
     return corpo(async m => ok(await scegliCartella(m.titolo)));
@@ -1088,6 +1202,12 @@ const server = http.createServer(async (req, res) => {
       preparaCartella(info.path, info.nome);
       ricorda(info.path);
       ok({ path: info.path, info: infoCampagna(info.path) });
+    });
+  }
+  if (u.pathname === '/api/campagna/elimina' && req.method === 'POST') {
+    return corpo(async m => {
+      try { await eliminaCampagna(String(m.path || '')); ok(elencoCampagne()); }
+      catch (e) { ok({ ...elencoCampagne(), errore: e.message }); }
     });
   }
   if (u.pathname === '/api/campagna/dimentica' && req.method === 'POST') {

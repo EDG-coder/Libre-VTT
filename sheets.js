@@ -69,7 +69,30 @@ function rollExpr(expr, label) {
   return m;
 }
 // in chat: /r 2d6+3  (oppure /roll ...)
+// «/w Nome testo» (o /w "Nome con spazi" testo): un sussurro. Lo vedono solo chi lo riceve e chi
+// conduce; il nome si cerca fra chi è nella sessione (anche con gli spazi: vince il più lungo).
+function sussurro(text) {
+  const m = /^\/(?:w|whisper|s|sussurra)\s+([\s\S]+)$/i.exec(text);
+  if (!m) return false;
+  const inRete = typeof NET !== 'undefined' && NET.on;
+  if (!inRete) { addChat({ kind: 'text', text: tr('I sussurri servono quando giochi in rete: da solo non c\'è nessuno a cui sussurrare.') }); return true; }
+  let resto = m[1].trim(), a = '';
+  const q = /^["«]([^"»]+)["»]\s*([\s\S]*)$/.exec(resto);
+  if (q) { a = q[1].trim(); resto = q[2]; }
+  else {
+    const nomi = (NET.players || []).map(p => String(p.name || '').trim()).filter(Boolean).concat('master', 'gm')
+      .sort((x, y) => y.length - x.length);
+    const low = resto.toLowerCase();
+    a = nomi.find(n => low.startsWith(n.toLowerCase()) && /^(\s|$)/.test(resto.slice(n.length))) || resto.split(/\s+/)[0];
+    resto = resto.slice(a.length);
+  }
+  resto = resto.trim();
+  if (!a || !resto) { addChat({ kind: 'text', text: tr('Per sussurrare scrivi: /w Nome messaggio') }); return true; }
+  addChat({ kind: 'text', text: resto, to: a });
+  return true;
+}
 function chatCommand(text) {
+  if (sussurro(text)) return true;
   const m = text.match(/^\/(?:r|roll)\s+(.+)$/i);
   if (!m) return false;
   if (!rollExpr(m[1])) addChat({ kind: 'text', text: 'Tiro non valido: ' + m[1] });
@@ -163,7 +186,7 @@ document.body.insertAdjacentHTML('beforeend', `
 
 function newSheet(name, tpl) {
   const f = {};
-  if (tpl === 'dnd5e' || tpl === 'standard') Object.assign(f, { level: '1', str: '10', dex: '10', con: '10', int: '10', wis: '10', cha: '10', ac: '10', speed: settings.unit === 'm' ? '9 m' : '30 ft' });
+  if (tpl === 'dnd5e' || tpl === 'standard') Object.assign(f, { level: '1', str: '10', dex: '10', con: '10', int: '10', wis: '10', cha: '10', speed: settings.unit === 'm' ? '9 m' : '30 ft' });
   return { id: uid(), name, tpl, icon: null, f };
 }
 $('sheetNew').addEventListener('click', () => {
@@ -186,7 +209,7 @@ function renderSheetList() {
   if (!sheets.length) { list.innerHTML = '<div class="empty">Nessuna scheda. Creane una con «Nuova scheda».</div>'; return; }
   list.replaceChildren(...sheets.map(s => {
     const d = document.createElement('div'), im = new Image(), nm = document.createElement('span'), sm = document.createElement('small');
-    d.className = 'sheetItem'; d.dataset.id = s.id; d.draggable = true; d.title = 'Doppio clic per aprire, trascina sulla mappa per il segnalino';
+    d.className = 'sheetItem'; d.dataset.id = s.id; d.draggable = true; d.title = document.documentElement.classList.contains('ui-touch') ? 'Tocca per aprire, tieni premuto per le altre opzioni' : 'Doppio clic per aprire, trascina sulla mappa per il segnalino';
     im.className = 'sicon'; im.src = iconOf(s); im.alt = ''; im.draggable = false;
     nm.className = 'nm'; nm.textContent = s.name; sm.textContent = { standard: 'Standard', dnd5e: 'Open D&D 5e', simple: 'Open semplice' }[s.tpl] || '';
     d.append(im, nm, sm);
@@ -251,7 +274,7 @@ function linkToken(el, id) {
   const s = sheets.find(x => x.id === id);
   if (s) el.dataset.name = s.name;
   if (s && !s.icon) {                          // la scheda prende come icona l'immagine di questo segnalino
-    s.icon = { url: el.querySelector('img').getAttribute('src'), aid: el.dataset.aid === undefined ? undefined : +el.dataset.aid };
+    s.icon = { url: rifImmagine(el.querySelector('img').getAttribute('src'), el.dataset.gid), aid: el.dataset.aid === undefined ? undefined : +el.dataset.aid };
     renderSheetList(); scheduleSheets();
   }
   updateTokenBars(); scheduleBoardSave();
@@ -404,8 +427,31 @@ function openSheet(id) {
   bindSheet(body, s);
   if (std) stdSetup(w, body, s);
   if (tpl === 'dnd5e') openSetup(w, body, s);
+  dentroLoSchermo(w);
   return w;
 }
+// Una finestra appena aperta sta tutta nello schermo (con la × raggiungibile), anche se la finestra del programma è stretta.
+function dentroLoSchermo(w) {
+  if (!w.isConnected || w.classList.contains('icon')) return;
+  const maxW = innerWidth - 16, maxH = innerHeight - 16;
+  if (w.offsetWidth > maxW) w.style.width = maxW + 'px';
+  if (w.offsetHeight > maxH) w.style.height = maxH + 'px';
+  const r = w.getBoundingClientRect();
+  if (r.right > innerWidth - 8) w.style.left = Math.max(8, innerWidth - 8 - r.width) + 'px';
+  if (r.bottom > innerHeight - 8) w.style.top = Math.max(8, innerHeight - 8 - r.height) + 'px';
+}
+addEventListener('resize', () => wins.forEach(w => w._state === 'open' && dentroLoSchermo(w)));
+// Esc chiude la finestra della scheda in primo piano (se non stai scrivendo in un campo)
+addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || e.defaultPrevented) return;
+  if (document.querySelector('dialog[open], #viewport.fog-on, #viewport.pen-on, #viewport.pen-erase') || (typeof ctx !== 'undefined' && !ctx.hidden)) return;
+  const t = e.target;
+  if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) { t.blur(); return; }   // il primo Esc esce dal campo
+  const aperte = [...wins.values()].filter(w => w._state === 'open' && w.isConnected);
+  if (!aperte.length) return;
+  const sopra = aperte.sort((a, b) => (+b.style.zIndex || 0) - (+a.style.zIndex || 0))[0];
+  closeWin(sopra);
+});
 // Standard e Open D&D 5e usano gli stessi campi: la stessa scheda si può vedere nei due formati.
 // La scelta vale per questo dispositivo e finché il programma resta aperto.
 const vistaScheda = new Map();
@@ -430,20 +476,43 @@ const SKILLS = [
 const iv = v => parseInt(v, 10) || 0;
 const sgn = n => (n >= 0 ? '+' : '−') + Math.abs(n);        // per mostrarlo
 const sgnE = n => (n >= 0 ? '+' : '') + n;                  // per l'espressione del tiro
-const abMod = (s, a) => Math.floor((iv(s.f[a]) - 10) / 2);
-const profB = s => (s.f.profb !== undefined && s.f.profb !== '') ? iv(s.f.profb) : 2 + Math.floor((Math.max(1, iv(s.f.level)) - 1) / 4);
-const skillB = (s, k) => abMod(s, SKILLS.find(x => x[0] === k)[2]) + (s.f['kp_' + k] ? profB(s) : 0);
+// I calcoli delle regole passano da formule.json (formule.js); la riserva è lo stesso calcolo scritto qui.
+const regola = (nome, v, riserva) => typeof FORMULE !== 'undefined' ? FORMULE.usa(nome, v, riserva) : riserva();
+const abMod = (s, a) => regola('modificatore', { punteggio: iv(s.f[a]) }, () => Math.floor((iv(s.f[a]) - 10) / 2));
+const profB = s => {
+  const scritta = s.f.profb !== undefined && s.f.profb !== '';
+  return regola('competenza', { livello: iv(s.f.level), manuale: iv(s.f.profb), scritta: scritta ? 1 : 0 },
+    () => scritta ? iv(s.f.profb) : 2 + Math.floor((Math.max(1, iv(s.f.level)) - 1) / 4));
+};
+const skillB = (s, k) => {
+  const mod = abMod(s, SKILLS.find(x => x[0] === k)[2]), comp = profB(s), ke = !!s.f['ke_' + k], kp = !!s.f['kp_' + k];
+  return regola('abilita', { mod, competente: kp ? 1 : 0, maestria: ke ? 1 : 0, competenza: comp }, () => mod + (ke ? comp * 2 : kp ? comp : 0));
+};
+const cdDa = (s, a) => { const competenza = profB(s), mod = abMod(s, a); return regola('cdIncantesimi', { competenza, mod }, () => 8 + competenza + mod); };
+const atkDa = (s, a) => { const competenza = profB(s), mod = abMod(s, a); return regola('attaccoIncantesimi', { competenza, mod }, () => competenza + mod); };
+const caSenzaArmatura = s => { const modDes = abMod(s, 'dex'); return regola('caSenzaArmatura', { modDes }, () => 10 + modDes); };
+// la caratteristica da incantatore scritta nella scheda («Saggezza», «SAG», «Wisdom»…) → chiave
+function abIncantatore(s) {
+  const t = String(s.f.sc_ab || '').trim().toLowerCase().slice(0, 3);
+  return { for: 'str', str: 'str', des: 'dex', dex: 'dex', cos: 'con', con: 'con', int: 'int', sag: 'wis', wis: 'wis', car: 'cha', cha: 'cha' }[t] || null;
+}
+// CD e attacco degli incantesimi: calcolati (8 + competenza + mod., competenza + mod.) se la casella è vuota
+const vuotoF = v => v === undefined || v === null || String(v).trim() === '';
+function cdIncantesimi(s) { const a = abIncantatore(s); return vuotoF(s.f.spcd) ? (a ? cdDa(s, a) : null) : iv(s.f.spcd); }
+function atkIncantesimi(s) { const a = abIncantatore(s); return vuotoF(s.f.spatk) ? (a ? atkDa(s, a) : null) : iv(s.f.spatk); }
 const abilName = a => ABIL.find(x => x[0] === a)[2];
 function calcValue(s, key) {
   const [t, a] = key.split(':');
   if (t === 'mod') return abMod(s, a);
-  if (t === 'save') return abMod(s, a) + (s.f['sp_' + a] ? profB(s) : 0);
+  if (t === 'save') { const mod = abMod(s, a), competenza = profB(s), c = !!s.f['sp_' + a]; return regola('tiroSalvezza', { mod, competente: c ? 1 : 0, competenza }, () => mod + (c ? competenza : 0)); }
   if (t === 'skill') return skillB(s, a);
   if (t === 'prof') return profB(s);
-  if (t === 'init') return abMod(s, 'dex') + iv(s.f.initb);
-  if (t === 'pp') return 10 + skillB(s, 'perception');
+  if (t === 'init') { const modDes = abMod(s, 'dex'), bonus = iv(s.f.initb); return regola('iniziativa', { modDes, bonus }, () => modDes + bonus); }
+  if (t === 'pp') { const percezione = skillB(s, 'perception'); return regola('percezionePassiva', { percezione }, () => 10 + percezione); }
   if (t === 'wsum') return +Object.keys(s.f).filter(k => /^iv\d+w$/.test(k)).reduce((a, k) => a + (parseFloat(String(s.f[k]).replace(',', '.')) || 0), 0).toFixed(2);
-  if (t === 'wmax') return +(iv(s.f.str) * 7.5).toFixed(1);
+  if (t === 'wmax') return +regola('caricoMassimo', { forza: iv(s.f.str) }, () => iv(s.f.str) * 7.5).toFixed(1);
+  if (t === 'spcd') return cdIncantesimi(s) ?? 0;
+  if (t === 'spatk') return atkIncantesimi(s) ?? 0;
   return 0;
 }
 function recalc(root, s) {
@@ -452,12 +521,24 @@ function recalc(root, s) {
   const sag = abMod(s, 'wis'), comp = s.f.ke_perception ? profB(s) * 2 : s.f.kp_perception ? profB(s) : 0;
   const perche = `10 + Saggezza (${sgn(sag)})` + (comp ? ` + ${s.f.ke_perception ? 'maestria' : 'competenza'} in Percezione (${sgn(comp)})` : ' — senza competenza in Percezione: spunta la casella di Percezione se il personaggio ce l\'ha');
   root.querySelectorAll('[data-c="pp"]').forEach(o => { o.title = perche; });
+  // CD e attacco degli incantesimi: il valore calcolato si vede in grigio finché non ne scrivi uno tuo
+  // CA senza armatura: 10 + Destrezza, in grigio finché non scrivi quella della tua armatura
+  const ca = caSenzaArmatura(s);
+  root.querySelectorAll('[data-f="ac"]').forEach(i => { i.placeholder = String(ca); i.title = `Senza armatura: 10 + Destrezza (${sgn(abMod(s, 'dex'))}) = ${ca}. Con un'armatura scrivi qui la tua CA.`; });
+  const a = abIncantatore(s);
+  root.querySelectorAll('[data-f="spcd"]').forEach(i => { i.placeholder = a ? String(cdDa(s, a)) : ''; i.title = a ? 'Calcolata: 8 + competenza + modificatore (scrivi un numero per cambiarla)' : 'Scrivi la caratteristica da incantatore per calcolarla'; });
+  root.querySelectorAll('[data-f="spatk"]').forEach(i => { i.placeholder = a ? sgnE(atkDa(s, a)) : ''; i.title = a ? 'Calcolato: competenza + modificatore (scrivi un numero per cambiarlo)' : 'Scrivi la caratteristica da incantatore per calcolarlo'; });
 }
 function doRoll(s, key) {
   const [t, a] = key.split(':');
   let expr, label;
-  if (t === 'spatk') { expr = '1d20' + sgnE(iv(s.f.spatk)); label = `${s.name} · Attacco con incantesimo`; }
-  else if (t === 'atk') { expr = '1d20' + sgnE(iv(s.f['ab' + a])); label = `${s.name} · ${s.f['an' + a] || 'Attacco'}`; }
+  if (t === 'spatk') { expr = '1d20' + sgnE(atkIncantesimi(s) ?? 0); label = `${s.name} · Attacco con incantesimo`; }
+  else if (t === 'atk') {
+    // un incantesimo a tiro salvezza («CD 13», «DC13»): non si tira per colpire, si dice la CD
+    const cd = /^\s*(?:CD|DC|TS)\s*:?\s*(\d+)/i.exec(String(s.f['ab' + a] || ''));
+    if (cd) { addChat({ kind: 'rule', title: `${s.name} · ${s.f['an' + a] || 'Attacco'}`, text: `Tiro salvezza CD ${cd[1]}` + (s.f['ad' + a] ? ` · ${s.f['ad' + a]}` : '') }); return; }
+    expr = '1d20' + sgnE(iv(s.f['ab' + a])); label = `${s.name} · ${s.f['an' + a] || 'Attacco'}`;
+  }
   else if (t === 'dmg') { expr = s.f['ad' + a] || ''; label = `${s.name} · Danni ${s.f['an' + a] || ''}`.trim(); }
   else {
     expr = '1d20' + sgnE(calcValue(s, key));
@@ -545,7 +626,7 @@ function standardHtml() {
   const saves = ABIL.map(([k, , nm]) => `<div class="rl2">${ck('sp_' + k, 'Competenza')}<button type="button" class="rb" data-r="save:${k}" data-c="save:${k}"></button><span>${nm}</span></div>`).join('');
   const skills = STD_SKILLS.map(k => { const [, nm, a] = SKILLS.find(x => x[0] === k), sh = ABIL.find(x => x[0] === a)[1]; return `<div class="rl2">${ck('kp_' + k, 'Competenza')}<button type="button" class="rb" data-r="skill:${k}" data-c="skill:${k}"></button><span>${nm} <small>(${sh[0] + sh.slice(1).toLowerCase()})</small></span></div>`; }).join('');
   const lim = rows(6, i => `<div class="lf"><input type="text" data-f="lf${i}n" placeholder="Nome"><span class="rest">${ck('lf' + i + 'b', 'Riposo breve')}${ck('lf' + i + 'l', 'Riposo lungo')}${ck('lf' + i + 'a', 'Alba')}</span><input type="number" data-f="lf${i}t" placeholder="Tot"><input type="number" data-f="lf${i}u" placeholder="Usi"></div>`);
-  const atk = rows(8, i => `<div class="atk"><input type="text" data-f="an${i}" placeholder="Arma"><input type="number" data-f="ab${i}" placeholder="Bonus att."><input type="text" data-f="ad${i}" placeholder="Danni / tipo (1d8+3)"><div class="bt"><button type="button" class="rb" data-r="atk:${i}">Colpire</button><button type="button" class="rb" data-r="dmg:${i}">Danni</button></div></div>`);
+  const atk = rows(8, i => `<div class="atk"><input type="text" data-f="an${i}" placeholder="Arma"><input type="text" inputmode="text" data-f="ab${i}" placeholder="Bonus att." title="Bonus per colpire (es. +5), oppure la CD di un incantesimo a tiro salvezza (es. CD 13)"><input type="text" data-f="ad${i}" placeholder="Danni / tipo (1d8+3)"><div class="bt"><button type="button" class="rb" data-r="atk:${i}">Colpire</button><button type="button" class="rb" data-r="dmg:${i}">Danni</button></div></div>`);
   const spl = rows(9, i => `<div class="box"><h5>Livello ${i + 1}<button type="button" class="sendRule" data-send="sp${i + 1}" title="Invia in chat">💬</button></h5>
       <div class="row2">${fld('Slot totali', 'sl' + (i + 1) + 't', 'number')}${fld('Slot spesi', 'sl' + (i + 1) + 'u', 'number')}</div><textarea data-f="sp${i + 1}" placeholder="Es. Palla di fuoco [[8d6 | Danni]]"></textarea></div>`);
   const inv = Array.from({ length: 20 }, (_, i) => `<div class="iv"><input type="text" data-f="iv${i}n" placeholder="Oggetto"><input type="text" inputmode="decimal" data-f="iv${i}w" placeholder="kg"></div>`);

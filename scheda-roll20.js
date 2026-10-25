@@ -81,7 +81,11 @@
     // intestazione: il valore sta appena sopra la sua etichetta
     const nome = et.nome ? pulisci(sopra(et.nome, 20, 250, 40)) : '';
     const cl = et.classe ? pulisci(sopra(et.classe, et.classe.x0 - 2, et.classe.x0 + 100)) : '';
-    if (cl) { const m = /^(.*?)\s*(\d{1,2})$/.exec(cl); if (m && m[1]) { f.class = m[1]; f.level = m[2]; } else f.class = cl; }
+    if (cl) {
+      const parti = cl.split(/\s*[,/;]\s*/).filter(Boolean), livelli = parti.map(p => /(\d{1,2})\s*$/.exec(p));
+      if (parti.length > 1 && livelli.every(Boolean)) { f.class = parti.join(' / '); f.level = String(livelli.reduce((a, m) => a + +m[1], 0)); }
+      else { const m = /^(.*?)\s*(\d{1,2})$/.exec(cl); if (m && m[1]) { f.class = m[1]; f.level = m[2]; } else f.class = cl; }
+    }
     const coppie = [['bg', et.storia], ['player', et.giocatore], ['race', et.razza], ['align', et.allineamento], ['xp', et.pe]];
     for (const [k, lab] of coppie) { const v = lab ? pulisci(sopra(lab, lab.x0 - 2, lab.x0 + 100)) : ''; if (v) f[k] = v; }
 
@@ -126,7 +130,10 @@
     const inBox = (x0, x1) => unisci(alto.filter(i => i.x0 >= x0 && i.x0 < x1));
     const ca = inBox(215, 270), ini = inBox(270, 325), vel = inBox(325, 400);
     if (numero(ca) !== null) f.ac = String(numero(ca));
-    if (numero(ini) !== null) f.initb = (numero(ini) >= 0 ? '+' : '') + numero(ini);
+    if (numero(ini) !== null) {
+      const extra = numero(ini) - (mod.dex != null ? mod.dex : 0);
+      if (extra) f.initb = (extra > 0 ? '+' : '') + extra;          // es. Allerta (+5); di solito niente
+    }
     if (vel) f.speed = vel;
     if (et.pfMax) {
       const n = p1.find(it => numero(it.s) !== null && Math.abs(it.y0 - et.pfMax.y0) < 6 && it.x0 > et.pfMax.x1);
@@ -160,9 +167,11 @@
         if (nomeA) armi.push([nomeA, pulisci(r.items.filter(i => i.x0 >= 95 && i.x0 < 128).map(i => i.s).join(' ')), pulisci(r.items.filter(i => i.x0 >= 128).map(i => i.s).join(' '))]);
       }
     }
-    armi.slice(0, 8).forEach(([n, a, d], i) => {
+    armi.slice(0, 40).forEach(([n, a, d], i) => {
       f['an' + i] = n.replace(/…$/, '');
-      const v = numero(a); if (v !== null) f['ab' + i] = String(v);
+      const v = numero(a), cd = /^(?:DC|CD)\s*(\d+)/i.exec(a) || /(?:DC|CD)\s*(\d+)/i.exec(d);
+      if (v !== null) f['ab' + i] = String(v);
+      else if (cd) f['ab' + i] = 'CD ' + cd[1];
       if (d) f['ad' + i] = d.replace(/…$/, '');
       if (/…/.test(n + d)) avvisi.push(`il nome dell'attacco «${n}» è tagliato nella stampa di Roll20`);
     });
@@ -184,7 +193,17 @@
       const p2 = pagine[1].items, e2 = trova(p2, ETICHETTE.equip), c2 = trova(p2, /^(CP|MR)$/);
       if (e2) ogg.push(...righe(p2, 215, (c2 ? c2.y1 : 20) + 2, pagine[1].w * 0.67, e2.y0 - 1).map(r => r.testo));
     }
-    if (ogg.length) f.equip = ogg.filter(t => !/^(CP|SP|EP|GP|PP|MR|MA|ME|MO|MP)(\s|$)/.test(t)).join('\n');
+    const oggetti = ogg.filter(t => !/^(CP|SP|EP|GP|PP|MR|MA|ME|MO|MP)(\s|$)/.test(t));
+    const resto = [];
+    // Roll20 elenca sia la dotazione («Dungeoneer's Pack») sia quello che c'è dentro: il peso si conta una volta sola
+    const contenuto = oggetti.some(t => /\b(backpack|zaino|rations|razioni|waterskin|otre|bedroll|giaciglio)\b/i.test(t));
+    oggetti.forEach((t, i) => {
+      if (i >= 45) { resto.push(t); return; }                       // la scheda Standard ha 45 righe
+      f['iv' + i + 'n'] = t;
+      const kg = contenuto && /\b(pack|dotazione)\b/i.test(t) ? 0 : pesoOggetto(t);
+      if (kg !== null) f['iv' + i + 'w'] = String(kg);
+    });
+    if (resto.length) f.equip = resto.join('\n');
     const freccia = ogg.map(t => /^(\d+)\s+(Arrows|Frecce|Bolts|Quadrelli|Sling Bullets|Proiettili)/i.exec(t)).find(Boolean);
     if (freccia) { f.am0n = freccia[2]; f.am0q = freccia[1]; }
     const arm = ogg.map(t => /^\d+\s+((Padded|Leather|Studded Leather|Hide|Chain Shirt|Scale Mail|Breastplate|Half Plate|Ring Mail|Chain Mail|Splint|Plate)( Armor)?)$/i.exec(t)).find(Boolean);
@@ -249,8 +268,10 @@
       const ab = pulisci(testoZona(it, Wp * 0.45, 30, Wp * 0.62, 60));
       const dc = pulisci(testoZona(it, Wp * 0.62, 30, Wp * 0.8, 60)), atk = pulisci(testoZona(it, Wp * 0.8, 30, Wp, 60));
       if (ab) f.sc_ab = ab.charAt(0) + ab.slice(1).toLowerCase();
-      if (numero(dc) !== null) f.spcd = String(numero(dc));
-      if (numero(atk) !== null) f.spatk = String(numero(atk));
+      const abK = { sag: 'wis', wis: 'wis', int: 'int', car: 'cha', cha: 'cha', for: 'str', str: 'str', des: 'dex', dex: 'dex', cos: 'con', con: 'con' }[ab.slice(0, 3).toLowerCase()];
+      const m = abK && mod[abK] != null ? mod[abK] : null;
+      if (numero(dc) !== null && (m === null || numero(dc) !== 8 + prof + m)) f.spcd = String(numero(dc));
+      if (numero(atk) !== null && (m === null || numero(atk) !== prof + m)) f.spatk = String(numero(atk));
       const cls = pulisci(testoZona(it, 30, 30, Wp * 0.45, 72)).replace(/SPELLCASTING|CLASS|CLASSE DA INCANTATORE/gi, '').trim();
       if (cls) f.sc_class = cls;
       // tre colonne; in ciascuna si alternano «livello  slot» e i nomi degli incantesimi
@@ -302,12 +323,43 @@
     // privilegi: ognuno con la sua descrizione (se c'è), uno sotto l'altro
     const visti = new Set();
     const blocchi = nomiPriv.filter(n => !visti.has(n) && visti.add(n)).map(n => desc[n] && desc[n].righe.length ? `${n}\n${scrivi(desc[n].righe)}` : n);
-    if (blocchi.length) f.features = blocchi.join('\n\n');
+    if (blocchi.length) f.classf = blocchi.join('\n\n');             // «Privilegi di classe» (anche nella scheda Standard)
 
     for (const k of Object.keys(f)) if (f[k] === '' || f[k] == null) delete f[k];
     if (!f.level) f.level = '1';
     const conta = Object.keys(f).length;
     return { name: (nome || 'Personaggio').slice(0, 40), tpl: 'dnd5e', f, avvisi, campi: conta };
+  }
+  // peso in kg (1 lb = 0,5 kg, come nei manuali italiani) degli oggetti più comuni del manuale base
+  const PESI_LB = {
+    'backpack': 5, 'zaino': 5, 'bedroll': 7, 'giaciglio': 7, 'blanket': 3, 'coperta': 3, 'crowbar': 5, 'piede di porco': 5, 'hammer': 3, 'martello': 3,
+    'piton': 0.25, 'chiodo da rocciatore': 0.25, 'torch': 1, 'torcia': 1, 'tinderbox': 1, 'acciarino': 1, 'rations': 2, 'razioni': 2, 'waterskin': 5, 'otre': 5,
+    'hempen rope': 10, 'corda di canapa': 10, 'silk rope': 5, 'corda di seta': 5, 'rope': 10, 'corda': 10, 'lantern': 2, 'lanterna': 2, 'oil': 1, 'olio': 1,
+    'mess kit': 1, 'gavetta': 1, 'common clothes': 3, 'abiti comuni': 3, 'fine clothes': 6, 'abiti pregiati': 6, 'costume': 4, 'traveler\'s clothes': 4, 'vestments': 4, 'paramenti': 4,
+    'belt pouch': 1, 'borsa': 1, 'pouch': 1, 'sack': 0.5, 'sacco': 0.5, 'quiver': 1, 'faretra': 1, 'arrows': 0.05, 'frecce': 0.05, 'bolts': 0.075, 'quadrelli': 0.075,
+    'holy symbol': 1, 'simbolo sacro': 1, 'prayer wheel': 0, 'stick of incense': 0, 'incenso': 0, 'candle': 0, 'candela': 0, 'book': 5, 'libro': 5, 'spellbook': 3,
+    'component pouch': 2, 'borsa per componenti': 2, 'arcane focus': 1, 'druidic focus': 1, 'thieves\' tools': 1, 'arnesi da scasso': 1, 'healer\'s kit': 3, 'kit del guaritore': 3,
+    'disguise kit': 3, 'kit per il camuffamento': 3, 'flask': 1, 'fiasca': 1, 'bottle': 2, 'bottiglia': 2, 'potion of healing': 0.5, 'pozione di guarigione': 0.5,
+    'explorer\'s pack': 59, 'dotazione da esploratore': 59, 'dungeoneer\'s pack': 61.5, 'dotazione da avventuriero': 61.5, 'priest\'s pack': 24, 'dotazione da sacerdote': 24,
+    'scholar\'s pack': 10, 'dotazione da studioso': 10, 'burglar\'s pack': 44.5, 'dotazione da scassinatore': 44.5, 'diplomat\'s pack': 36, 'dotazione da diplomatico': 36,
+    'entertainer\'s pack': 38, 'dotazione da intrattenitore': 38,
+    'padded armor': 8, 'leather armor': 10, 'armatura di cuoio': 10, 'studded leather armor': 13, 'cuoio borchiato': 13, 'hide armor': 12, 'chain shirt': 20, 'giaco di maglia': 20,
+    'scale mail': 45, 'corazza a scaglie': 45, 'breastplate': 20, 'corazza di piastre': 20, 'half plate': 40, 'mezza armatura': 40, 'ring mail': 40, 'chain mail': 55, 'cotta di maglia': 55,
+    'splint armor': 60, 'plate armor': 65, 'armatura completa': 65, 'shield': 6, 'scudo': 6,
+    'club': 2, 'dagger': 1, 'pugnale': 1, 'greatclub': 10, 'handaxe': 2, 'ascia': 2, 'javelin': 2, 'giavellotto': 2, 'light hammer': 2, 'mace': 4, 'mazza': 4,
+    'quarterstaff': 4, 'bastone ferrato': 4, 'sickle': 2, 'spear': 3, 'lancia': 3, 'light crossbow': 5, 'balestra leggera': 5, 'dart': 0.25, 'shortbow': 2, 'arco corto': 2,
+    'sling': 0, 'fionda': 0, 'battleaxe': 4, 'ascia da battaglia': 4, 'flail': 2, 'glaive': 6, 'greataxe': 7, 'ascia bipenne': 7, 'greatsword': 6, 'spadone': 6,
+    'halberd': 6, 'alabarda': 6, 'lance': 6, 'longsword': 3, 'spada lunga': 3, 'maul': 10, 'maglio': 10, 'morningstar': 4, 'morning star': 4, 'pike': 18, 'picca': 18,
+    'rapier': 2, 'stocco': 2, 'scimitar': 3, 'scimitarra': 3, 'shortsword': 2, 'spada corta': 2, 'trident': 4, 'tridente': 4, 'war pick': 2, 'warhammer': 2, 'martello da guerra': 2,
+    'whip': 3, 'frusta': 3, 'hand crossbow': 3, 'heavy crossbow': 18, 'longbow': 2, 'arco lungo': 2, 'net': 3, 'rete': 3
+  };
+  function pesoOggetto(riga) {
+    const m = /^(\d+)\s+(.+)$/.exec(String(riga).trim());
+    const q = m ? +m[1] : 1, nome = (m ? m[2] : String(riga)).toLowerCase().replace(/\s*\(.*\)\s*$/, '').trim();
+    let lb = PESI_LB[nome];
+    if (lb === undefined) { const k = Object.keys(PESI_LB).filter(k => nome.startsWith(k)).sort((a, b) => b.length - a.length)[0]; if (k) lb = PESI_LB[k]; }
+    if (lb === undefined || q === 0) return q === 0 ? 0 : null;
+    return Math.round(q * lb * 0.5 * 100) / 100;
   }
   function quanti(f, L) { let i = 0; while (f[`sp${L}_${i}`] !== undefined) i++; return i; }
 

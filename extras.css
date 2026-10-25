@@ -130,6 +130,10 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 }
 #helpDialog::backdrop, #sheetDialog::backdrop, #pickDialog::backdrop { background: rgba(0, 0, 0, .55); }
 #helpDialog h3, #sheetDialog h3, #pickDialog h3 { margin: 0 0 12px; }
+/* la guida non è mai più alta dello schermo (tolte le barre del telefono): l'elenco scorre */
+#helpDialog[open] { display: flex; flex-direction: column; max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px); }
+#helpDialog .helpList { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.ui-touch .soloMouse { display: none !important; }
 .helpList { margin: 0 0 16px; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: var(--text-soft); }
 #pickGrid { display: grid; grid-template-columns: repeat(4, 72px); gap: 8px; max-height: 320px; overflow-y: auto; margin-bottom: 14px; }
 #pickGrid button { padding: 0; border: 2px solid transparent; border-radius: 8px; background: var(--panel-2); cursor: pointer; overflow: hidden; }
@@ -191,8 +195,8 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 .sheetWin textarea { min-height: 84px; resize: vertical; }
 .sheetWin .lab { display: flex; flex-direction: column; gap: 2px; font-size: .78em; color: color-mix(in srgb, var(--sh-fg) 70%, transparent); }
 .sheetWin .hdr { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
-.sheetWin .abil { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.sheetWin .ab { text-align: center; border: 1px solid var(--sh-line); border-radius: 10px; padding: 4px; background: rgba(255, 255, 255, .3); }
+.sheetWin .abil { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }   /* finestra stretta: le caratteristiche vanno a capo */
+.sheetWin .ab { text-align: center; border: 1px solid var(--sh-line); border-radius: 10px; padding: 4px; min-width: 0; background: rgba(255, 255, 255, .3); }
 .sheetWin .ab b { display: block; font-size: .72em; letter-spacing: .05em; }
 .sheetWin .ab input { text-align: center; font-size: 1.15em; font-weight: 700; }
 .sheetWin .rl2 { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
@@ -625,3 +629,19 @@ body.net-player #caselleSect { display: none; }
 /* l'icona dello strumento sempre al centro del suo cerchio, qualunque sia lo stato del pannello */
 .tool.glass > .tgrip { width: 52px !important; height: 52px !important; display: flex; align-items: center; justify-content: center; }
 .tool.glass > .tgrip > svg { display: block; flex: none; margin: 0; }
+/* [[1d20+5]] nei messaggi della chat */
+.msg .chipRoll { margin: 0 2px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--accent, #7c5cff); background: color-mix(in srgb, var(--accent, #7c5cff) 22%, transparent); color: inherit; font: inherit; font-size: .92em; font-weight: 600; cursor: pointer; }
+.msg .chipRoll:hover { background: var(--accent, #7c5cff); color: #fff; }
+
+/* ======================= Note (note.js) ======================= */
+#noteBox .tbody { width: 300px; }
+.noteTabs { gap: 0 !important; }
+.noteTabs button { flex: 1; padding: 6px 4px; border-radius: 0; }
+.noteTabs button:first-child { border-radius: 10px 0 0 10px; }
+.noteTabs button:last-child { border-radius: 0 10px 10px 0; }
+.noteTabs button.active { background: color-mix(in srgb, var(--accent, #7c5cff) 45%, transparent); }
+#noteTesto { width: 100%; min-height: 180px; max-height: 50vh; resize: vertical; box-sizing: border-box; margin: 6px 0 2px;
+  border: 1px solid rgba(255, 255, 255, .2); border-radius: 10px; padding: 8px 10px; background: rgba(0, 0, 0, .3); color: inherit; font: inherit; font-size: 14px; line-height: 1.4; }
+#noteTesto[readonly] { opacity: .85; }
+.noteEdit { font-size: 13px; gap: 6px; }
+.noteEdit[hidden] { display: none !important; }

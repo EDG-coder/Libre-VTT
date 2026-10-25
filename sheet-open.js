@@ -22,7 +22,7 @@ function openPagina1() {
     const sh = ABIL.find(x => x[0] === a)[1];
     return `<div class="rl2">${ck('kp_' + k, 'Competenza')}${ck('ke_' + k, 'Maestria (competenza doppia)')}<span>${nm} <small>(${sh[0] + sh.slice(1).toLowerCase()})</small></span><button type="button" class="rb" data-r="skill:${k}" data-c="skill:${k}"></button></div>`;
   }).join('');
-  const atk = rows(8, i => `<div class="atk"><input type="text" data-f="an${i}" placeholder="Arma o attacco"><input type="number" data-f="ab${i}" placeholder="Bonus att."><input type="text" data-f="ad${i}" placeholder="Danni / tipo (1d8+3)"><div class="bt"><button type="button" class="rb" data-r="atk:${i}">Tira per colpire</button><button type="button" class="rb" data-r="dmg:${i}">Tira i danni</button></div></div>`);
+  const atk = `<div class="oAtk">${rows(8, rigaAttacco)}</div><button type="button" class="oAdd oAtkAdd">＋ Aggiungi un attacco</button>`;
   const lim = rows(6, i => `<div class="lf"><input type="text" data-f="lf${i}n" placeholder="Nome"><span class="rest" title="Si recupera con: riposo breve, riposo lungo, all'alba">${ck('lf' + i + 'b', 'Riposo breve')}${ck('lf' + i + 'l', 'Riposo lungo')}${ck('lf' + i + 'a', 'Alba')}</span><input type="number" data-f="lf${i}t" placeholder="Tot."><input type="number" data-f="lf${i}u" placeholder="Usi"></div>`);
   return `<div class="sgrid">
     <div class="box full"><div class="hdr">${fld('Classe', 'class')}${fld('Livello', 'level', 'number')}${fld('Razza', 'race')}${fld('Background', 'bg')}${fld('Allineamento', 'align')}${fld('Sesso', 'sex')}${fld('Punti esperienza', 'xp')}${fld('Nome giocatore', 'player')}</div></div>
@@ -107,6 +107,9 @@ function dndHtml() {
       .map((h, i) => `<div class="spage" data-pg="${i + 1}"${i ? ' hidden' : ''}>${h}</div>`).join('');
 }
 
+// una riga di attacco (le stesse chiavi an/ab/ad della scheda Standard)
+const rigaAttacco = i => `<div class="atk"><input type="text" data-f="an${i}" placeholder="Arma o attacco"><input type="text" inputmode="text" data-f="ab${i}" placeholder="Bonus att." title="Bonus per colpire (es. +5), oppure la CD di un incantesimo a tiro salvezza (es. CD 13)"><input type="text" data-f="ad${i}" placeholder="Danni / tipo (1d8+3)"><div class="bt"><button type="button" class="rb" data-r="atk:${i}">Tira per colpire</button><button type="button" class="rb" data-r="dmg:${i}">Tira i danni</button></div></div>`;
+
 // ---------- Gli incantesimi: un elenco che si allunga ----------
 // Usano le stesse chiavi della scheda Standard: sp<livello>_<n> il nome, sp<livello>_<n>_d la
 // descrizione, spk_<livello>_<n> «preparato». Qui le righe sono quante ne servono.
@@ -168,9 +171,28 @@ function openSetup(w, root, s) {
   }
   root.querySelectorAll('.oLiv').forEach(disegnaLivello);
 
+  // attacchi: almeno 8 righe, e tutte quelle già scritte (anche oltre)
+  const atkBox = root.querySelector('.oAtk');
+  const atkRighe = fino => {
+    const n = atkBox.querySelectorAll('.atk').length;
+    if (n >= fino) return null;
+    atkBox.insertAdjacentHTML('beforeend', Array.from({ length: fino - n }, (_, j) => rigaAttacco(n + j)).join(''));
+    const nuove = [...atkBox.querySelectorAll('.atk')].slice(n);
+    nuove.forEach(r => r.querySelectorAll('[data-f]').forEach(el => bindField(el, root, s)));
+    return nuove[0];
+  };
+  if (atkBox) atkRighe(quantiAttacchi(s));
+
   root.addEventListener('click', e => {
     const info = e.target.closest('.oInfo');
     if (info) { alert(info.title); return; }
+    if (e.target.closest('.oAtkAdd')) {
+      const n = atkBox.querySelectorAll('.atk').length;
+      if (n >= 200) return;
+      const r = atkRighe(n + 1);
+      if (r) r.querySelector('input').focus();
+      return;
+    }
     const box = e.target.closest('.oLiv');
     if (!box) return;
     const L = +box.dataset.liv;

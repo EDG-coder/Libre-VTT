@@ -95,7 +95,7 @@ android {
 // il programma (lo stesso del computer) va dentro l'APK, in assets/nodejs-project
 def copiaProgramma = tasks.register('copiaProgramma', Sync) {
     from(radiceProgetto) {
-        include '*.html', '*.js', '*.css', 'favicon.svg', 'package.json', 'assets/Sfondi/main.webp', 'assets/Sfondi/main-en.webp'
+        include '*.html', '*.js', '*.css', 'favicon.svg', 'package.json', 'formule.json', 'assets/Sfondi/main.webp', 'assets/Sfondi/main-en.webp'
         exclude 'zigwrap.js'
     }
     into layout.buildDirectory.dir('generated/programma/nodejs-project')

@@ -25,7 +25,7 @@ mkdir -p "$APPD/Contents/MacOS" "$DEST/assets/Sfondi" "$DEST/uffa-link/src" || m
 cp mac/Info.plist "$APPD/Contents/Info.plist" || muori "manca mac/Info.plist"
 cp mac/myvtt "$APPD/Contents/MacOS/myvtt" && chmod 755 "$APPD/Contents/MacOS/myvtt" || muori "manca mac/myvtt"
 cp mac/AppIcon.icns "$RES/AppIcon.icns" || muori "manca mac/AppIcon.icns"
-for f in *.html *.js *.css favicon.svg package.json; do [ -f "$f" ] && cp "$f" "$DEST/"; done
+for f in *.html *.js *.css favicon.svg package.json formule.json; do [ -f "$f" ] && cp "$f" "$DEST/"; done
 cp assets/Sfondi/main.webp assets/Sfondi/main-en.webp "$DEST/assets/Sfondi/"
 cp uffa-link/Cargo.toml "$DEST/uffa-link/"
 [ -f uffa-link/Cargo.lock ] && cp uffa-link/Cargo.lock "$DEST/uffa-link/"

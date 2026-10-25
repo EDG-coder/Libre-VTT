@@ -106,7 +106,7 @@ let session = Object.assign({ locked: false, approval: false, maxPlayers: 0, pau
 
 // Le cose che cambiano il mondo: chi è congelato o in pausa non le può fare.
 const MUTATING = new Set(['board', 'token.move', 'token.add', 'token.del', 'fog.set', 'scene.show',
-  'sheet.add', 'sheet.save', 'sheet.del', 'music', 'asset.put']);
+  'sheet.add', 'sheet.save', 'sheet.del', 'music', 'asset.put', 'notes.save', 'notes.edit']);
 
 let saveTimer = 0;
 function scheduleSave() {
@@ -251,7 +251,8 @@ function viewFor(c) {
   return {
     v: world.v, active: p.seeAllScenes ? world.active : pubId, publicScene: world.publicScene, fogColor: world.fogColor || 'auto',
     scenes: scenes.map(s => sceneFor(c, s)),
-    sheets, chat: (world.chat || []).slice(-250).map(m => chatFor(c, m)), music: world.music,
+    sheets, chat: (world.chat || []).slice(-250).map(m => chatFor(c, m)).filter(Boolean), music: world.music,
+    notes: world.notes || { text: '', editable: false },
     turni: turniPerChi(c)
   };
 }
@@ -316,7 +317,14 @@ function seesSecret(c, m) {
   if (!c.token) return false;
   return c.token === m.byId || recOf(c.token).role === 'master';
 }
+// Un sussurro (/w Nome testo) lo vedono solo chi lo scrive, chi lo riceve e chi conduce:
+// agli altri non arriva proprio.
+function seesWhisper(c, m) {
+  if (!c.token) return false;
+  return c.token === m.byId || c.token === m.whisper.to || recOf(c.token).role === 'master';
+}
 function chatFor(c, m) {
+  if (m.whisper) return seesWhisper(c, m) ? m : null;
   if (!m.secret || seesSecret(c, m)) return m;
   return { id: m.id, ts: m.ts, kind: 'roll', secret: true, hidden: true, label: 'tiro segreto', by: m.by, byId: m.byId };
 }
@@ -326,7 +334,7 @@ function addChat(m) {
   m.ts = Date.now();
   world.chat = (world.chat || []).concat(m).slice(-500);
   scheduleSave();
-  for (const c of clients) c.send({ t: 'chat', msg: chatFor(c, m) });
+  for (const c of clients) { const v = chatFor(c, m); if (v) c.send({ t: 'chat', msg: v }); }
   panelPush({ t: 'chat', msg: m });                      // il pannello è di chi conduce
 }
 
@@ -365,7 +373,11 @@ function handleIntent(c, m) {
       for (const sh of world.sheets || []) if (sh.owner) shOwners.set(sh.id, sh.owner);
       if (Array.isArray(b.scenes)) {
         world.scenes = b.scenes;
+        // indirizzi calcolati (http://127.0.0.1:<porta>/asset/<hash>) salvati per sbaglio: tornano «gs:<hash>»
+        const fissa = o => { const m = o && /^https?:\/\/(?:127\.0\.0\.1|localhost):\d+\/asset\/([a-f0-9]{64})/.exec(String(o.url || '')); if (m) { o.url = 'gs:' + m[1]; o.gid = m[1]; } return o; };
+        for (const sc of world.scenes) fissa(sc.bg);
         for (const sc of world.scenes) sc.photos = (sc.photos || []).map(ph => {
+          fissa(ph);
           if (!ph.id) ph.id = newId('tk');
           if (!ph.owner && owners.has(ph.id)) ph.owner = owners.get(ph.id);
           return ph;
@@ -494,6 +506,16 @@ function handleIntent(c, m) {
       if (!p.chat) return deny(c, m.op, 'non puoi scrivere');
       const text = str(m.text, 2000).trim();
       if (!text) return;
+      if (m.to) {                                          // sussurro
+        const a = str(m.to, 60).trim().toLowerCase();
+        const alMaster = ['master', 'gm', 'dm'].includes(a);
+        const voci = Object.entries(roster).filter(([, r]) => !r.banned && (alMaster ? r.role === 'master' : String(r.name || '').trim().toLowerCase() === a));
+        if (!voci.length) return deny(c, m.op, `nessuno si chiama «${str(m.to, 60)}»`);
+        if (voci.length > 1 && !alMaster) return deny(c, m.op, `ci sono più persone che si chiamano «${str(m.to, 60)}»`);
+        const [tok, rec] = voci[0];
+        addChat({ kind: 'text', text, by: c.name, byId: c.token, whisper: { to: tok, toName: rec.name || 'master' } });
+        return;
+      }
       addChat({ kind: 'text', text, by: c.name, byId: c.token });
       return;
     }
@@ -546,6 +568,23 @@ function handleIntent(c, m) {
       if (c.role !== 'master' && s.owner !== c.token) return deny(c, m.op, 'questa scheda non è tua');
       world.sheets = world.sheets.filter(x => x !== s);
       changed();
+      return;
+    }
+
+    // --- note di gruppo: le scrive chi conduce; i giocatori solo se lui lo permette ---
+    case 'notes.save': {
+      const n = world.notes || { text: '', editable: false };
+      if (c.role !== 'master' && !n.editable) return deny(c, m.op, 'le note di gruppo le scrive solo chi conduce');
+      world.notes = { ...n, text: str(m.text, 20000), by: c.name, at: Date.now() };
+      scheduleSave();
+      broadcast({ t: 'notes', notes: world.notes, from: c.id });
+      return;
+    }
+    case 'notes.edit': {
+      if (c.role !== 'master') return deny(c, m.op, 'lo decide chi conduce');
+      world.notes = { ...(world.notes || { text: '' }), editable: !!m.editable };
+      scheduleSave();
+      broadcast({ t: 'notes', notes: world.notes });
       return;
     }
 
@@ -819,6 +858,7 @@ function wsParse(state) {
 }
 
 function onUpgrade(req, sock, head) {
+  if (!hostLocale(req, PORT)) { sock.destroy(); return; }
   const key = req.headers['sec-websocket-key'];
   const url = new URL(req.url, 'http://localhost');
   const local = /^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(sock.remoteAddress || '');
@@ -999,7 +1039,17 @@ const sendHttp = (res, code, body, type = 'text/plain; charset=utf-8') => {
   res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' });
   res.end(body);
 };
+// Contro il «DNS rebinding»: un sito aperto nel browser potrebbe far puntare il suo nome a
+// 127.0.0.1 e leggere le nostre risposte. Il browser però manda il suo nome nell'intestazione Host:
+// accettiamo solo 127.0.0.1, localhost o [::1], con la nostra porta.
+function hostLocale(req, porta) {
+  const h = String(req.headers.host || '').toLowerCase();
+  if (!h) return true;
+  const m = /^(127\.0\.0\.1|localhost|\[::1\])(?::(\d+))?$/.exec(h);
+  return !!m && (!m[2] || +m[2] === +porta);
+}
 function httpHandler(req, res) {
+  if (!hostLocale(req, PORT)) { res.writeHead(403); return res.end('Host non permesso'); }
   const url = new URL(req.url, 'http://localhost');
   const local = /^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(req.socket.remoteAddress || '');
   if (!local) return sendHttp(res, 403, 'Il pannello si apre solo da questo computer.');

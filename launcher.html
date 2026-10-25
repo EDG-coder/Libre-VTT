@@ -92,6 +92,7 @@
     background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px;
     white-space: pre-wrap; overflow-wrap: anywhere;
   }
+  .logBox:empty::before { content: attr(data-tip); font-style: italic; opacity: .7; }   /* il registro vuoto dice perché */
   .logBox div.warn { color: var(--warn); }
   .logBox div.bad { color: var(--bad); }
   .logBox div.ok { color: var(--ok); }
@@ -236,15 +237,15 @@
   </div>
 
   <div class="cards" id="scelte">
-    <button class="card" data-go="solo">
+    <button class="card" data-go="solo" aria-label="Gioco da solo">
       <span class="ic">🎲</span><b>Gioco da solo</b>
       <small><span class="soloPc">Solo questo computer.</span><span class="soloApp">Solo questo dispositivo.</span> Non serve altro.</small>
     </button>
-    <button class="card" data-go="host">
+    <button class="card" data-go="host" aria-label="Conduco io">
       <span class="ic">🛡</span><b>Conduco io</b>
       <small>Apro una partita e invito gli altri con un codice.</small>
     </button>
-    <button class="card" data-go="join">
+    <button class="card" data-go="join" aria-label="Mi unisco">
       <span class="ic">🧭</span><b>Mi unisco</b>
       <small>Ho il codice di chi conduce.</small>
     </button>
@@ -327,7 +328,7 @@
 
   <details class="log" id="dettagli">
     <summary>Che cosa sta succedendo</summary>
-    <div class="logBox" id="log"></div>
+    <div class="logBox" id="log" data-tip="Ancora niente: qui compaiono i messaggi del tavolo e della sessione quando parte una campagna."></div>
   </details>
 
   <footer id="piede"></footer>
@@ -399,8 +400,9 @@ function disegna() {
   }
   $('prontoCamp').classList.toggle('hide', !(acceso && S.campagna));
   if (S.campagna) $('prontoCampNome').textContent = S.campagna.nome;
-  $('piede').textContent = `LIBRE VTT ${S.versione || ''} · ${S.piattaforma} · Node ${S.node}` +
-    (S.link ? ' · collegamento a distanza pronto' : ' · collegamento a distanza da preparare');
+  const trp = window.tr || (x => x);
+  $('piede').textContent = `LIBRE VTT ${S.versione || ''} · ${trp(S.piattaforma)} · Node ${S.node} · ` +
+    trp(S.link ? 'collegamento a distanza pronto' : 'collegamento a distanza da preparare');
 }
 
 async function carica() {
@@ -468,16 +470,25 @@ async function apriCampagne(modo) {
   mostraSolo('boxCamp');
   disegnaCampagne(await fetch('/api/campagne').then(r => r.json()));
 }
+// Nell'app il percorso vero è illeggibile (…/Data/Application/3826ABB5-…/Campagne/Boh):
+// si mostra come lo vedi nell'app File, «Sul mio iPad › LIBRE VTT › Campagne › Boh».
+function percorsoLeggibile(p, home) {
+  const nrm = x => String(x || '').replace(/\\/g, '/').replace(/\/+$/, '');
+  if (!NAT.disponibile || !home || !nrm(p).startsWith(nrm(home) + '/')) return p;
+  const resto = nrm(p).slice(nrm(home).length + 1).split('/');
+  const dove = NAT.piattaforma === 'ios' ? [/iPhone/.test(navigator.userAgent) ? (window.tr || (x => x))('Sul mio iPhone') : (window.tr || (x => x))('Sul mio iPad')] : [];
+  return [...dove, 'LIBRE VTT', (window.tr || (x => x))('Campagne'), ...resto].join(' › ');
+}
 function disegnaCampagne(r) {
   const L = $('campLista');
   L.replaceChildren();
+  const tr = window.tr || (x => x);
   $('campNota').textContent = NAT.disponibile
-    ? 'Le campagne stanno dentro l\'app. Per portarne una da un computer, o per darla a un amico, usa un file .zip: ' +
-      '📤 la esporta (e la mandi come vuoi), «Importa» la aggiunge qui.' +
-      (NAT.piattaforma === 'ios' ? ' Le trovi anche nell\'app File, in «Sul mio iPhone/iPad › LIBRE VTT › Campagne».' : '')
-    : `Le campagne nuove vanno in «${r.home}». Una campagna è una cartella: puoi copiarla, ` +
-      'tenerla su una chiavetta o darla a un amico, che la apre da qui con «Apri una cartella» e la conduce lui. ' +
-      'Con 📤 la metti in un file .zip, comodo da mandare (anche a un telefono).';
+    ? tr('Le campagne stanno dentro l\'app. Per portarne una da un computer, o per darla a un amico, usa un file .zip: 📤 la esporta (e la mandi come vuoi), «Importa» la aggiunge qui.') +
+      (NAT.piattaforma === 'ios' ? ' ' + tr('Le trovi anche nell\'app File, in «Sul mio iPhone/iPad › LIBRE VTT › Campagne».') : '')
+    : tr('Le campagne nuove vanno in «{home}». Una campagna è una cartella: puoi copiarla, tenerla su una chiavetta o darla a un amico, che la apre da qui con «Apri una cartella» e la conduce lui. Con 📤 la metti in un file .zip, comodo da mandare (anche a un telefono).', { home: r.home }) +
+      (r.icloud ? '\n\n⚠ ' + tr('Questa cartella è dentro Documenti, che è sincronizzata con iCloud: se è attivo «Ottimizza spazio», macOS può togliere le immagini dal Mac. LIBRE VTT le riscarica quando apri la campagna, ma per evitarlo: in Finder, clic destro sulla cartella LIBRE VTT → «Mantieni scaricato».') : '');
+  $('campNota').style.whiteSpace = 'pre-line';
   if (!r.lista.length) {
     L.append(el('div', 'vuoto', NAT.disponibile
       ? 'Non hai ancora nessuna campagna: creane una nuova, oppure importa quella che ti hanno dato (un file .zip o una cartella).'
@@ -490,12 +501,13 @@ function disegnaCampagne(r) {
     const main = el('button', 'cmain'); main.type = 'button'; main.disabled = !c.esiste;
     const tx = el('span', 'ctx');
     const nome = el('b', '', c.nome);
-    if (ultima && !c.vecchia) nome.append(el('span', 'tag', 'ultima'));
+    const tr = window.tr || (x => x);
+    if (ultima && !c.vecchia) nome.append(el('span', 'tag', tr('ultima')));
     const dett = c.esiste
-      ? [conta(c.scene, 'scena', 'scene'), conta(c.schede, 'scheda', 'schede'), conta(c.immagini, 'immagine', 'immagini'), quando(c.modificata)].filter(Boolean).join(' · ') + (c.scrivibile ? '' : ' · sola lettura')
+      ? [conta(c.scene, 'scena', 'scene'), conta(c.schede, 'scheda', 'schede'), conta(c.immagini, 'immagine', 'immagini'), quando(c.modificata)].filter(Boolean).map(x => tr(x)).join(' · ') + (c.scrivibile ? '' : ' · ' + tr('sola lettura'))
       : 'Cartella non trovata: è stata spostata o cancellata?';
     const pth = el('small', 'cpath'); pth.title = c.path;
-    const bdi = el('bdi', '', c.vecchia ? 'nella cartella del gioco, da prima delle campagne' : c.path); bdi.dir = 'ltr'; pth.append(bdi);
+    const bdi = el('bdi', '', c.vecchia ? 'nella cartella del gioco, da prima delle campagne' : percorsoLeggibile(c.path, r.home)); bdi.dir = 'ltr'; pth.append(bdi);
     tx.append(nome, el('small', '', dett), pth);
     main.append(el('span', 'cic', c.vecchia ? '🗃' : '📜'), tx, el('span', 'cgo', c.esiste ? 'Apri ›' : ''));
     main.onclick = () => scegliCampagna(c.path);
@@ -509,14 +521,29 @@ function disegnaCampagne(r) {
     ex.disabled = !c.esiste || !c.campagna;
     ex.onclick = () => esporta(c.path, ex);
     act.append(ex);
-    if (!c.vecchia) {
+    const nrm = x => String(x || '').replace(/\\/g, '/').replace(/\/+$/, '');
+    const inCampagne = !!r.home && nrm(c.path).startsWith(nrm(r.home) + '/');
+    if (!c.vecchia && !inCampagne) {                 // fuori dalla cartella Campagne: si può solo togliere dall'elenco
       const via = el('button', '', '✕'); via.type = 'button'; via.title = 'Togli dall\'elenco (la cartella resta dov\'è)';
       via.onclick = async () => disegnaCampagne(await post('/api/campagna/dimentica', { path: c.path }));
       act.append(via);
     }
+    if (!c.vecchia && c.esiste && c.campagna) {
+      const del = el('button', 'cdel', '🗑'); del.type = 'button'; del.title = 'Elimina la campagna (va nel Cestino)'; del.setAttribute('aria-label', 'Elimina la campagna «' + c.nome + '»');
+      del.onclick = () => eliminaCampagna(c);
+      act.append(del);
+    }
     row.append(main, act);
     L.append(row);
   });
+}
+async function eliminaCampagna(c) {
+  const tr = window.tr || (x => x);
+  const dove = NAT.disponibile ? tr('nel Cestino di LIBRE VTT (da lì la puoi recuperare con l\'app File)') : tr('nel Cestino del computer (da lì la puoi recuperare)');
+  if (!confirm(tr('Eliminare la campagna «{nome}»?\n\nLa cartella va {dove}. Finché è nel Cestino non compare più qui.', { nome: c.nome, dove }))) return;
+  const r = await post('/api/campagna/elimina', { path: c.path });
+  if (r && r.errore) { erroreCamp(tr('Non sono riuscito a eliminarla: {e}', { e: r.errore })); return; }
+  disegnaCampagne(r);
 }
 function scegliCampagna(path) {
   erroreCamp('');
@@ -544,7 +571,7 @@ $('campNuova').onclick = () => { $('campNuovaRiga').classList.remove('hide'); $(
 $('campCrea').onclick = async () => {
   const nome = $('campNome').value.trim();
   if (!nome) { $('campNome').focus(); return; }
-  const r = await post('/api/campagna/nuova', { nome });
+  const r = await post('/api/campagna/nuova', { nome, lingua: I18N.lingua });
   if (r.errore) return erroreCamp(r.errore);
   $('campNome').value = '';
   scegliCampagna(r.path);

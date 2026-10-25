@@ -29,7 +29,7 @@ mkdir -p "$FW"
 echo "→ Copio il programma"
 P="$QUI/LibreVTT/nodejs-project"
 rm -rf "$P"; mkdir -p "$P/assets/Sfondi"
-for f in "$RADICE"/*.html "$RADICE"/*.js "$RADICE"/*.css "$RADICE"/favicon.svg "$RADICE"/package.json; do
+for f in "$RADICE"/*.html "$RADICE"/*.js "$RADICE"/*.css "$RADICE"/favicon.svg "$RADICE"/package.json "$RADICE"/formule.json; do
   cp "$f" "$P/"
 done
 rm -f "$P/zigwrap.js"
