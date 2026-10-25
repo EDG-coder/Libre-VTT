@@ -127,6 +127,7 @@
       <button class="tab active" type="button" data-tab="chat" style="--aura:#7c5cff" title="Chat"><span class="ic">💬</span><span class="lbl"> Chat</span></button>
       <button class="tab" type="button" data-tab="assets" style="--aura:#ff9f43" title="Assets"><span class="ic">🎨</span><span class="lbl"> Assets</span></button>
       <button class="tab" type="button" data-tab="sheets" style="--aura:#ff6fa8" title="Schede"><span class="ic">📜</span><span class="lbl"> Schede</span></button>
+      <button class="tab" type="button" data-tab="comp" style="--aura:#3db8ff" title="Compendio"><span class="ic">📚</span><span class="lbl"> Compendio</span></button>
       <button class="tab" type="button" data-tab="settings" style="--aura:#2ee6a6" title="Impostazioni"><span class="ic">⚙️</span><span class="lbl"> Impostazioni</span></button>
     </nav>
 
@@ -144,6 +145,22 @@
       <div class="row"><button id="sheetNew" type="button" class="btn">＋ Nuova scheda</button></div>
       <p class="note"><span class="soloMouse">Doppio clic per aprire. Trascina una scheda sulla mappa per creare il segnalino collegato; clic destro per altre opzioni.</span><span class="soloTocco">Tocca una scheda per aprirla. Tienila premuta per le altre opzioni, anche per metterla sulla mappa.</span></p>
       <div id="sheetList"></div>
+    </section>
+
+    <section id="tab-comp" class="pane">
+      <div class="compCerca">
+        <input id="compQ" type="search" placeholder="Cerca (anche in inglese)…" autocomplete="off" aria-label="Cerca nel compendio">
+        <select id="compTipo" aria-label="Tipo"></select>
+      </div>
+      <div class="compFiltri" id="compFiltri"></div>
+      <div class="row compAzioni">
+        <button id="compNuova" type="button" class="btn ghost">＋ Nuova voce</button>
+        <button id="compImporta" type="button" class="btn ghost">📥 Importa…</button>
+        <button id="compOpen5e" type="button" class="btn ghost">🌐 Open5e…</button>
+        <button id="compPacchetti" type="button" class="btn ghost">📦 Pacchetti…</button>
+      </div>
+      <p class="note" id="compStato"></p>
+      <div id="compLista" role="list"></div>
     </section>
 
     <section id="tab-settings" class="pane">
@@ -343,6 +360,7 @@
 <script src="scene-mini.js"></script>
 <script src="sheet-gen.js"></script>
 <script src="sistema.js"></script>
+<script src="compendio.js"></script>
 <script src="mobile.js"></script>
 </body>
 </html>

@@ -324,6 +324,7 @@ async function applyWorld(w) {
     mergeSheets(w.sheets);
     if (w.notes && typeof noteDalServer === 'function') noteDalServer(w.notes, false);
     if (w.sistema && typeof sistemaDalMaster === 'function') sistemaDalMaster(w.sistema);
+    if (w.compendio && typeof compendioDalMaster === 'function') compendioDalMaster(w.compendio);
     if (Array.isArray(w.chat)) {
       chat = w.chat;
       if (typeof renderChat === 'function') renderChat();
@@ -424,7 +425,8 @@ async function netPushBoard() {
         if (el) el.dataset.gid = ph.gid;
       }
     }
-    intent('board', { board: { active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, turni: settings.turni || null, scenes: b.scenes, sheets, sistema: typeof SISTEMA !== 'undefined' && SISTEMA.perRete ? SISTEMA.perRete() : null } });
+    const compendio = typeof COMPENDIO !== 'undefined' && COMPENDIO.perRete ? await COMPENDIO.perRete().catch(() => null) : null;
+    intent('board', { board: { compendio, active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, turni: settings.turni || null, scenes: b.scenes, sheets, sistema: typeof SISTEMA !== 'undefined' && SISTEMA.perRete ? SISTEMA.perRete() : null } });
   } finally { NET.pushing = false; }
 }
 

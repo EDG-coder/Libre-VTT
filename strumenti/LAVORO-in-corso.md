@@ -8,10 +8,14 @@ FATTO (non ancora rilasciato):
 - Blocco 3: scene-mini.js (miniature data/miniature/<id>.webp via server.js /api/miniatura, anteprima, pillola «📌 Mostra ai giocatori», griglia scene riordino/duplica). Test: scratchpad/minitest.js
 - Blocco 4: sistemi/ (dnd5e-2014, dnd5e-2024, vuoto) con sistema.json+formule.json; launcher sceglie sistema (nuova campagna / campagna vecchia / file .libresistema); server.js serve /sistema/*, /api/sistema (PUT, personalizza, esporta); sistema.js (client, editor, sfinimento 2014/2024, etichetta Specie, modelli scheda), sheet-gen.js (scheda generica); net/game-server passano world.sistema. Test: scratchpad/sistest.js. Packaging aggiornato per sistemi/.
 
-IN CORSO — Blocco 5 compendio:
+FATTO anche — Blocco 5 compendio (compendio.js, server.js /api/compendio*, strumenti/srd/converti.js -> sistemi/*/compendio/srd-5.x, nomi it in strumenti/srd/it). Test: scratchpad/comptest.js (da ricreare se il container è nuovo).
+RESTA del blocco 5: test in rete (giocatori vedono i pacchetti/nascoste), traduzioni EN.
+VECCHIE NOTE blocco 5:
 - Dati SRD: /home/claude/5e-bits/5e-database/src/{2014,2024}/en (MIT, contenuti CC-BY-4.0).
 - Nomi italiani in /home/claude/uffa/strumenti/srd/it/: vocab.json, incantesimi.json, mostri.json FATTI; mancano equip, magic items, trait, feature (lista in scratchpad/nomi-en.json).
 - Poi: convertitore strumenti/srd/converti.js -> sistemi/<id>/compendio/srd-5.x/{pacchetto.json, voci/*.json}; compendio.js (pannello ricerca/filtri, finestre voce, trascina mostro->segnalino+scheda, oggetto/incantesimo->scheda, @nome in chat, Nuova voce, import/export .librepack zip, visibilità master/tutti, invio ai giocatori come asset json).
 
 DA FARE: Blocco 6 (Open5e, 5etools JSON, CSV, creazione guidata + Sali di livello), traduzioni EN, test completi, verifica indipendente, rilascio 3.5.0, riepilogo in italiano per punti.
 iPhone (blocco 3) solo insieme all'utente via Device Hub.
+
+Se il container è nuovo: git clone del repo, git checkout lavoro-3.5, copia in /home/claude/uffa; 5e-database: git clone --depth 1 https://github.com/5e-bits/5e-database /home/claude/5e-bits/5e-database

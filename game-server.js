@@ -29,7 +29,7 @@ fs.mkdirSync(DATA, { recursive: true });
 // Il mondo la cita con «gs:<hash>», e il ponte del giocatore se la fa mandare dall'host.
 const ASSETS = path.join(DATA, 'assets');
 fs.mkdirSync(ASSETS, { recursive: true });
-const MIME_EXT = { 'image/webp': '.webp', 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/avif': '.avif', 'image/svg+xml': '.svg', 'image/bmp': '.bmp' };
+const MIME_EXT = { 'application/json': '.json', 'image/webp': '.webp', 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/avif': '.avif', 'image/svg+xml': '.svg', 'image/bmp': '.bmp' };
 const EXT_MIME = Object.fromEntries(Object.entries(MIME_EXT).map(([m, e]) => [e, m]));
 const MAX_ASSET = 12 * 1024 * 1024;
 const isHash = h => typeof h === 'string' && /^[a-f0-9]{64}$/.test(h);
@@ -254,6 +254,7 @@ function viewFor(c) {
     sheets, chat: (world.chat || []).slice(-250).map(m => chatFor(c, m)).filter(Boolean), music: world.music,
     notes: world.notes || { text: '', editable: false },
     sistema: world.sistema || null,
+    compendio: world.compendio || null,
     turni: turniPerChi(c)
   };
 }
@@ -383,6 +384,11 @@ function handleIntent(c, m) {
           if (!ph.owner && owners.has(ph.id)) ph.owner = owners.get(ph.id);
           return ph;
         });
+      }
+      // il compendio che vedono i giocatori: l'elenco dei pacchetti (e per quelli della campagna l'hash del file)
+      if (b.compendio && typeof b.compendio === 'object' && Array.isArray(b.compendio.pacchetti)) {
+        const t = JSON.stringify(b.compendio);
+        if (t.length < 2000000) world.compendio = JSON.parse(t);
       }
       // il sistema di gioco della campagna (regole e formule): lo usano anche i giocatori
       if (b.sistema && typeof b.sistema === 'object' && b.sistema.dati) {

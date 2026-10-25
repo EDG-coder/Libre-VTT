@@ -704,3 +704,68 @@ body.net-player #caselleSect { display: none; }
 #sistemaDlg .sisR .x { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: none; color: var(--muted); cursor: pointer; }
 #sistemaDlg .sisSchede { display: flex; flex-direction: column; gap: 4px; }
 #sistemaDlg .err { color: #ff8a8a; min-height: 1em; margin: 8px 0 0; font-size: 13px; }
+
+/* ======================= Compendio (compendio.js) ======================= */
+#tab-comp { gap: 8px; min-height: 0; overflow: hidden; }
+.compCerca { display: flex; gap: 6px; }
+.compCerca input { flex: 1; min-width: 0; }
+.compCerca input, .compCerca select, .compFiltri select { font: inherit; font-size: 13px; padding: 7px 9px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); }
+.compFiltri { display: flex; flex-wrap: wrap; gap: 6px; }
+.compFiltri select { flex: 1 1 120px; min-width: 0; }
+.compAzioni { flex-wrap: wrap; gap: 6px; }
+.compAzioni .btn { padding: 6px 9px; font-size: 13px; }
+.compAzioni .btn[hidden] { display: none; }
+#compStato[hidden] { display: none; }
+#compLista { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-bottom: 12px; }
+.compVoce { position: relative; display: flex; flex-direction: column; gap: 1px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; }
+.compVoce:hover, .compVoce:focus-visible { border-color: #3db8ff; outline: none; }
+.compVoce b { font-size: 14px; }
+.compVoce small { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compVoce.nascosta { opacity: .65; border-style: dashed; }
+.compVoce .compNasc { position: absolute; right: 8px; top: 7px; font-size: 12px; }
+.vocWin .sbody { padding: 0; display: flex; flex-direction: column; }
+.vocWin .cvBarra { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--sh-line, var(--line)); }
+.vocWin .cvBarra .btn { padding: 5px 9px; font-size: 12.5px; }
+.vocWin .cvCorpo { padding: 10px 16px 18px; overflow-y: auto; font-size: 14px; line-height: 1.45; }
+.vocWin .cvCorpo p { margin: 0 0 8px; }
+.vocWin .cvCorpo h4 { margin: 14px 0 6px; padding-bottom: 3px; border-bottom: 1px solid var(--sh-line, var(--line)); font-size: 15px; color: var(--sh-accent, #3db8ff); }
+.vocWin .cvCorpo h5 { margin: 10px 0 4px; font-size: 14px; }
+.vocWin .cvTesta small { color: color-mix(in srgb, var(--sh-fg, var(--text)) 60%, transparent); }
+.vocWin .cvSott { font-style: italic; }
+.vocWin .cvGriglia { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; margin: 8px 0; }
+.vocWin .cvR { display: contents; }
+.vocWin .cvR span { color: color-mix(in srgb, var(--sh-fg, var(--text)) 65%, transparent); }
+.vocWin .cvCar { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin: 8px 0; }
+.vocWin .cvCarB { display: flex; flex-direction: column; align-items: center; padding: 4px 0; border-radius: 8px; border: 1px solid var(--sh-line, var(--line)); background: none; color: inherit; font: inherit; cursor: pointer; }
+.vocWin .cvCarB small { font-size: 10px; } .vocWin .cvCarB span { font-size: 12px; }
+.vocWin .cvAz { margin-bottom: 6px; }
+.vocWin .cvTiri { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin: -2px 0 8px; }
+.vocWin .cvCd { font-size: 12px; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--sh-line, var(--line)); }
+.vocWin .cvPriv { margin: 4px 0; border: 1px solid var(--sh-line, var(--line)); border-radius: 8px; padding: 4px 10px; }
+.vocWin .cvPriv summary { cursor: pointer; font-weight: 600; }
+.vocWin .cvLic { margin-top: 16px; font-size: 11px; color: color-mix(in srgb, var(--sh-fg, var(--text)) 55%, transparent); }
+.compTab { border-collapse: collapse; margin: 6px 0 10px; font-size: 12.5px; width: 100%; }
+.compTab td, .compTab th { border: 1px solid var(--sh-line, var(--line)); padding: 3px 6px; text-align: left; vertical-align: top; }
+.chipVoce { border: 1px solid #3db8ff; background: color-mix(in srgb, #3db8ff 15%, transparent); color: inherit; border-radius: 8px; padding: 1px 7px; font: inherit; font-size: .95em; cursor: pointer; }
+#compSugg { position: fixed; z-index: 100012; display: flex; flex-direction: column; padding: 4px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+#compSugg[hidden] { display: none; }
+#compSugg button { text-align: left; border: 0; background: none; color: var(--text); padding: 6px 8px; border-radius: 6px; font: inherit; font-size: 13px; cursor: pointer; }
+#compSugg button:hover { background: var(--panel-3); }
+#compSugg small { color: var(--muted); }
+.compDlg { width: min(640px, 94vw); max-height: 86vh; max-height: 86dvh; border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; background: var(--panel); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, .6); overflow-y: auto; }
+.compDlg::backdrop { background: rgba(0, 0, 0, .55); }
+.compDlg h3 { margin: 0 0 10px; }
+.compDlg label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.compDlg label.check { flex-direction: row; align-items: center; gap: 6px; font-size: 13px; color: var(--text); margin-top: 10px; }
+.compDlg input:not([type=checkbox]), .compDlg select, .compDlg textarea { font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); }
+.compEdG, .compEdCampi { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.compEdCampi { grid-column: 1 / -1; }
+.compEdTesto { margin-top: 10px; }
+.compEdTesto textarea { min-height: 180px; resize: vertical; }
+.compScelte { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
+.compPL { display: flex; flex-direction: column; gap: 8px; }
+.compP { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.compP small { color: var(--muted); }
+.compP .compLic { display: block; font-size: 11px; max-height: 3.2em; overflow: hidden; }
+.compPB { display: flex; gap: 4px; flex: none; }
+.compPB .btn { padding: 4px 8px; font-size: 12px; }

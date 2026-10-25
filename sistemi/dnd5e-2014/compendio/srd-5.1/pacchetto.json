@@ -1,0 +1,25 @@
+{
+  "formato": "libre-vtt-pacchetto",
+  "versione": 1,
+  "id": "srd-5.1",
+  "nome": "SRD 5.1 (D&D 2014)",
+  "edizione": "1",
+  "autore": "Wizards of the Coast",
+  "licenza": "Questo pacchetto contiene materiale del System Reference Document 5.1 di Wizards of the Coast LLC, disponibile con licenza Creative Commons Attribution 4.0 International (CC-BY-4.0): https://creativecommons.org/licenses/by/4.0/legalcode. Testi originali in inglese; nomi tradotti in italiano da LIBRE VTT. Dati JSON dal progetto 5e-database (licenza MIT).",
+  "fonte": "SRD 5.1",
+  "sistema": "dnd5e-2014",
+  "base": true,
+  "visibile": "tutti",
+  "voci": {
+    "incantesimo": 319,
+    "mostro": 334,
+    "oggetto": 599,
+    "talento": 1,
+    "condizione": 15,
+    "regola": 44,
+    "specie": 9,
+    "background": 1,
+    "classe": 12,
+    "sottoclasse": 12
+  }
+}
