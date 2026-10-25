@@ -1,0 +1,221 @@
+{
+  "formato": "libre-vtt-sistema",
+  "versione": 1,
+  "id": "dnd5e-2024",
+  "nome": "D&D 5.5 (2024)",
+  "edizione": "2024",
+  "autore": "LIBRE VTT",
+  "licenza": "Regole dal System Reference Document 5.2 di Wizards of the Coast LLC, disponibile con licenza Creative Commons Attribution 4.0 (CC-BY-4.0).",
+  "caratteristiche": [
+    {
+      "id": "str",
+      "sigla": "FOR",
+      "nome": "Forza"
+    },
+    {
+      "id": "dex",
+      "sigla": "DES",
+      "nome": "Destrezza"
+    },
+    {
+      "id": "con",
+      "sigla": "COS",
+      "nome": "Costituzione"
+    },
+    {
+      "id": "int",
+      "sigla": "INT",
+      "nome": "Intelligenza"
+    },
+    {
+      "id": "wis",
+      "sigla": "SAG",
+      "nome": "Saggezza"
+    },
+    {
+      "id": "cha",
+      "sigla": "CAR",
+      "nome": "Carisma"
+    }
+  ],
+  "abilita": [
+    {
+      "id": "acro",
+      "nome": "Acrobazia",
+      "caratteristica": "dex"
+    },
+    {
+      "id": "anim",
+      "nome": "Addestrare animali",
+      "caratteristica": "wis"
+    },
+    {
+      "id": "arca",
+      "nome": "Arcano",
+      "caratteristica": "int"
+    },
+    {
+      "id": "athl",
+      "nome": "Atletica",
+      "caratteristica": "str"
+    },
+    {
+      "id": "dece",
+      "nome": "Inganno",
+      "caratteristica": "cha"
+    },
+    {
+      "id": "hist",
+      "nome": "Storia",
+      "caratteristica": "int"
+    },
+    {
+      "id": "insi",
+      "nome": "Intuizione",
+      "caratteristica": "wis"
+    },
+    {
+      "id": "inti",
+      "nome": "Intimidire",
+      "caratteristica": "cha"
+    },
+    {
+      "id": "inve",
+      "nome": "Indagare",
+      "caratteristica": "int"
+    },
+    {
+      "id": "medi",
+      "nome": "Medicina",
+      "caratteristica": "wis"
+    },
+    {
+      "id": "natu",
+      "nome": "Natura",
+      "caratteristica": "int"
+    },
+    {
+      "id": "perception",
+      "nome": "Percezione",
+      "caratteristica": "wis"
+    },
+    {
+      "id": "perf",
+      "nome": "Intrattenere",
+      "caratteristica": "cha"
+    },
+    {
+      "id": "pers",
+      "nome": "Persuasione",
+      "caratteristica": "cha"
+    },
+    {
+      "id": "reli",
+      "nome": "Religione",
+      "caratteristica": "int"
+    },
+    {
+      "id": "slei",
+      "nome": "Rapidità di mano",
+      "caratteristica": "dex"
+    },
+    {
+      "id": "stea",
+      "nome": "Furtività",
+      "caratteristica": "dex"
+    },
+    {
+      "id": "surv",
+      "nome": "Sopravvivenza",
+      "caratteristica": "wis"
+    }
+  ],
+  "valute": [
+    {
+      "id": "cp",
+      "nome": "Rame",
+      "sigla": "mr",
+      "valore": 0.01
+    },
+    {
+      "id": "sp",
+      "nome": "Argento",
+      "sigla": "ma",
+      "valore": 0.1
+    },
+    {
+      "id": "ep",
+      "nome": "Electrum",
+      "sigla": "me",
+      "valore": 0.5
+    },
+    {
+      "id": "gp",
+      "nome": "Oro",
+      "sigla": "mo",
+      "valore": 1
+    },
+    {
+      "id": "pp",
+      "nome": "Platino",
+      "sigla": "mp",
+      "valore": 10
+    }
+  ],
+  "tipiDanno": [
+    "Acido",
+    "Contundente",
+    "Freddo",
+    "Fuoco",
+    "Forza",
+    "Fulmine",
+    "Necrotico",
+    "Perforante",
+    "Veleno",
+    "Psichico",
+    "Radioso",
+    "Tagliente",
+    "Tuono"
+  ],
+  "condizioni": [
+    "Accecato",
+    "Affascinato",
+    "Assordato",
+    "Afferrato",
+    "Avvelenato",
+    "Incapacitato",
+    "Sfinimento",
+    "Invisibile",
+    "Paralizzato",
+    "Pietrificato",
+    "Prono",
+    "Spaventato",
+    "Stordito",
+    "Trattenuto",
+    "Privo di sensi"
+  ],
+  "unita": {
+    "distanza": "ft",
+    "casella": 5,
+    "peso": "lb"
+  },
+  "schede": [
+    "standard",
+    "dnd5e",
+    "simple"
+  ],
+  "regole": {
+    "sfinimento": "meno2",
+    "spareggioIniziativa": "dex",
+    "maestrieArmi": true,
+    "talentoOrigine": true,
+    "aumentiDa": "background",
+    "caratteristicaIniziativa": "dex"
+  },
+  "etichette": {
+    "razza": "Specie"
+  },
+  "compendio": [
+    "srd-5.2"
+  ]
+}

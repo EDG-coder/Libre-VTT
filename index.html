@@ -173,6 +173,17 @@
         <label class="row">Quanto copre (per te) <input type="range" id="fogVeilIn" min="10" max="100" step="5"><output id="fogVeilOut"></output></label>
       </div>
 
+      <div class="sect" data-sect="sistema" id="sistemaSect">
+        <h4>Sistema di gioco</h4>
+        <p class="note"><b id="sisNome">—</b> <span id="sisTipo"></span></p>
+        <p class="note">Le regole delle schede (formule, caratteristiche, abilità, condizioni…) vengono dal sistema della campagna. Si sceglie quando nasce la campagna.</p>
+        <div class="row soloMasterSis">
+          <button id="sisModifica" type="button" class="btn ghost">✎ Modifica…</button>
+          <button id="sisPersonalizza" type="button" class="btn ghost" title="Copia il sistema dentro la campagna, così puoi cambiarlo">Rendilo personalizzato</button>
+          <a id="sisEsporta" class="btn ghost" href="api/sistema/esporta" download>📤 Esporta (.libresistema)</a>
+        </div>
+      </div>
+
       <div class="sect" data-sect="regole">
         <h4>Regole</h4>
         <label class="check"><input id="caratLibere" type="checkbox"> Caratteristiche senza limite (normalmente vanno da 1 a 30)</label>
@@ -329,6 +340,9 @@
 <script src="turni.js"></script>
 <script src="undo.js"></script>
 <script src="note.js"></script>
+<script src="scene-mini.js"></script>
+<script src="sheet-gen.js"></script>
+<script src="sistema.js"></script>
 <script src="mobile.js"></script>
 </body>
 </html>

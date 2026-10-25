@@ -253,6 +253,7 @@ function viewFor(c) {
     scenes: scenes.map(s => sceneFor(c, s)),
     sheets, chat: (world.chat || []).slice(-250).map(m => chatFor(c, m)).filter(Boolean), music: world.music,
     notes: world.notes || { text: '', editable: false },
+    sistema: world.sistema || null,
     turni: turniPerChi(c)
   };
 }
@@ -382,6 +383,11 @@ function handleIntent(c, m) {
           if (!ph.owner && owners.has(ph.id)) ph.owner = owners.get(ph.id);
           return ph;
         });
+      }
+      // il sistema di gioco della campagna (regole e formule): lo usano anche i giocatori
+      if (b.sistema && typeof b.sistema === 'object' && b.sistema.dati) {
+        const t = JSON.stringify(b.sistema);
+        if (t.length < 400000) world.sistema = JSON.parse(t);
       }
       if (Array.isArray(b.sheets)) {
         // Il master aggiorna e aggiunge, ma non cancella: le schede si tolgono solo con sheet.del,

@@ -156,6 +156,94 @@ function saveState(req, res, q) {
   });
 }
 
+// ---------- il sistema di gioco della campagna ----------
+// campagna.json → sistema.id: uno di quelli del programma (sistemi/<id>/) oppure «personalizzato»,
+// che sta nella campagna (sistema/) e si può modificare dal tavolo. Il browser lo legge da /sistema/….
+const META = path.join(CAMP, 'campagna.json');
+const leggiMeta = () => { try { return JSON.parse(fs.readFileSync(META, 'utf8')) || {}; } catch { return {}; } };
+function cartellaSistema() {
+  const m = leggiMeta(), id = m.sistema && m.sistema.id;
+  if (id === 'personalizzato' && fs.existsSync(path.join(CAMP, 'sistema', 'sistema.json'))) return { dir: path.join(CAMP, 'sistema'), id, mio: true };
+  const nome = /^[\w.-]+$/.test(id || '') && fs.existsSync(path.join(ROOT, 'sistemi', id, 'sistema.json')) ? id : 'dnd5e-2014';
+  return { dir: path.join(ROOT, 'sistemi', nome), id: nome, mio: false, scelto: !!id };
+}
+function infoSistema(res) {
+  const c = cartellaSistema();
+  let j = {}; try { j = JSON.parse(fs.readFileSync(path.join(c.dir, 'sistema.json'), 'utf8')); } catch {}
+  json(res, 200, { id: c.id, nome: j.nome || c.id, personalizzato: c.mio, scelto: c.scelto !== false });
+}
+// salva un file del sistema personalizzato (solo sistema.json, formule.json e lingue/*.json)
+function salvaSistema(req, res, q) {
+  const c = cartellaSistema();
+  if (!c.mio) return send(res, 409, 'Il sistema della campagna non è personalizzato');
+  const nome = String(q.get('file') || '');
+  if (!/^(sistema|formule)\.json$|^lingue\/[a-z]{2}\.json$/.test(nome)) return send(res, 400, 'File non valido');
+  const parti = []; let n = 0, troppo = false;
+  req.on('data', d => { n += d.length; if (n > 2 * 1024 * 1024) { troppo = true; send(res, 413, 'Troppo grande'); req.destroy(); } else parti.push(d); });
+  req.on('end', () => {
+    if (troppo) return;
+    let j; try { j = JSON.parse(Buffer.concat(parti).toString('utf8')); } catch { return send(res, 400, 'Non è JSON valido'); }
+    if (nome === 'sistema.json') { if (j.formato !== 'libre-vtt-sistema') return send(res, 400, 'Manca «formato»'); j.id = 'personalizzato'; }
+    if (nome === 'formule.json' && j.formato !== 'libre-vtt-formule') return send(res, 400, 'Manca «formato»');
+    const f = path.join(c.dir, nome);
+    fs.mkdirSync(path.dirname(f), { recursive: true });
+    fs.writeFileSync(f + '.tmp', JSON.stringify(j, null, 2)); fs.renameSync(f + '.tmp', f);
+    if (nome === 'sistema.json') { const m = leggiMeta(); m.sistema = { id: 'personalizzato', nome: String(j.nome || 'Sistema personalizzato').slice(0, 60) }; fs.writeFileSync(META, JSON.stringify(m, null, 2)); }
+    json(res, 200, { ok: true });
+  });
+}
+// «rendilo personalizzato»: copia il sistema del programma dentro la campagna, per poterlo cambiare
+function personalizzaSistema(res) {
+  const c = cartellaSistema();
+  if (c.mio) return json(res, 200, { ok: true });
+  const dest = path.join(CAMP, 'sistema');
+  if (fs.existsSync(dest)) fs.renameSync(dest, path.join(CAMP, 'sistema-precedente-' + Date.now().toString(36)));
+  fs.cpSync(c.dir, dest, { recursive: true });
+  const j = JSON.parse(fs.readFileSync(path.join(dest, 'sistema.json'), 'utf8'));
+  j.id = 'personalizzato'; j.nome = j.nome + ' (personalizzato)';
+  fs.writeFileSync(path.join(dest, 'sistema.json'), JSON.stringify(j, null, 2));
+  const m = leggiMeta(); m.sistema = { id: 'personalizzato', nome: j.nome }; fs.writeFileSync(META, JSON.stringify(m, null, 2));
+  json(res, 200, { ok: true });
+}
+// esporta il sistema come .libresistema (uno zip della sua cartella)
+function esportaSistema(res) {
+  const c = cartellaSistema();
+  const { creaZip } = require('./zip');
+  const tmp = path.join(require('os').tmpdir(), 'libre-sistema-' + Date.now().toString(36) + '.zip');
+  try {
+    creaZip(c.dir, tmp, { radice: '' });
+    const b = fs.readFileSync(tmp);
+    let nome = 'sistema'; try { nome = JSON.parse(fs.readFileSync(path.join(c.dir, 'sistema.json'), 'utf8')).nome || nome; } catch {}
+    res.writeHead(200, { 'Content-Type': 'application/zip', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(nome.replace(/[\\/:*?"<>|]+/g, ' ').trim() + '.libresistema')}`, 'Cache-Control': 'no-store' });
+    res.end(b);
+  } catch (e) { send(res, 500, 'Non riesco a esportarlo: ' + e.message); }
+  finally { fs.rm(tmp, { force: true }, () => {}); }
+}
+
+// Miniature delle scene: data/miniature/<id scena>.webp (le fa il browser quando lasci una scena)
+const MINI = path.join(DATA, 'miniature');
+const miniFile = q => { const id = String(q.get('id') || ''); return /^[\w-]{1,80}$/.test(id) ? path.join(MINI, id + '.webp') : null; };
+function getMini(res, q) {
+  const f = miniFile(q); if (!f) return send(res, 400, 'Scena non valida');
+  fs.readFile(f, (e, d) => e ? send(res, 404, 'Non c\'è') : (res.writeHead(200, { 'Content-Type': 'image/webp', 'Cache-Control': 'no-cache' }), res.end(d)));
+}
+function saveMini(req, res, q) {
+  const f = miniFile(q); if (!f) return send(res, 400, 'Scena non valida');
+  const chunks = []; let size = 0, tooBig = false;
+  req.on('data', c => { size += c.length; if (size > 400 * 1024) { tooBig = true; send(res, 413, 'Troppo grande'); req.destroy(); } else chunks.push(c); });
+  req.on('end', () => {
+    if (tooBig) return;
+    const b = Buffer.concat(chunks);
+    if (b.length < 12 || b.toString('ascii', 0, 4) !== 'RIFF' || b.toString('ascii', 8, 12) !== 'WEBP') return send(res, 400, 'Non è un\'immagine webp');
+    try { fs.mkdirSync(MINI, { recursive: true }); fs.writeFileSync(f + '.tmp', b); fs.renameSync(f + '.tmp', f); json(res, 200, { ok: true }); }
+    catch { send(res, 500, 'Non riesco a salvarla'); }
+  });
+}
+function deleteMini(res, q) {
+  const f = miniFile(q); if (!f) return send(res, 400, 'Scena non valida');
+  fs.rm(f, { force: true }, () => json(res, 200, { ok: true }));
+}
+
 function createFolder(res, q) {
   const name = clean(q.get('name'));
   if (!name) return send(res, 400, 'Nome non valido');
@@ -198,6 +286,13 @@ function handle(req, res) {
     if (route === 'GET /api/boot') return json(res, 200, { boot: BOOT });
     if (route === 'GET /api/state') return getState(res, q);
     if (route === 'PUT /api/state') return saveState(req, res, q);
+    if (route === 'GET /api/miniatura') return getMini(res, q);
+    if (route === 'GET /api/sistema') return infoSistema(res);
+    if (route === 'PUT /api/sistema') return salvaSistema(req, res, q);
+    if (route === 'POST /api/sistema/personalizza') return personalizzaSistema(res);
+    if (route === 'GET /api/sistema/esporta') return esportaSistema(res);
+    if (route === 'PUT /api/miniatura') return saveMini(req, res, q);
+    if (route === 'DELETE /api/miniatura') return deleteMini(res, q);
     return send(res, 405, 'Richiesta non consentita');
   }
   if (req.method !== 'GET') return send(res, 405, 'Metodo non consentito');
@@ -214,6 +309,13 @@ function handle(req, res) {
     if (!info) return send(res, 404, 'Non trovato');
     return fs.readFile(path.join(DATA, 'assets', dep[1] + (info.ext || '')), (err, d) => err ? send(res, 404, 'Non trovato')
       : (res.writeHead(200, { 'Content-Type': info.mime || 'application/octet-stream', 'Cache-Control': 'public, max-age=31536000, immutable' }), res.end(d)));
+  }
+  // i file del sistema di gioco della campagna (sistema.json, formule.json, compendio, lingue)
+  if (rel.startsWith('/sistema/')) {
+    const dir = cartellaSistema().dir, file = path.join(dir, rel.slice(9));
+    const type = MIME[path.extname(file).toLowerCase()];
+    if (!file.startsWith(dir + path.sep) || !type) return send(res, 404, 'Non trovato');
+    return fs.readFile(file, (err, d) => err ? send(res, 404, 'Non trovato') : send(res, 200, d, type));
   }
   // le immagini vengono dalla campagna, tutto il resto dal programma
   const base = rel.startsWith('/assets/') ? CAMP : ROOT;

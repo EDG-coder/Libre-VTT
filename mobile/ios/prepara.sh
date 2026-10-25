@@ -29,11 +29,12 @@ mkdir -p "$FW"
 echo "→ Copio il programma"
 P="$QUI/LibreVTT/nodejs-project"
 rm -rf "$P"; mkdir -p "$P/assets/Sfondi"
-for f in "$RADICE"/*.html "$RADICE"/*.js "$RADICE"/*.css "$RADICE"/favicon.svg "$RADICE"/package.json "$RADICE"/formule.json; do
+for f in "$RADICE"/*.html "$RADICE"/*.js "$RADICE"/*.css "$RADICE"/favicon.svg "$RADICE"/package.json; do
   cp "$f" "$P/"
 done
 rm -f "$P/zigwrap.js"
 cp "$RADICE/assets/Sfondi/main.webp" "$RADICE/assets/Sfondi/main-en.webp" "$P/assets/Sfondi/"
+cp -R "$RADICE/sistemi" "$P/"
 
 # ---------- 2. Node.js per iOS ----------
 if [ ! -d "$FW/NodeMobile.xcframework" ]; then

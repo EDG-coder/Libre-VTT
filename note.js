@@ -88,7 +88,9 @@
   };
 
   box.querySelector('.tgrip').addEventListener('click', () => { toggleOpen(box, !box.classList.contains('open')); disegna(); });
-  registerTool('note', box, box.querySelector('.tgrip'), 'Note');
+  const strumento = registerTool('note', box, box.querySelector('.tgrip'), 'Note');
+  // in alto, sotto dadi e turni: in fondo al menu si aprirebbe fuori dallo schermo
+  if (typeof slotsEl !== 'undefined' && slotsEl.children[2]) slotsEl.insertBefore(strumento.slot, slotsEl.children[2]);
 
   // lo stato della campagna si legge quando la mappa è pronta (prima non si sa se c'è il server)
   const primaDopo = window.afterBoardLoad;

@@ -187,6 +187,7 @@ document.body.insertAdjacentHTML('beforeend', `
 function newSheet(name, tpl) {
   const f = {};
   if (tpl === 'dnd5e' || tpl === 'standard') Object.assign(f, { level: '1', str: '10', dex: '10', con: '10', int: '10', wis: '10', cha: '10', speed: settings.unit === 'm' ? '9 m' : '30 ft' });
+  if (tpl === 'generica' && typeof SISTEMA !== 'undefined' && SISTEMA.dati) { f.level = '1'; for (const c of SISTEMA.dati.caratteristiche || []) f[c.id] = '10'; }
   return { id: uid(), name, tpl, icon: null, f };
 }
 $('sheetNew').addEventListener('click', () => {
@@ -393,7 +394,7 @@ const sheetWinMenu = w => {
     st === 'open' ? { label: 'Riduci a barra', fn: () => setWinState(w, 'min') } : { label: 'Ripristina', fn: () => setWinState(w, 'open') },
     ...(w._sheet && st !== 'icon' ? [{ label: 'Riduci a icona', fn: () => setWinState(w, 'icon') }] : []),
     ...(w._sheet ? [{ label: '🖼 Cambia icona…', fn: () => pickAsset(a => setSheetIcon(w._sheet, a)) }] : []),
-    ...(w._sheet && w._sheet.tpl !== 'simple' ? [{ label: (vistaScheda.get(w._sheet.id) || w._sheet.tpl) === 'standard' ? '📋 Vedi come scheda Open' : '📜 Vedi come scheda Standard', fn: () => cambiaVista(w) }] : []),
+    ...(w._sheet && w._sheet.tpl !== 'simple' && w._sheet.tpl !== 'generica' ? [{ label: (vistaScheda.get(w._sheet.id) || w._sheet.tpl) === 'standard' ? '📋 Vedi come scheda Open' : '📜 Vedi come scheda Standard', fn: () => cambiaVista(w) }] : []),
     ...(w._sheet && typeof vociFileScheda === 'function' ? vociFileScheda(w) : []),
     '-', { label: 'Chiudi', fn: () => closeWin(w) }
   ];
@@ -418,7 +419,7 @@ function openSheet(id) {
   }
   const body = w._body;
   body.innerHTML = (std ? '' : '<div class="box nameBox"><label class="lab">Nome del personaggio<input type="text" data-name maxlength="40"></label></div>') +
-    (std ? standardHtml() : tpl === 'dnd5e' ? dndHtml() : simpleHtml());
+    (std ? standardHtml() : tpl === 'dnd5e' ? dndHtml() : tpl === 'generica' && typeof genericaHtml === 'function' ? genericaHtml() : simpleHtml());
   const ni = body.querySelector('[data-name]');
   if (ni) {
     ni.value = s.name;
@@ -427,6 +428,7 @@ function openSheet(id) {
   bindSheet(body, s);
   if (std) stdSetup(w, body, s);
   if (tpl === 'dnd5e') openSetup(w, body, s);
+  if (tpl === 'generica' && typeof genericaSetup === 'function') genericaSetup(w, body, s);
   dentroLoSchermo(w);
   return w;
 }
@@ -523,6 +525,7 @@ function recalc(root, s) {
   root.querySelectorAll('[data-c="pp"]').forEach(o => { o.title = perche; });
   // CD e attacco degli incantesimi: il valore calcolato si vede in grigio finché non ne scrivi uno tuo
   // CA senza armatura: 10 + Destrezza, in grigio finché non scrivi quella della tua armatura
+  if (s.tpl === 'generica') return;                   // la scheda del sistema fa i suoi conti (sheet-gen.js)
   const ca = caSenzaArmatura(s);
   root.querySelectorAll('[data-f="ac"]').forEach(i => { i.placeholder = String(ca); i.title = `Senza armatura: 10 + Destrezza (${sgn(abMod(s, 'dex'))}) = ${ca}. Con un'armatura scrivi qui la tua CA.`; });
   const a = abIncantatore(s);

@@ -323,6 +323,7 @@ async function applyWorld(w) {
   try {
     mergeSheets(w.sheets);
     if (w.notes && typeof noteDalServer === 'function') noteDalServer(w.notes, false);
+    if (w.sistema && typeof sistemaDalMaster === 'function') sistemaDalMaster(w.sistema);
     if (Array.isArray(w.chat)) {
       chat = w.chat;
       if (typeof renderChat === 'function') renderChat();
@@ -423,7 +424,7 @@ async function netPushBoard() {
         if (el) el.dataset.gid = ph.gid;
       }
     }
-    intent('board', { board: { active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, turni: settings.turni || null, scenes: b.scenes, sheets } });
+    intent('board', { board: { active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, turni: settings.turni || null, scenes: b.scenes, sheets, sistema: typeof SISTEMA !== 'undefined' && SISTEMA.perRete ? SISTEMA.perRete() : null } });
   } finally { NET.pushing = false; }
 }
 

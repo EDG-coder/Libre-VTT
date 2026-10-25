@@ -601,7 +601,7 @@ body.net-player #fogSect { display: none; }
 body.net-player #caselleSect { display: none; }
 
 /* ======================= Ordine dei turni (turni.js) ======================= */
-#turniBox .tbody { width: 260px; }
+#turniBox { --tw: 260px; }
 .turniTesta b { font-size: 14px; }
 .turniTesta label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .turniLista { max-height: 260px; overflow-y: auto; overscroll-behavior: contain; margin: 4px 0; }
@@ -634,14 +634,73 @@ body.net-player #caselleSect { display: none; }
 .msg .chipRoll:hover { background: var(--accent, #7c5cff); color: #fff; }
 
 /* ======================= Note (note.js) ======================= */
-#noteBox .tbody { width: 300px; }
+#noteBox { --tw: min(380px, calc(100vw - 110px)); }
 .noteTabs { gap: 0 !important; }
 .noteTabs button { flex: 1; padding: 6px 4px; border-radius: 0; }
 .noteTabs button:first-child { border-radius: 10px 0 0 10px; }
 .noteTabs button:last-child { border-radius: 0 10px 10px 0; }
-.noteTabs button.active { background: color-mix(in srgb, var(--accent, #7c5cff) 45%, transparent); }
+.noteTabs button.active { background: rgba(124, 92, 255, .5); border-color: #a58bff; }
+#noteBox.open { background: rgba(18, 21, 28, .92); }
 #noteTesto { width: 100%; min-height: 180px; max-height: 50vh; resize: vertical; box-sizing: border-box; margin: 6px 0 2px;
   border: 1px solid rgba(255, 255, 255, .2); border-radius: 10px; padding: 8px 10px; background: rgba(0, 0, 0, .3); color: inherit; font: inherit; font-size: 14px; line-height: 1.4; }
 #noteTesto[readonly] { opacity: .85; }
 .noteEdit { font-size: 13px; gap: 6px; }
 .noteEdit[hidden] { display: none !important; }
+
+/* ======================= Miniature delle scene (scene-mini.js) ======================= */
+.sceneRow > button.pick { align-items: center; }
+.sceneMini { flex: none; width: 60px; height: 40px; border-radius: 6px; object-fit: cover; background: rgba(255, 255, 255, .06); border: 1px solid var(--line); }
+.sceneRow .scIcona { display: none; }
+#sceneMenu { min-width: 290px; }
+#sceneGridOpen { display: block; width: 100%; margin-top: 4px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: none; color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
+#sceneGridOpen:hover { background: var(--panel-3); }
+#sceneGridOpen[hidden] { display: none; }
+#scenePreview { position: fixed; left: 0; top: 0; z-index: 100010; width: 300px; padding: 8px; border-radius: 14px; pointer-events: none;
+  background: var(--panel); border: 1px solid var(--line); box-shadow: 0 14px 40px rgba(0, 0, 0, .55); color: var(--text); }
+#scenePreview[hidden] { display: none; }
+#scenePreview img { display: block; width: 100%; aspect-ratio: 3 / 2; border-radius: 8px; object-fit: cover; background: rgba(255, 255, 255, .06); }
+#scenePreview .spInfo { display: flex; flex-direction: column; gap: 2px; padding: 6px 4px 2px; }
+#scenePreview .spInfo span { font-size: 12px; color: var(--muted); }
+#publicBadge { white-space: nowrap; }
+#pubMostra { display: flex; align-items: center; height: 44px; white-space: nowrap; padding: 0 14px; border-radius: 22px; cursor: pointer; font: inherit; font-size: 13px; color: #1b1500;
+  background: #ffd93d; border: 0; box-shadow: 0 0 14px rgba(255, 217, 61, .45); }
+#pubMostra[hidden] { display: none; }
+#sceneGridDlg { width: min(860px, 94vw); max-height: 86vh; max-height: 86dvh; border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; background: var(--panel); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
+#sceneGridDlg[open] { display: flex; flex-direction: column; }
+#sceneGridDlg::backdrop { background: rgba(0, 0, 0, .55); }
+.sgHead { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.sgHead h3 { margin: 0; }
+.sgHead .sgHint { flex: 1; font-size: 13px; color: var(--muted); }
+#sceneGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; overflow-y: auto; min-height: 0; padding: 2px; }
+.scCard { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+.scCard:hover { border-color: var(--accent); }
+.scCard.attiva { box-shadow: inset 0 0 0 2px var(--accent); }
+.scCard.pubblica { border-color: #2ee6a6; }
+.scCard .sceneMini { width: 100%; height: auto; aspect-ratio: 3 / 2; }
+.scCard b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scCard small { font-size: 12px; color: var(--muted); }
+.scCard .scAz { position: absolute; top: 12px; right: 12px; display: flex; gap: 4px; }
+.scCard .scAz button { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: rgba(18, 21, 28, .8); color: #fff; cursor: pointer; }
+.scCard.trascino { z-index: 2; opacity: .85; box-shadow: 0 12px 30px rgba(0, 0, 0, .5); transition: none; }
+.scCard.qui { outline: 2px dashed var(--accent); outline-offset: 2px; }
+
+/* ======================= Sistema di gioco (sistema.js) ======================= */
+#sistemaDlg { width: min(760px, 94vw); max-height: 88vh; max-height: 88dvh; border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; background: var(--panel); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
+#sistemaDlg[open] { display: flex; flex-direction: column; }
+#sistemaDlg::backdrop { background: rgba(0, 0, 0, .55); }
+#sistemaDlg h3 { margin: 0 0 10px; }
+#sistemaDlg h4 { margin: 14px 0 6px; font-size: 14px; }
+#sistemaDlg .sisEd { overflow-y: auto; min-height: 0; padding-right: 4px; }
+#sistemaDlg input, #sistemaDlg select, #sistemaDlg textarea { font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); min-width: 0; }
+#sistemaDlg .sisGriglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+#sistemaDlg .sisGriglia label, #sistemaDlg .sisArea { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+#sistemaDlg .sisArea { margin-top: 8px; }
+#sistemaDlg .sisLista { display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
+#sistemaDlg .sisR { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+#sistemaDlg .sisR .cId { width: 80px; } #sistemaDlg .sisR .cSig { width: 64px; } #sistemaDlg .sisR .cNome, #sistemaDlg .sisR .aNome { flex: 1; }
+#sistemaDlg .sisRF .fNome { width: 140px; } #sistemaDlg .sisRF .fUsa { width: 170px; } #sistemaDlg .sisRF .fTesto { flex: 1; min-width: 200px; font-family: ui-monospace, Menlo, monospace; }
+#sistemaDlg .sisRF.no .fTesto { border-color: #ff6b6b; }
+#sistemaDlg .sisRF .fErr { flex-basis: 100%; color: #ff8a8a; font-size: 11px; }
+#sistemaDlg .sisR .x { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: none; color: var(--muted); cursor: pointer; }
+#sistemaDlg .sisSchede { display: flex; flex-direction: column; gap: 4px; }
+#sistemaDlg .err { color: #ff8a8a; min-height: 1em; margin: 8px 0 0; font-size: 13px; }

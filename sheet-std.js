@@ -177,9 +177,9 @@ function stdPage1() {
 
   // attacchi
   h += box(212, 376, 174, 206, 'ATTACCHI & INCANTESIMI', 'sPanel');
-  h += lab('ARMA', 218, 385, 60, 'c', 'sNano') + lab('BONUS ATT.', 281, 385, 28, 'c', 'sNano') + lab('DANNI / TIPO', 312, 385, 56, 'c', 'sNano');
+  h += lab('ARMA', 218, 385, 58, 'c', 'sNano') + lab('BONUS ATT.', 279, 385, 26, 'c', 'sNano') + lab('DANNI / TIPO', 308, 385, 50, 'c', 'sNano');
   // le righe stanno in un riquadro che scorre: sotto l'ultima piena ce n'è sempre una vuota
-  h += `<div class="sAtk" style="${at(ATK_X, ATK_Y, 172, 108)}">${rep(6, stdRigaAttacco)}</div>`;
+  h += `<div class="sAtk" style="${at(ATK_X, ATK_Y, 168, 108)}">${rep(5, stdRigaAttacco)}</div>`;
   h += lab('MUNIZIONI', 219, 502, 51, 'c', 'sMicro') + lab('Q.TÀ', 275, 502, 19, 'c', 'sMicro');
   h += rep(3, i => inp('am' + i + 'n', 219, 509.89 + i * 18, 51, 14, 'sCell') + nmb('am' + i + 'q', 275, 509.89 + i * 18, 19, 14, 'sCell'));
   h += box(300, 520, 82, 34, '', 'sBox');
@@ -394,23 +394,39 @@ function quantiAttacchi(s) {                       // righe usate: l'ultima che 
 }
 function stdRigaAttacco(i) {
   const y = 0.89 + i * 18.2, x = -ATK_X;
-  return inp('an' + i, 218 + x, y, 60, 14, 'sCell') + inp('ab' + i, 281 + x, y, 28, 14, 'sCell sNum') + inp('ad' + i, 312 + x, y, 56, 14, 'sCell') +
-    `<button type="button" class="sHit" data-r="atk:${i}" style="${at(369.5 + x, y, 8.5, 14)}" title="Tira per colpire">◎</button>` +
-    `<button type="button" class="sHit sDmg" data-r="dmg:${i}" style="${at(378.5 + x, y, 8.5, 14)}" title="Tira i danni">◆</button>`;
+  // tutto dentro il riquadro (che va da 212 a 386): i due dadi finiscono a 379
+  return inp('an' + i, 218 + x, y, 58, 14, 'sCell') + inp('ab' + i, 279 + x, y, 26, 14, 'sCell sNum') + inp('ad' + i, 308 + x, y, 50, 14, 'sCell') +
+    `<button type="button" class="sHit" data-r="atk:${i}" style="${at(360.5 + x, y, 8.5, 14)}" title="Tira per colpire">◎</button>` +
+    `<button type="button" class="sHit sDmg" data-r="dmg:${i}" style="${at(370.5 + x, y, 8.5, 14)}" title="Tira i danni">◆</button>`;
 }
 function stdBindAttacchi(root, s) {
   const box = root.querySelector('.sAtk');
   if (!box) return;
   const righe = () => box.querySelectorAll('[data-f^="an"]').length;
+  // «＋» subito sotto l'ultima riga: aggiunge una riga (il riquadro scorre quando sono più di sei)
+  const piu = document.createElement('button');
+  piu.type = 'button'; piu.className = 'sAtkPiu'; piu.textContent = '＋'; piu.title = 'Aggiungi un attacco';
+  piu.setAttribute('aria-label', 'Aggiungi un attacco');
+  const metti = () => { piu.style.cssText = at(2, 0.89 + righe() * 18.2, 161, 13); box.appendChild(piu); };
   const aggiungi = fino => {
-    let n = righe();
-    if (n >= fino) return;
-    box.insertAdjacentHTML('beforeend', rep(fino - n, j => stdRigaAttacco(n + j)));
-    box.querySelectorAll('[data-f]').forEach(el => { if (!el._legato) bindField(el, root, s); el._legato = 1; });
+    const n = righe();
+    if (n < fino) {
+      piu.remove();
+      box.insertAdjacentHTML('beforeend', rep(fino - n, j => stdRigaAttacco(n + j)));
+      box.querySelectorAll('[data-f]').forEach(el => { if (!el._legato) bindField(el, root, s); el._legato = 1; });
+    }
+    metti();
   };
   box.querySelectorAll('[data-f]').forEach(el => { el._legato = 1; });
-  aggiungi(Math.max(6, quantiAttacchi(s) + 1));
-  box.addEventListener('input', () => aggiungi(Math.min(200, Math.max(6, quantiAttacchi(s) + 1))));
+  aggiungi(Math.max(5, quantiAttacchi(s)));          // 5 righe + il «＋»: stanno nel riquadro senza scorrere
+  piu.addEventListener('click', () => {
+    const n = righe();
+    if (n >= 200) return;
+    aggiungi(n + 1);
+    const nuovo = box.querySelector(`[data-f="an${n}"]`);
+    nuovo.focus();
+    box.scrollTop = box.scrollHeight;
+  });
 }
 
 function stdAdatta(inp) {
