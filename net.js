@@ -502,7 +502,7 @@ var rollExpr = (prev => function (expr, label) {
   if (!can('roll')) { netSay('Non puoi tirare i dadi.', 'warn'); return true; }
   const d = diceApply(expr);
   if (!parseExpr(d.expr)) return false;                     // si vede subito se è scritto male
-  intent('roll', { expr: d.expr, label: label || String(expr).replace(/\s+/g, ''), secret: d.secret });
+  intent('roll', { expr: d.expr, label: label || String(expr).replace(/\s+/g, ''), secret: d.secret, doppio: !!window.tiroDoppio });
   diceLast.textContent = 'Tiro mandato al server…';
   return true;
 })(rollExpr);

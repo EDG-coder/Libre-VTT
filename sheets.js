@@ -64,6 +64,7 @@ function rollExpr(expr, label) {
   if (!r) return false;
   const m = { kind: 'roll', label: label || String(expr).replace(/\s+/g, ''), ...r };
   if (d.secret) m.secret = true;
+  if (window.tiroDoppio && r.rolls && r.rolls.length === 2) m.doppio = true;
   addChat(m);
   diceShowLast(m);
   return m;
@@ -396,6 +397,7 @@ const sheetWinMenu = w => {
     ...(w._sheet ? [{ label: '🖼 Cambia icona…', fn: () => pickAsset(a => setSheetIcon(w._sheet, a)) }] : []),
     ...(w._sheet && w._sheet.tpl !== 'simple' && w._sheet.tpl !== 'generica' ? [{ label: (vistaScheda.get(w._sheet.id) || w._sheet.tpl) === 'standard' ? '📋 Vedi come scheda Open' : '📜 Vedi come scheda Standard', fn: () => cambiaVista(w) }] : []),
     ...(w._sheet && typeof vociFileScheda === 'function' ? vociFileScheda(w) : []),
+    ...(w._sheet && typeof vociSaliLivello === 'function' ? vociSaliLivello(w) : []),
     '-', { label: 'Chiudi', fn: () => closeWin(w) }
   ];
 };

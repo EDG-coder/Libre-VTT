@@ -330,6 +330,27 @@ function salvaVisibilita(req, res) {
   });
 }
 
+// ---------- Open5e: la sua API (v2) letta passando da qui ----------
+// Il tavolo chiede /api/open5e?percorso=creatures/&search=…: solo GET, solo api.open5e.com/v2 e solo
+// gli elenchi che servono al compendio. (Dal browser direttamente non sempre si può, e così si
+// controlla cosa esce.)
+const OPEN5E_OK = new Set(['documents/', 'creatures/', 'spells/', 'items/', 'magicitems/', 'weapons/', 'armor/', 'feats/', 'species/', 'backgrounds/', 'conditions/', 'classes/', 'rules/']);
+function open5e(res, q) {
+  const percorso = String(q.get('percorso') || '');
+  if (!OPEN5E_OK.has(percorso)) return send(res, 400, 'Elenco non permesso');
+  const u = new URL('https://api.open5e.com/v2/' + percorso);
+  for (const [k, v] of q) if (k !== 'percorso' && /^[\w_]{1,40}$/.test(k)) u.searchParams.set(k, String(v).slice(0, 200));
+  u.searchParams.set('format', 'json');
+  const r = require('https').get(u, { timeout: 20000, headers: { 'User-Agent': 'LIBRE VTT' } }, x => {
+    if (x.statusCode !== 200) { x.resume(); return send(res, 502, 'Open5e ha risposto ' + x.statusCode); }
+    const parti = []; let n = 0;
+    x.on('data', d => { n += d.length; if (n > 30 * 1024 * 1024) { x.destroy(); } else parti.push(d); });
+    x.on('end', () => send(res, 200, Buffer.concat(parti), MIME['.json']));
+  });
+  r.on('timeout', () => r.destroy(new Error('tempo scaduto')));
+  r.on('error', e => { if (!res.headersSent) send(res, 502, 'Open5e non risponde (' + e.message + '): sei collegato a internet?'); });
+}
+
 // Miniature delle scene: data/miniature/<id scena>.webp (le fa il browser quando lasci una scena)
 const MINI = path.join(DATA, 'miniature');
 const miniFile = q => { const id = String(q.get('id') || ''); return /^[\w-]{1,80}$/.test(id) ? path.join(MINI, id + '.webp') : null; };
@@ -399,6 +420,7 @@ function handle(req, res) {
     if (route === 'GET /api/miniatura') return getMini(res, q);
     if (route === 'GET /api/sistema') return infoSistema(res);
     if (route === 'GET /api/compendio') return elencoCompendio(res);
+    if (route === 'GET /api/open5e') return open5e(res, q);
     if (route === 'POST /api/compendio/importa') return importaPacchetto(req, res);
     if (route === 'POST /api/compendio/pacchetto') return salvaPacchetto(req, res);
     if (route === 'DELETE /api/compendio') return eliminaPacchetto(res, q);

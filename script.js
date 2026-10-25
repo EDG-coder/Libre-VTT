@@ -1074,6 +1074,21 @@ function msgEl(m) {
     }
     head.textContent = '🎲 ' + m.label;
     d.append(head);
+    // due tiri alla pari (dalla scheda in vantaggio o svantaggio): si vedono tutti e due, senza dire quale vale
+    if (m.doppio && Array.isArray(m.rolls) && m.rolls.length === 2) {
+      d.classList.add('doppio');
+      if (m.secret) { const s = document.createElement('span'); s.className = 'sec'; s.textContent = '🔒 segreto'; s.title = 'Lo vedete solo tu e il master'; d.append(s); }
+      const mod = m.mod || 0, box = document.createElement('span'); box.className = 'rr rDue'; box.title = tr('Due tiri: scegli tu quale tenere');
+      m.rolls.forEach((v, i) => {
+        if (i) box.append(document.createTextNode(' · '));
+        const b = document.createElement('b'); b.textContent = v + mod;
+        if (m.sides === 20 && v === 20) b.className = 'max'; else if (m.sides === 20 && v === 1) b.className = 'min';
+        if (mod) b.title = `${v} ${mod > 0 ? '+' : '−'} ${Math.abs(mod)}`;
+        box.append(b);
+      });
+      d.append(box);
+      return d;
+    }
     if (m.adv) { const a = document.createElement('span'); a.className = 'adv ' + m.adv; a.textContent = m.adv === 'adv' ? 'vantaggio' : 'svantaggio'; d.append(a); }
     if (m.secret) { const s = document.createElement('span'); s.className = 'sec'; s.textContent = '🔒 segreto'; s.title = 'Lo vedete solo tu e il master'; d.append(s); }
     const drop = new Set(m.drop || []), mod = m.mod || 0;
@@ -1537,6 +1552,7 @@ function diceShowLast(m) {
   const kept = m.rolls.filter((_, i) => !drop.has(i));
   const tag = m.adv === 'adv' ? ' (vantaggio)' : m.adv === 'dis' ? ' (svantaggio)' : '';
   const parts = m.rolls.length <= 12 ? m.rolls.map((v, i) => drop.has(i) ? `(${v})` : String(v)).join(' ') : '';
+  if (m.doppio && m.rolls.length === 2) { diceLast.textContent = `${m.label}: ${m.rolls.map(v => v + (m.mod || 0)).join(' · ')}` + (m.secret ? ' · 🔒 segreto' : ''); fitDice(); diceMostraGrande(m, ''); return; }
   diceLast.textContent = `${m.label}${tag}: ` + (kept.length === 1 && !m.mod && !drop.size ? m.total : (parts ? parts + ' → ' : '') + m.total) +
     (m.secret ? ' · 🔒 segreto' : '');
   fitDice();
@@ -1556,7 +1572,7 @@ function diceMostraGrande(m, tag) {
   }
   const lab = document.createElement('span'), tot = document.createElement('b');
   lab.textContent = m.label + tag + (m.secret ? ' · 🔒' : '');
-  tot.textContent = m.total;
+  tot.textContent = m.doppio && m.rolls && m.rolls.length === 2 ? m.rolls.map(v => v + (m.mod || 0)).join(' · ') : m.total;
   pop.replaceChildren(lab, tot);
   pop.classList.remove('on'); void pop.offsetWidth; pop.classList.add('on');
   clearTimeout(dicePopTimer);

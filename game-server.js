@@ -509,6 +509,7 @@ function handleIntent(c, m) {
       if (!r) return deny(c, m.op, 'tiro non valido');
       const msg = { kind: 'roll', label: str(m.label || m.expr, 80), by: c.name, byId: c.token, ...r };
       if (m.secret) msg.secret = true;
+      if (m.doppio && r.rolls && r.rolls.length === 2) msg.doppio = true;   // due tiri mostrati alla pari (scheda in vantaggio/svantaggio)
       addChat(msg);
       return;
     }

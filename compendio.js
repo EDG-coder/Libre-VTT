@@ -349,6 +349,7 @@
     });
     w._onClose = () => finestre.delete(k);
     finestre.set(k, w);
+    dispatchEvent(new CustomEvent('libre-voce-aperta', { detail: { w, mostro: v.tipo === 'mostro' } }));
     if (typeof dentroLoSchermo === 'function') dentroLoSchermo(w);
     return w;
   }

@@ -15,7 +15,8 @@ VECCHIE NOTE blocco 5:
 - Nomi italiani in /home/claude/uffa/strumenti/srd/it/: vocab.json, incantesimi.json, mostri.json FATTI; mancano equip, magic items, trait, feature (lista in scratchpad/nomi-en.json).
 - Poi: convertitore strumenti/srd/converti.js -> sistemi/<id>/compendio/srd-5.x/{pacchetto.json, voci/*.json}; compendio.js (pannello ricerca/filtri, finestre voce, trascina mostro->segnalino+scheda, oggetto/incantesimo->scheda, @nome in chat, Nuova voce, import/export .librepack zip, visibilità master/tutti, invio ai giocatori come asset json).
 
-DA FARE: Blocco 6 (Open5e, 5etools JSON, CSV, creazione guidata + Sali di livello), traduzioni EN, test completi, verifica indipendente, rilascio 3.5.0, riepilogo in italiano per punti.
+FATTO anche: Blocco 6 (compendio-import.js: Open5e via /api/open5e, 5etools, CSV; creazione.js: creazione guidata + Sali di livello); tiri-scheda.js (barra Pubblico/Privato + Svantaggio/Normale/Vantaggio su ogni scheda, tiro doppio 'doppio' mostrato alla pari). Test: createst.js, tiritest.js.
+DA FARE: traduzioni EN, test completi, verifica indipendente, rilascio 3.5.0, riepilogo in italiano per punti.
 iPhone (blocco 3) solo insieme all'utente via Device Hub.
 
 Se il container è nuovo: git clone del repo, git checkout lavoro-3.5, copia in /home/claude/uffa; 5e-database: git clone --depth 1 https://github.com/5e-bits/5e-database /home/claude/5e-bits/5e-database
