@@ -29,7 +29,7 @@ let target = 'board';      // nel livello Mappa: 'board' = rettangolo, 'bg' = im
 const DEFAULT_GRID = { show: false, snap: false, fitToken: true, size: 50, color: '#ffffff', opacity: 85 };
 const DEFAULT_BORDER = { color: '#000000', transparent: false, width: 3 };
 const DEFAULT_PING = { color: '#ff4d4d', size: 2, speed: 8, fade: 2500 };      // size in cm, speed in cm/s, fade in ms
-const SECTIONS = { look: true, res: false, grid: true, gridDefault: false, map: false, border: false, ping: false, sheets: false, tools: false, hidden: false, chat: false };   // sezioni aperte di default
+const SECTIONS = { look: true, res: false, grid: true, gridDefault: false, map: false, border: false, ping: false, sheets: false, tools: false, ordineStrumenti: false, hidden: false, chat: false };   // sezioni aperte di default
 const RESOLUTIONS = [[480, '480p'], [720, '720p'], [1080, '1080p'], [1440, '1440p'], [0, 'Originale']];
 const settings = { theme: 'dark', autoBg: true, fogColor: 'auto', fogVeil: 0.55, caratLibere: false, spareggioDes: true, prefT: 0, boxLabels: ['', '', ''], resToken: 720, resBg: 1080, gridDefault: { ...DEFAULT_GRID }, border: { ...DEFAULT_BORDER }, ping: { ...DEFAULT_PING }, sections: {},
   tools: {}, drawerOpen: true, publicScene: null, unit: 'ft', sheetClose: 'x', rulerCenter: false, dockOpen: true, hiddenLayer: { show: true, opacity: 45 }, chatTabs: { rolls: false, rules: false },
@@ -1478,6 +1478,7 @@ async function loadBoard() {
     if (+s.prefT > 0) settings.prefT = +s.prefT;
     for (const k of ['tools', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'park', 'music']) if (s[k] && typeof s[k] === 'object') settings[k] = { ...settings[k], ...s[k] };
     settings.sections = s.sections && typeof s.sections === 'object' ? { ...s.sections } : {};
+    settings.toolOrder = Array.isArray(s.toolOrder) ? s.toolOrder.filter(x => typeof x === 'string').slice(0, 60) : null;
     paintBorder();
     const okRect = r => r && [r.x, r.y, r.w, r.h].every(Number.isFinite) && r.w > 0 && r.h > 0;
     const pick = r => ({ x: r.x, y: r.y, w: r.w, h: r.h });

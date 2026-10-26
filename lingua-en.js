@@ -1658,3 +1658,12 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "📚 Compendio": "📚 Compendium",
 "@Palla di fuoco": "@Fireball",
 });
+
+// 3.5.1 — ordine degli strumenti
+Object.assign(window.LIBRE_LINGUE.en, {
+"Ordine degli strumenti": "Tool order",
+"L'ordine delle icone nel menu a sinistra: spostale con le frecce o trascinandole.": "The order of the icons in the left menu: move them with the arrows or by dragging.",
+"Sposta in su": "Move up",
+"Sposta in giù": "Move down",
+"Ripristina l'ordine": "Reset order",
+});

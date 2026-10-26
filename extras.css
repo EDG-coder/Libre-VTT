@@ -802,3 +802,13 @@ body.net-player #caselleSect { display: none; }
 .creaRiep .cvGriglia { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; }
 .creaRiep .cvR { display: contents; } .creaRiep .cvR span { color: var(--muted); }
 .tiroBar .livSu { margin-left: auto; padding: 4px 10px; font-size: 12.5px; }
+
+/* Impostazioni → Ordine degli strumenti */
+.ordStr { list-style: none; margin: 6px 0 8px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ordStr li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 8px; background: rgba(127, 127, 127, .12); cursor: grab; user-select: none; }
+.ordStr li.preso { opacity: .5; }
+.ordStr .ordIc { width: 22px; height: 22px; flex: none; display: grid; place-items: center; }
+.ordStr .ordIc svg { width: 20px; height: 20px; }
+.ordStr .ordNome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ordStr button { width: 30px; height: 28px; padding: 0; border-radius: 6px; border: 1px solid rgba(127, 127, 127, .35); background: transparent; color: inherit; font-size: 15px; cursor: pointer; }
+.ordStr button:disabled { opacity: .3; cursor: default; }
