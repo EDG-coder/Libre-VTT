@@ -464,9 +464,10 @@ function handle(req, res) {
     return fs.readFile(file, (err, d) => err ? send(res, 404, 'Non trovato') : send(res, 200, d, type));
   }
   // le immagini vengono dalla campagna, il codice comune da condiviso/, tutto il resto dalle pagine (web/)
-  const comune = rel.startsWith('/condiviso/');
-  const base = rel.startsWith('/assets/') ? CAMP : comune ? path.join(ROOT, 'condiviso') : WEB;
-  const file = path.join(base, rel === '/' ? 'index.html' : comune ? rel.slice(10) : rel);
+  // (e i sistemi di gioco già pronti da sistemi/)
+  const dalProgramma = /^\/(condiviso|sistemi)\//.exec(rel);
+  const base = rel.startsWith('/assets/') ? CAMP : dalProgramma ? path.join(ROOT, dalProgramma[1]) : WEB;
+  const file = path.join(base, rel === '/' ? 'index.html' : dalProgramma ? rel.slice(dalProgramma[0].length) : rel);
   const type = MIME[path.extname(file).toLowerCase()];
   if (!file.startsWith(base + path.sep) || !type) return send(res, 404, 'Non trovato');
   fs.readFile(file, (err, data) => err ? send(res, 404, 'Non trovato') : send(res, 200, data, type));
