@@ -1,0 +1,441 @@
+getpwuid_r did not find a match for uid 501
+Timestamp               Ty Process[PID:TID]
+2026-10-26 20:40:34.724 Df LibreVTT[19805:10df9] [com.apple.xpc:connection] [0x600003d00000] activating connection: mach=true listener=false peer=false name=com.apple.cfprefsd.daemon
+2026-10-26 20:40:34.733 Df LibreVTT[19805:10dfc] (libMobileGestalt.dylib) No persisted cache on this platform.
+2026-10-26 20:40:34.743 Df LibreVTT[19805:10df9] [com.apple.UIKit:BackgroundTask] Creating new assertion because there is no existing background assertion.
+2026-10-26 20:40:34.743 Df LibreVTT[19805:10df9] [com.apple.UIKit:BackgroundTask] Creating new background assertion
+2026-10-26 20:40:34.743 Df LibreVTT[19805:10df9] [com.apple.UIKit:BackgroundTask] Created new background assertion <BKSProcessAssertion: 0x60000210a440>
+2026-10-26 20:40:34.743 Df LibreVTT[19805:10df9] [com.apple.runningboard:connection] Initializing connection
+2026-10-26 20:40:34.743 Df LibreVTT[19805:10df9] [com.apple.runningboard:process] Removing all cached process handles
+2026-10-26 20:40:34.748 Df LibreVTT[19805:10df9] [com.apple.runningboard:connection] Creating connection to com.apple.runningboard
+2026-10-26 20:40:34.748 Df LibreVTT[19805:10df9] [com.apple.xpc:connection] [0x600003d000f0] activating connection: mach=true listener=false peer=false name=com.apple.runningboard
+2026-10-26 20:40:34.749 Df LibreVTT[19805:10dfb] [com.apple.runningboard:connection] Sending handshake request attempt #1 to server
+2026-10-26 20:40:34.757 Df LibreVTT[19805:10dfb] [com.apple.runningboard:connection] Handshake succeeded
+2026-10-26 20:40:34.757 Df LibreVTT[19805:10dfb] [com.apple.runningboard:connection] Identity resolved as app<io.github.edg-coder.librevtt((null))>
+2026-10-26 20:40:34.761 Df LibreVTT[19805:10df9] [com.apple.UIKit:BackgroundTask] Incrementing reference count for background assertion <BKSProcessAssertion: 0x60000210a440>
+2026-10-26 20:40:34.762 Df LibreVTT[19805:10df9] [com.apple.UIKit:BackgroundTask] Created background task <_UIBackgroundTaskInfo: 0x600001706700>: taskID = 1, taskName = Launch Background Task for Coalescing, creationTime = 942 (elapsed = 0).
+2026-10-26 20:40:34.763 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UIApplicationSceneKeyboardSettings on FBSSceneSettings
+2026-10-26 20:40:34.790 A  LibreVTT[19805:10dfb] (RunningBoardServices) didChangeInheritances
+2026-10-26 20:40:34.791 Df LibreVTT[19805:10dea] [com.apple.xpc:connection] [0x100f05d20] activating connection: mach=false listener=false peer=false name=(anonymous)
+2026-10-26 20:40:34.799 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneOcclusionSettings> on FBSSceneSettings
+2026-10-26 20:40:34.806 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneInterfaceProtectionSceneSettings> on FBSSceneSettings
+2026-10-26 20:40:34.808 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UIHomeAffordanceHostSceneSettings> on FBSSceneSettings
+2026-10-26 20:40:34.808 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISystemShellSceneHostingEnvironmentSettings on FBSSceneSettings
+2026-10-26 20:40:34.809 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISceneRenderingEnvironmentSettings on FBSSceneSettings
+2026-10-26 20:40:34.865 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneTransitioningHostSettings> on FBSSceneSettings
+2026-10-26 20:40:34.875 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneHostingContentSizePreferenceClientSettings> on FBSSceneClientSettings
+2026-10-26 20:40:34.878 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISceneHostingTraitCollectionPropagationSettings on FBSSceneSettings
+2026-10-26 20:40:34.880 Df LibreVTT[19805:10dea] [com.apple.UIKit:Application] Deactivation reason added: 10; deactivation reasons: 0 -> 1024; animating application lifecycle event: 0
+2026-10-26 20:40:34.881 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneHostingSheetPresentationSettings> on FBSSceneSettings
+2026-10-26 20:40:34.881 E  LibreVTT[19805:0] [com.apple.os_debug_log:] assertion failed: 24G830 22F77: libxpc.dylib + 72720 [021C0BF8-EDD4-395A-B281-2CC7A26F742F]: 0x7d
+2026-10-26 20:40:34.881 Df LibreVTT[19805:10dea] [com.apple.BoardServices:Injection] activating monitor for service com.apple.frontboard.open
+2026-10-26 20:40:34.882 Df LibreVTT[19805:10dea] [com.apple.BoardServices:Injection] activating monitor for service com.apple.frontboard.workspace-service
+2026-10-26 20:40:34.882 Df LibreVTT[19805:10dea] [com.apple.FrontBoard:Common] FBSWorkspace registering source: com.apple.frontboard.systemappservices
+2026-10-26 20:40:34.882 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneHostingSheetPresentationClientSettings> on FBSSceneClientSettings
+2026-10-26 20:40:34.883 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneHostingEventDeferringSettings> on FBSSceneSettings
+2026-10-26 20:40:34.884 Df LibreVTT[19805:10dea] [com.apple.FrontBoard:Common] FBSWorkspace connected to endpoint : <BSServiceConnectionEndpoint: 0x60000170c680; target: com.apple.frontboard.systemappservices; service: com.apple.frontboard.workspace-service>
+2026-10-26 20:40:34.884 Df LibreVTT[19805:10dea] [com.apple.FrontBoard:Common] <FBSWorkspaceScenesClient:0x600002c02b00 com.apple.frontboard.systemappservices> attempting immediate handshake from activate
+2026-10-26 20:40:34.884 Df LibreVTT[19805:10dea] [com.apple.FrontBoard:Common] <FBSWorkspaceScenesClient:0x600002c02b00 com.apple.frontboard.systemappservices> sent handshake
+2026-10-26 20:40:34.884 Df LibreVTT[19805:10dea] [com.apple.runningboard:general] Added observer for process assertions expiration warning: <_RBSExpirationWarningClient: 0x60000020fa00>
+2026-10-26 20:40:34.885 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <UIKit__UITypedKeyValueSceneSettings> on FBSSceneSettings
+2026-10-26 20:40:34.885 Df LibreVTT[19805:10df9] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <UIKit__UITypedKeyValueSceneSettings> on FBSSceneClientSettings
+2026-10-26 20:40:34.887 Df LibreVTT[19805:10dfe] [com.apple.FrontBoard:SceneExtension] Realizing settings extension FBSSceneSettingsCore on FBSSceneSettings
+2026-10-26 20:40:34.888 Df LibreVTT[19805:10dfe] [com.apple.FrontBoard:SceneExtension] Realizing settings extension FBSSceneClientSettingsCore on FBSSceneClientSettings
+2026-10-26 20:40:34.890 Df LibreVTT[19805:10dfe] [com.apple.FrontBoard:SceneExtension] UIMutableApplicationSceneSettings setting counterpart class: UIApplicationSceneSettings
+2026-10-26 20:40:34.890 Df LibreVTT[19805:10dfe] [com.apple.FrontBoard:SceneExtension] UIMutableApplicationSceneClientSettings setting counterpart class: UIApplicationSceneClientSettings
+2026-10-26 20:40:34.891 Df LibreVTT[19805:10dfe] [com.apple.FrontBoard:SceneExtension] Realizing settings extension FBSSceneTransitionContextCore on FBSSceneTransitionContext
+2026-10-26 20:40:34.898 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIScreen] Evaluated capturing state as 0 on <UIScreen: 0x100e07280> for initial
+2026-10-26 20:40:34.899 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIScreen] Evaluated capturing state as 0 on <UIScreen: 0x100e07280> for CADisplay KVO
+2026-10-26 20:40:34.908 Df LibreVTT[19805:10dea] [com.apple.Accessibility:AXSupportCommon] Read CategoryName: per-app = 1, category name = (null)
+2026-10-26 20:40:34.909 Df LibreVTT[19805:10dea] [com.apple.Accessibility:AXSupportCommon] Read CategoryName: per-app = 0, category name = (null)
+2026-10-26 20:40:34.914 Df LibreVTT[19805:10dea] [com.apple.dt.xctest:Default] Registering for test daemon availability notify post.
+2026-10-26 20:40:34.915 Df LibreVTT[19805:10dea] [com.apple.dt.xctest:Default] notify_get_state check indicated test daemon not ready.
+2026-10-26 20:40:34.916 Df LibreVTT[19805:10dea] [com.apple.dt.xctest:Default] notify_get_state check indicated test daemon not ready.
+2026-10-26 20:40:34.916 Df LibreVTT[19805:10dea] [com.apple.dt.xctest:Default] notify_get_state check indicated test daemon not ready.
+2026-10-26 20:40:34.916 A  LibreVTT[19805:10dfa] (CoreFoundation) Loading Preferences From User Session CFPrefsD
+2026-10-26 20:40:34.916 Df LibreVTT[19805:10dea] [com.apple.UIKit:Application] Deactivation reason added: 11; deactivation reasons: 1024 -> 3072; animating application lifecycle event: 0
+2026-10-26 20:40:34.917 Df LibreVTT[19805:10dea] [com.apple.UIKit:ViewServices] Launching as view service: NO
+2026-10-26 20:40:34.943 Df LibreVTT[19805:10dea] [com.apple.UIKit:Application] Deactivation reason removed: 10; deactivation reasons: 3072 -> 2048; animating application lifecycle event: 0
+2026-10-26 20:40:34.943 Df LibreVTT[19805:10dea] [com.apple.UIKit:EventBus] Event Timing Profile for Touch: not found, path="/System/Library/EventTimingProfiles/Sim.Touch.plist"
+2026-10-26 20:40:34.943 Df LibreVTT[19805:10dea] [com.apple.UIKit:EventBus] Event Timing Profile for Pencil: not found, path="/System/Library/EventTimingProfiles/Sim.Pencil.plist"
+2026-10-26 20:40:34.943 Df LibreVTT[19805:10dea] [com.apple.UIKit:UpdateScheduler] Selected display: name=LCD (PurpleMain), id=1
+2026-10-26 20:40:34.947 Df LibreVTT[19805:10dea] [com.apple.UIKit:BackgroundTask] Will add backgroundTask with taskName: Persistent SceneSession Map Update, expirationHandler: <__NSGlobalBlock__: 0x1e6965d48>
+2026-10-26 20:40:34.948 Df LibreVTT[19805:10dea] [com.apple.UIKit:BackgroundTask] Reusing background assertion <BKSProcessAssertion: 0x60000210a440>
+2026-10-26 20:40:34.948 Df LibreVTT[19805:10dea] [com.apple.UIKit:BackgroundTask] Incrementing reference count for background assertion <BKSProcessAssertion: 0x60000210a440>
+2026-10-26 20:40:34.948 Df LibreVTT[19805:10dea] [com.apple.UIKit:BackgroundTask] Created background task <_UIBackgroundTaskInfo: 0x600001711640>: taskID = 2, taskName = Persistent SceneSession Map Update, creationTime = 942 (elapsed = 0).
+2026-10-26 20:40:34.949 Df LibreVTT[19805:10dea] [com.apple.UIKit:Application] Deactivation reason added: 5; deactivation reasons: 2048 -> 2080; animating application lifecycle event: 1
+2026-10-26 20:40:34.949 Df LibreVTT[19805:10dea] [com.apple.UIKit:InterfaceStyle] Should send trait collection or coordinate space update, interface style 1 -> 1, <UIWindowScene: 0x100e08300> (3216BD55-A79A-492C-A39A-12DB8946DDF6)
+2026-10-26 20:40:34.950 Df LibreVTT[19805:10dea] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x100e08300> (3216BD55-A79A-492C-A39A-12DB8946DDF6)
+2026-10-26 20:40:34.950 Df LibreVTT[19805:10dea] [com.apple.UIKit:HomeAffordanceObservation] Initializing: <_UIHomeAffordanceSceneNotifier: 0x60000290caf0>; with scene: <UIWindowScene: 0x100e08300>
+2026-10-26 20:40:34.951 Df LibreVTT[19805:10dea] [com.apple.BacklightServices:scenes] 0x600000c123a0 setDelegate:<0x600000c0e580 _UIBacklightEnvironment> hasDelegate:YES for environment:sceneID:io.github.edg-coder.librevtt-default
+2026-10-26 20:40:34.952 Df LibreVTT[19805:10dea] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x100e08300> (3216BD55-A79A-492C-A39A-12DB8946DDF6)
+2026-10-26 20:40:34.952 Df LibreVTT[19805:10dea] [com.apple.UIKit:EventDeferring] [0x600002912e60] Initialized with scene: <UIWindowScene: 0x100e08300>; behavior: <_UIEventDeferringBehavior_iOS: 0x60000021c200>; availableForProcess: 1, systemShellManagesKeyboardFocus: 1
+2026-10-26 20:40:34.954 Df LibreVTT[19805:10dea] [com.apple.xpc:connection] [0x10200f400] activating connection: mach=false listener=false peer=false name=(anonymous)
+2026-10-26 20:40:34.957 Df LibreVTT[19805:10dea] [com.apple.BackBoard:EventDelivery] policyStatus:<BKSHIDEventDeliveryPolicyObserver: 0x600002104f50; process scope; status: target> was:none
+2026-10-26 20:40:34.957 Df LibreVTT[19805:10dea] [com.apple.UIKit:KeyWindow] Setting default evaluation strategy for UIUserInterfaceIdiomPad to LastOneWins
+2026-10-26 20:40:34.957 Df LibreVTT[19805:10dea] [com.apple.UIKit:KeyWindow] Scene target of keyboard event deferring environment did change: 1; scene: UIWindowScene: 0x100e08300; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aio.github.edg-coder.librevtt-default
+2026-10-26 20:40:34.958 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Focus system enabled
+2026-10-26 20:40:34.959 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Failed to update focus with context <UIFocusUpdateContext: 0x600003308500: previouslyFocusedItem=(null), nextFocusedItem=(null), focusHeading=None>. No additional info available.
+2026-10-26 20:40:34.959 Df LibreVTT[19805:10dea] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x100e08300> (3216BD55-A79A-492C-A39A-12DB8946DDF6)
+2026-10-26 20:40:34.959 Df LibreVTT[19805:10dea] [com.apple.UIKit:EventDeferring] [0x600002912e60] Scene target of event deferring environments did update: scene: 0x100e08300; current systemShellManagesKeyboardFocus: 1; systemShellManagesKeyboardFocusForScene: 1; eligibleForRecordRemoval: 1;
+2026-10-26 20:40:34.960 Df LibreVTT[19805:10dea] [com.apple.UIKit:KeyWindow] Scene became target of keyboard event deferring environment: UIWindowScene: 0x100e08300; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aio.github.edg-coder.librevtt-default
+2026-10-26 20:40:34.960 Df LibreVTT[19805:10dea] [com.apple.UIKit:KeyWindow] Setting default evaluation strategy for UIUserInterfaceIdiomPad to SystemShellManaged
+2026-10-26 20:40:34.960 Df LibreVTT[19805:10dea] [com.apple.UIKit:KeyWindow] Key window needs update: 0; currentKeyWindowScene: 0x0; evaluatedKeyWindowScene: 0x100e08300; currentApplicationKeyWindow: 0x0; evaluatedApplicationKeyWindow: 0x0; reason: UIWindowScene: 0x100e08300: Window scene became target of keyboard environment
+2026-10-26 20:40:34.960 Df LibreVTT[19805:10dea] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x100e08300> (3216BD55-A79A-492C-A39A-12DB8946DDF6)
+2026-10-26 20:40:34.960 Df LibreVTT[19805:10dea] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x100e08300> (3216BD55-A79A-492C-A39A-12DB8946DDF6)
+2026-10-26 20:40:34.961 Df LibreVTT[19805:10dea] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x100e08300> (3216BD55-A79A-492C-A39A-12DB8946DDF6)
+2026-10-26 20:40:35.002 Df LibreVTT[19805:10dfb] [com.apple.xpc:connection] [0x100e0f920] activating connection: mach=true listener=false peer=false name=com.apple.fontservicesd
+2026-10-26 20:40:35.082 A  LibreVTT[19805:10dea] (TCC) TCCAccessRequest() IPC
+2026-10-26 20:40:35.082 Df LibreVTT[19805:10dea] [com.apple.xpc:connection] [0x600003d041e0] activating connection: mach=true listener=false peer=false name=com.apple.tccd
+2026-10-26 20:40:35.105 Df LibreVTT[19805:10dea] [com.apple.xpc:connection] [0x600003d041e0] invalidated after the last release of the connection object
+2026-10-26 20:40:35.107 A  LibreVTT[19805:10dea] (TCC) TCCAccessRequest() IPC
+2026-10-26 20:40:35.107 Df LibreVTT[19805:10dea] [com.apple.xpc:connection] [0x600003d24000] activating connection: mach=true listener=false peer=false name=com.apple.tccd
+2026-10-26 20:40:35.112 Df LibreVTT[19805:10dea] [com.apple.xpc:connection] [0x600003d24000] invalidated after the last release of the connection object
+2026-10-26 20:40:35.121 A  LibreVTT[19805:10dea] (libsystem_containermanager.dylib) container_system_group_path_for_identifier
+2026-10-26 20:40:35.121 Df LibreVTT[19805:10dea] [com.apple.containermanager:xpc] Requesting container lookup; class = 13, identifier = (null), group_identifier = systemgroup.com.apple.configurationprofiles, create = 1, temp = 0, euid = 501, uid = 501
+2026-10-26 20:40:35.122 A  LibreVTT[19805:10dea] (libsystem_containermanager.dylib) container_query_t
+2026-10-26 20:40:35.122 Df LibreVTT[19805:10dea] [com.apple.containermanager:xpc] Query; euid = 501, uid = 501, class = 13, identifier = [(null)](0), flags = 900000003
+2026-10-26 20:40:35.125 Df LibreVTT[19805:10dea] [com.apple.containermanager:unspecified] container_query_get_single_result: success
+2026-10-26 20:40:35.125 A  LibreVTT[19805:10dea] (libsystem_containermanager.dylib) container_copy_object
+2026-10-26 20:40:35.125 Df LibreVTT[19805:10dea] [com.apple.containermanager:unspecified] container_system_group_path_for_identifier: success
+2026-10-26 20:40:35.125 Df LibreVTT[19805:10dea] [com.apple.ManagedConfiguration:MC] Got system group container path from MCM for systemgroup.com.apple.configurationprofiles: /Users/runner/Library/Developer/CoreSimulator/Devices/2EDB2671-090C-4988-822E-421879ECE84C/data/Containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles
+2026-10-26 20:40:35.146 Df LibreVTT[19805:10dea] [com.apple.gamecontroller:Session] Creating global game controller session...
+2026-10-26 20:40:35.155 Df LibreVTT[19805:10dea] [com.apple.BackBoard:EventDelivery] policyStatus:<BKSHIDEventDeliveryPolicyObserver: 0x6000021045f0; process scope; status: target> was:none
+2026-10-26 20:40:35.170 Df LibreVTT[19805:10dea] (WebKit) 0x10a000600 - [PID=0] WebProcessCache::updateCapacity: Cache is disabled because process swap on navigation is disabled
+2026-10-26 20:40:35.182 Df LibreVTT[19805:10dea] (libMobileGestalt.dylib) No persisted cache on this platform.
+2026-10-26 20:40:35.210 Df LibreVTT[19805:10dfb] [com.apple.xpc:connection] [0x600003d204b0] activating connection: mach=true listener=false peer=false name=com.apple.webprivacyd
+2026-10-26 20:40:35.222 Df LibreVTT[19805:10dea] [com.apple.WebKit:ResourceLoading] 0x1020089a0 - ResourceMonitorThrottler::Initialized with count: 5, duration: 86400, maxHosts: 100
+2026-10-26 20:40:35.222 Df LibreVTT[19805:10dea] [com.apple.WebKit:Storage] 0x1020087a8 - WebsiteDataStore::WebsiteDataStore sessionID=1
+2026-10-26 20:40:35.230 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10200fb98 - PageConfiguration::delaysWebProcessLaunchUntilFirstLoad() -> false because of associated processPool value
+2026-10-26 20:40:35.230 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10281ae08 - WebProcessPool::createWebPage: Not delaying WebProcess launch
+2026-10-26 20:40:35.233 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a000e80 - [PID=0] WebProcessProxy::constructor:
+2026-10-26 20:40:35.239 Df LibreVTT[19805:10df9] [com.apple.BackBoard:MousePointer] Activating Connection: <(null):0x60000210d130>
+2026-10-26 20:40:35.246 Df LibreVTT[19805:10df9] [com.apple.xpc:connection] [0x100e0c0a0] activating connection: mach=true listener=false peer=false name=com.apple.lsd.mapdb
+2026-10-26 20:40:35.254 Df LibreVTT[19805:10df9] [com.apple.extensionkit:launch] Launching process with config: bundleID: com.apple.WebKit.WebContent instance ID: Optional([_EXExtensionInstanceIdentifier: 4188EB3F-196A-42F5-AEBB-899CBE56132E])
+2026-10-26 20:40:35.274 Df LibreVTT[19805:10dea] [com.apple.avkit:AVKit] +[AVPictureInPicturePlatformAdapter isPictureInPictureSupported]_block_invoke isPictureInPictureSupported YES
+2026-10-26 20:40:35.293 Df LibreVTT[19805:10dea] (libMobileGestalt.dylib) No persisted cache on this platform.
+2026-10-26 20:40:35.294 Df LibreVTT[19805:10dea] [com.apple.xpc:connection] [0x600003d04000] activating connection: mach=true listener=false peer=false name=com.apple.IOSurface.Remote
+2026-10-26 20:40:35.296 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000130 - [PID=0, throttler=0x10a000f10] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Process initialization'
+2026-10-26 20:40:35.305 Df LibreVTT[19805:10dfd] [com.apple.xpc:connection] [0x600003d20d20] activating connection: mach=true listener=false peer=false name=com.apple.accessibility.mediaaccessibilityd
+2026-10-26 20:40:35.312 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=0] WebPageProxy::constructor:
+2026-10-26 20:40:35.314 Df LibreVTT[19805:10dea] [com.apple.WebKit:Media] PlaybackSessionManagerProxy::PlaybackSessionManagerProxy(C39945AA)
+2026-10-26 20:40:35.314 Df LibreVTT[19805:10dea] [com.apple.WebKit:Fullscreen] PlaybackSessionManagerProxy::VideoPresentationManagerProxy(C39945AA)
+2026-10-26 20:40:35.319 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a000e80 - [PID=0] WebProcessProxy::addExistingWebPage: webPage=0x101823018, pageProxyID=9, webPageID=10
+2026-10-26 20:40:35.320 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSwapping] 0x10a000600 - [PID=0] WebProcessCache::updateCapacity: Cache is disabled by client
+2026-10-26 20:40:35.321 Df LibreVTT[19805:10dea] (libMobileGestalt.dylib) No persisted cache on this platform.
+2026-10-26 20:40:35.321 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000190 - [PID=0, throttler=0x10a002490] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Process initialization'
+2026-10-26 20:40:35.328 Df LibreVTT[19805:10dea] [com.apple.WebKit:TextInteraction] Conforming to BrowserEngineKit text input protocol
+2026-10-26 20:40:35.335 Df LibreVTT[19805:10dfa] [com.apple.xpc:connection] [0x102008c80] activating connection: mach=false listener=false peer=false name=(anonymous)
+2026-10-26 20:40:35.341 Df LibreVTT[19805:10dea] [com.apple.UIKit:_UIVisualStyleRegistry] Warning: no visual style classes have been registered at all.
+2026-10-26 20:40:35.342 Df LibreVTT[19805:10dea] [com.apple.UIKit:_UIVisualStyleRegistry] Warning: no visual style classes have been registered at all.
+2026-10-26 20:40:35.342 Df LibreVTT[19805:10dea] [com.apple.UIKit:_UIVisualStyleRegistry] Note: no default visual style class registered as fallback for stylable class UIActivityIndicatorView
+2026-10-26 20:40:35.342 Df LibreVTT[19805:10dea] [com.apple.UIKit:_UIVisualStyleRegistry] Note: no default visual style class registered as fallback for stylable class UIActivityIndicatorView
+2026-10-26 20:40:35.342 Df LibreVTT[19805:10dea] [PrototypeTools:domain] Not observing PTDefaults on customer install.
+2026-10-26 20:40:35.350 Df LibreVTT[19805:10dea] [com.apple.WebKit:ViewState] 0x10a000df0 - ApplicationStateTracker::ApplicationStateTracker(): m_isInBackground=1
+2026-10-26 20:40:35.350 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a002340 - ProcessStateMonitor::ProcessStateMonitor
+2026-10-26 20:40:35.350 Df LibreVTT[19805:10dea] [com.apple.runningboard:monitor] Updating configuration of monitor M19805-1
+2026-10-26 20:40:35.351 Df LibreVTT[19805:10dea] [com.apple.WebKit:ViewState] 0x10103ee00 - WKApplicationStateTrackingView: View with page [0x101823018, pageProxyID=9] was added to a window, _lastObservedStateWasBackground=0, isNowBackground=1
+2026-10-26 20:40:35.351 Df LibreVTT[19805:10dea] [com.apple.WebKit:ViewState] 0x101823018 - [pageProxyID=9, webPageID=10, PID=0] WebPageProxy::applicationDidEnterBackground: isSuspendedUnderLock? 0
+2026-10-26 20:40:35.352 A  LibreVTT[19805:10dfb] (RunningBoardServices) observedProcessStatesDidChange
+2026-10-26 20:40:35.376 Df LibreVTT[19805:10dea] [com.apple.WebKit:ViewState] 0x101823018 - [pageProxyID=9, webPageID=10, PID=0] WebPageProxy::viewIsBecomingInvisible:
+2026-10-26 20:40:35.376 Df LibreVTT[19805:10dfb] [com.apple.runningboard:connection] Creating side-channel connection to com.apple.runningboard
+2026-10-26 20:40:35.376 Df LibreVTT[19805:10dfb] [com.apple.xpc:connection] [0x600003d240f0] activating connection: mach=true listener=false peer=false name=com.apple.runningboard
+2026-10-26 20:40:35.377 Df LibreVTT[19805:10dea] [com.apple.WebKit:ViewState] 0x102829a00 (pageProxyID=9) -[WKWebView _endLiveResize]
+2026-10-26 20:40:35.378 Df LibreVTT[19805:10dea] [com.apple.UIKit:PointerLockState] preferredPointerLockStatus updated: scene: <UIWindowScene: 0x100e08300; role: UIWindowSceneSessionRoleApplication; persistentIdentifier: 3216BD55-A79A-492C-A39A-12DB8946DDF6; activationState: UISceneActivationStateUnattached>; viewController: <LibreVTT.ViewController: 0x101820200>; preferredPointerLockStatus: _UIPointerLockStatusUnlocked
+2026-10-26 20:40:35.378 Df LibreVTT[19805:10dea] [com.apple.UIKit:KeyWindow] Key window API is scene-level: YES
+2026-10-26 20:40:35.379 Df LibreVTT[19805:10dea] [com.apple.UIKit:KeyWindow] UIWindowScene: 0x100e08300: Window became key in scene: UIWindow: 0x100e09d90; contextId: 0x16B27F9A: reason: UIWindowScene: 0x100e08300: Window requested to become key in scene: 0x100e09d90
+2026-10-26 20:40:35.379 Df LibreVTT[19805:10dea] [com.apple.UIKit:KeyWindow] Key window needs update: 1; currentKeyWindowScene: 0x0; evaluatedKeyWindowScene: 0x100e08300; currentApplicationKeyWindow: 0x0; evaluatedApplicationKeyWindow: 0x100e09d90; reason: UIWindowScene: 0x100e08300: Window requested to become key in scene: 0x100e09d90
+2026-10-26 20:40:35.379 Df LibreVTT[19805:10dea] [com.apple.UIKit:KeyWindow] Window did become application key: UIWindow: 0x100e09d90; contextId: 0x16B27F9A; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aio.github.edg-coder.librevtt-default
+2026-10-26 20:40:35.379 Df LibreVTT[19805:10dea] [com.apple.UIKit:EventDeferring] [0x600002912e60] Begin local event deferring requested for token: 0x6000026140c0; environments: 1; reason: UIWindowScene: 0x100e08300: Begin event deferring in keyboardFocus for window: 0x100e09d90
+2026-10-26 20:40:35.381 Df LibreVTT[19805:10dea] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x100e08300> (3216BD55-A79A-492C-A39A-12DB8946DDF6)
+2026-10-26 20:40:35.381 Df LibreVTT[19805:10dea] [com.apple.WebKit:ViewState] 0x10a000df0 - ApplicationStateTracker: UISceneWillEnterForeground
+2026-10-26 20:40:35.381 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a002340 - ProcessStateMonitor::~ProcessStateMonitor
+2026-10-26 20:40:35.381 Df LibreVTT[19805:10dea] [com.apple.runningboard:monitor] unsubscribing configuration of monitor M19805-1
+2026-10-26 20:40:35.381 Df LibreVTT[19805:10dea] [com.apple.WebKit:ViewState] 0x101823018 - [pageProxyID=9, webPageID=10, PID=0] WebPageProxy::applicationWillEnterForeground: isSuspendedUnderLock? 0
+2026-10-26 20:40:35.382 Df LibreVTT[19805:10dfa] [com.apple.BackBoard:EventDelivery] policyStatus:<BKSHIDEventDeliveryPolicyObserver: 0x600002104f50; token: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aio.github.edg-coder.librevtt-default; status: ancestor> was:target
+2026-10-26 20:40:35.384 Df LibreVTT[19805:10dfa] [com.apple.BackBoard:EventDelivery] observerPolicyDidChange: 0x600002104f50 -> <_UIKeyWindowSceneObserver: 0x600000c12160>
+2026-10-26 20:40:35.386 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] Activating connection to server: (null)
+2026-10-26 20:40:35.386 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] server remote target <BSXPCServiceConnectionProxy<BKSKeyboardServiceClientToServerIPC>: 0x600002924e70>
+2026-10-26 20:40:35.386 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] currently observing: YES
+2026-10-26 20:40:35.387 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] connected: (
+    "<BKSHIDKeyboardDevice: 0x60000025c2a0> {\134n    senderID: 0xACEFADE00000003;\134n    transport: <nil>;\134n    language: <nil>;\134n    layout: US;\134n    countryCode: 0;\134n    standardType: 4294967295;\134n    subinterfaceID: 0;\134n    capsLockKeyHasLanguageSwitchLabel: NO;\134n    globeKeyLabelHasGlobeSymbol: NO;\134n}"
+)
+2026-10-26 20:40:35.387 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] currently observing: NO
+2026-10-26 20:40:35.387 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] disconnected: (
+    "<BKSHIDKeyboardDevice: 0x60000025c2a0> {\134n    senderID: 0xACEFADE00000003;\134n    transport: <nil>;\134n    language: <nil>;\134n    layout: US;\134n    countryCode: 0;\134n    standardType: 4294967295;\134n    subinterfaceID: 0;\134n    capsLockKeyHasLanguageSwitchLabel: NO;\134n    globeKeyLabelHasGlobeSymbol: NO;\134n}"
+)
+2026-10-26 20:40:35.387 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] currently observing: YES
+2026-10-26 20:40:35.387 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] connected: (
+    "<BKSHIDKeyboardDevice: 0x600000259480> {\134n    senderID: 0xACEFADE00000003;\134n    transport: <nil>;\134n    language: <nil>;\134n    layout: US;\134n    countryCode: 0;\134n    standardType: 4294967295;\134n    subinterfaceID: 0;\134n    capsLockKeyHasLanguageSwitchLabel: NO;\134n    globeKeyLabelHasGlobeSymbol: NO;\134n}"
+)
+2026-10-26 20:40:35.387 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] currently observing: NO
+2026-10-26 20:40:35.387 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] disconnected: (
+    "<BKSHIDKeyboardDevice: 0x600000259480> {\134n    senderID: 0xACEFADE00000003;\134n    transport: <nil>;\134n    language: <nil>;\134n    layout: US;\134n    countryCode: 0;\134n    standardType: 4294967295;\134n    subinterfaceID: 0;\134n    capsLockKeyHasLanguageSwitchLabel: NO;\134n    globeKeyLabelHasGlobeSymbol: NO;\134n}"
+)
+2026-10-26 20:40:35.393 Df LibreVTT[19805:10dea] [com.apple.UIKit:HardwareKeyboard] -[UIApplication GSKeyboardForHWLayout:senderID:forceRebuild:createIfNeeded:], New hardware layout is created with US layout and 0 standardType.
+2026-10-26 20:40:35.393 Df LibreVTT[19805:10dfb] [com.apple.runningboard:process] Hit the server for a process handle 1a7f1ae000004d5d that resolved to: [app<io.github.edg-coder.librevtt((null))>:19805]
+2026-10-26 20:40:35.394 Df LibreVTT[19805:10dfb] [com.apple.runningboard:monitor] Received state update for 19805 (app<io.github.edg-coder.librevtt((null))>, unknown-NotVisible
+2026-10-26 20:40:35.395 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] currently observing: YES
+2026-10-26 20:40:35.396 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] connected: (
+    "<BKSHIDKeyboardDevice: 0x60000025c320> {\134n    senderID: 0xACEFADE00000003;\134n    transport: <nil>;\134n    language: <nil>;\134n    layout: US;\134n    countryCode: 0;\134n    standardType: 4294967295;\134n    subinterfaceID: 0;\134n    capsLockKeyHasLanguageSwitchLabel: NO;\134n    globeKeyLabelHasGlobeSymbol: NO;\134n}"
+)
+2026-10-26 20:40:35.396 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] currently observing: NO
+2026-10-26 20:40:35.396 Df LibreVTT[19805:10dea] [com.apple.BackBoard:Keyboard] disconnected: (
+    "<BKSHIDKeyboardDevice: 0x60000025c320> {\134n    senderID: 0xACEFADE00000003;\134n    transport: <nil>;\134n    language: <nil>;\134n    layout: US;\134n    countryCode: 0;\134n    standardType: 4294967295;\134n    subinterfaceID: 0;\134n    capsLockKeyHasLanguageSwitchLabel: NO;\134n    globeKeyLabelHasGlobeSymbol: NO;\134n}"
+)
+2026-10-26 20:40:35.396 Df LibreVTT[19805:10dea] [com.apple.WebKit:ViewState] 0x101823018 - [pageProxyID=9, webPageID=10, PID=0] WebPageProxy::updateActivityState: view visibility state changed 0 -> 1
+2026-10-26 20:40:35.396 Df LibreVTT[19805:10e20] [com.apple.BackBoard:Keyboard] connected: (
+    "<BKSHIDKeyboardDevice: 0x60000025c3c0> {\134n    senderID: 0xACEFADE00000003;\134n    transport: <nil>;\134n    language: <nil>;\134n    layout: US;\134n    countryCode: 0;\134n    standardType: 4294967295;\134n    subinterfaceID: 0;\134n    capsLockKeyHasLanguageSwitchLabel: NO;\134n    globeKeyLabelHasGlobeSymbol: NO;\134n}"
+)
+2026-10-26 20:40:35.396 Df LibreVTT[19805:10dea] [com.apple.WebKit:ViewState] 0x101823018 - [pageProxyID=9, webPageID=10, PID=0] WebPageProxy::viewIsBecomingVisible:
+2026-10-26 20:40:35.397 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x101823018 - [pageProxyID=9, webPageID=10, PID=0] WebPageProxy::updateThrottleState: UIProcess is taking a foreground assertion because the view is visible
+2026-10-26 20:40:35.397 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a006560 - [PID=0, throttler=0x10a000f10] ProcessThrottler::Activity::Activity: Starting foreground activity / 'View is visible'
+2026-10-26 20:40:35.402 Df LibreVTT[19805:10dea] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:io.github.edg-coder.librevtt-default  persistentID: 3216BD55-A79A-492C-A39A-12DB8946DDF6
+2026-10-26 20:40:35.402 Df LibreVTT[19805:10dea] [com.apple.UIKit:Application] Ignoring already applied deactivation reason: 5; deactivation reasons: 2080
+2026-10-26 20:40:35.403 Df LibreVTT[19805:10dea] [com.apple.UIKit:Application] Deactivation reason added: 12; deactivation reasons: 2080 -> 6176; animating application lifecycle event: 1
+2026-10-26 20:40:35.404 Df LibreVTT[19805:10dea] [com.apple.UIKit:Application] Deactivation reason removed: 11; deactivation reasons: 6176 -> 4128; animating application lifecycle event: 1
+2026-10-26 20:40:35.406 Df LibreVTT[19805:10dea] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x100e08300> (3216BD55-A79A-492C-A39A-12DB8946DDF6)
+2026-10-26 20:40:35.408 Df LibreVTT[19805:10e21] [com.apple.UIIntelligenceSupport:xpc] establishing connection to agent
+2026-10-26 20:40:35.438 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Failed to update focus with context <UIFocusUpdateContext: 0x60000330b7a0: previouslyFocusedItem=(null), nextFocusedItem=(null), focusHeading=None>. No additional info available.
+2026-10-26 20:40:35.439 Df LibreVTT[19805:10dea] [com.apple.network:activity] Create activity from XPC object <nw_activity 50:1 [C9AA9FCB-A3B2-4EFC-B31A-05868699F142] (reporting strategy default)>
+2026-10-26 20:40:35.439 Df LibreVTT[19805:10dea] [com.apple.network:activity] Create activity from XPC object <nw_activity 50:2 [3FA805AD-8E75-4BB0-A6EA-EE260135AB11] (reporting strategy default)>
+2026-10-26 20:40:35.439 Df LibreVTT[19805:10dea] [com.apple.network:activity] Set activity <nw_activity 50:1 [C9AA9FCB-A3B2-4EFC-B31A-05868699F142] (reporting strategy default)> as the global parent
+2026-10-26 20:40:35.439 Df LibreVTT[19805:10dea] [com.apple.UIKit:BackgroundTask] Ending background task with UIBackgroundTaskIdentifier: 1
+2026-10-26 20:40:35.439 Df LibreVTT[19805:10dea] [com.apple.UIKit:BackgroundTask] Ending task with identifier 1 and description: <_UIBackgroundTaskInfo: 0x600001706700>: taskID = 1, taskName = Launch Background Task for Coalescing, creationTime = 942 (elapsed = 1), _expireHandler: (null)
+2026-10-26 20:40:35.440 Df LibreVTT[19805:10dea] [com.apple.UIKit:BackgroundTask] Decrementing reference count for assertion <BKSProcessAssertion: 0x60000210a440> (used by background task with identifier 1: <_UIBackgroundTaskInfo: 0x600001706700>: taskID = 1, taskName = Launch Background Task for Coalescing, creationTime = 942 (elapsed = 1))
+2026-10-26 20:40:35.440 Df LibreVTT[19805:10dea] [com.apple.UIKit:UpdateScheduler] Target list changed: <CADisplay:LCD PurpleMain>
+2026-10-26 20:40:35.441 Df LibreVTT[19805:10dea] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:io.github.edg-coder.librevtt-default  persistentID: 3216BD55-A79A-492C-A39A-12DB8946DDF6
+2026-10-26 20:40:35.442 A  LibreVTT[19805:10dea] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-10-26 20:40:35.446 Df LibreVTT[19805:10dfa] [com.apple.CoreAnalytics:client] No XPC connection in Simulator
+2026-10-26 20:40:35.446 A  LibreVTT[19805:10dea] (GameController) [GCDeviceSession] Activate
+2026-10-26 20:40:35.447 Df LibreVTT[19805:10e21] [com.apple.xpc:session] [0x600002117ac0] Session created.
+2026-10-26 20:40:35.447 Df LibreVTT[19805:10e21] [com.apple.xpc:session] [0x600002117ac0] Session created from connection [0x600003d245a0]
+2026-10-26 20:40:35.448 A  LibreVTT[19805:10dea] (GameControllerFoundation) [HID Event System Client] Notify HID Service Matched
+2026-10-26 20:40:35.450 A  LibreVTT[19805:10dea] (GameControllerFoundation) [HID Event System Client] Notify HID Service Matched
+2026-10-26 20:40:35.477 E  LibreVTT[19805:10dfa] [com.apple.app_launch_measurement:General] Failed to send CA Event for app launch measurements for ca_event_type: 0 event_name: com.apple.app_launch_measurement.FirstFramePresentationMetric
+2026-10-26 20:40:35.483 A  LibreVTT[19805:10dea] (GameControllerFoundation) [HID Event System Client] Activate
+2026-10-26 20:40:35.484 Df LibreVTT[19805:10dea] [com.apple.UIKit:EventDeferring] [0x600002912e60] Scene target of event deferring environments did update: scene: 0x100e08300; current systemShellManagesKeyboardFocus: 1; systemShellManagesKeyboardFocusForScene: 1; eligibleForRecordRemoval: 1;
+2026-10-26 20:40:35.484 Df LibreVTT[19805:10dea] [com.apple.UIKit:KeyWindow] Scene became target of keyboard event deferring environment: UIWindowScene: 0x100e08300; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aio.github.edg-coder.librevtt-default
+2026-10-26 20:40:35.485 Df LibreVTT[19805:10dea] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:io.github.edg-coder.librevtt-default  persistentID: 3216BD55-A79A-492C-A39A-12DB8946DDF6
+2026-10-26 20:40:35.485 Df LibreVTT[19805:10dea] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:io.github.edg-coder.librevtt-default  persistentID: 3216BD55-A79A-492C-A39A-12DB8946DDF6
+2026-10-26 20:40:35.486 Df LibreVTT[19805:10e21] [com.apple.xpc:connection] [0x600003d245a0] activating connection: mach=true listener=false peer=false name=com.apple.uiintelligencesupport.agent
+2026-10-26 20:40:35.487 Df LibreVTT[19805:10dea] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x100e08300> (3216BD55-A79A-492C-A39A-12DB8946DDF6)
+2026-10-26 20:40:35.488 Df LibreVTT[19805:10dea] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:io.github.edg-coder.librevtt-default  persistentID: 3216BD55-A79A-492C-A39A-12DB8946DDF6
+2026-10-26 20:40:35.488 Df LibreVTT[19805:10dea] [com.apple.UIKit:Application] Deactivation reason removed: 12; deactivation reasons: 4128 -> 32; animating application lifecycle event: 1
+2026-10-26 20:40:35.489 Df LibreVTT[19805:10dea] [com.apple.KeyboardArbiter:Client] Send setDeactivating: N (-DeactivationReason:SuspendedEventsOnly)
+2026-10-26 20:40:35.489 Df LibreVTT[19805:10dea] [com.apple.UIKit:Application] Deactivation reason removed: 5; deactivation reasons: 32 -> 0; animating application lifecycle event: 0
+2026-10-26 20:40:35.489 Df LibreVTT[19805:10dfa] [com.apple.UIKit:BackgroundTask] Ending background task with UIBackgroundTaskIdentifier: 2
+2026-10-26 20:40:35.490 A  LibreVTT[19805:10dea] (GameController) Notify ApplicationDidBecomeActive
+2026-10-26 20:40:35.490 Df LibreVTT[19805:10dea] [com.apple.WebKit:Fullscreen] PlaybackSessionManagerProxy::applicationDidBecomeActive(C39945AA)
+2026-10-26 20:40:35.490 Df LibreVTT[19805:10dea] [com.apple.KeyboardArbiter:Client] startConnection
+2026-10-26 20:40:35.491 Df LibreVTT[19805:10dea] [com.apple.xpc:connection] [0x100f0a670] activating connection: mach=true listener=false peer=false name=com.apple.UIKit.KeyboardManagement.hosted
+2026-10-26 20:40:35.492 Df LibreVTT[19805:10dea] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:io.github.edg-coder.librevtt-default  persistentID: 3216BD55-A79A-492C-A39A-12DB8946DDF6
+2026-10-26 20:40:35.493 Df LibreVTT[19805:10dea] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:io.github.edg-coder.librevtt-default  persistentID: 3216BD55-A79A-492C-A39A-12DB8946DDF6
+2026-10-26 20:40:35.495 Df LibreVTT[19805:10dea] [com.apple.KeyboardArbiter:Client] handleKeyboardChange: set currentKeyboard:N (wasKeyboard:N)
+2026-10-26 20:40:35.495 Df LibreVTT[19805:10dea] [com.apple.UIKit:KeyboardSceneDelegate] forceReloadInputViews
+2026-10-26 20:40:35.495 Df LibreVTT[19805:10dea] [com.apple.UIKit:KeyboardSceneDelegate] Reloading input views for: <(null): 0x0; > force: 1
+2026-10-26 20:40:35.496 Df LibreVTT[19805:10dea] [com.apple.UIKit:KeyboardArbiterClientLog] isWritingToolsHandlingKeyboardTracking:Y (WT ready:Y, Arbiter ready:Y)
+2026-10-26 20:40:35.496 Df LibreVTT[19805:10dfa] [com.apple.UIKit:BackgroundTask] Ending task with identifier 2 and description: <_UIBackgroundTaskInfo: 0x600001711640>: taskID = 2, taskName = Persistent SceneSession Map Update, creationTime = 942 (elapsed = 1), _expireHandler: <__NSGlobalBlock__: 0x1e6965d48>
+2026-10-26 20:40:35.496 Df LibreVTT[19805:10e21] [com.apple.xpc:session] [0x600002117ac0] Session activated
+2026-10-26 20:40:35.499 Df LibreVTT[19805:10dfa] [com.apple.UIKit:BackgroundTask] Decrementing reference count for assertion <BKSProcessAssertion: 0x60000210a440> (used by background task with identifier 2: <_UIBackgroundTaskInfo: 0x600001711640>: taskID = 2, taskName = Persistent SceneSession Map Update, creationTime = 942 (elapsed = 1))
+2026-10-26 20:40:35.499 Df LibreVTT[19805:10dfa] [com.apple.UIKit:BackgroundTask] Will invalidate assertion: <BKSProcessAssertion: 0x60000210a440> for task identifier: 2
+2026-10-26 20:40:35.504 A  LibreVTT[19805:10e02] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-10-26 20:40:35.507 A  LibreVTT[19805:10e02] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-10-26 20:40:35.523 A  LibreVTT[19805:10e02] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-10-26 20:40:35.524 A  LibreVTT[19805:10dfa] (RunningBoardServices) didChangeInheritances
+2026-10-26 20:40:35.524 A  LibreVTT[19805:10e02] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-10-26 20:40:35.526 A  LibreVTT[19805:10e02] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-10-26 20:40:35.529 A  LibreVTT[19805:10e02] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-10-26 20:40:35.530 Df LibreVTT[19805:10df9] [com.apple.runningboard:process] Starting death monitoring for handle [xpcservice<com.apple.WebKit.WebContent([app<io.github.edg-coder.librevtt((null))>:19805])>{vt hash: 71395982}[uuid:4188EB3F-196A-42F5-AEBB-899CBE56132E]:19815]
+2026-10-26 20:40:35.531 Df LibreVTT[19805:10dea] [com.apple.network:activity] <nw_activity 50:1 [C9AA9FCB-A3B2-4EFC-B31A-05868699F142] (global parent) (reporting strategy default) complete (reason success)> complete with reason 2 (success), duration 1458ms
+2026-10-26 20:40:35.531 Df LibreVTT[19805:10dea] [com.apple.network:activity] <nw_activity 50:2 [3FA805AD-8E75-4BB0-A6EA-EE260135AB11] (reporting strategy default) complete (reason success)> complete with reason 2 (success), duration 1458ms
+2026-10-26 20:40:35.531 Df LibreVTT[19805:10dea] [com.apple.network:activity] Unsetting the global parent activity <nw_activity 50:1 [C9AA9FCB-A3B2-4EFC-B31A-05868699F142] (global parent) (reporting strategy default) complete (reason success)>
+2026-10-26 20:40:35.531 Df LibreVTT[19805:10dea] [com.apple.network:activity] Unset the global parent activity
+2026-10-26 20:40:35.531 E  LibreVTT[19805:10e21] [com.apple.app_launch_measurement:General] Failed to send CA Event for app launch measurements for ca_event_type: 1 event_name: com.apple.app_launch_measurement.ExtendedLaunchMetrics
+2026-10-26 20:40:35.532 A  LibreVTT[19805:10e02] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-10-26 20:40:35.538 A  LibreVTT[19805:10e02] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-10-26 20:40:35.541 A  LibreVTT[19805:10e02] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-10-26 20:40:35.549 A  LibreVTT[19805:10e02] (CoreFoundation) Updating Key-Value Observers Of Preferences
+2026-10-26 20:40:35.574 Df LibreVTT[19805:10df9] [com.apple.extensionkit:launch] Created new process ExtensionProcess: bundleID: com.apple.WebKit.WebContent instance ID: Optional([_EXExtensionInstanceIdentifier: 4188EB3F-196A-42F5-AEBB-899CBE56132E]) pid: 19815.
+2026-10-26 20:40:35.574 Df LibreVTT[19805:10df9] [com.apple.extensionkit:launch] Launching process with config: bundleID: com.apple.WebKit.GPU instance ID: Optional([_EXExtensionInstanceIdentifier: 095BED96-4651-4439-B923-AB9147621797])
+2026-10-26 20:40:35.575 Df LibreVTT[19805:10e21] [com.apple.WebKit:Process] AssertionCapability::AssertionCapability: taking assertion Foreground
+2026-10-26 20:40:35.578 Df LibreVTT[19805:10dea] [com.apple.xpc:connection] [0x100f118e0] activating connection: mach=false listener=false peer=false name=(anonymous)
+2026-10-26 20:40:35.586 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a000e80 - [PID=19815] WebProcessProxy::didFinishLaunching:
+2026-10-26 20:40:35.588 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000f10 - [PID=19815] ProcessThrottler::didConnectToProcess
+2026-10-26 20:40:35.588 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000f10 - [PID=19815] ProcessThrottler::setThrottleState: Updating process assertion type to 3 (foregroundActivities=2, backgroundActivities=4)
+2026-10-26 20:40:35.588 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] AssertionCapability::AssertionCapability: taking assertion Foreground
+2026-10-26 20:40:35.589 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x600001721540 - WKProcessAssertionBackgroundTaskManager: beginBackgroundTaskWithName
+2026-10-26 20:40:35.589 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] WKProcessAssertionBackgroundTaskManager: Took a FinishTaskInterruptable assertion for own process
+2026-10-26 20:40:35.590 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000e80 - [PID=19815] WebProcessProxy::didChangeThrottleState: type=2
+2026-10-26 20:40:35.590 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000e80 - [PID=19815] WebProcessProxy::didChangeThrottleState(Foreground) Taking foreground assertion for network process
+2026-10-26 20:40:35.590 Df LibreVTT[19805:10e21] [com.apple.WebKit:ProcessSuspension] 0x10a007ee0 - ProcessAssertion::acquireSync Trying to take RBS assertion 'WebProcess Foreground Assertion' for process with PID=19815
+2026-10-26 20:40:35.590 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a006590 - [PID=0, throttler=0x10a002490] ProcessThrottler::Activity::Activity: Starting foreground activity / 'GPU for foreground view(s)'
+2026-10-26 20:40:35.590 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a0080b0 - NetworkProcessProxy::NetworkProcessProxy
+2026-10-26 20:40:35.593 Df LibreVTT[19805:10e21] [com.apple.WebKit:ProcessSuspension] 0x10a007ee0 - ProcessAssertion() Successfully granted capability
+2026-10-26 20:40:35.594 Df LibreVTT[19805:10dea] [com.apple.CFNetwork:Default] Initializing CFHTTPCookieStorage singleton
+2026-10-26 20:40:35.594 Df LibreVTT[19805:10dea] [com.apple.CFNetwork:Default] Creating default cookie storage with process/bundle identifier
+2026-10-26 20:40:35.597 Df LibreVTT[19805:10dea] [com.apple.network:] networkd_settings_read_from_file initialized networkd settings by reading plist directly
+2026-10-26 20:40:35.597 Df LibreVTT[19805:10dea] [com.apple.network:] networkd_settings_read_from_file initialized networkd settings by reading plist directly
+2026-10-26 20:40:35.599 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a0065c0 - [PID=0, throttler=0x10a008140] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Process initialization'
+2026-10-26 20:40:35.600 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a008510 - [PID=0, throttler=0x10a008140] ProcessThrottler::Activity::Activity: Starting foreground activity / 'Networking for foreground view(s)'
+2026-10-26 20:40:35.600 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a0080b0 - NetworkProcessProxy::sendXPCEndpointToProcess(0x10a000e80) state = 1 has connection = 1 XPC endpoint message = 0x0
+2026-10-26 20:40:35.616 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000130 - [PID=19815, throttler=0x10a000f10] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'Process initialization'
+2026-10-26 20:40:35.617 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a0080b0 - NetworkProcessProxy::getNetworkProcessConnection: Taking a background assertion because web process pid 19815 (core identifier 8) is requesting a connection
+2026-10-26 20:40:35.852 Df LibreVTT[19805:10df9] [com.apple.runningboard:process] Starting death monitoring for handle [xpcservice<com.apple.WebKit.GPU([app<io.github.edg-coder.librevtt((null))>:19805])>{vt hash: 223737757}[uuid:095BED96-4651-4439-B923-AB9147621797]:19818]
+2026-10-26 20:40:35.860 Df LibreVTT[19805:10df9] [com.apple.extensionkit:launch] Created new process ExtensionProcess: bundleID: com.apple.WebKit.GPU instance ID: Optional([_EXExtensionInstanceIdentifier: 095BED96-4651-4439-B923-AB9147621797]) pid: 19818.
+2026-10-26 20:40:35.860 Df LibreVTT[19805:10df9] [com.apple.extensionkit:launch] Launching process with config: bundleID: com.apple.WebKit.Networking instance ID: Optional([_EXExtensionInstanceIdentifier: 03DE38F2-9A4A-4AF3-AC36-A0D0E73845E1])
+2026-10-26 20:40:35.860 Df LibreVTT[19805:10dfe] [com.apple.WebKit:Process] AssertionCapability::AssertionCapability: taking assertion Foreground
+2026-10-26 20:40:35.861 E  LibreVTT[19805:10df9] [com.apple.extensionkit:default] Failed to resolve host network app id to config: bundleID: com.apple.WebKit.Networking instance ID: Optional([_EXExtensionInstanceIdentifier: 03DE38F2-9A4A-4AF3-AC36-A0D0E73845E1])
+2026-10-26 20:40:35.862 Df LibreVTT[19805:10dea] [com.apple.xpc:connection] [0x100e16520] activating connection: mach=false listener=false peer=false name=(anonymous)
+2026-10-26 20:40:35.923 A  LibreVTT[19805:10dfe] (RunningBoardServices) didChangeInheritances
+2026-10-26 20:40:35.991 Df LibreVTT[19805:10df9] [com.apple.runningboard:process] Starting death monitoring for handle [xpcservice<com.apple.WebKit.Networking([app<io.github.edg-coder.librevtt((null))>:19805])>{vt hash: 114736818}[uuid:03DE38F2-9A4A-4AF3-AC36-A0D0E73845E1]:19819]
+2026-10-26 20:40:35.995 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a002400 - GPUProcessProxy::didFinishLaunching:
+2026-10-26 20:40:35.995 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a002400 - GPUProcessProxy::connectionWillOpen:
+2026-10-26 20:40:35.995 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a002490 - [PID=19818] ProcessThrottler::didConnectToProcess
+2026-10-26 20:40:35.995 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a002490 - [PID=19818] ProcessThrottler::setThrottleState: Updating process assertion type to 3 (foregroundActivities=2, backgroundActivities=1)
+2026-10-26 20:40:35.995 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] AssertionCapability::AssertionCapability: taking assertion Foreground
+2026-10-26 20:40:35.995 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a0080b0 - NetworkProcessProxy::sendXPCEndpointToProcess(0x10a002400) state = 1 has connection = 1 XPC endpoint message = 0x0
+2026-10-26 20:40:35.995 Df LibreVTT[19805:10dfe] [com.apple.WebKit:ProcessSuspension] 0x10a008f00 - ProcessAssertion::acquireSync Trying to take RBS assertion 'GPUProcess Foreground Assertion' for process with PID=19818
+2026-10-26 20:40:35.995 A  LibreVTT[19805:10dfa] (CoreServicesInternal) CFURLCreateBookmarkData
+2026-10-26 20:40:35.999 Df LibreVTT[19805:10dfe] [com.apple.WebKit:ProcessSuspension] 0x10a008f00 - ProcessAssertion() Successfully granted capability
+2026-10-26 20:40:36.004 Df LibreVTT[19805:10df9] [com.apple.extensionkit:launch] Created new process ExtensionProcess: bundleID: com.apple.WebKit.Networking instance ID: Optional([_EXExtensionInstanceIdentifier: 03DE38F2-9A4A-4AF3-AC36-A0D0E73845E1]) pid: 19819.
+2026-10-26 20:40:36.004 Df LibreVTT[19805:10df9] [com.apple.WebKit:Process] AssertionCapability::AssertionCapability: taking assertion Foreground
+2026-10-26 20:40:36.007 Df LibreVTT[19805:10dea] [com.apple.xpc:connection] [0x100f11b20] activating connection: mach=false listener=false peer=false name=(anonymous)
+2026-10-26 20:40:36.043 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000190 - [PID=19818, throttler=0x10a002490] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'Process initialization'
+2026-10-26 20:40:36.090 A  LibreVTT[19805:10dfa] (RunningBoardServices) didChangeInheritances
+2026-10-26 20:40:36.153 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a0080b0 - NetworkProcessProxy::didFinishLaunching
+2026-10-26 20:40:36.153 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a008140 - [PID=19819] ProcessThrottler::didConnectToProcess
+2026-10-26 20:40:36.153 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a008140 - [PID=19819] ProcessThrottler::setThrottleState: Updating process assertion type to 3 (foregroundActivities=2, backgroundActivities=2)
+2026-10-26 20:40:36.153 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] AssertionCapability::AssertionCapability: taking assertion Foreground
+2026-10-26 20:40:36.153 Df LibreVTT[19805:10dfe] [com.apple.WebKit:ProcessSuspension] 0x10a008fc0 - ProcessAssertion::acquireSync Trying to take RBS assertion 'NetworkProcess Foreground Assertion' for process with PID=19819
+2026-10-26 20:40:36.154 Df LibreVTT[19805:10dfe] [com.apple.WebKit:ProcessSuspension] 0x10a008fc0 - ProcessAssertion() Successfully granted capability
+2026-10-26 20:40:36.158 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a0080b0 - NetworkProcessProxy::sendXPCEndpointToProcess(0x10a000e80) state = 1 has connection = 1 XPC endpoint message = 0x600003d20780
+2026-10-26 20:40:36.158 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a0080b0 - NetworkProcessProxy::sendXPCEndpointToProcess(0x10a002400) state = 1 has connection = 1 XPC endpoint message = 0x600003d20780
+2026-10-26 20:40:36.197 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a0065c0 - [PID=19819, throttler=0x10a008140] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'Process initialization'
+2026-10-26 20:40:36.247 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::loadRequest:
+2026-10-26 20:40:36.248 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::loadRequestWithNavigationShared:
+2026-10-26 20:40:36.251 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a005070 - NavigationState is taking a process network assertion because a page load started
+2026-10-26 20:40:36.251 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000130 - [PID=19815, throttler=0x10a000f10] ProcessThrottler::Activity::Activity: Starting background activity / 'Page Load'
+2026-10-26 20:40:36.270 Df LibreVTT[19805:10dfe] [com.apple.xpc:connection] [0x100f118e0] Re-initialization successful; calling out to event handler with XPC_ERROR_CONNECTION_INTERRUPTED
+2026-10-26 20:40:36.572 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::decidePolicyForNavigationAction: frameID=13, isMainFrame=1, navigationID=16
+2026-10-26 20:40:36.576 A  LibreVTT[19805:10dfd] (CoreFoundation) Loading Preferences From User Session CFPrefsD
+2026-10-26 20:40:36.583 Df LibreVTT[19805:10dfd] [com.apple.xpc:connection] [0x600003d24b40] activating connection: mach=true listener=false peer=false name=com.apple.Safari.SafeBrowsing.Service
+2026-10-26 20:40:36.584 Df LibreVTT[19805:10dea] [com.apple.WebKit:AppSSO] 0x10a000420 - SOAuthorizationCoordinator::tryAuthorize
+2026-10-26 20:40:36.592 A  LibreVTT[19805:10dea] (AppSSO) canPerformAuthorizationWithURL
+2026-10-26 20:40:36.594 A  LibreVTT[19805:10dea] (AppSSOCore) canPerformAuthorizationWithURL
+2026-10-26 20:40:36.594 A  LibreVTT[19805:10dea] (AppSSOCore) canPerformAuthorizationWithURL
+2026-10-26 20:40:36.594 A  LibreVTT[19805:10dea] (AppSSOCore) canPerformAuthorizationWithURL
+2026-10-26 20:40:36.596 Df LibreVTT[19805:10dea] [com.apple.authkit:siwa] Should process URL called
+2026-10-26 20:40:36.598 Df LibreVTT[19805:10dea] [com.apple.authkit:siwa] Fetching native takeover URLs
+2026-10-26 20:40:36.600 Df LibreVTT[19805:10dea] [com.apple.xpc:connection] [0x100f13a00] activating connection: mach=true listener=false peer=false name=com.apple.ak.authorizationservices.xpc
+2026-10-26 20:40:36.626 Df LibreVTT[19805:10dea] [com.apple.authkit:siwa] Native takeover URLs fetched
+2026-10-26 20:40:36.627 Df LibreVTT[19805:10dea] [com.apple.authkit:siwa] URL shouldn't be processed
+2026-10-26 20:40:36.627 Df LibreVTT[19805:10dea] [com.apple.AppSSO:SOConfigurationClient] -[SOConfigurationClient init]  on <SOConfigurationClient: 0x600000283ce0>
+2026-10-26 20:40:36.627 Df LibreVTT[19805:10dea] [com.apple.xpc:connection] [0x100e20d70] activating connection: mach=true listener=false peer=false name=com.apple.AppSSO.service-xpc
+2026-10-26 20:40:36.628 Df LibreVTT[19805:10dea] [com.apple.AppSSO:SOServiceConnection] <SOServiceConnection: 0x600000283e00>: new XPC connection
+2026-10-26 20:40:36.628 Df LibreVTT[19805:10dea] [com.apple.AppSSO:SOConfigurationClient] -[SOConfigurationClient _reloadConfig]  on <SOConfigurationClient: 0x600000283ce0>
+2026-10-26 20:40:36.628 Df LibreVTT[19805:10dea] [com.apple.AppSSO:SOClient] -[SOClient configurationWithCompletion:]  on <SOClient: 0x600000006d70>
+2026-10-26 20:40:37.212 Df LibreVTT[19805:10dea] [com.apple.AppSSO:SOClient] configurationWithCompletion: success = YES, error = (null)
+2026-10-26 20:40:37.213 Df LibreVTT[19805:10dea] [com.apple.WebKit:AppSSO] 0x10a000420 - SOAuthorizationCoordinator::tryAuthorize: The requested URL is not registered for AppSSO handling. No further action needed.
+2026-10-26 20:40:37.214 E  LibreVTT[19805:10dea] [com.apple.WebKit:ResourceLoadStatistics] Failed to request storage access quirks from WebPrivacy.
+2026-10-26 20:40:37.214 E  LibreVTT[19805:10dea] [com.apple.WebKit:ResourceLoadStatistics] Failed to request query parameters from WebPrivacy.
+2026-10-26 20:40:37.214 E  LibreVTT[19805:10dea] [com.apple.WebKit:ResourceLoadStatistics] Failed to request storage access user agent string quirks from WebPrivacy.
+2026-10-26 20:40:37.214 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a002400 - GPUProcessProxy is taking a background assertion because a web process is requesting a connection
+2026-10-26 20:40:37.225 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a002400 - GPUProcessProxy::didCreateContextForVisibilityPropagation: webPageProxyID: 9, pagePID: 10, contextID: 3240843652
+2026-10-26 20:40:37.226 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] Created visibility propagation interaction <_UIVisibilityPropagationInteraction: 0x600002601680> for process with PID=19818
+2026-10-26 20:40:37.817 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::decidePolicyForNavigationAction: listener called: frameID=13, isMainFrame=1, navigationID=16, policyAction=0, safeBrowsingWarning=0, isAppBoundDomain=0, wasNavigationIntercepted=0
+2026-10-26 20:40:37.817 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::receivedNavigationActionPolicyDecision: frameID=13, isMainFrame=1, navigationID=16, policyAction=0
+2026-10-26 20:40:37.820 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSwapping] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::decidePolicyForNavigationAction: keep using process 19815 for navigation, reason=Process has not yet committed any provisional loads
+2026-10-26 20:40:37.820 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a000e80 - [PID=19815] WebProcessProxy::canTerminateAuxiliaryProcess: returns false (pageCount=1, provisionalPageCount=0, suspendedPageCount=0, m_isInProcessCache=0, m_shutdownPreventingScopeCounter=0)
+2026-10-26 20:40:37.826 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didStartProvisionalLoadForFrame: frameID=13, isMainFrame=1
+2026-10-26 20:40:37.826 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x10a000e80 - [PID=19815] WebProcessProxy::didStartProvisionalLoadForMainFrame:
+2026-10-26 20:40:37.883 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Failed to update focus with context <UIFocusUpdateContext: 0x600003304dc0: previouslyFocusedItem=(null), nextFocusedItem=(null), focusHeading=None>. No additional info available.
+2026-10-26 20:40:37.909 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::decidePolicyForNavigationAction: frameID=13, isMainFrame=1, navigationID=16
+2026-10-26 20:40:37.910 Df LibreVTT[19805:10dea] [com.apple.WebKit:AppSSO] 0x10a000420 - SOAuthorizationCoordinator::tryAuthorize
+2026-10-26 20:40:37.910 A  LibreVTT[19805:10dea] (AppSSO) canPerformAuthorizationWithURL
+2026-10-26 20:40:37.911 A  LibreVTT[19805:10dea] (AppSSOCore) canPerformAuthorizationWithURL
+2026-10-26 20:40:37.911 A  LibreVTT[19805:10dea] (AppSSOCore) canPerformAuthorizationWithURL
+2026-10-26 20:40:37.911 A  LibreVTT[19805:10dea] (AppSSOCore) canPerformAuthorizationWithURL
+2026-10-26 20:40:37.911 Df LibreVTT[19805:10dea] [com.apple.authkit:siwa] Should process URL called
+2026-10-26 20:40:37.911 Df LibreVTT[19805:10dea] [com.apple.authkit:siwa] Fetching native takeover URLs
+2026-10-26 20:40:37.912 Df LibreVTT[19805:10dea] [com.apple.authkit:siwa] Native takeover URLs fetched
+2026-10-26 20:40:37.912 Df LibreVTT[19805:10dea] [com.apple.authkit:siwa] URL shouldn't be processed
+2026-10-26 20:40:37.912 Df LibreVTT[19805:10dea] [com.apple.WebKit:AppSSO] 0x10a000420 - SOAuthorizationCoordinator::tryAuthorize: The requested URL is not registered for AppSSO handling. No further action needed.
+2026-10-26 20:40:37.913 E  LibreVTT[19805:10dea] [com.apple.WebKit:ResourceLoadStatistics] Failed to request query parameters from WebPrivacy.
+2026-10-26 20:40:37.913 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::decidePolicyForNavigationAction: listener called: frameID=13, isMainFrame=1, navigationID=16, policyAction=0, safeBrowsingWarning=0, isAppBoundDomain=0, wasNavigationIntercepted=0
+2026-10-26 20:40:37.913 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::receivedNavigationActionPolicyDecision: frameID=13, isMainFrame=1, navigationID=16, policyAction=0
+2026-10-26 20:40:37.913 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSwapping] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::decidePolicyForNavigationAction: keep using process 19815 for navigation, reason=Process has not yet committed any provisional loads
+2026-10-26 20:40:37.913 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a000e80 - [PID=19815] WebProcessProxy::canTerminateAuxiliaryProcess: returns false (pageCount=1, provisionalPageCount=0, suspendedPageCount=0, m_isInProcessCache=0, m_shutdownPreventingScopeCounter=0)
+2026-10-26 20:40:37.914 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didReceiveServerRedirectForProvisionalLoadForFrame: frameID=13, isMainFrame=1
+2026-10-26 20:40:37.977 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didNavigateWithNavigationDataShared:
+2026-10-26 20:40:37.977 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didPerformServerRedirect:
+2026-10-26 20:40:37.982 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didCommitLoadForFrame: frameID=13, isMainFrame=1
+2026-10-26 20:40:38.013 E  LibreVTT[19805:10dea] [com.apple.WebKit:ResourceLoadStatistics] Failed to request allowed query parameters from WebPrivacy.
+2026-10-26 20:40:38.459 Df LibreVTT[19805:10dea] [com.apple.WebKit:ResourceLoadStatistics] StorageAccessPromptQuirkController::didUpdateCachedListData: Loaded 1 storage access prompt(s) quirks from WebPrivacy.
+2026-10-26 20:40:38.493 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didFinishDocumentLoadForFrame: frameID=13, isMainFrame=1
+2026-10-26 20:40:38.495 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didFinishLoadForFrame: frameID=13, isMainFrame=1
+2026-10-26 20:40:38.495 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a005070 - NavigationState will release its process network assertion soon because the page load completed
+2026-10-26 20:40:38.497 Df LibreVTT[19805:10dea] [com.apple.runningboard:process] Hit the server for a process handle 1a7f1ae000004d5d that resolved to: [app<io.github.edg-coder.librevtt((null))>:19805]
+2026-10-26 20:40:38.497 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000190 - [PID=19815, throttler=0x10a000f10] ProcessThrottler::Activity::Activity: Starting foreground activity / 'WebPageProxy::runJavaScriptInFrameInScriptWorld'
+2026-10-26 20:40:38.498 Df LibreVTT[19805:10dea] [com.apple.WebKit:ViewState] 0x102829a00 (pageProxyID=9) -[WKWebView _updateVisibleContentRects:] - scroll view state is non-stable, bailing (shouldDeferGeometryUpdates 0, dynamicViewportUpdateMode 0, needsResetViewStateAfterCommitLoadForMainFrame 1, sizeChangedSinceLastVisibleContentRectUpdate 0, [_scrollView isZoomBouncing] 0, currentlyAdjustingScrollViewInsetsForKeyboard 0)
+2026-10-26 20:40:38.503 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Failed to update focus with context <UIFocusUpdateContext: 0x600003312940: previouslyFocusedItem=(null), nextFocusedItem=(null), focusHeading=None>. No additional info available.
+2026-10-26 20:40:38.506 E  LibreVTT[19805:10dea] [com.apple.WebKit:ResourceLoadStatistics] Failed to request restricted opener domains from WebPrivacy
+2026-10-26 20:40:38.541 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000190 - [PID=19815, throttler=0x10a000f10] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'WebPageProxy::runJavaScriptInFrameInScriptWorld'
+2026-10-26 20:40:38.664 A  LibreVTT[19805:10dea] (libsystem_containermanager.dylib) container_system_group_path_for_identifier
+2026-10-26 20:40:38.664 Df LibreVTT[19805:10dea] [com.apple.containermanager:xpc] Requesting container lookup; class = 13, identifier = com.apple.nsurlsessiond, group_identifier = systemgroup.com.apple.nsurlstoragedresources, create = 1, temp = 0, euid = 501, uid = 501
+2026-10-26 20:40:38.664 A  LibreVTT[19805:10dea] (libsystem_containermanager.dylib) container_query_t
+2026-10-26 20:40:38.664 Df LibreVTT[19805:10dea] [com.apple.containermanager:xpc] Query; euid = 501, uid = 501, class = 13, identifier = [com.apple.nsurlsessiond](1), flags = 900000003
+2026-10-26 20:40:38.665 Df LibreVTT[19805:10dea] [com.apple.containermanager:unspecified] container_query_get_single_result: success
+2026-10-26 20:40:38.665 A  LibreVTT[19805:10dea] (libsystem_containermanager.dylib) container_copy_object
+2026-10-26 20:40:38.665 Df LibreVTT[19805:10dea] [com.apple.containermanager:unspecified] container_system_group_path_for_identifier: success
+2026-10-26 20:40:38.731 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Failed to update focus with context <UIFocusUpdateContext: 0x600003304500: previouslyFocusedItem=(null), nextFocusedItem=(null), focusHeading=None>. No additional info available.
+2026-10-26 20:40:39.057 Df LibreVTT[19805:10dea] [com.apple.WebKit:ViewState] 0x102829a00 (pageProxyID=9) -[WKWebView _didCommitLayerTree:] - received a commit (2) while deferring visible content rect updates (dynamicViewportUpdateMode 0, needsResetViewStateAfterCommitLoadForMainFrame 1 (wants commit 2), sizeChangedSinceLastVisibleContentRectUpdate 0, [_scrollView isZoomBouncing] 0, currentlyAdjustingScrollViewInsetsForKeyboard 0)
+2026-10-26 20:40:39.058 Df LibreVTT[19805:10dea] [com.apple.WebKit:ViewState] 0x102829a00 (pageProxyID=9) -[WKWebView _updateVisibleContentRects:] - performing first visible content rect update after deferring updates
+2026-10-26 20:40:39.064 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Failed to update focus with context <UIFocusUpdateContext: 0x60000330c8c0: previouslyFocusedItem=(null), nextFocusedItem=(null), focusHeading=None>. No additional info available.
+2026-10-26 20:40:39.151 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Failed to update focus with context <UIFocusUpdateContext: 0x600003312940: previouslyFocusedItem=(null), nextFocusedItem=(null), focusHeading=None>. No additional info available.
+2026-10-26 20:40:41.496 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a005070 NavigationState is releasing background process assertion because a page load completed
+2026-10-26 20:40:41.496 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000130 - [PID=19815, throttler=0x10a000f10] ProcessThrottler::Activity::invalidate: Ending background activity / 'Page Load'
+2026-10-26 20:41:21.893 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Failed to update focus with context <UIFocusUpdateContext: 0x60000330c960: previouslyFocusedItem=(null), nextFocusedItem=(null), focusHeading=None>. No additional info available.
+2026-10-26 20:41:22.165 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Failed to update focus with context <UIFocusUpdateContext: 0x60000330ca00: previouslyFocusedItem=(null), nextFocusedItem=(null), focusHeading=None>. No additional info available.
+2026-10-26 20:41:23.542 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::willPerformClientRedirectForFrame: frameID=13, isMainFrame=1
+2026-10-26 20:41:23.545 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::decidePolicyForNavigationAction: frameID=13, isMainFrame=1, navigationID=0
+2026-10-26 20:41:23.547 Df LibreVTT[19805:10dea] [com.apple.WebKit:AppSSO] 0x10a000420 - SOAuthorizationCoordinator::tryAuthorize
+2026-10-26 20:41:23.547 A  LibreVTT[19805:10dea] (AppSSO) canPerformAuthorizationWithURL
+2026-10-26 20:41:23.549 A  LibreVTT[19805:10dea] (AppSSOCore) canPerformAuthorizationWithURL
+2026-10-26 20:41:23.550 A  LibreVTT[19805:10dea] (AppSSOCore) canPerformAuthorizationWithURL
+2026-10-26 20:41:23.550 A  LibreVTT[19805:10dea] (AppSSOCore) canPerformAuthorizationWithURL
+2026-10-26 20:41:23.550 Df LibreVTT[19805:10dea] [com.apple.authkit:siwa] Should process URL called
+2026-10-26 20:41:23.550 Df LibreVTT[19805:10dea] [com.apple.authkit:siwa] Fetching native takeover URLs
+2026-10-26 20:41:23.551 Df LibreVTT[19805:10dea] [com.apple.authkit:siwa] Native takeover URLs fetched
+2026-10-26 20:41:23.552 Df LibreVTT[19805:10dea] [com.apple.authkit:siwa] URL shouldn't be processed
+2026-10-26 20:41:23.552 Df LibreVTT[19805:10dea] [com.apple.WebKit:AppSSO] 0x10a000420 - SOAuthorizationCoordinator::tryAuthorize: The requested URL is not registered for AppSSO handling. No further action needed.
+2026-10-26 20:41:23.552 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::decidePolicyForNavigationAction: listener called: frameID=13, isMainFrame=1, navigationID=17, policyAction=0, safeBrowsingWarning=0, isAppBoundDomain=0, wasNavigationIntercepted=0
+2026-10-26 20:41:23.552 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::receivedNavigationActionPolicyDecision: frameID=13, isMainFrame=1, navigationID=17, policyAction=0
+2026-10-26 20:41:23.552 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSwapping] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::decidePolicyForNavigationAction: keep using process 19815 for navigation, reason=Navigation is same-site
+2026-10-26 20:41:23.552 Df LibreVTT[19805:10dea] [com.apple.WebKit:Process] 0x10a000e80 - [PID=19815] WebProcessProxy::canTerminateAuxiliaryProcess: returns false (pageCount=1, provisionalPageCount=0, suspendedPageCount=0, m_isInProcessCache=0, m_shutdownPreventingScopeCounter=0)
+2026-10-26 20:41:23.560 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didStartProvisionalLoadForFrame: frameID=13, isMainFrame=1
+2026-10-26 20:41:23.560 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x10a000e80 - [PID=19815] WebProcessProxy::didStartProvisionalLoadForMainFrame:
+2026-10-26 20:41:23.560 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a005070 - NavigationState is taking a process network assertion because a page load started
+2026-10-26 20:41:23.560 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000130 - [PID=19815, throttler=0x10a000f10] ProcessThrottler::Activity::Activity: Starting background activity / 'Page Load'
+2026-10-26 20:41:23.577 Df LibreVTT[19805:10dea] [com.apple.WebKit:BackForwardCache] WebBackForwardCache::addEntry: item=8-29, hasSuspendedPage=0, size=1/2
+2026-10-26 20:41:23.578 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didNavigateWithNavigationDataShared:
+2026-10-26 20:41:23.578 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didPerformClientRedirectShared: frameID=13, isMainFrame=1
+2026-10-26 20:41:23.578 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didCancelClientRedirectForFrame: frameID=13, isMainFrame=1
+2026-10-26 20:41:23.579 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didCommitLoadForFrame: frameID=13, isMainFrame=1
+2026-10-26 20:41:23.836 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didNavigateWithNavigationDataShared:
+2026-10-26 20:41:23.836 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didSameDocumentNavigationForFrameViaJS: frameID=13, isMainFrame=1, type=2
+2026-10-26 20:41:23.884 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Failed to update focus with context <UIFocusUpdateContext: 0x600003313520: previouslyFocusedItem=(null), nextFocusedItem=(null), focusHeading=None>. No additional info available.
+2026-10-26 20:41:24.279 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didFinishDocumentLoadForFrame: frameID=13, isMainFrame=1
+2026-10-26 20:41:24.286 Df LibreVTT[19805:10dea] [com.apple.WebKit:Loading] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didFinishLoadForFrame: frameID=13, isMainFrame=1
+2026-10-26 20:41:24.286 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a005070 - NavigationState will release its process network assertion soon because the page load completed
+2026-10-26 20:41:24.286 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000160 - [PID=19815, throttler=0x10a000f10] ProcessThrottler::Activity::Activity: Starting foreground activity / 'WebPageProxy::runJavaScriptInFrameInScriptWorld'
+2026-10-26 20:41:24.287 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000160 - [PID=19815, throttler=0x10a000f10] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'WebPageProxy::runJavaScriptInFrameInScriptWorld'
+2026-10-26 20:41:24.446 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Failed to update focus with context <UIFocusUpdateContext: 0x60000330ca00: previouslyFocusedItem=(null), nextFocusedItem=(null), focusHeading=None>. No additional info available.
+2026-10-26 20:41:24.450 Df LibreVTT[19805:10dea] [com.apple.WebKit:ViewState] 0x101823018 - [pageProxyID=9, webPageID=10, PID=19815] WebPageProxy::didReceiveTitleForFrame: This page updates its title without user interaction and is allowed to run in the background
+2026-10-26 20:41:24.450 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a006530 - [PID=19815, throttler=0x10a000f10] ProcessThrottler::Activity::Activity: Starting background activity / 'Page updates its title'
+2026-10-26 20:41:24.751 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Failed to update focus with context <UIFocusUpdateContext: 0x60000330d220: previouslyFocusedItem=(null), nextFocusedItem=(null), focusHeading=None>. No additional info available.
+2026-10-26 20:41:25.153 Df LibreVTT[19805:10dea] [com.apple.UIKit:UIFocus] Failed to update focus with context <UIFocusUpdateContext: 0x6000033135c0: previouslyFocusedItem=(null), nextFocusedItem=(null), focusHeading=None>. No additional info available.
+2026-10-26 20:41:27.240 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000160 - [PID=19815, throttler=0x10a000f10] ProcessThrottler::Activity::Activity: Starting foreground activity / 'WebPageProxy::runJavaScriptInFrameInScriptWorld'
+2026-10-26 20:41:27.241 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000160 - [PID=19815, throttler=0x10a000f10] ProcessThrottler::Activity::invalidate: Ending foreground activity / 'WebPageProxy::runJavaScriptInFrameInScriptWorld'
+2026-10-26 20:41:27.288 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a005070 NavigationState is releasing background process assertion because a page load completed
+2026-10-26 20:41:27.288 Df LibreVTT[19805:10dea] [com.apple.WebKit:ProcessSuspension] 0x10a000130 - [PID=19815, throttler=0x10a000f10] ProcessThrottler::Activity::invalidate: Ending background activity / 'Page Load'

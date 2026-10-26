@@ -1,0 +1,8 @@
+pronto: http://127.0.0.1:4100/
+{"path":"/Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Data/Application/F7E151DB-E565-477E-B6F8-42D398C0B7B8/Documents/Campagne/Prova iPhone","home":"/Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Data/Application/F7E151DB-E565-477E-B6F8-42D398C0B7B8/Documents/Campagne","ultima":null,"lista":[{"path":"/Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Data/Application/F7E151DB-E565-477E-B6F8-42D398C0B7B8/Documents/Campagne/Prova iPhone","nome":"Prova iPhone","esiste":true,"campagna":true,"vuota":false,"scrivibile":true,"scene":0,"schede":0,"immagini":1,"modificata":0,"vecchia":false,"sistema":null}],"icloud":false}
+cartella: /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Data/Application/F7E151DB-E565-477E-B6F8-42D398C0B7B8/Documents/Campagne/Prova iPhone
+{"ok":true}
+stato: solo | errore: None | busy: None
+   Nuova campagna «Prova iPhone» in /Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Data/Application/F7E151DB-E565-477E-B6F8-42D398C0B7B8/Documents/Campagne/Prova iPhone
+   Campagna: «Prova iPhone» (/Users/runner/Library/Developer/CoreSimulator/Devices/DC4CD8B3-4457-4153-9087-A0D7A2F9BFD9/data/Containers/Data/Application/F7E151DB-E565-477E-B6F8-42D398C0B7B8/Documents/Campagne/Prova iPhone)
+   Pronto.
