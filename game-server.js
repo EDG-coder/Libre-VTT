@@ -13,6 +13,7 @@
 
 'use strict';
 const http = require('http'), net = require('net'), fs = require('fs'), path = require('path'), crypto = require('crypto');
+const LUCE = require('./luce-calcolo.js');
 
 const MODE = (process.argv[2] || 'host').toLowerCase();
 const PORT = +(process.env.PORT || 4000);
@@ -105,7 +106,7 @@ let roster = readJson('players.json', null) || {};
 let session = Object.assign({ locked: false, approval: false, maxPlayers: 0, paused: false }, readJson('session.json', null) || {});
 
 // Le cose che cambiano il mondo: chi è congelato o in pausa non le può fare.
-const MUTATING = new Set(['board', 'token.move', 'token.add', 'token.del', 'fog.set', 'scene.show',
+const MUTATING = new Set(['board', 'token.move', 'token.add', 'token.del', 'fog.set', 'luce.dimentica', 'luce.porta', 'scene.show',
   'sheet.add', 'sheet.save', 'sheet.del', 'music', 'asset.put', 'notes.save', 'notes.edit']);
 
 let saveTimer = 0;
@@ -180,6 +181,110 @@ function hiddenByFog(sc, p) {
   return f.cells[cy * f.cols + cx] !== '1';
 }
 
+// ======================= Illuminazione dinamica (luce-calcolo.js) =======================
+// La visuale del party la calcola qui il server: ai giocatori arrivano solo i poligoni di quello che
+// vedono (e il «già visto»), mai i muri e le luci della scena. Dove la luce non arriva, i segnalini
+// degli altri non vengono nemmeno mandati.
+const luceDi = sc => sc && sc.luce && sc.luce.on ? LUCE.pulisci(sc.luce) : null;
+/** Una casella della nebbia è «zona di luce dinamica»? Se il master non ne ha segnata nessuna, vale tutta la mappa. */
+function inZona(sc, x, y) {
+  const f = fogOf(sc.id);
+  if (!f || !f.zona || f.zona.indexOf('1') < 0) return true;
+  const cx = Math.floor((x - f.x) / f.cell), cy = Math.floor((y - f.y) / f.cell);
+  if (cx < 0 || cy < 0 || cx >= f.cols || cy >= f.rows) return false;
+  return f.zona[cy * f.cols + cx] === '1';
+}
+const centro = ph => [ph.l + ph.w / 2, ph.t + ph.h / 2];
+const schedaDi = ph => ph.sheet && (world.sheets || []).find(s => s.id === ph.sheet);
+/** I segnalini del party: quelli dei giocatori (o con la scheda affidata a un giocatore), o segnati a mano dal master. */
+function delParty(sc, ph) {
+  if ((ph.layer || 'tokens') !== 'tokens' || ph.shape) return false;
+  if (ph.party === true) return true;
+  if (ph.party === false) return false;
+  if (tokenOwner(sc, ph)) return true;
+  const sh = schedaDi(ph);
+  return !!(sh && Object.values(roster).some(r => r.role !== 'master' && r.sheets && r.sheets[sh.id] === 'rw'));
+}
+const viste = new Map();                // scena → { chiave, vista }
+const visti = new Map();                // scena → griglia del «già visto» (Uint8Array dentro)
+function grigliaVisto(sc, board, cella) {
+  let g = visti.get(sc.id);
+  const ok = g && g.x === board.x && g.y === board.y && g.cols === Math.ceil(board.w / g.q) && g.rows === Math.ceil(board.h / g.q) && g.q === Math.max(4, cella / 4);
+  if (ok) return g;
+  g = LUCE.griglia(board, cella);
+  const salvato = world.visto && world.visto[sc.id];
+  if (salvato && salvato.x === g.x && salvato.y === g.y && salvato.cols === g.cols && salvato.rows === g.rows) g.d = LUCE.espandi(salvato.rle, g.d.length);
+  visti.set(sc.id, g);
+  return g;
+}
+/** La vista del party nella scena (ricalcolata solo se è cambiato qualcosa che conta). Con la visione
+ *  non condivisa ognuno ha la sua: solo i suoi segnalini (c = chi guarda). */
+function vistaDi(sc, c) {
+  const luce = luceDi(sc);
+  if (!luce) return null;
+  const board = sc.board || { x: 0, y: 0, w: 1000, h: 1000 };
+  const cella = (sc.grid && +sc.grid.size) || 50;
+  const occhi = [], luciT = [];
+  for (const ph of sc.photos || []) {
+    if ((ph.layer || 'tokens') !== 'tokens' || ph.shape) continue;
+    const [x, y] = centro(ph);
+    if (ph.luce && (ph.luce.r > 0 || ph.luce.rf > 0)) luciT.push({ x, y, r: Math.min(200, +ph.luce.r || 0), rf: Math.min(200, +ph.luce.rf || 0), col: /^#[0-9a-f]{6}$/i.test(ph.luce.col || '') ? ph.luce.col : '#ffd27a' });
+    if (delParty(sc, ph) && (luce.condivisa || !c || isTheirs(c, sc, ph))) occhi.push({ x, y, scuro: ph.scuro != null ? Math.max(0, Math.min(200, +ph.scuro || 0)) : LUCE.scurovisione(schedaDi(ph) && schedaDi(ph).f) });
+  }
+  const chi = luce.condivisa || !c ? sc.id : sc.id + '|' + (c.token || c.id);   // di chi è il «già visto»
+  const chiave = JSON.stringify([luce, board, cella, occhi, luciT]);
+  const v = viste.get(chi);
+  if (v && v.chiave === chiave) return v.vista;
+  const vista = LUCE.vista(luce, board, cella, occhi, luciT);
+  vista.ricordo = luce.ricordo; vista.chi = chi;
+  viste.set(chi, { chiave, vista });
+  // il «già visto» cresce con quello che il party vede adesso
+  const g = grigliaVisto({ id: chi }, board, cella);
+  if (LUCE.segnaVisto(g, vista)) {
+    world.visto = world.visto || {};
+    world.visto[chi] = { x: g.x, y: g.y, q: g.q, cols: g.cols, rows: g.rows, rle: LUCE.comprimi(g.d) };
+    scheduleSave();
+  }
+  return vista;
+}
+/** Le porte che questo giocatore vede (fuori dalla nebbia e nella sua visuale): solo quelle gli arrivano, e solo quelle può aprire. */
+function porteVisibili(c, sc) {
+  const luce = sc.luce && (sc.luce.on || sc.luce.solidi) ? LUCE.pulisci(sc.luce) : null;
+  if (!luce) return [];
+  const v = luce.on ? vistaDi(sc, c) : null;
+  return luce.muri.filter(w => {
+    if (!w.porta) return false;
+    const x = (w.x1 + w.x2) / 2, y = (w.y1 + w.y2) / 2;
+    if (permsFor(c).revealFog) return true;
+    if (v && inZona(sc, x, y)) {
+      // la porta si vede se uno dei suoi punti (centro o un po' dentro dai due estremi) è visibile
+      const pts = [[x, y], [w.x1 + (x - w.x1) * 0.6, w.y1 + (y - w.y1) * 0.6], [w.x2 + (x - w.x2) * 0.6, w.y2 + (y - w.y2) * 0.6]];
+      const nx = -(w.y2 - w.y1), ny = w.x2 - w.x1, L = Math.hypot(nx, ny) || 1, e = 3;
+      return pts.some(([px, py]) => LUCE.visibile(v, px + nx / L * e, py + ny / L * e) || LUCE.visibile(v, px - nx / L * e, py - ny / L * e));
+    }
+    return !hiddenByFog(sc, { l: x, t: y, w: 0, h: 0 });
+  }).map(w => ({ id: w.id, x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2, aperta: w.aperta }));
+}
+/** Per chi non vede tutto: il segnalino è nascosto (sotto la nebbia, o al buio dove c'è la luce dinamica)? */
+function nascostoA(c, sc, ph) {
+  if (permsFor(c).revealFog || isTheirs(c, sc, ph)) return false;
+  const v = vistaDi(sc, c);
+  if (v && (ph.layer || 'tokens') === 'tokens') {
+    const [x, y] = centro(ph);
+    if (inZona(sc, x, y)) return !LUCE.visibile(v, x, y);
+  }
+  return hiddenByFog(sc, ph);
+}
+/** Quello che il giocatore riceve della luce: i poligoni e le porte che vede, mai i muri. */
+function lucePerGiocatore(c, sc) {
+  const porte = porteVisibili(c, sc);
+  const v = vistaDi(sc, c);
+  if (!v) return { luce: sc.luce ? { on: false, porte } : undefined, vista: undefined };
+  const out = { amb: v.amb, ricordo: v.ricordo, occhi: v.occhi.map(o => ({ x: o.x, y: o.y, scuro: o.scuro, poly: o.poly })), luci: v.luci };
+  if (v.ricordo === 'scuro') { const g = visti.get(v.chi); if (g) out.visto = { x: g.x, y: g.y, q: g.q, cols: g.cols, rows: g.rows, rle: LUCE.comprimi(g.d) }; }
+  return { luce: { on: true, ambiente: v.amb, ricordo: v.ricordo, porte }, vista: out };
+}
+
 /** Il percorso locale del master non vale per gli altri: fuori va «gs:<hash>». */
 const outUrl = o => (o && o.gid) ? { ...o, url: 'gs:' + o.gid, aid: undefined } : o;
 
@@ -189,12 +294,13 @@ function sceneFor(c, sc) {
   out.bg = outUrl(sc.bg);
   out.photos = (sc.photos || []).filter(ph => {
     if ((ph.layer || 'tokens') === 'hidden' && !p.seeHiddenLayer) return false;
-    // il proprio personaggio si vede sempre, anche se è entrato nella nebbia
-    if (!p.revealFog && hiddenByFog(sc, ph) && !isTheirs(c, sc, ph)) return false;
+    // il proprio personaggio si vede sempre, anche se è entrato nella nebbia o è al buio
+    if (nascostoA(c, sc, ph)) return false;
     return true;
   }).map(outUrl);
   // la nebbia va mandata comunque: al giocatore serve per dipingere il nero
   out.fog = fogOf(sc.id);
+  if (!p.revealFog) Object.assign(out, lucePerGiocatore(c, sc));
   return out;
 }
 
@@ -234,7 +340,7 @@ function turniPerChi(c) {
   if (!t) return null;
   if (permsFor(c).seeHiddenLayer) return t;
   const nascosti = new Set();
-  for (const sc of world.scenes || []) for (const ph of sc.photos || []) if ((ph.layer || 'tokens') === 'hidden' || (!permsFor(c).revealFog && hiddenByFog(sc, ph) && !isTheirs(c, sc, ph))) nascosti.add(ph.id);
+  for (const sc of world.scenes || []) for (const ph of sc.photos || []) if ((ph.layer || 'tokens') === 'hidden' || nascostoA(c, sc, ph)) nascosti.add(ph.id);
   const righe = t.righe.filter(r => !(r.pid && nascosti.has(r.pid)));
   const ora = t.righe[t.cur];
   return { ...t, righe, cur: Math.max(0, righe.indexOf(ora)) };
@@ -426,6 +532,12 @@ function handleIntent(c, m) {
       if (!(p.moveAnyToken || (p.moveOwnTokens && mine))) return deny(c, m.op, 'non è un tuo segnalino');
       if ((ph.layer || 'tokens') === 'hidden' && !p.seeHiddenLayer) return deny(c, m.op, 'non puoi');
       const pos = m.pos || {};
+      // muri non attraversabili: un giocatore non porta il segnalino dall'altra parte di un muro o di una porta chiusa
+      if (!p.moveAnyToken && sc.luce && sc.luce.solidi) {
+        const l = LUCE.pulisci(sc.luce), [ax, ay] = centro(ph);
+        const bx = (+pos.l || 0) + (pos.w > 0 ? +pos.w : ph.w) / 2, by = (+pos.t || 0) + (pos.h > 0 ? +pos.h : ph.h) / 2;
+        if (LUCE.attraversa(l, ax, ay, bx, by)) { schedulePush(); return deny(c, m.op, 'c\'è un muro'); }
+      }
       ph.l = +pos.l || 0; ph.t = +pos.t || 0;
       if (pos.w > 0) ph.w = +pos.w;
       if (pos.h > 0) ph.h = +pos.h;
@@ -479,6 +591,29 @@ function handleIntent(c, m) {
       if (!ph) return;
       if (!(p.moveAnyToken || isTheirs(c, sc, ph))) return deny(c, m.op, 'non è un tuo segnalino');
       sc.photos = sc.photos.filter(x => x !== ph);
+      changed();
+      return;
+    }
+
+    // --- luce dinamica: il master fa dimenticare al party quello che aveva già visto ---
+    case 'luce.dimentica': {
+      if (!p.revealFog) return deny(c, m.op, 'solo chi conduce');
+      const id = str(m.scene, 60);
+      for (const k of Object.keys(world.visto || {})) if (k === id || k.startsWith(id + '|')) delete world.visto[k];
+      for (const mp of [visti, viste]) for (const k of [...mp.keys()]) if (k === id || k.startsWith(id + '|')) mp.delete(k);
+      scheduleSave(); schedulePush();
+      return;
+    }
+
+    // --- una porta: la apre (o chiude) chi la vede ---
+    case 'luce.porta': {
+      const sc = findScene(m.scene);
+      if (!sc || !sc.luce || !Array.isArray(sc.luce.muri)) return deny(c, m.op, 'scena sconosciuta');
+      const id = str(m.id, 40);
+      if (!porteVisibili(c, sc).some(w => w.id === id)) return deny(c, m.op, 'quella porta non la vedi');
+      const w = sc.luce.muri.find(x => x.id === id && x.porta);
+      if (!w) return deny(c, m.op, 'porta sconosciuta');
+      w.aperta = typeof m.aperta === 'boolean' ? m.aperta : !w.aperta;
       changed();
       return;
     }

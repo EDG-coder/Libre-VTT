@@ -157,7 +157,23 @@ function fitView(anim, margin = 1) {
   const r = baseRect(), s = fitScale(r) * margin;
   setView({ s, x: (innerWidth - r.w * s) / 2 - r.x * s, y: (innerHeight - r.h * s) / 2 - r.y * s }, anim);
 }
-addEventListener('resize', () => { applyView(); });
+// una vista salvata su uno schermo di un'altra misura (il master sul computer, il telefono girato):
+// si tiene lo stesso punto della mappa al centro e si scala nella stessa proporzione
+function adattaVista(v) {
+  const W = innerWidth, H = innerHeight;
+  if (!(v.w > 0 && v.h > 0)) return (W < 600 || (H < 500 && W < 1000)) ? null : v;   // vista vecchia senza misura: sul telefono si centra
+  if (v.w === W && v.h === H) return v;
+  const cx = (v.w / 2 - v.x) / v.s, cy = (v.h / 2 - v.y) / v.s, s = v.s * Math.min(W / v.w, H / v.h);
+  return { x: W / 2 - cx * s, y: H / 2 - cy * s, s };
+}
+let vistaW = innerWidth, vistaH = innerHeight;
+addEventListener('resize', () => {
+  // cambia la larghezza (telefono girato, finestra ridimensionata): stesso centro. Se cambia solo
+  // l'altezza (la tastiera del telefono che si apre) la mappa resta dov'è.
+  if (innerWidth !== vistaW) { const v = adattaVista({ x: view.x, y: view.y, s: view.s, w: vistaW, h: vistaH }); if (v) Object.assign(view, { x: v.x, y: v.y, s: v.s }); }
+  vistaW = innerWidth; vistaH = innerHeight;
+  applyView();
+});
 
 // Zoom con la rotellina, centrato sul puntatore (con limiti min/max)
 viewport.addEventListener('wheel', e => {
@@ -632,7 +648,7 @@ function newScene(name, type) {
 // scrive nella scena attiva quello che c'è sullo schermo
 function captureScene() {
   if (!cur) return;
-  cur.view = { x: view.x, y: view.y, s: view.s };
+  cur.view = { x: view.x, y: view.y, s: view.s, w: innerWidth, h: innerHeight };
   cur.board = rectOf(board);
   cur.bg = bgBox.hidden ? null : { ...rectOf(bgBox), url: rifImmagine(bgBox.dataset.url, bgBox.dataset.gid), gid: bgBox.dataset.gid || undefined, aid: bgBox.dataset.aid === '' ? undefined : +bgBox.dataset.aid };
   cur.photos = [...world.querySelectorAll('.photo')].map(p => ({
@@ -640,7 +656,8 @@ function captureScene() {
     owner: p.dataset.owner || undefined, gid: p.dataset.gid || undefined,
     url: p._shape ? undefined : rifImmagine(p.querySelector('img').getAttribute('src'), p.dataset.gid), shape: p._shape, layer: p.dataset.layer, aid: p.dataset.aid === undefined ? undefined : +p.dataset.aid,
     l: num(p, 'left'), t: num(p, 'top'), w: num(p, 'width'), h: num(p, 'height'), z: +p.style.zIndex, sheet: p.dataset.sheet, name: p.dataset.name, round: p.dataset.round, ring: p.dataset.ring,
-    fx: p.dataset.fx || undefined, crossed: p.dataset.crossed ? true : undefined, vals: p.dataset.vals || undefined
+    fx: p.dataset.fx || undefined, crossed: p.dataset.crossed ? true : undefined, vals: p.dataset.vals || undefined,
+    ...(typeof luceDatiSegnalino === 'function' ? luceDatiSegnalino(p) : {})
   }));
   if (typeof drawSnapshot === 'function') cur.draw = drawSnapshot();
 }
@@ -700,7 +717,8 @@ async function showScene(sc) {
   setBgBox(url ? { ...sc.bg, url, gid: sc.bg.gid || (String(sc.bg.url).startsWith('gs:') ? sc.bg.url.slice(3) : undefined) } : null);
   setLayer('tokens');
   paintGrid();
-  if (sc.view) { Object.assign(view, sc.view); applyView(); } else fitView(false, 0.9);
+  const vista = sc.view && adattaVista(sc.view);
+  if (vista) { Object.assign(view, { x: vista.x, y: vista.y, s: vista.s }); applyView(); } else fitView(false, 0.9);
   updatePageColor();
   renderSceneUI(); syncSettings();
 }
@@ -1485,6 +1503,7 @@ async function loadBoard() {
     scenes = st.scenes.map(sc => ({
       id: sc.id || uid(), name: sc.name || 'Scena', type: sc.type === 'cinematic' ? 'cinematic' : 'map',
       bg: sc.bg || null, grid: { ...DEFAULT_GRID, ...sc.grid }, photos: sc.photos || [], view: sc.view || null, draw: sc.draw || null,
+      luce: sc.luce || undefined,
       // salvataggi precedenti: il rettangolo coincide con la mappa (o è quello di default)
       board: okRect(sc.board) ? pick(sc.board) : okRect(sc.bg) ? pick(sc.bg) : { ...DEFAULT_RECT }
     }));

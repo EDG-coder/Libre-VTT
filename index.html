@@ -75,6 +75,7 @@
     <button type="button" data-layer="tokens" class="active" title="Muovi e ridimensiona i segnalini">Segnalini</button>
     <button type="button" data-layer="hidden" title="Muovi le immagini del livello nascosto">Nascosto</button>
     <button type="button" data-layer="map" title="Muovi e ridimensiona il rettangolo e lo sfondo">Mappa</button>
+    <button type="button" data-layer="luce" title="Muri, porte e luci della luce dinamica">Luci</button>
   </div>
   <div id="targetSwitch" role="group" aria-label="Cosa modificare nel livello Mappa" hidden>
     <button type="button" data-target="board" class="active" title="Muovi e ridimensiona il rettangolo (si aggancia ai bordi dell'immagine)">Rettangolo</button>
@@ -151,6 +152,7 @@
       <div class="compCerca">
         <input id="compQ" type="search" placeholder="Cerca (anche in inglese)…" autocomplete="off" aria-label="Cerca nel compendio">
         <select id="compTipo" aria-label="Tipo"></select>
+        <button id="compFiltriBtn" type="button" class="btn ghost" aria-expanded="false" title="Mostra o nascondi filtri e pulsanti">Filtri ▾</button>
       </div>
       <div class="compFiltri" id="compFiltri"></div>
       <div class="row compAzioni">
@@ -373,6 +375,8 @@
 <script src="compendio-import.js"></script>
 <script src="tiri-scheda.js"></script>
 <script src="creazione.js"></script>
+<script src="luce-calcolo.js"></script>
+<script src="luce.js"></script>
 <script src="ordine-strumenti.js"></script>
 <script src="mobile.js"></script>
 </body>

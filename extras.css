@@ -453,7 +453,8 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 #netBar .nbX:hover { opacity: 1; }
 
 /* ---------- Che cosa sparisce a chi non ha il permesso ---------- */
-.no-revealFog #fogBox,
+.no-revealFog #fogBox, .no-revealFog #luceBox, .no-revealFog #toolDrawer .slot[data-tool="fog"], .no-revealFog #toolDrawer .slot[data-tool="luce"],
+.no-revealFog #layerSwitch [data-layer="luce"],
 .no-draw #penBox,
 .no-controlMusic .mMaster,
 .no-seeAllScenes #sceneWrap,
@@ -812,3 +813,31 @@ body.net-player #caselleSect { display: none; }
 .ordStr .ordNome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ordStr button { width: 30px; height: 28px; padding: 0; border-radius: 6px; border: 1px solid rgba(127, 127, 127, .35); background: transparent; color: inherit; font-size: 15px; cursor: pointer; }
 .ordStr button:disabled { opacity: .3; cursor: default; }
+
+/* ---------- Illuminazione dinamica (luce.js) ---------- */
+#luceCanvas { position: absolute; pointer-events: none; z-index: 2147483000; }
+#luceTinta { position: absolute; pointer-events: none; z-index: 2; mix-blend-mode: soft-light; opacity: .85; }
+#luceCanvas[hidden], #luceTinta[hidden], #luceSegni[hidden] { display: none; }
+#luceSegni { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; z-index: 2147483001; }
+#luceSegni .lMuro { stroke: #ff5d8f; stroke-linecap: round; filter: drop-shadow(0 0 2px rgba(0, 0, 0, .8)); }
+#luceSegni .lPunto { fill: #fff; stroke: #ff5d8f; }
+#luceSegni .lAnteprima { stroke: #ff5d8f; stroke-linecap: round; opacity: .8; }
+#luceSegni .lAnteprima.porta, #luceSegni .lPortaL { stroke: #ffb000; stroke-linecap: round; }
+#luceSegni .lPortaL.aperta { stroke: #2ee6a6; opacity: .8; }
+#luceSegni .lAlone { fill: none; stroke: var(--c, #ffd27a); stroke-dasharray: 6 6; opacity: .55; }
+#luceSegni .lAlone.forte { stroke-dasharray: none; opacity: .8; }
+#luceSegni .lFonte { fill: var(--c, #ffd27a); stroke: #000; }
+#luceSegni .lPorta { pointer-events: auto; cursor: pointer; }
+#luceSegni .lPorta circle { fill: rgba(18, 21, 28, .85); stroke: #ffb000; stroke-width: 2; }
+#luceSegni .lPorta circle.aperta { stroke: #2ee6a6; }
+#luceSegni .lPorta text { fill: #fff; font: 600 14px system-ui, sans-serif; pointer-events: none; }
+#luceSegni:not(.modifica) .lPortaL { opacity: .55; }
+#viewport.layer-luce { cursor: crosshair; }
+#viewport.layer-luce .photo { pointer-events: none; opacity: .75; }
+#layerSwitch button[data-layer="luce"].active { background: rgba(255, 176, 0, .55); box-shadow: 0 0 12px rgba(255, 176, 0, .8); }
+#luceBox { --tw: 300px; }
+#luceBox .lRiga { justify-content: space-between; }
+.lSeg { display: inline-flex; gap: 2px; flex-wrap: wrap; }
+#luceBox .tbody button.on, #fogZone button.on { background: rgba(255, 176, 0, .55); box-shadow: 0 0 8px rgba(255, 176, 0, .6); }
+#luceBox input[type=number] { width: 64px; }
+#luceBox [hidden] { display: none !important; }

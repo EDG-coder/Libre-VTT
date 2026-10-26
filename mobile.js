@@ -48,6 +48,38 @@
     const t = e.pointerType === 'touch' ? 'touch' : e.pointerType === 'mouse' ? 'mouse' : null;   // la penna non cambia niente
     if (t && t !== ultimo) { ultimo = t; aggiorna(); }
   }, true);
+  // ======================= Strumenti a sinistra sul telefono =======================
+  // Devono starci tutti senza scorrere (vedi mobile.css): se non entrano in una colonna si rimpiccioliscono
+  // fino a 44 px e poi vanno su più colonne.
+  function dimensionaStrumenti() {
+    const dr = document.getElementById('toolDrawer'), sl = dr && dr.querySelector('.slots');
+    if (!sl) return;
+    if (!R.classList.contains('ui-tel')) { dr.style.removeProperty('--k'); dr.style.removeProperty('--righe'); return; }
+    const n = Math.max(1, [...sl.children].filter(c => getComputedStyle(c).display !== 'none').length);
+    const cs = getComputedStyle(dr), sotto = parseFloat(cs.bottom) || 76;
+    const sopra = 12 + (parseFloat(getComputedStyle(R).getPropertyValue('--sa-top')) || 0);
+    const alto = innerHeight - sotto - sopra - 22;                  // 22: il bordo e il padding del menu
+    const passo = k => 60 * k;                                      // casella 52 + spazio 8, in scala
+    let k = Math.min(1, (alto + 8) / (n * 60)), righe = n;
+    if (k < 44 / 52) { k = 44 / 52; righe = Math.max(1, Math.floor((alto + 8 * k) / passo(k))); }
+    dr.style.setProperty('--k', k.toFixed(3));
+    dr.style.setProperty('--righe', Math.ceil(n / Math.ceil(n / righe)));
+  }
+  addEventListener('resize', () => requestAnimationFrame(dimensionaStrumenti));
+  addEventListener('load', dimensionaStrumenti);
+  document.addEventListener('DOMContentLoaded', () => {
+    const sl = document.querySelector('#toolDrawer .slots');
+    if (sl) new MutationObserver(dimensionaStrumenti).observe(sl, { childList: true });
+    dimensionaStrumenti();
+  });
+  requestAnimationFrame(dimensionaStrumenti);
+
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('#compFiltriBtn'); if (!b) return;
+    const aperti = document.getElementById('tab-comp').classList.toggle('filtriAperti');
+    b.setAttribute('aria-expanded', aperti); b.textContent = (window.tr || (x => x))(aperti ? 'Filtri ▴' : 'Filtri ▾');
+  });
+
   const toccoOra = () => R.classList.contains('ui-touch');
   const telefono = () => R.classList.contains('ui-tel');
 
@@ -104,7 +136,7 @@
   const sullaMappa = e => e.pointerType === 'touch' && nodo(e) && viewport.contains(e.target);
   const strumentoAttivo = () =>
     (typeof penOn !== 'undefined' && penOn) || (typeof rulerOn !== 'undefined' && rulerOn) ||
-    (typeof fogAllowed === 'function' && fogAllowed());
+    (typeof fogAllowed === 'function' && fogAllowed()) || (typeof luceAttiva === 'function' && luceAttiva());
   function suCornice(e) {                       // livello «Mappa»: si sta spostando il rettangolo o lo sfondo
     if (typeof layer === 'undefined' || layer !== 'map') return false;
     if (e.target.closest('.handle')) return true;
@@ -149,7 +181,7 @@
     if (dita.size > 2) { ignora.add(e.pointerId); ferma(e); return; }
 
     // un dito solo
-    if (strumentoAttivo() || selezioneArea || suCornice(e)) return;          // penna, righello, nebbia, rettangolo: come col mouse
+    if (strumentoAttivo() || selezioneArea || suCornice(e) || e.target.closest('.lPorta')) return;   // penna, righello, nebbia, luci, rettangolo, porte: come col mouse
     const foto = e.target.closest('.photo');
     if (foto) {                                // un segnalino: lo muove la mappa; se resta fermo a lungo, il menu
       lungo = { id: e.pointerId, timer: setTimeout(() => {

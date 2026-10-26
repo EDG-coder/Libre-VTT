@@ -17,16 +17,29 @@ function fogOf(make) {
   if (!cur.fog && make) {
     const b = boardRect();
     const cols = Math.max(1, Math.ceil(b.w / FOG_CELL)), rows = Math.max(1, Math.ceil(b.h / FOG_CELL));
-    cur.fog = { on: true, x: b.x, y: b.y, cell: FOG_CELL, cols, rows, cells: '0'.repeat(cols * rows) };
+    // segnare una zona di luce non accende la nebbia
+    cur.fog = { on: !/zona/.test(fogTool.mode), x: b.x, y: b.y, cell: FOG_CELL, cols, rows, cells: '0'.repeat(cols * rows) };
   }
-  return cur.fog || null;
+  const f = cur.fog || null;
+  if (f && make && (!f.zona || f.zona.length !== f.cols * f.rows)) f.zona = '0'.repeat(f.cols * f.rows);
+  return f;
 }
+// La luce dinamica nelle caselle: «zona» = lì vale la luce (fuori resta la nebbia). Nessuna zona = vale dappertutto.
+const luceAccesa = () => !!(cur && cur.luce && cur.luce.on);
+const zonaSegnata = f => !!(f && f.zona && f.zona.indexOf('1') >= 0);
+const inZonaLuce = (f, i) => luceAccesa() && (!zonaSegnata(f) || f.zona[i] === '1');
 
 const fogIdx = (f, cx, cy) => cy * f.cols + cx;
 const fogGet = (f, cx, cy) => f.cells[fogIdx(f, cx, cy)] === '1';
 function fogSet(f, cx, cy, on) {
   if (cx < 0 || cy < 0 || cx >= f.cols || cy >= f.rows) return false;
   const i = fogIdx(f, cx, cy);
+  if (fogTool.mode === 'zona' || fogTool.mode === 'nozona') {            // le zone della luce dinamica
+    const z = fogTool.mode === 'zona';
+    if ((f.zona[i] === '1') === z) return false;
+    f.zona = f.zona.slice(0, i) + (z ? '1' : '0') + f.zona.slice(i + 1);
+    return true;
+  }
   if ((f.cells[i] === '1') === on) return false;
   f.cells = f.cells.slice(0, i) + (on ? '1' : '0') + f.cells.slice(i + 1);
   return true;
@@ -48,7 +61,9 @@ const fogVelo = () => (settings.fogVeil >= 0.05 && settings.fogVeil <= 1 ? setti
 function fogApply() {
   const f = fogOf(false);
   const mine = typeof isMaster !== 'function' || isMaster();
-  if (!f || !f.on) { fogCanvas.hidden = true; return; }
+  // a chi conduce le zone della luce si mostrano mentre usa la nebbia o il livello «Luci»
+  const zone = mine && zonaSegnata(f) && (fogTool.on || (typeof layer !== 'undefined' && layer === 'luce'));
+  if (!f || (!f.on && !zone)) { fogCanvas.hidden = true; return; }
   fogCanvas.hidden = false;
   const w = f.cols * f.cell, h = f.rows * f.cell;
   // un pixel del canvas per casella: lo stiriamo con il css, resta leggerissimo
@@ -58,8 +73,13 @@ function fogApply() {
   const ctx = fogCanvas.getContext('2d');
   ctx.clearRect(0, 0, f.cols, f.rows);
   ctx.fillStyle = fogColore();
-  for (let y = 0; y < f.rows; y++) for (let x = 0; x < f.cols; x++) {
-    if (f.cells[fogIdx(f, x, y)] !== '1') ctx.fillRect(x, y, 1, 1);
+  if (f.on) for (let y = 0; y < f.rows; y++) for (let x = 0; x < f.cols; x++) {
+    const i = fogIdx(f, x, y);
+    if (f.cells[i] !== '1' && !inZonaLuce(f, i)) ctx.fillRect(x, y, 1, 1);   // dove c'è la luce dinamica, decide lei
+  }
+  if (zone) {
+    ctx.fillStyle = 'rgba(255, 205, 70, .55)';
+    for (let y = 0; y < f.rows; y++) for (let x = 0; x < f.cols; x++) if (f.zona[fogIdx(f, x, y)] === '1') ctx.fillRect(x, y, 1, 1);
   }
 }
 
@@ -123,7 +143,7 @@ function fogPaintAt(clientX, clientY) {
 let fogDrag = 0, fogDirty = false, fogRect = null, fogPoly = null;
 const fogAllowed = () => fogTool.on && (typeof can !== 'function' || can('revealFog'));
 const fogWorld = e => ({ x: (e.clientX - view.x) / view.s, y: (e.clientY - view.y) / view.s });
-const fogColor = () => fogTool.mode === 'reveal' ? '#ffd93d' : '#4da6ff';
+const fogColor = () => ({ reveal: '#ffd93d', hide: '#4da6ff', zona: '#ffb000', nozona: '#b0b0b0' })[fogTool.mode] || '#4da6ff';
 
 function drawRectPreview(a, b) {
   const [x1, y1] = toScreen(a.x, a.y), [x2, y2] = toScreen(b.x, b.y);
@@ -203,6 +223,10 @@ const fogBox = mk('div', 'tool glass',
        <button type="button" data-m="reveal" class="on">☀ Scopri</button>
        <button type="button" data-m="hide">☁ Copri</button>
      </div>
+     <div class="trow" id="fogZone" title="Dove vale la luce dinamica (strumento 💡). Se non segni nessuna zona, vale su tutta la mappa.">
+       <button type="button" data-m="zona">💡 Zona luce</button>
+       <button type="button" data-m="nozona">✖ Togli zona</button>
+     </div>
      <div class="trow" id="fogShapes">
        <button type="button" data-s="brush" class="on" title="Dipingi a mano libera">✏️ Pennello</button>
        <button type="button" data-s="rect" title="Trascina per fare un rettangolo">▭ Rettangolo</button>
@@ -229,6 +253,7 @@ function fogSync() {
   $('fogSize').value = fogTool.size;
   $('fogSizeOut').textContent = fogTool.size;
   $('fogModes').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === fogTool.mode));
+  $('fogZone').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === fogTool.mode));
   $('fogShapes').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.s === fogTool.shape));
   $('fogSizeRow').hidden = fogTool.shape !== 'brush';
   $('fogRes').value = String(f ? f.cell : FOG_CELL);
@@ -242,9 +267,9 @@ $('fogOn').addEventListener('input', e => {
   f.on = e.target.checked;
   fogApply(); fogPush(); fogSync();
 });
-$('fogModes').addEventListener('click', e => {
+for (const id of ['fogModes', 'fogZone']) $(id).addEventListener('click', e => {
   const b = e.target.closest('[data-m]'); if (!b) return;
-  fogTool.mode = b.dataset.m; fogSync();
+  fogTool.mode = b.dataset.m; fogSync(); fogApply();
 });
 $('fogShapes').addEventListener('click', e => {
   const b = e.target.closest('[data-s]'); if (!b) return;
@@ -270,7 +295,17 @@ function fogRebuild(cell) {
     }
     cells = out.join('');
   }
-  cur.fog = { on: old ? old.on : true, x: b.x, y: b.y, cell: c, cols, rows, cells };
+  let zona;
+  if (old && old.zona) {
+    const out = new Array(cols * rows);
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      const wx = b.x + (x + 0.5) * c, wy = b.y + (y + 0.5) * c;
+      const ox = Math.floor((wx - old.x) / old.cell), oy = Math.floor((wy - old.y) / old.cell);
+      out[y * cols + x] = ox >= 0 && oy >= 0 && ox < old.cols && oy < old.rows && old.zona[oy * old.cols + ox] === '1' ? '1' : '0';
+    }
+    zona = out.join('');
+  }
+  cur.fog = { on: old ? old.on : true, x: b.x, y: b.y, cell: c, cols, rows, cells, zona };
   fogApply(); fogPush(); fogSync();
 }
 $('fogRes').addEventListener('change', e => fogRebuild(+e.target.value));
@@ -282,7 +317,7 @@ fogBox.querySelector('.tgrip').addEventListener('click', () => {
   toggleOpen(fogBox, open);
   fogTool.on = open;
   if (open && typeof setPen === 'function') setPen(false);
-  fogSync();
+  fogSync(); fogApply();
 });
 registerTool('fog', fogBox, fogBox.querySelector('.tgrip'), 'Nebbia di guerra');
 

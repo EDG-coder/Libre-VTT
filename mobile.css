@@ -90,21 +90,27 @@
 .ui-tel .tabs { padding: 8px; gap: 6px; }
 .ui-tel #assetGrid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
 
-/* strumenti a sinistra: più stretti, e se non ci stanno si scorrono */
+/* strumenti a sinistra. Niente scorrimento dentro il menu: su iPhone/iPad (WebKit) un contenitore che
+   scorre taglia tutto quello che c'è dentro, anche i pannelli aperti e la linguetta, che sono «fixed».
+   Se le icone non ci stanno in una colonna, mobile.js le rimpicciolisce un po' (--k) e le mette su
+   più colonne (--righe), una accanto all'altra. */
 .ui-tel #toolDrawer {
   top: auto; bottom: calc(76px + env(safe-area-inset-bottom)); transform: none; left: 0;
-  max-height: calc(100vh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-  max-height: calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-  overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
   /* niente effetti sul contenitore: altrimenti gli strumenti aperti non potrebbero uscirne */
   -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(18, 21, 28, .82);
-  transition: left .3s cubic-bezier(.22, .8, .3, 1);
+  transition: transform .3s cubic-bezier(.22, .8, .3, 1);
 }
-.ui-tel #toolDrawer.closed { transform: none; left: -74px; }
-/* la linguetta resta fuori dal contenitore che scorre (altrimenti sparirebbe con lui) */
-.ui-tel #toolDrawer .dhandle { position: fixed; left: calc(71px + env(safe-area-inset-left)); top: auto; bottom: calc(96px + env(safe-area-inset-bottom)); transform: none; transition: left .3s cubic-bezier(.22, .8, .3, 1); }
-.ui-tel #toolDrawer.closed .dhandle { left: 0; }
-.ui-tel #toolDrawer .slots { gap: 8px; }
+.ui-tel #toolDrawer.closed { transform: translateX(-100%); }
+.ui-tel #toolDrawer .slots {
+  display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--righe, 20), calc(52px * var(--k, 1)));
+  grid-auto-columns: calc(52px * var(--k, 1)); gap: calc(8px * var(--k, 1)) 8px;
+}
+.ui-tel #toolDrawer .slot { width: calc(52px * var(--k, 1)); height: calc(52px * var(--k, 1)); }
+.ui-tel #toolDrawer .slot > .tool:not(.open) { transform: scale(var(--k, 1)); transform-origin: 0 0; }
+/* col pannello laterale a tutto schermo (telefono in verticale) menu e barra in basso non coprono niente */
+@media (max-width: 599px) {
+  .ui-tel body.menu-open #toolDrawer, .ui-tel body.menu-open #dock, .ui-tel body.menu-open #dockZone { visibility: hidden; }
+}
 /* uno strumento aperto sale dal basso, largo quanto lo schermo */
 .ui-tel .tool.open, .ui-tel #dice.open, .ui-tel #toolDrawer .slot > .tool.open {
   position: fixed !important; left: calc(8px + env(safe-area-inset-left)) !important; right: calc(8px + env(safe-area-inset-right)) !important;
@@ -116,19 +122,25 @@
 .ui-tel .tool.open .tbody, .ui-tel #dice.open #diceBody { width: auto !important; }
 .ui-tel #zoomBox.open { width: auto !important; height: 52px !important; }
 
-/* in basso: la scena e i livelli in una riga che si scorre */
+/* in basso: la scena e i livelli. Niente scorrimento (su iPhone taglierebbe il menu delle scene, che sta
+   dentro): pulsanti più compatti e, se proprio non ci stanno, si va a capo. */
 .ui-tel #dock {
   left: calc(8px + env(safe-area-inset-left)); right: calc(8px + env(safe-area-inset-right)); bottom: 8px; transform: none;
-  justify-content: flex-start; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px;
+  justify-content: flex-start; align-items: flex-end; flex-wrap: wrap-reverse; gap: 6px; padding: 2px; pointer-events: none;
 }
-.ui-tel #dock::-webkit-scrollbar, .ui-tel #toolDrawer::-webkit-scrollbar { display: none; }
+.ui-tel #dock > * { pointer-events: auto; }
+.ui-tel #toolDrawer::-webkit-scrollbar { display: none; }
 .ui-tel #dock.collapsed { transform: translateY(calc(100% + 24px)); }
 .ui-tel #dockZone { bottom: calc(56px + env(safe-area-inset-bottom)); }
 .ui-tel #dockZone.collapsed { bottom: env(safe-area-inset-bottom); }
+/* con il menu delle scene aperto la linguetta della barra non copre «Torna alla home» */
+body:has(#sceneMenu:not([hidden])) #dockZone { visibility: hidden; }
 .ui-tel #sceneBtn, .ui-tel #layerSwitch, .ui-tel #targetSwitch, .ui-tel #publicBadge, .ui-tel #selArea { height: 42px; flex: none; }
-.ui-tel #sceneBtn { max-width: 44vw; padding: 0 12px; }
-.ui-tel #layerSwitch button, .ui-tel #targetSwitch button { padding: 0 10px; font-size: 12.5px; }
-.ui-tel #sceneMenu { position: fixed; left: 8px; right: 8px; bottom: calc(60px + env(safe-area-inset-bottom)); min-width: 0; max-height: 60vh; }
+.ui-tel #sceneBtn { max-width: 34vw; padding: 0 10px; gap: 4px; }
+.ui-tel #sceneName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-tel #layerSwitch button, .ui-tel #targetSwitch button { padding: 0 8px; font-size: 12.5px; }
+@media (max-width: 400px) { .ui-tel #sceneIcon { display: none; } .ui-tel #layerSwitch button, .ui-tel #targetSwitch button { padding: 0 6px; font-size: 12px; } }
+.ui-tel #sceneMenu { position: fixed; left: 8px; right: 8px; bottom: calc(60px + env(safe-area-inset-bottom)); min-width: 0; max-height: 60vh; max-height: 60dvh; overflow-y: auto; }
 
 /* le schede dei personaggi e le finestre della chat: a tutto schermo */
 .ui-tel .sheetWin:not(.icon):not(.min) {
@@ -147,8 +159,9 @@
 .ui-tel #ctx { max-width: calc(100vw - 16px); }
 .ui-tel #netBar { max-width: calc(100vw - 16px); font-size: 12.5px; }
 
-/* le scorciatoie da tastiera non servono a chi tocca */
-.ui-touch .dHint { display: none; }
+/* le scorciatoie da tastiera non servono a chi tocca (né sul telefono, anche prima del primo tocco) */
+.ui-touch .dHint, .ui-tel .dHint { display: none; }
+@media (pointer: coarse) { html:not(.ui-mouse) .dHint { display: none; } }
 
 /* Fase 4: con le dita ogni comando è almeno 44×44 (linee guida Apple e Android).
    Restano più piccoli solo i pallini dentro le schede, che si ingrandiscono col pizzico. */
@@ -177,3 +190,19 @@
 .pane label.row { flex-wrap: nowrap; white-space: nowrap; }
 .pane .row input[type=text], .pane .row input[type=number], .pane .row select { flex: 1 1 60px; min-width: 0; width: auto; }
 .pane .seg button { min-width: 0; white-space: normal; line-height: 1.15; }
+
+/* Compendio sul telefono in orizzontale: lo schermo è basso, filtri e pulsanti stanno dietro «Filtri ▾»
+   così l'elenco dei risultati ha quasi tutto lo spazio */
+#compFiltriBtn { display: none; }
+@media (max-height: 499px) {
+  .ui-tel #compFiltriBtn { display: inline-flex; flex: none; padding: 6px 10px; }
+  .ui-tel #tab-comp:not(.filtriAperti) .compFiltri, .ui-tel #tab-comp:not(.filtriAperti) .compAzioni { display: none; }
+  .ui-tel #tab-comp .compCerca { flex-wrap: nowrap; }
+  .ui-tel #tab-comp #compStato:empty { display: none; }
+}
+/* il menu delle scene aperto sta sopra il menu degli strumenti */
+body:has(#sceneMenu:not([hidden])) #dock { z-index: 100008; }
+/* le schede del pannello laterale sul telefono: le icone strette, il nome solo su quella aperta, e non si taglia */
+.ui-tel .tabs { gap: 4px; }
+.ui-tel .tab:not(.active) { flex: 0 0 40px; padding-inline: 0; }
+.ui-tel .tab.active { flex: 1 1 auto; padding-inline: 8px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

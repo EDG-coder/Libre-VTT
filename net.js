@@ -313,7 +313,7 @@ function normScene(s) {
     id: s.id, name: s.name || 'Scena', type: s.type === 'cinematic' ? 'cinematic' : 'map',
     bg: s.bg || null, grid: { ...DEFAULT_GRID, ...s.grid }, photos: s.photos || [],
     view: s.view || null, draw: s.draw || null, board: s.board || { ...DEFAULT_RECT },
-    fog: s.fog || null
+    fog: s.fog || null, luce: s.luce || null, vista: s.vista || null
   };
 }
 
@@ -348,6 +348,7 @@ async function applyWorld(w) {
     }
     rememberPhotos();
     if (typeof fogApply === 'function') fogApply();
+    if (typeof luceRidisegna === 'function') luceRidisegna();
   } finally {
     NET.applying = false;
   }
@@ -399,6 +400,11 @@ function mergeIntoCurrent(w) {
     if (typeof fxDaDati === 'function') fxDaDati(el, p);
   }
   if (sc.fog !== undefined) cur.fog = sc.fog;
+  // le porte aperte o chiuse dai giocatori
+  if (sc.luce && Array.isArray(sc.luce.muri) && cur.luce && Array.isArray(cur.luce.muri)) {
+    const porte = new Map(sc.luce.muri.filter(m => m.porta).map(m => [m.id, !!m.aperta]));
+    for (const m of cur.luce.muri) if (m.porta && porte.has(m.id)) m.aperta = porte.get(m.id);
+  }
   if (typeof updateTokenBars === 'function') updateTokenBars();
 }
 
