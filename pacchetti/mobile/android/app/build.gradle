@@ -1,0 +1,111 @@
+// L'app per Android: una finestra (WebView) + Node.js (nodejs-mobile) + il collegamento (Rust).
+// Prima di compilare servono due cose che prepara il workflow .github/workflows/app.yml
+// (o lo script mobile/android/prepara.sh):
+//   app/libnode/                       nodejs-mobile per Android (bin/<abi>/libnode.so e include/node)
+//   app/src/main/jniLibs/<abi>/libuffa_link.so   il collegamento, compilato da uffa-link
+plugins {
+    id 'com.android.application'
+}
+
+// la versione arriva dal workflow (LIBRE_VERSIONE=3.1.0); in locale vale quella qui sotto
+def versione = System.getenv('LIBRE_VERSIONE') ?: '3.0.0'
+def numeri = (versione.tokenize('.-') + ['0', '0', '0']).take(3).collect { it.isInteger() ? it.toInteger() : 0 }
+def codice = numeri[0] * 10000 + numeri[1] * 100 + numeri[2]
+// le architetture: quelle per cui c'è libnode (di solito arm64-v8a, armeabi-v7a, x86_64)
+def architetture = (System.getenv('LIBRE_ABI') ?: 'arm64-v8a,armeabi-v7a,x86_64').tokenize(',')
+def radiceProgetto = file('../../../..')   // la cartella principale di LIBRE VTT (sopra pacchetti/mobile/android)
+def chiave = System.getenv('LIBRE_KEYSTORE')
+
+android {
+    namespace 'app.librevtt'
+    compileSdk 35
+    // l'NDK indicato da ANDROID_NDK_HOME (lo stesso usato per compilare il collegamento in Rust)
+    def ndk = System.getenv('ANDROID_NDK_HOME')
+    if (ndk && file("$ndk/source.properties").exists()) {
+        def p = new Properties()
+        file("$ndk/source.properties").withInputStream { p.load(it) }
+        ndkPath ndk
+        ndkVersion p.getProperty('Pkg.Revision')
+    }
+
+    defaultConfig {
+        applicationId 'app.librevtt'
+        minSdk 24
+        targetSdk 35
+        versionCode codice
+        versionName versione
+        externalNativeBuild {
+            cmake {
+                // libnode.so è compilata con la libreria C++ condivisa: va messa anche lei nell'APK
+                arguments '-DANDROID_STL=c++_shared'
+                // solo le architetture per cui c'è libnode (con gli APK divisi non si può usare ndk.abiFilters)
+                abiFilters(*architetture)
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake { path 'src/main/cpp/CMakeLists.txt' }
+    }
+
+    splits {
+        abi {
+            enable true
+            reset()
+            include(*architetture)
+            universalApk true
+        }
+    }
+
+    signingConfigs {
+        rilascio {
+            if (chiave && file(chiave).exists()) {
+                storeFile file(chiave)
+                storePassword System.getenv('LIBRE_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('LIBRE_KEY_ALIAS') ?: 'librevtt'
+                keyPassword System.getenv('LIBRE_KEY_PASSWORD') ?: System.getenv('LIBRE_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig = (chiave && file(chiave).exists()) ? signingConfigs.rilascio : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    packaging {
+        // librerie compresse dentro l'APK: il file da scaricare è molto più piccolo
+        jniLibs { useLegacyPackaging true }
+    }
+
+    sourceSets {
+        main {
+            assets.srcDirs += layout.buildDirectory.dir('generated/programma').get().asFile
+        }
+    }
+}
+
+// il programma (lo stesso del computer) va dentro l'APK, in assets/nodejs-project
+def copiaProgramma = tasks.register('copiaProgramma', Sync) {
+    from(radiceProgetto) {
+        include 'server/**', 'condiviso/**', 'web/**', 'sistemi/**', 'package.json', 'assets/Sfondi/main.webp', 'assets/Sfondi/main-en.webp'
+        exclude 'server/zigwrap.js'
+    }
+    into layout.buildDirectory.dir('generated/programma/nodejs-project')
+}
+tasks.named('preBuild') { dependsOn copiaProgramma }
+
+// gli APK con nomi chiari: LIBRE-VTT-<versione>-arm64-v8a.apk, …-universale.apk
+android.applicationVariants.all { variant ->
+    variant.outputs.all { out ->
+        def abi = out.getFilter(com.android.build.OutputFile.ABI) ?: 'universale'
+        outputFileName = "LIBRE-VTT-${versione}-${abi}${variant.buildType.name == 'debug' ? '-debug' : ''}.apk"
+    }
+}

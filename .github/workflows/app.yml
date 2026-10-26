@@ -59,7 +59,7 @@ jobs:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: uffa-link
+          workspaces: pacchetti/uffa-link
           key: android
       - name: Node per Android e il collegamento
         env:
@@ -71,7 +71,7 @@ jobs:
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> "$GITHUB_ENV"
           echo "NDK: $ANDROID_NDK_HOME"
           set -o pipefail
-          bash mobile/android/prepara.sh 2>&1 | tee registro-prepara.log
+          bash pacchetti/mobile/android/prepara.sh 2>&1 | tee registro-prepara.log
       - name: La chiave per firmare
         env:
           CHIAVE: ${{ secrets.LIBRE_KEYSTORE_B64 }}
@@ -86,7 +86,7 @@ jobs:
             echo "::warning::Mancano i secrets LIBRE_KEYSTORE_B64 e LIBRE_KEYSTORE_PASSWORD: l'APK è firmato con una chiave di prova (gli aggiornamenti non si installeranno sopra)."
           fi
       - name: Compila gli APK
-        working-directory: mobile/android
+        working-directory: pacchetti/mobile/android
         env:
           LIBRE_VERSIONE: ${{ inputs.versione || '3.0.0' }}
         shell: bash
@@ -144,7 +144,7 @@ jobs:
           target: google_apis
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: bash mobile/android/prova-emulatore.sh
+          script: bash pacchetti/mobile/android/prova-emulatore.sh
       - name: Foto e registri nel ramo «registri-prova-android»
         if: always()
         env:
@@ -165,14 +165,14 @@ jobs:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: uffa-link
+          workspaces: pacchetti/uffa-link
           key: ios
       - name: Il programma, Node per iOS e il collegamento
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -o pipefail
-          bash mobile/ios/prepara.sh 2>&1 | tee registro-prepara.log
+          bash pacchetti/mobile/ios/prepara.sh 2>&1 | tee registro-prepara.log
       - name: La versione
         env:
           VERSIONE: ${{ inputs.versione || '3.0.0' }}
@@ -181,10 +181,10 @@ jobs:
           IFS=. read -r a b c <<< "${VERSIONE%%-*}"
           NUM=$(( ${a:-0} * 10000 + ${b:-0} * 100 + ${c:-0} ))
           sed -i '' -e "s/^MARKETING_VERSION = .*/MARKETING_VERSION = $VERSIONE/" \
-                    -e "s/^CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $NUM/" mobile/ios/Config.xcconfig
-          grep VERSION mobile/ios/Config.xcconfig
+                    -e "s/^CURRENT_PROJECT_VERSION = .*/CURRENT_PROJECT_VERSION = $NUM/" pacchetti/mobile/ios/Config.xcconfig
+          grep VERSION pacchetti/mobile/ios/Config.xcconfig
       - name: Compila l'app (senza firma)
-        working-directory: mobile/ios
+        working-directory: pacchetti/mobile/ios
         run: |
           set -o pipefail
           xcodebuild -version
@@ -200,25 +200,25 @@ jobs:
       - name: IPA e progetto Xcode
         run: |
           mkdir -p app-ios ipa/Payload
-          cp -R mobile/ios/build/LibreVTT.xcarchive/Products/Applications/LibreVTT.app ipa/Payload/
+          cp -R pacchetti/mobile/ios/build/LibreVTT.xcarchive/Products/Applications/LibreVTT.app ipa/Payload/
           (cd ipa && zip -qry ../app-ios/LIBRE-VTT-iOS.ipa Payload)
           # il progetto: già con dentro il programma, Node e il collegamento compilati
           mkdir -p xcode
           rsync -a --exclude build --exclude build.log --exclude prepara.sh --exclude crea-progetto.py \
-            mobile/ios/ "xcode/LIBRE-VTT-Xcode/"
-          cp mobile/LEGGIMI-Xcode.txt "xcode/LIBRE-VTT-Xcode/LEGGIMI.txt"
+            pacchetti/mobile/ios/ "xcode/LIBRE-VTT-Xcode/"
+          cp pacchetti/mobile/LEGGIMI-Xcode.txt "xcode/LIBRE-VTT-Xcode/LEGGIMI.txt"
           (cd xcode && ditto -c -k --sequesterRsrc --keepParent LIBRE-VTT-Xcode ../app-ios/LIBRE-VTT-Xcode.zip)
           ls -la app-ios
       - name: Prova nel simulatore iPhone
         if: github.event_name == 'workflow_dispatch' && inputs.prova
-        working-directory: mobile/ios
+        working-directory: pacchetti/mobile/ios
         run: bash prova-simulatore.sh
       - name: Foto e registri nel ramo «registri-prova-ios»
         if: always() && github.event_name == 'workflow_dispatch' && inputs.prova
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p /tmp/regp && cp -R mobile/ios/prova/. /tmp/regp/ 2>/dev/null; cd /tmp/regp && git init -q && git checkout -q -b registri-prova-ios
+          mkdir -p /tmp/regp && cp -R pacchetti/mobile/ios/prova/. /tmp/regp/ 2>/dev/null; cd /tmp/regp && git init -q && git checkout -q -b registri-prova-ios
           git -c user.name=ci -c user.email=ci@localhost add -A
           git -c user.name=ci -c user.email=ci@localhost commit -q -m "prova $GITHUB_RUN_ID" || exit 0
           git push -q -f "https://x-access-token:$GH_TOKEN@github.com/$GITHUB_REPOSITORY.git" registri-prova-ios

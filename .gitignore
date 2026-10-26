@@ -6,23 +6,26 @@
 !/assets/Sfondi/main.webp
 !/assets/Sfondi/main-en.webp
 myvtt-avvio.log
+LIBRE VTT.lnk
 uffa-link.id
 # …e quello che si costruisce
-/uffa-link/target/
+/pacchetti/uffa-link/target/
+# compilato prima del riordino delle cartelle
+/uffa-link/
 /installatori/
-/installer/windows/stage/
+/pacchetti/installer/windows/stage/
 *.dmg
 __pycache__/
 node_modules/
 .DS_Store
 # app per telefono: quello che scaricano o compilano i prepara.sh
-/mobile/android/app/libnode/
-/mobile/android/app/src/main/jniLibs/
-/mobile/android/app/build/
-/mobile/android/build/
-/mobile/android/.gradle/
-/mobile/android/local.properties
-/mobile/ios/Frameworks/
-/mobile/ios/LibreVTT/nodejs-project/
-/mobile/ios/build/
+/pacchetti/mobile/android/app/libnode/
+/pacchetti/mobile/android/app/src/main/jniLibs/
+/pacchetti/mobile/android/app/build/
+/pacchetti/mobile/android/build/
+/pacchetti/mobile/android/.gradle/
+/pacchetti/mobile/android/local.properties
+/pacchetti/mobile/ios/Frameworks/
+/pacchetti/mobile/ios/LibreVTT/nodejs-project/
+/pacchetti/mobile/ios/build/
 xcuserdata/

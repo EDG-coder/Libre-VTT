@@ -74,9 +74,9 @@ chiesto:
 
 | sistema | che cosa apri |
 |---|---|
-| Windows | `LIBRE VTT.vbs` (la prima volta crea accanto `LIBRE VTT.lnk` con l'icona: poi usa quello) |
-| Linux | `LIBRE VTT.desktop` (o `./avvia-app.sh`) |
-| macOS | `LIBRE VTT.app` dentro la cartella (versione «ponte», vedi sotto) |
+| Windows | `avvio/LIBRE VTT.vbs` (la prima volta crea nella cartella principale `LIBRE VTT.lnk` con l'icona: poi usa quello) |
+| Linux | `avvio/LIBRE VTT.desktop` (o `avvio/avvia-app.sh`) |
+| macOS | `avvio/LIBRE VTT.app` (versione «ponte», vedi sotto) |
 
 Così serve **Node** già installato ([nodejs.org](https://nodejs.org), versione LTS).
 
@@ -105,16 +105,16 @@ finestra che c'è già invece di accenderne un'altra.
 
 Se usi la cartella invece del .dmg: puoi tenere `LIBRE VTT.app` dov'è oppure trascinarla in
 **Applicazioni**. Se la sposti, **la prima volta** ti chiede dov'è la cartella del gioco e se la
-ricorda. Se poi scompatti una versione nuova, **«Cambia cartella collegata (macOS).command»** le
+ricorda. Se poi scompatti una versione nuova, **«avvio/Cambia cartella collegata (macOS).command»** le
 fa dimenticare quella vecchia. Se cliccandola non succede proprio niente, lo zip ha perso il
 permesso di esecuzione: in Terminale `chmod +x ` + trascina `LIBRE VTT.app` + `/Contents/MacOS/myvtt`,
 Invio, una volta sola. Il registro è in `myvtt-avvio.log` nella cartella del gioco.
 
 ### Se preferisci fare a mano
 
-Gli avviatori di prima ci sono ancora: `start.command` / `start.bat` (da solo),
-`avvia-master.*` e `avvia-giocatore.*` (a distanza), e il classico `node server.js`
-(`CAMPAIGN_DIR=/percorso/campagna node server.js` per usare una campagna).
+Gli avviatori di prima ci sono ancora, in `avvio/`: `start.command` / `start.bat` (da solo),
+`avvia-master.*` e `avvia-giocatore.*` (a distanza), e il classico `node server/server.js`
+(`CAMPAIGN_DIR=/percorso/campagna node server/server.js` per usare una campagna).
 
 ## Le campagne
 
@@ -163,21 +163,41 @@ dalla pagina dell'esecuzione, senza pubblicare.
 
 ### A mano
 
-- `python3 installer/crea-installer.py` → `installatori/` con l'installatore per Linux e quello
+- `python3 pacchetti/installer/crea-installer.py` → `installatori/` con l'installatore per Linux e quello
   per Windows (`.cmd`). Questi scaricano Node durante l'installazione.
-- **Mac, su un Mac**: doppio clic su `mac/Crea il DMG.command` (dmg compresso, con Node e, se c'è
+- **Mac, su un Mac**: doppio clic su `pacchetti/mac/Crea il DMG.command` (dmg compresso, con Node e, se c'è
   Rust, il collegamento già compilato).
-- **Mac, senza un Mac**: `python3 mac/crea-dmg-senza-mac.py` (immagine ISO 9660 con Rock Ridge,
+- **Mac, senza un Mac**: `python3 pacchetti/mac/crea-dmg-senza-mac.py` (immagine ISO 9660 con Rock Ridge,
   che macOS apre come un .dmg).
 
 ## Com'è fatto dentro
 
 | pezzo | che cosa fa | dove |
 |---|---|---|
-| `launcher.js` | la finestra di avvio, accende e spegne il resto | `127.0.0.1:4100` |
-| `server.js` | serve i file del VTT e le immagini | `127.0.0.1:3000` |
-| `game-server.js` | **decide**: permessi, tiri di dado, chi vede cosa | `127.0.0.1:4000` |
-| `uffa-link` | porta i byte da una macchina all'altra con iroh | `127.0.0.1:4010` |
+| `server/launcher.js` | la finestra di avvio, accende e spegne il resto | `127.0.0.1:4100` |
+| `server/server.js` | serve i file del VTT e le immagini | `127.0.0.1:3000` |
+| `server/game-server.js` | **decide**: permessi, tiri di dado, chi vede cosa | `127.0.0.1:4000` |
+| `pacchetti/uffa-link` | porta i byte da una macchina all'altra con iroh | `127.0.0.1:4010` |
+
+### Le cartelle del progetto
+
+| cartella | che cosa c'è |
+|---|---|
+| `avvio/` | gli avviatori per usare il progetto così com'è (`.vbs`, `.desktop`, `.app`, `start.*`, `avvia-*`) |
+| `server/` | i programmi che girano con Node: avviatore, tavolo, server di gioco |
+| `condiviso/` | il codice usato sia dal server sia dal browser (il calcolo della luce dinamica) |
+| `web/` | le pagine: `index.html` (il tavolo), `launcher.html`, `panel.html`, le icone |
+| `web/css/` | gli stili |
+| `web/js/base/` | il cuore del tavolo: mappa, strumenti, rete, telefono, lingue |
+| `web/js/mappa/` | nebbia, luce dinamica, miniature delle scene, segnalini |
+| `web/js/strumenti/` | musica, note, ordine dei turni |
+| `web/js/schede/` | le schede dei personaggi, i PDF, Roll20, la creazione guidata, i tiri |
+| `web/js/regole/` | i sistemi di gioco e il compendio |
+| `web/lib/` | le librerie di altri (pdf-lib, pdf.js) |
+| `sistemi/` | i sistemi di gioco già pronti (D&D 5e 2014 e 2024, vuoto) con il loro compendio |
+| `assets/` | lo sfondo di benvenuto |
+| `pacchetti/` | quello che serve per costruire le versioni da installare: `installer/`, `mac/`, `mobile/`, e il collegamento `uffa-link/` |
+| `sviluppo/` | gli strumenti per chi sviluppa (il convertitore delle regole SRD) |
 
 Il browser parla sempre e solo con il proprio computer. Il server di gioco è l'unica fonte vera
 dei dati: il browser **chiede**, il server **decide**. Se un giocatore manomettesse la sua
@@ -262,4 +282,4 @@ Tutto dentro la cartella della campagna:
 Di solito: 4100 la finestra di avvio, 3000 il tavolo, 4000 il server di gioco e il pannello, 4010
 il collegamento. Se una è occupata da un altro programma, l'avviatore ne sceglie un'altra libera,
 lo scrive nel registro e se la ricorda per le volte dopo (così il browser non perde chi sei).
-A mano: `PORT=4001 node game-server.js host`, e nel VTT cambia la porta in Impostazioni → Sessione.
+A mano: `PORT=4001 node server/game-server.js host`, e nel VTT cambia la porta in Impostazioni → Sessione.

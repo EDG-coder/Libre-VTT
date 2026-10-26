@@ -1,0 +1,125 @@
+#!/bin/bash
+# "Ponte": questa app può vivere ovunque (anche in Applicazioni) e si ricorda dove sta la
+# vera cartella del gioco (quella con dentro server/, web/, i dati salvati...).
+
+QUI0="$(dirname "$0")"
+CONF_DIR="$HOME/Library/Application Support/LIBRE VTT"
+CONF_FILE="$CONF_DIR/cartella.txt"
+mkdir -p "$CONF_DIR" 2>/dev/null
+
+osa() {
+  # Esegue un blocco AppleScript passato riga per riga via stdin, senza terminale visibile.
+  osascript 2>/dev/null
+}
+
+cartella_valida() {
+  [ -n "$1" ] && { [ -f "$1/server/launcher.js" ] || [ -f "$1/launcher.js" ]; }
+}
+
+chiedi_cartella() {
+  local scelta
+  scelta="$(osascript -e 'POSIX path of (choose folder with prompt "Dove hai messo la cartella di LIBRE VTT? (quella con dentro le cartelle server, web, sistemi…)")' 2>/dev/null)"
+  printf '%s' "$scelta" | sed 's:/$::'
+}
+
+CARTELLA=""
+
+# 1) Una cartella già ricordata da una volta precedente?
+if [ -f "$CONF_FILE" ]; then
+  SALVATA="$(cat "$CONF_FILE" 2>/dev/null)"
+  if cartella_valida "$SALVATA"; then
+    CARTELLA="$SALVATA"
+  fi
+fi
+
+# 2) Se non c'è ancora nulla di valido, prova il posto "classico": la cartella sopra «avvio», dove sta questo
+#    stesso bundle (funziona se l'app è ancora dentro la cartella del gioco, non spostata in
+#    Applicazioni). Se macOS ha aperto l'app da una copia isolata e temporanea (traslocazione),
+#    questo tentativo fallisce da solo — e si passa al punto 3 senza bisogno di spiegarlo.
+if [ -z "$CARTELLA" ]; then
+  CANDIDATA="$(cd "$QUI0/../../../.." 2>/dev/null && pwd)"
+  if cartella_valida "$CANDIDATA"; then
+    CARTELLA="$CANDIDATA"
+  fi
+fi
+
+# 3) Ancora niente: chiediglielo una volta, con una finestra normale (non il Terminale).
+TENTATIVI=0
+while [ -z "$CARTELLA" ] && [ "$TENTATIVI" -lt 3 ]; do
+  TENTATIVI=$((TENTATIVI + 1))
+  SCELTA="$(chiedi_cartella)"
+  if [ -z "$SCELTA" ]; then
+    # Ha premuto Annulla.
+    exit 0
+  fi
+  if cartella_valida "$SCELTA"; then
+    CARTELLA="$SCELTA"
+  else
+    osascript -e 'display dialog "Quella cartella non ha dentro server/launcher.js: non sembra la cartella di LIBRE VTT. Riprova scegliendo quella giusta." buttons {"OK"} default button 1 with title "LIBRE VTT" with icon caution' >/dev/null 2>&1
+  fi
+done
+
+if [ -z "$CARTELLA" ]; then
+  exit 1
+fi
+
+# Ricorda la scelta per la prossima volta.
+printf '%s' "$CARTELLA" > "$CONF_FILE" 2>/dev/null
+
+cd "$CARTELLA" || exit 1
+LOG="$CARTELLA/myvtt-avvio.log"
+: > "$LOG"
+
+avvisa() {
+  local titolo="$1" coda="$2"
+  local msg
+  msg="$(printf '%s\n\nUltime righe del registro (%s):\n\n%s' "$titolo" "$LOG" "$coda" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+  osascript -e "display dialog \"$msg\" buttons {\"OK\"} default button 1 with title \"LIBRE VTT\" with icon caution" >/dev/null 2>&1
+}
+
+{
+  echo "cartella di lavoro: $CARTELLA"
+  echo "data: $(date)"
+} >> "$LOG"
+
+# Se per qualche motivo questo stesso file ha perso il permesso di esecuzione, non ci arriviamo
+# nemmeno: qui sistemiamo almeno gli altri avviatori nella cartella del gioco.
+chmod +x "$CARTELLA"/avvio/*.command "$CARTELLA"/avvio/*.sh 2>/dev/null
+
+# Node può non essere nel PATH quando si parte da Finder: lo si cerca dove si installa di solito.
+for p in /usr/local/bin /opt/homebrew/bin /usr/bin "$HOME/.volta/bin" "$HOME/.nvm/versions/node"/*/bin; do
+  [ -x "$p/node" ] && export PATH="$p:$PATH" && break
+done
+
+if ! command -v node >/dev/null; then
+  echo "node non trovato nel PATH: $PATH" >> "$LOG"
+  osascript \
+    -e 'display dialog "Per far partire LIBRE VTT serve Node.\n\nScaricalo da nodejs.org (versione LTS), poi riprova." buttons {"Vai al sito","Chiudi"} default button 1 with title "Manca Node"' \
+    -e 'if button returned of result is "Vai al sito" then open location "https://nodejs.org"' \
+    >/dev/null 2>&1
+  exit 1
+fi
+
+echo "node trovato: $(command -v node) ($(node -v 2>&1))" >> "$LOG"
+echo "avvio server/launcher.js …" >> "$LOG"
+
+if [ -f server/launcher.js ]; then node server/launcher.js >> "$LOG" 2>&1 & else node launcher.js >> "$LOG" 2>&1 & fi
+NODE_PID=$!
+
+sleep 4
+
+if ! kill -0 "$NODE_PID" 2>/dev/null; then
+  CODA="$(tail -n 25 "$LOG" 2>/dev/null)"
+  avvisa "LIBRE VTT si è chiuso subito dopo l'avvio." "$CODA"
+  exit 1
+fi
+
+wait "$NODE_PID"
+EXIT_CODE=$?
+
+if [ "$EXIT_CODE" -ne 0 ]; then
+  CODA="$(tail -n 25 "$LOG" 2>/dev/null)"
+  avvisa "LIBRE VTT si è fermato con un errore (codice ${EXIT_CODE})." "$CODA"
+fi
+
+exit "$EXIT_CODE"

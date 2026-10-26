@@ -51,13 +51,13 @@ jobs:
         run: pip install ziglang cargo-zigbuild
       - name: Compila
         shell: bash
-        working-directory: uffa-link
+        working-directory: pacchetti/uffa-link
         run: |
           if [ "${{ matrix.zig }}" = "true" ]; then cargo zigbuild --release --target ${{ matrix.target }}
           else cargo build --release --target ${{ matrix.target }}; fi
-          mkdir -p ../out
-          cp "target/${{ matrix.target }}/release/${{ matrix.file }}" "../out/${{ matrix.asset }}"
-          cd ../out && sha256sum "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256" && cat "${{ matrix.asset }}.sha256"
+          mkdir -p ../../out
+          cp "target/${{ matrix.target }}/release/${{ matrix.file }}" "../../out/${{ matrix.asset }}"
+          cd ../../out && sha256sum "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256" && cat "${{ matrix.asset }}.sha256"
       - uses: actions/upload-artifact@v4
         with:
           name: link-${{ matrix.nome }}
@@ -69,22 +69,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Compila per Apple Silicon e Intel
-        working-directory: uffa-link
+        working-directory: pacchetti/uffa-link
         run: |
           rustup update stable && rustup default stable
           rustup target add aarch64-apple-darwin x86_64-apple-darwin
           cargo build --release --target aarch64-apple-darwin
           cargo build --release --target x86_64-apple-darwin
-          mkdir -p ../out
-          lipo -create -output ../out/uffa-link-macos-universal \
+          mkdir -p ../../out
+          lipo -create -output ../../out/uffa-link-macos-universal \
             target/aarch64-apple-darwin/release/uffa-link target/x86_64-apple-darwin/release/uffa-link
-          codesign --force --sign - ../out/uffa-link-macos-universal
-          cd ../out && shasum -a 256 uffa-link-macos-universal > uffa-link-macos-universal.sha256
+          codesign --force --sign - ../../out/uffa-link-macos-universal
+          cd ../../out && shasum -a 256 uffa-link-macos-universal > uffa-link-macos-universal.sha256
       - name: Crea il .dmg (con Node e il collegamento dentro)
         env:
           MYVTT_REPO: ${{ github.repository }}
           MYVTT_LINK: ${{ github.workspace }}/out/uffa-link-macos-universal
-        run: bash mac/crea-dmg.sh "$PWD/dmg/LIBRE-VTT.dmg"
+        run: bash pacchetti/mac/crea-dmg.sh "$PWD/dmg/LIBRE-VTT.dmg"
       - uses: actions/upload-artifact@v4
         with:
           name: link-macos-universal
@@ -118,11 +118,11 @@ jobs:
           done
       - name: Crea gli installatori
         run: |
-          python3 installer/crea-installer.py out \
+          python3 pacchetti/installer/crea-installer.py out \
             --node-linux-x64 "$NODE_LINUX_X64" --node-linux-arm64 "$NODE_LINUX_ARM64" --node-win-x64 "$NODE_WIN_X64" \
             --link-linux-x64 link/uffa-link-linux-x64 --link-linux-arm64 link/uffa-link-linux-arm64 \
             --link-win-x64 link/uffa-link-windows-x64.exe \
-            --repo "${{ github.repository }}" --stage-windows installer/windows/stage
+            --repo "${{ github.repository }}" --stage-windows pacchetti/installer/windows/stage
           mv "out/Installa LIBRE VTT.cmd" out/Installa-LIBRE-VTT-Windows.cmd
           ls -la out
       - uses: actions/upload-artifact@v4
@@ -132,7 +132,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: stage-windows
-          path: installer/windows/stage
+          path: pacchetti/installer/windows/stage
 
   setup-exe:
     name: LIBRE-VTT-Setup.exe
@@ -143,7 +143,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: stage-windows
-          path: installer/windows/stage
+          path: pacchetti/installer/windows/stage
       - name: Inno Setup
         shell: pwsh
         run: |
@@ -151,7 +151,7 @@ jobs:
           if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe' }
           $v = '${{ inputs.versione || github.ref_name }}' -replace '^v', ''
           if ($v -notmatch '^\d') { $v = '0.0.0' }
-          & $iscc "/DVersione=$v" installer\windows\myvtt.iss
+          & $iscc "/DVersione=$v" pacchetti\installer\windows\myvtt.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:
