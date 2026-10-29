@@ -1134,6 +1134,8 @@ function msgEl(m) {
     }
     if (m.adv) { const a = document.createElement('span'); a.className = 'adv ' + m.adv; a.textContent = m.adv === 'adv' ? 'vantaggio' : 'svantaggio'; d.append(a); }
     if (m.secret) { const s = document.createElement('span'); s.className = 'sec'; s.textContent = '🔒 segreto'; s.title = 'Lo vedete solo tu e il master'; d.append(s); }
+    // tirato da scollegati (dadi provvisori): il server non l'ha tirato lui, ha solo controllato che i dadi tornino
+    if (m.provvisorio) { const s = document.createElement('span'); s.className = 'provv'; s.textContent = '⚠ non verificato'; s.title = 'Tirato da scollegato: i dadi li ha tirati il suo dispositivo, non il server'; d.append(s); }
     const drop = new Set(m.drop || []), mod = m.mod || 0;
     const kept = m.rolls.filter((_, i) => !drop.has(i));
     const single = kept.length === 1 && !mod;
@@ -1524,6 +1526,7 @@ async function loadBoard() {
     if (s.fogVeil >= 0.05 && s.fogVeil <= 1) settings.fogVeil = +s.fogVeil;
     if (typeof s.caratLibere === 'boolean') settings.caratLibere = s.caratLibere;
     if (typeof s.spareggioDes === 'boolean') settings.spareggioDes = s.spareggioDes;
+    if (typeof s.dadiProvvisori === 'boolean') settings.dadiProvvisori = s.dadiProvvisori;
     if (s.turni && Array.isArray(s.turni.righe)) settings.turni = s.turni;
     if (Array.isArray(s.boxLabels)) settings.boxLabels = [0, 1, 2].map(i => String(s.boxLabels[i] || '').slice(0, 14));
     if (+s.prefT > 0) settings.prefT = +s.prefT;

@@ -904,3 +904,7 @@ body:not(.net-on) .soloRete { display: none !important; }
 .qDot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: #2ee6a6; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 0%, transparent); }
 .qDot.q-giallo { background: #f5c542; }
 .qDot.q-rosso { background: #ff5c5c; }
+
+/* Un tiro fatto da scollegati (dadi provvisori): il server ha solo controllato che i dadi tornino */
+.msg.roll .provv { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; letter-spacing: .02em;
+  background: rgba(255, 107, 107, .14); color: #ff9a9a; border: 1px dashed rgba(255, 107, 107, .6); }

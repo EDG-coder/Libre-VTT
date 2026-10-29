@@ -153,7 +153,7 @@ function playerList() {
       muted: !!rec.muted, frozen: !!rec.frozen, banned: !!rec.banned, pending: !!c.pending,
       client: c.client || '?', peer: c.peer || null,
       since: c.since || now, onFor: Math.round((now - (c.since || now)) / 1000),
-      rtt: c.rtt == null ? null : c.rtt, qualita: c.qualita || 'verde', leggera: !!c.leggera,
+      rtt: c.rtt == null ? null : c.rtt, qualita: c.qualita || 'verde', leggera: !!c.leggera, stabile: stabili.has(c.token),
       lastOp: c.lastOp || null, lastAt: c.lastAt || null, ops: c.ops || 0,
       viewScene: c.viewScene || null, viewRect: c.viewRect || null
     };
@@ -400,7 +400,7 @@ function viewFor(c) {
     return acc ? { ...s, icon: outUrl(s.icon), _access: acc } : null;
   }).filter(Boolean);
   return {
-    v: world.v, active: p.seeAllScenes ? world.active : pubId, publicScene: world.publicScene, fogColor: world.fogColor || 'auto',
+    v: world.v, active: p.seeAllScenes ? world.active : pubId, publicScene: world.publicScene, fogColor: world.fogColor || 'auto', dadiProvvisori: !!world.dadiProvvisori,
     scenes: scenes.map(s => sceneFor(c, s)),
     sheets, chat: (world.chat || []).slice(-250).map(m => chatFor(c, m)).filter(Boolean), music: world.music,
     notes: world.notes || { text: '', editable: false },
@@ -465,7 +465,7 @@ function pushWorld(c, piena) {
   ultime.set(c.token, { ver, testi: nuovi });
   const msg = { t: 'delta', da: prec.ver, a: ver, set, via };
   if (Object.keys(toppe).length) msg.toppe = toppe;
-  c.send(msg);
+  if (JSON.stringify(msg).length < 4000) sendA(c, msg); else c.send(msg);     // le differenze piccole anche dal canale stabile
 }
 // Le corsie: A (piccola, sempre subito), B (schede e scene: in modalità leggera un po' dopo), C (pesante: in
 // modalità leggera solo quando il collegamento torna buono).
@@ -494,9 +494,17 @@ function rnd(n) {
 // rolls: tutti i dadi tirati; drop: le posizioni di quelli scartati (non contano nel totale).
 const TERM = '(?:\\d*d\\d+(?:k[hl]\\d+)?|\\d+)';
 const EXPR_RE = new RegExp('^[+-]?' + TERM + '(?:[+-]' + TERM + ')*$');
-function parseExpr(str) {
+// dati: i dadi già tirati (un tiro provvisorio fatto da scollegati): si controllano invece di tirarli.
+function parseExpr(str, dati) {
   const s = String(str || '').replace(/\s+/g, '').toLowerCase();
   if (s.length > 80 || !EXPR_RE.test(s)) return null;
+  let pos = 0, ok = true;
+  const dado = faces => {
+    if (!dati) return rnd(faces);
+    const v = Math.abs(Math.round(+dati[pos++]));
+    if (!(v >= 1 && v <= faces)) ok = false;
+    return v;
+  };
   const rolls = [], drop = []; let mod = 0, sides = 0, mixed = false, count = 0, adv = '';
   for (const tkn of s.match(new RegExp('[+-]?' + TERM, 'g'))) {
     const neg = tkn[0] === '-', body = tkn.replace(/^[+-]/, '');
@@ -508,7 +516,7 @@ function parseExpr(str) {
       if (sides && sides !== faces) mixed = true;
       sides = faces;
       const start = rolls.length, vals = [];
-      for (let i = 0; i < cnt; i++) { const v = rnd(faces); vals.push(v); rolls.push((neg ? -1 : 1) * v); }
+      for (let i = 0; i < cnt; i++) { const v = dado(faces); vals.push(v); rolls.push((neg ? -1 : 1) * v); }
       if (dm[3]) {
         const k = parseInt(dm[4], 10);
         if (!(k >= 1 && k <= cnt)) return null;
@@ -524,6 +532,7 @@ function parseExpr(str) {
     }
   }
   if (!rolls.length || Math.abs(mod) > 10000) return null;
+  if (dati && (!ok || pos !== dati.length)) return null;            // dadi che non tornano con la formula
   const total = rolls.reduce((a, b, i) => drop.includes(i) ? a : a + b, 0) + mod;
   const out = { rolls, mod, sides: mixed ? 0 : sides, total };
   if (drop.length) out.drop = drop.sort((a, b) => a - b);
@@ -554,13 +563,13 @@ function addChat(m) {
   m.ts = Date.now();
   world.chat = (world.chat || []).concat(m).slice(-500);
   scheduleSave();
-  for (const c of clients) { const v = chatFor(c, m); if (v) c.send({ t: 'chat', msg: v }); }
+  for (const c of clients) { const v = chatFor(c, m); if (v) sendA(c, { t: 'chat', msg: v }); }
   panelPush({ t: 'chat', msg: m });                      // il pannello è di chi conduce
 }
 
 // ======================= Le intenzioni dei clienti =======================
 function deny(c, op, why) {
-  c.send({ t: 'denied', op, reason: why, q: c.qOra || undefined });
+  sendA(c, { t: 'denied', op, reason: why, q: c.qOra || undefined });
   logAction(c, op, false, why);
 }
 const str = (v, n = 200) => String(v == null ? '' : v).slice(0, n);
@@ -636,6 +645,7 @@ function handleIntent(c, m) {
       if ('publicScene' in b) world.publicScene = b.publicScene;
       if ('turni' in b) world.turni = turniPuliti(b.turni);
       if (b.unita === 'm' || b.unita === 'ft') world.unita = b.unita;   // piedi o metri: per leggere «60» nella scurovisione
+      if ('dadiProvvisori' in b) world.dadiProvvisori = !!b.dadiProvvisori;   // chi è scollegato può tirare «in provvisorio»?
       if ('fogColor' in b) world.fogColor = /^#[0-9a-f]{6}$/i.test(String(b.fogColor || '')) ? String(b.fogColor) : 'auto';
       scheduleSave(); schedulePush();
       return;
@@ -804,6 +814,20 @@ function handleIntent(c, m) {
       return;
     }
 
+    // --- un tiro fatto da scollegati (dadi provvisori): solo se il master lo permette, e segnato come tale ---
+    case 'roll.prov': {
+      if (!p.roll) return deny(c, m.op, 'non puoi tirare');
+      if (!world.dadiProvvisori) return deny(c, m.op, 'il master non accetta i tiri fatti da scollegati');
+      const r = Array.isArray(m.dadi) && m.dadi.length <= 200 ? parseExpr(m.expr, m.dadi) : null;
+      if (!r) return deny(c, m.op, 'tiro non valido');
+      const msg = { kind: 'roll', label: str(m.label || m.expr, 80), by: c.name, byId: c.token, ...r, provvisorio: true };
+      const quando = +m.quando;
+      if (quando > Date.now() - 24 * 3600e3 && quando <= Date.now()) msg.quando = quando;
+      if (m.secret) msg.secret = true;
+      addChat(msg);
+      return;
+    }
+
     // --- chat ---
     case 'chat': {
       if (!p.chat) return deny(c, m.op, 'non puoi scrivere');
@@ -829,7 +853,7 @@ function handleIntent(c, m) {
       world.chat = world.chat.filter(x => x !== msg);
       chatTolti.push(msg.id); if (chatTolti.length > 50) chatTolti.shift();
       scheduleSave();
-      for (const k of clients) k.send({ t: 'chat.del', id: msg.id });
+      for (const k of clients) sendA(k, { t: 'chat.del', id: msg.id });
       panelPush({ t: 'chat.del', id: msg.id });
       return;
     }
@@ -1018,6 +1042,22 @@ function applyPerm(m) {
   return true;
 }
 
+// ======================= Il canale stabile =======================
+// Il giocatore può aprire un secondo collegamento verso di noi (uffa-link lo fa passare solo dai relay:
+// lento ma difficile da far cadere). Non è una persona in più: è una seconda strada per una che c'è già.
+// Ci passano, doppi, i messaggi piccoli e importanti (corsia A): ognuno con un numero (d), così il ponte del
+// giocatore tiene il primo che arriva e butta il doppione. Nell'altro verso il giocatore ci manda, doppi,
+// i suoi intenti piccoli: il numero (q) fa sì che si facciano una volta sola.
+const stabili = new Map();                // gettone → il collegamento stabile
+const prefissoD = crypto.randomBytes(3).toString('hex');
+let contaD = 0;
+function sendA(c, msg) {
+  const s = c.token && stabili.get(c.token);
+  if (!s) { c.send(msg); return; }
+  msg.d = prefissoD + (++contaD).toString(36);
+  c.send(msg); s.send(msg);
+}
+
 // ======================= Com'è il collegamento di ciascuno =======================
 // Dal tempo di risposta ai battiti (c.rtt), dai battiti senza risposta e da quante volte è caduto e rientrato
 // negli ultimi 2 minuti. Se il collegamento è debole si passa da soli alla modalità leggera (le corsie,
@@ -1041,7 +1081,7 @@ function aggiornaQualita(c) {
   const leggera = debole || (!!c.leggera && ora - (c.deboleDa || 0) < 30000);
   if (leggera !== !!c.leggera) {
     c.leggera = leggera;
-    c.send({ t: 'leggera', on: leggera });
+    sendA(c, { t: 'leggera', on: leggera });
     logAction(c, 'collegamento', true, leggera ? 'debole: modalità leggera' : 'di nuovo buono');
     if (!leggera) {                                          // torna buono: arriva quello che era rimasto indietro
       pushWorld(c);
@@ -1062,6 +1102,7 @@ function attach(c) {
   console.log(`+ ${c.kind} #${c.id} collegato (${clients.size} in tutto)`);
 }
 function detach(c) {
+  if (c.stabile) { if (stabili.get(c.token) === c) { stabili.delete(c.token); sendPlayers(); } return; }
   if (!clients.delete(c)) return;
   if (c.token) uscite.set(c.token, Date.now());
   c.codaC = []; clearTimeout(c.timerC); clearTimeout(c.timerB);
@@ -1077,6 +1118,22 @@ function onMessage(c, raw) {
   if (m.t === 'peer') { c.peer = str(m.id, 80); return; }        // riga scritta da uffa-link
   if (m.t === 'pong') { c.alive = true; if (c.beatAt) c.rtt = Date.now() - c.beatAt; return; }
   if (m.t === 'eco') { c.alive = true; c.send({ t: 'eco' }); return; }   // «ci sei?» (chi si è appena svegliato)
+  if (c.stabile) {                                                         // dal canale stabile: solo intenti, a nome del collegamento vero
+    if (m.t === 'intent' && m.q) { const k = [...clients].find(x => x.token === c.token && !x.pending); if (k) onMessage(k, raw); }
+    return;
+  }
+  if (m.t === 'hello' && m.canale === 'stabile') {                         // si apre il canale stabile di un giocatore già noto
+    const token = str(m.token, 64), rec = roster[token];
+    if (c.kind !== 'link' || !/^[a-f0-9]{24}$/.test(token) || !rec || rec.banned) { c.close(); return; }
+    clients.delete(c);                                                     // non è una persona in più
+    c.stabile = true; c.token = token;
+    const vecchio = stabili.get(token);
+    if (vecchio && vecchio !== c) vecchio.close();
+    stabili.set(token, c);
+    c.send({ t: 'eco' });
+    sendPlayers();
+    return;
+  }
 
   if (m.t === 'hello') {
     // Il gettone è l'identità: il browser se lo tiene e lo rimanda. Se non ce l'ha, gliene do uno.
@@ -1155,7 +1212,7 @@ function onMessage(c, raw) {
     // Con il suo numero (q) l'intento si fa una volta sola: il browser lo rimanda finché non ha la conferma
     // («ok»), quindi dopo una caduta (o arrivato da due strade) può arrivare di nuovo.
     const q = typeof m.q === 'string' && m.q.length <= 40 ? m.q : null;
-    if (q && giaFatto(c.token, q)) { c.send({ t: 'ok', q }); return; }
+    if (q && giaFatto(c.token, q)) { sendA(c, { t: 'ok', q }); return; }
     const rec = recOf(c.token);
     c.ops = (c.ops || 0) + 1; c.lastOp = str(m.op, 40); c.lastAt = Date.now();
     c.qOra = q;
@@ -1166,7 +1223,7 @@ function onMessage(c, raw) {
       else handleIntent(c, m);
     } catch (e) { console.error('intento', m.op, e.message); }
     c.qOra = null;
-    if (q) c.send({ t: 'ok', q });
+    if (q) sendA(c, { t: 'ok', q });
     return;
   }
   if (m.t === 'name') {
@@ -1387,17 +1444,9 @@ function bridgeConnect() {
       if (msg.t === 'asset.data' || msg.t === 'asset.miss') { bridgeAsset(msg); continue; }   // roba nostra
       if (msg.t === 'beat') { bridgeSend({ t: 'pong' }); continue; }   // il ponte è vivo anche senza browser
       if (msg.t === 'eco') continue;                        // la risposta al nostro «ci sei?»: basta che sia arrivata
-      if (msg.t === 'bye') lastHello = null;                // allontanato: non lo si ripresenta da soli
-      // dove è arrivato il browser (versione del mondo, ultimo messaggio di chat): se il tubo si riapre
-      // lo ripresentiamo da lì, e l'host gli manda solo quello che si è perso
-      else if (lastHello) {
-        if ((msg.t === 'world' || msg.t === 'welcome') && msg.ver) lastHello.ver = msg.ver;
-        if (msg.t === 'delta') lastHello.ver = msg.a;
-        const ch = msg.t === 'chat' ? [msg.msg] : msg.world && msg.world.chat || msg.chatDopo || [];
-        if (ch.length && ch[ch.length - 1] && ch[ch.length - 1].id) lastHello.chatDa = ch[ch.length - 1].id;
-      }
-      for (const c of clients) c.send(msg);                 // tutto il resto va al browser
+      versoBrowser(msg);
     }
+    stabileApri();                                         // l'host c'è: apriamo anche il canale stabile
   });
   let gone = false;
   const retry = () => {
@@ -1412,6 +1461,97 @@ function bridgeConnect() {
   sock.on('close', retry);
   sock.on('error', () => {});
 }
+/** Un messaggio dell'host (dal tubo o dal canale stabile) per il browser. */
+const arrivati = new Set(), arrivatiL = [];
+let attesaDelta = new Map(), attesaTimer = 0;
+function versoBrowser(msg, giaInOrdine) {
+  // doppio (è arrivato anche dall'altra strada): il primo vince
+  if (msg.d) {
+    if (arrivati.has(msg.d)) return;
+    arrivati.add(msg.d); arrivatiL.push(msg.d);
+    if (arrivatiL.length > 3000) arrivati.delete(arrivatiL.shift());
+  }
+  // le differenze vanno in ordine: una arrivata prima di quella che la precede (dal canale stabile, mentre
+  // quella grossa viaggia nel tubo) aspetta un momento; dopo 3 secondi passa comunque (il browser, se non
+  // torna, si fa rimandare il mondo)
+  if (msg.t === 'delta' && lastHello && lastHello.ver && !giaInOrdine) {
+    if (msg.a <= lastHello.ver) return;
+    if (msg.da !== lastHello.ver) {
+      attesaDelta.set(msg.da, msg);
+      if (!attesaTimer) attesaTimer = setTimeout(() => {
+        attesaTimer = 0;
+        const l = [...attesaDelta.values()].sort((a, b) => a.da - b.da); attesaDelta = new Map();
+        for (const x of l) versoBrowser(x, true);
+      }, 3000);
+      return;
+    }
+  }
+  if (msg.t === 'world' || msg.t === 'welcome') { attesaDelta = new Map(); clearTimeout(attesaTimer); attesaTimer = 0; }
+  if (msg.t === 'bye') lastHello = null;                // allontanato: non lo si ripresenta da soli
+  // dove è arrivato il browser (versione del mondo, ultimo messaggio di chat): se il tubo si riapre
+  // lo ripresentiamo da lì, e l'host gli manda solo quello che si è perso
+  else if (lastHello) {
+    if ((msg.t === 'world' || msg.t === 'welcome') && msg.ver) lastHello.ver = msg.ver;
+    if (msg.t === 'delta') lastHello.ver = msg.a;
+    const ch = msg.t === 'chat' ? [msg.msg] : msg.world && msg.world.chat || msg.chatDopo || [];
+    if (ch.length && ch[ch.length - 1] && ch[ch.length - 1].id) lastHello.chatDa = ch[ch.length - 1].id;
+  }
+  for (const c of clients) c.send(msg);                 // al browser
+  if (msg.t === 'delta' && lastHello) {                 // quelle che aspettavano questa
+    const dopo = attesaDelta.get(lastHello.ver);
+    if (dopo) { attesaDelta.delete(lastHello.ver); versoBrowser(dopo, true); }
+  }
+}
+
+// ---------- Il canale stabile (vedi «Il canale stabile» più su) ----------
+// Una seconda connessione verso uffa-link, che riconosce la prima riga e la fa passare solo dai relay.
+// Si apre quando il tubo è su e c'è un browser da presentare; se cade si riapre da sola.
+const STABILE = process.env.LINK_STABILE !== '0';
+let stabile = null, stabileBuf = '', stabileTimer = 0, stabileUltimo = 0;
+const OPS_A = new Set(['chat', 'rule', 'roll', 'roll.prov', 'token.move', 'scatta', 'luce.porta', 'chat.del']);
+function stabileApri() {
+  if (!STABILE || stabile || stabileTimer || !lastHello || !lastHello.token) return;
+  const sock = net.connect(LINK_PORT, '127.0.0.1');
+  stabile = sock; sock.setNoDelay(true);
+  stabileBuf = '';
+  sock.on('connect', () => {
+    stabileUltimo = Date.now();
+    sock.write('{"t":"canale","tipo":"stabile"}\n');
+    sock.write(JSON.stringify({ t: 'hello', canale: 'stabile', token: lastHello ? lastHello.token : '' }) + '\n');
+  });
+  sock.on('data', d => {
+    stabileUltimo = Date.now();
+    if (!sock.pronto) { sock.pronto = true; console.log('Canale stabile aperto.'); }
+    stabileBuf += d.toString('utf8');
+    if (stabileBuf.length > 4 * 1024 * 1024) { sock.destroy(); return; }
+    let i;
+    while ((i = stabileBuf.indexOf('\n')) >= 0) {
+      const line = stabileBuf.slice(0, i); stabileBuf = stabileBuf.slice(i + 1);
+      let msg; try { msg = JSON.parse(line); } catch { continue; }
+      if (msg.d) versoBrowser(msg);                      // solo i messaggi doppi: il resto arriva dal tubo
+    }
+  });
+  const giu = () => {
+    if (stabile !== sock) return;
+    stabile = null;
+    stabileTimer = setTimeout(() => { stabileTimer = 0; stabileApri(); }, 5000);
+  };
+  sock.on('close', giu);
+  sock.on('error', () => {});
+}
+// «ci sei?» ogni 10 secondi; se per 30 non risponde lo si riapre
+setInterval(() => {
+  if (!stabile || !stabile.pronto) return;
+  if (Date.now() - stabileUltimo > 30000) { stabile.destroy(); return; }
+  try { stabile.write('{"t":"eco"}\n'); } catch {}
+}, 10000);
+function stabileManda(m) {
+  if (stabile && stabile.pronto && m && m.t === 'intent' && m.q && OPS_A.has(m.op)) {
+    const line = JSON.stringify(m);
+    if (line.length < 4000) try { stabile.write(line + '\n'); } catch {}
+  }
+}
+
 // L'host manda un battito ogni 5 secondi. Se per 15 secondi non arriva niente il tubo è
 // morto anche se nessuno ce l'ha detto (wifi caduto, portatile chiuso…): lo chiudiamo noi
 // e ne apriamo uno nuovo.
@@ -1678,8 +1818,9 @@ if (MODE === 'join') {
     if (m.t === 'eco') { c.send({ t: 'eco' }); bridgeSveglia(); return; }   // il browser c'è; e il tubo?
     if (m.t === 'hello') lastHello = m;
     if (m.t === 'name' && lastHello) lastHello = { ...lastHello, name: m.name };
-    if (m.t === 'leave') lastHello = null;                   // scollegato a mano: non ripresentarlo
+    if (m.t === 'leave') { lastHello = null; if (stabile) stabile.destroy(); }   // scollegato a mano: non ripresentarlo
     bridgeSend(m);
+    stabileManda(m);                                         // gli intenti piccoli anche dall'altra strada
     if (m.t === 'hello') c.send({ t: 'link', up: hostUp });  // appena arrivato: sappia subito com'è il tubo
   };
   bridgeConnect();

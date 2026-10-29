@@ -644,7 +644,7 @@ async function netPushBoard() {
       }
     }
     const compendio = typeof COMPENDIO !== 'undefined' && COMPENDIO.perRete ? await COMPENDIO.perRete().catch(() => null) : null;
-    intent('board', { board: { compendio, active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, unita: settings.unit, turni: settings.turni || null, scenes: b.scenes, sheets, sistema: typeof SISTEMA !== 'undefined' && SISTEMA.perRete ? SISTEMA.perRete() : null } });
+    intent('board', { board: { compendio, active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, dadiProvvisori: !!settings.dadiProvvisori, unita: settings.unit, turni: settings.turni || null, scenes: b.scenes, sheets, sistema: typeof SISTEMA !== 'undefined' && SISTEMA.perRete ? SISTEMA.perRete() : null } });
   } finally { NET.pushing = false; }
 }
 
@@ -712,9 +712,14 @@ var addChat = (prev => function (m) {
 })(addChat);
 function netChat(msg) {
   if (msg && msg.id) NET.chatUltimo = msg.id;
+  // il proprio tiro provvisorio è arrivato al server: via la copia grigia
+  if (msg && msg.provvisorio && NET.me && msg.byId === NET.me.token) {
+    const grigio = chat.find(x => x.inAttesa && x.provvisorio && x.label === msg.label && x.total === msg.total);
+    if (grigio) { netFromServer = true; try { deleteChat(grigio.id); } finally { netFromServer = false; } }
+  }
   // il proprio messaggio scritto da scollegati è arrivato davvero: via la copia grigia
   if (msg && NET.me && msg.byId === NET.me.token && (msg.kind === 'text' || msg.kind === 'rule')) {
-    const grigio = chat.find(x => x.inAttesa && x.text === msg.text);
+    const grigio = chat.find(x => x.inAttesa && x.text === msg.text && x.kind === msg.kind);
     if (grigio) { netFromServer = true; try { deleteChat(grigio.id); } finally { netFromServer = false; } }
   }
   netFromServer = true;
@@ -726,7 +731,11 @@ function netChat(msg) {
 // In rete i dadi li tira il server: qui si manda solo l'espressione (già con vantaggio o
 // svantaggio) e se è segreto. Il server la controlla da capo e decide chi vede il risultato.
 var rollExpr = (prev => function (expr, label) {
-  if (NET.retrying || NET.hostDown) { netSay('Sei scollegato: il tiro partirà quando torna il collegamento. Riprova tra un attimo.', 'warn'); return true; }
+  if (NET.retrying || NET.hostDown) {
+    // scollegati: se il master lo permette si tira qui, «in provvisorio»; il tiro parte al ritorno, segnato come non verificato
+    if (NET.world && NET.world.dadiProvvisori && can('roll')) return netTiroProvvisorio(expr, label);
+    netSay('Sei scollegato: il tiro partirà quando torna il collegamento. Riprova tra un attimo.', 'warn'); return true;
+  }
   if (!NET.on) return prev(expr, label);
   if (!can('roll')) { netSay('Non puoi tirare i dadi.', 'warn'); return true; }
   const d = diceApply(expr);
@@ -735,6 +744,22 @@ var rollExpr = (prev => function (expr, label) {
   diceLast.textContent = 'Tiro mandato al server…';
   return true;
 })(rollExpr);
+
+/** Un tiro fatto da scollegati: i dadi li tira questo dispositivo; si vede subito (in grigio) e parte al ritorno.
+ *  Il server controlla che i dadi tornino con la formula e lo mette in chat con «⚠ non verificato». */
+function netTiroProvvisorio(expr, label) {
+  const d = diceApply(expr);
+  const r = parseExpr(d.expr);
+  if (!r) return false;
+  const lab = label || String(expr).replace(/\s+/g, '');
+  intent('roll.prov', { expr: d.expr, label: lab, dadi: r.rolls.map(Math.abs), secret: d.secret, quando: Date.now() });
+  const id = 'attesa-' + NET.n;
+  netFromServer = true;
+  try { addChat({ kind: 'roll', label: lab, ...r, secret: d.secret || undefined, provvisorio: true, inAttesa: true, id, by: NET.me && NET.me.name, byId: NET.me && NET.me.token }); } finally { netFromServer = false; }
+  chatLog.querySelectorAll('.msg').forEach(el => { if (el.dataset.id === id) el.classList.add('inAttesa'); });
+  if (typeof diceLast !== 'undefined') diceLast.textContent = tr('Tiro provvisorio: {n} (parte quando torna il collegamento)', { n: r.total });
+  return true;
+}
 
 // Ping: lo vedono tutti.
 var startPing = (prev => function (x, y) {
@@ -964,6 +989,8 @@ function netSyncForm() {
             : `Sei un giocatore in questa sessione (${NET.me.name}).`;
   const lv = $('netLeave');
   if (lv) lv.hidden = !(NET.on || NET.retrying || NET.hostDown);
+  const dp = $('netDadiProv');
+  if (dp) { dp.closest('label').hidden = !(NET.on && isMaster()); dp.checked = !!settings.dadiProvvisori; }
   // per chi conduce: com'è il collegamento di ciascun giocatore (pallino verde, giallo, rosso)
   const ul = $('netGiocatori');
   if (ul) {
@@ -1001,6 +1028,7 @@ if ($('netNameIn')) {
     try { localStorage.setItem('uffa-gs-port', v); } catch {}
   });
   $('netReconnect').addEventListener('click', () => { netReconnectNow(); netSyncForm(); });
+  if ($('netDadiProv')) $('netDadiProv').addEventListener('input', e => { settings.dadiProvvisori = e.target.checked; scheduleBoardSave(); });
   $('netLeave').addEventListener('click', () => { netDisconnect(); netSyncForm(); });
   setInterval(netSyncForm, 2000);
   netSyncForm();
