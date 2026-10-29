@@ -45,6 +45,8 @@
   }
   .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--muted); flex: none; }
   .dot.on { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+  .dot.on.giallo { background: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 25%, transparent); }
+  .dot.on.rosso { background: var(--bad); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad) 25%, transparent); }
   .dot.wait { background: var(--warn); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 25%, transparent); }
 
   .rules { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -235,7 +237,8 @@ function rowFor(r) {
   const head = document.createElement('div');
   head.className = 'pHead';
   const dot = document.createElement('span');
-  dot.className = 'dot' + (L.pending ? ' wait' : r.online ? ' on' : '');
+  dot.className = 'dot' + (L.pending ? ' wait' : r.online ? ' on' + (L.qualita && L.qualita !== 'verde' ? ' ' + L.qualita : '') : '');
+  if (r.online && !L.pending) dot.title = { verde: 'Collegamento buono', giallo: 'Collegamento debole', rosso: 'Collegamento pessimo' }[L.qualita || 'verde'];
   const nm = document.createElement('span'); nm.className = 'pName';
   const ni = document.createElement('input'); ni.value = r.name || '(senza nome)'; ni.title = 'Cambia il nome';
   ni.onchange = () => post('/api/perm', { token: r.token, name: ni.value }).then(load);
@@ -262,6 +265,7 @@ function rowFor(r) {
     const scena = S.scenes.find(x => x.id === L.viewScene);
     const add = (k, v) => { const d = document.createElement('div'); d.innerHTML = k + ' <b></b>'; d.querySelector('b').textContent = v; meta.append(d); };
     add('Ritardo', L.rtt == null ? '—' : L.rtt + ' ms');
+    add('Collegamento', { verde: 'buono', giallo: 'debole', rosso: 'pessimo' }[L.qualita || 'verde'] + (L.leggera ? ' · modalità leggera' : ''));
     add('Collegato da', durata(L.onFor || 0));
     add('Guarda', scena ? scena.name : (L.viewScene ? '(scena sconosciuta)' : '—'));
     add('Vista', L.viewRect ? `${L.viewRect.x}, ${L.viewRect.y} · ${Math.round(L.viewRect.s * 100)}%` : '—');

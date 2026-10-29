@@ -153,7 +153,7 @@ function playerList() {
       muted: !!rec.muted, frozen: !!rec.frozen, banned: !!rec.banned, pending: !!c.pending,
       client: c.client || '?', peer: c.peer || null,
       since: c.since || now, onFor: Math.round((now - (c.since || now)) / 1000),
-      rtt: c.rtt == null ? null : c.rtt,
+      rtt: c.rtt == null ? null : c.rtt, qualita: c.qualita || 'verde', leggera: !!c.leggera,
       lastOp: c.lastOp || null, lastAt: c.lastAt || null, ops: c.ops || 0,
       viewScene: c.viewScene || null, viewRect: c.viewRect || null
     };
@@ -440,14 +440,42 @@ function pushWorld(c, piena) {
     c.send({ t: 'world', world: v, ver });
     return;
   }
-  const set = {}, via = [];
-  let n = 0;
-  for (const [k, t] of testi) if (prec.testi.get(k) !== t) { set[k] = P.get(k); n++; }
-  for (const k of prec.testi.keys()) if (!testi.has(k)) via.push(k);
+  // Le differenze. Scene e schede cambiate viaggiano come «toppe» (solo i campi cambiati) se così pesano meno.
+  // In modalità leggera (collegamento debole, vedi più giù) si manda subito solo la corsia A (segnalini,
+  // turni, punti ferita, quello che si vede e la nebbia); il resto delle schede e delle scene (corsia B) poco
+  // dopo, tutto insieme; sistema di gioco e compendio (corsia C) solo quando il collegamento torna buono.
+  const set = {}, via = [], toppe = {}, nuovi = new Map(prec.testi);
+  let n = 0, restaB = false;
+  const corsiaOk = (k, tp) => { const cs = corsiaDi(k, tp); if (!c.leggera || cs === 'A' || (cs === 'B' && c.liberaB)) return true; if (cs === 'B') restaB = true; return false; };
+  for (const [k, t] of testi) {
+    const prima = prec.testi.get(k);
+    if (prima === t) continue;
+    let tp = null;
+    if (prima && (k.startsWith('sh:') || k.startsWith('sc:'))) {
+      try { const x = VERS.toppa(JSON.parse(prima), P.get(k)); if (JSON.stringify(x).length < t.length) tp = x; } catch {}
+    }
+    if (!corsiaOk(k, tp)) continue;
+    if (tp) toppe[k] = tp; else set[k] = P.get(k);
+    nuovi.set(k, t); n++;
+  }
+  for (const k of prec.testi.keys()) if (!testi.has(k) && corsiaOk(k, null)) { via.push(k); nuovi.delete(k); }
+  if (restaB && !c.timerB) c.timerB = setTimeout(() => { c.timerB = 0; c.liberaB = true; try { pushWorld(c); } finally { c.liberaB = false; } }, 1500);
   if (!n && !via.length) return;                                          // nessuna novità per lui
   const ver = prec.ver + 1;
-  ultime.set(c.token, { ver, testi });
-  c.send({ t: 'delta', da: prec.ver, a: ver, set, via });
+  ultime.set(c.token, { ver, testi: nuovi });
+  const msg = { t: 'delta', da: prec.ver, a: ver, set, via };
+  if (Object.keys(toppe).length) msg.toppe = toppe;
+  c.send(msg);
+}
+// Le corsie: A (piccola, sempre subito), B (schede e scene: in modalità leggera un po' dopo), C (pesante: in
+// modalità leggera solo quando il collegamento torna buono).
+const CAMPI_PF = new Set(['hp', 'hpmax', 'hpt']);
+function corsiaDi(k, tp) {
+  if (k === 'k:compendio' || k === 'k:sistema' || k === 'k:music') return 'C';
+  if (k.startsWith('ph:') || k.startsWith('pho:') || k === 'k:turni') return 'A';
+  if (tp && !tp.v.length && k.startsWith('sh:') && tp.p.every(([pp]) => pp[0] === 'f' && CAMPI_PF.has(pp[1]))) return 'A';
+  if (tp && !tp.v.length && k.startsWith('sc:') && tp.p.every(([pp]) => ['vista', 'luce', 'fog'].includes(pp[0]))) return 'A';
+  return 'B';
 }
 function pushWorldAll() { for (const c of clients) pushWorld(c); }
 
@@ -814,7 +842,7 @@ function handleIntent(c, m) {
     // --- ping ---
     case 'ping': {
       if (!p.ping) return deny(c, m.op, 'non puoi fare ping');
-      broadcast({ t: 'ping', x: +m.x || 0, y: +m.y || 0, color: str(m.color, 24), by: c.name });
+      broadcast({ t: 'ping', x: +m.x || 0, y: +m.y || 0, color: str(m.color, 24), by: c.name }, k => !k.leggera);   // corsia C: chi ha la linea debole non lo riceve
       return;
     }
 
@@ -880,7 +908,8 @@ function handleIntent(c, m) {
       if (!p.controlMusic) return deny(c, m.op, 'la musica la sceglie chi conduce');
       world.music = m.state || null;
       scheduleSave();
-      broadcast({ t: 'music', state: world.music });
+      // corsia C: a chi ha la linea debole la musica arriva quando il collegamento torna buono
+      for (const k of clients) { if (k.leggera) k.musicaDopo = true; else k.send({ t: 'music', state: world.music }); }
       return;
     }
 
@@ -917,7 +946,7 @@ function handleIntent(c, m) {
       const h = str(m.hash, 64);
       if (c.kind === 'ws' && !c.token) return;
       if (!isHash(h) || !haveAsset(h)) { c.send({ t: 'asset.miss', hash: h }); return; }
-      sendAsset(c, h);
+      sendAsset(c, h, Number.isInteger(m.da) && m.da > 0 ? m.da : 0);
       return;
     }
 
@@ -933,20 +962,36 @@ function handleIntent(c, m) {
   }
 }
 
-/** Manda un file a chi lo ha chiesto, a pezzi da 48 kB. */
-function sendAsset(c, hash) {
+/** Manda un file a chi lo ha chiesto, a pezzi da 48 kB, da «da» in poi (un'immagine interrotta riprende da dove
+ *  si era fermata). I pezzi sono corsia C: aspettano in fila (c.codaC) e partono quando il tubo non è
+ *  intasato, così chat, dadi e segnalini (che si mandano subito) non restano dietro a una mappa; in modalità
+ *  leggera ne parte uno ogni tanto. */
+const PEZZO = 48 * 1024;
+function sendAsset(c, hash, da) {
   const f = assetFile(hash);
   let buf;
   try { buf = fs.readFileSync(f); } catch { c.send({ t: 'asset.miss', hash }); return; }
   const info = assetIndex[hash] || {};
-  const STEP = 48 * 1024;
-  for (let off = 0; off < buf.length || off === 0; off += STEP) {
-    const part = buf.slice(off, off + STEP);
-    c.send({
-      t: 'asset.data', hash, mime: info.mime, name: info.name,
-      data: part.toString('base64'), last: off + STEP >= buf.length
-    });
-    if (off + STEP >= buf.length) break;
+  const inizio = Math.max(0, Math.min(buf.length, +da || 0));
+  c.codaC = (c.codaC || []).filter(j => j.hash !== hash);        // richiesta di nuovo: si riparte da dove dice
+  for (let off = inizio; off < buf.length || off === inizio; off += PEZZO) {
+    const last = off + PEZZO >= buf.length;
+    c.codaC.push({ hash, buf, off, last, mime: info.mime, name: info.name });
+    if (last) break;
+  }
+  pompaC(c);
+}
+function pompaC(c) {
+  clearTimeout(c.timerC); c.timerC = 0;
+  while (c.codaC && c.codaC.length) {
+    if (c.ingorgo && c.ingorgo() > 256 * 1024) { c.timerC = setTimeout(() => pompaC(c), 60); return; }
+    if (c.leggera) {
+      const att = (c.prossimoC || 0) - Date.now();
+      if (att > 0) { c.timerC = setTimeout(() => pompaC(c), att); return; }
+      c.prossimoC = Date.now() + 500 + Math.min(3000, c.rtt || 0);
+    }
+    const j = c.codaC.shift();
+    c.send({ t: 'asset.data', hash: j.hash, mime: j.mime, name: j.name, off: j.off, data: j.buf.subarray(j.off, j.off + PEZZO).toString('base64'), last: j.last });
   }
 }
 
@@ -973,6 +1018,43 @@ function applyPerm(m) {
   return true;
 }
 
+// ======================= Com'è il collegamento di ciascuno =======================
+// Dal tempo di risposta ai battiti (c.rtt), dai battiti senza risposta e da quante volte è caduto e rientrato
+// negli ultimi 2 minuti. Se il collegamento è debole si passa da soli alla modalità leggera (le corsie,
+// vedi pushWorld) e ci si resta finché per 30 secondi va bene. Il master vede per ognuno un pallino verde,
+// giallo o rosso (nel pannello della sessione e nelle impostazioni, alla voce «Sessione»).
+const cadute = new Map(), uscite = new Map();       // gettone → [quando è rientrato dopo una caduta], quando è uscito
+const caduteRecenti = token => (cadute.get(token) || []).filter(t => Date.now() - t < 120000).length;
+function qualitaDi(c) {
+  if (c.kind !== 'link') return 'verde';                     // sullo stesso computer dell'host
+  const d = caduteRecenti(c.token), rtt = c.rtt;
+  if ((c.mancati || 0) >= 1 || (rtt != null && rtt > 1500) || d >= 3) return 'rosso';
+  if (c.leggera || (rtt != null && rtt > 300) || d >= 1) return 'giallo';
+  return 'verde';
+}
+/** Ricalcola modalità leggera e pallino; true se il pallino è cambiato. */
+function aggiornaQualita(c) {
+  if (!c.token || c.kind !== 'link') return false;
+  const ora = Date.now();
+  const debole = (c.rtt != null && c.rtt > 800) || (c.mancati || 0) >= 1 || caduteRecenti(c.token) >= 2;
+  if (debole) c.deboleDa = ora;
+  const leggera = debole || (!!c.leggera && ora - (c.deboleDa || 0) < 30000);
+  if (leggera !== !!c.leggera) {
+    c.leggera = leggera;
+    c.send({ t: 'leggera', on: leggera });
+    logAction(c, 'collegamento', true, leggera ? 'debole: modalità leggera' : 'di nuovo buono');
+    if (!leggera) {                                          // torna buono: arriva quello che era rimasto indietro
+      pushWorld(c);
+      if (c.musicaDopo) { c.musicaDopo = false; c.send({ t: 'music', state: world.music }); }
+      pompaC(c);
+    }
+  }
+  const q = qualitaDi(c);
+  if (q === c.qualita) return false;
+  c.qualita = q;
+  return true;
+}
+
 // ======================= Un cliente collegato =======================
 function attach(c) {
   clients.add(c);
@@ -981,6 +1063,8 @@ function attach(c) {
 }
 function detach(c) {
   if (!clients.delete(c)) return;
+  if (c.token) uscite.set(c.token, Date.now());
+  c.codaC = []; clearTimeout(c.timerC); clearTimeout(c.timerB);
   console.log(`- ${c.kind} #${c.id} se n'è andato`);
   sendPlayers();
 }
@@ -1007,6 +1091,9 @@ function onMessage(c, raw) {
       logAction(old, 'ingresso', true, 'ricollegato');
     }
     c.token = token;
+    // rientra poco dopo essere uscito: conta come una caduta (per capire se il collegamento è debole)
+    const usc = uscite.get(token);
+    if (usc && Date.now() - usc < 120000) { const l = cadute.get(token) || []; l.push(Date.now()); cadute.set(token, l.slice(-10)); }
     const rec = recOf(token);
     // Il master è chi sta davanti alla macchina che ospita: arriva dal browser locale.
     if (c.kind === 'ws' && MODE === 'host' && !hasMaster()) rec.role = 'master';
@@ -1231,7 +1318,8 @@ function startLinkServer() {
     const c = {
       id: nextId++, kind: 'link', token: '', name: '', role: 'player', peer: null,
       send(msg) { try { sock.write(JSON.stringify(msg) + '\n'); } catch {} },
-      close() { try { sock.end(); } catch {} }
+      close() { try { sock.end(); } catch {} },
+      ingorgo: () => sock.writableLength                    // quanto aspetta ancora di partire
     };
     attach(c);
     sock.on('data', d => {
@@ -1284,8 +1372,10 @@ function bridgeConnect() {
       bridgeQueueBytes = 0;
       for (const line of bridgeQueue.splice(0)) {
         if (/^\{"t":"(hello|pong|eco)"/.test(line)) continue;   // via i saluti e le risposte ai battiti vecchi
+        if (line.startsWith('{"t":"intent","op":"asset.get"')) continue;   // le immagini si richiedono qui sotto, da dove erano arrivate
         sock.write(line);
       }
+      bridgeRiprendiImmagini();
     }
     linkState(true);                                     // l'host ha risposto: il tubo è davvero aperto
     bridgeBuf += d.toString('utf8');
@@ -1356,16 +1446,25 @@ const waiting = new Map();               // hash -> { parts, bytes, mime, name, 
 function wantAsset(hash) {
   let w = waiting.get(hash);
   if (w) return w.promise;
-  w = { parts: [], bytes: 0, mime: '', name: '' };
+  w = { parts: [], bytes: 0, mime: '', name: '', inizio: Date.now(), ultimo: Date.now() };
   w.promise = new Promise(resolve => { w.done = resolve; });
-  w.timer = setTimeout(() => { waiting.delete(hash); w.done(null); }, 25000);
   waiting.set(hash, w);
   bridgeSend({ t: 'intent', op: 'asset.get', hash });
   return w.promise;
 }
+// Si rinuncia a un'immagine se l'host, con il tubo aperto, non ne manda un pezzo da 30 secondi (o dopo 3 minuti
+// in tutto). Mentre il tubo è giù si aspetta: al ritorno la si richiede da dove era arrivata.
+setInterval(() => {
+  for (const [h, w] of waiting) if ((hostUp && Date.now() - w.ultimo > 30000) || Date.now() - w.inizio > 180000) { waiting.delete(h); w.done(null); }
+}, 5000);
+function bridgeRiprendiImmagini() {
+  for (const [hash, w] of waiting) { w.ultimo = Date.now(); bridgeSend({ t: 'intent', op: 'asset.get', hash, da: w.bytes }); }
+}
 function bridgeAsset(msg) {
   const w = waiting.get(msg.hash);
   if (!w) return;
+  if (msg.t === 'asset.data' && typeof msg.off === 'number' && msg.off !== w.bytes) return;   // un pezzo doppio o fuori posto
+  w.ultimo = Date.now();
   if (msg.t === 'asset.miss') { clearTimeout(w.timer); waiting.delete(msg.hash); w.done(null); return; }
   const part = Buffer.from(String(msg.data || ''), 'base64');
   w.parts.push(part); w.bytes += part.length;
@@ -1593,16 +1692,20 @@ if (MODE === 'join') {
 if (MODE === 'host') {
   let misses = new WeakMap();
   setInterval(() => {
+    let cambiata = false;
     for (const c of [...clients]) {
       if (c.alive === false) {
         const n = (misses.get(c) || 0) + 1;
         misses.set(c, n);
         if (n >= 3) { c.close(); detach(c); continue; }     // tre battiti a vuoto (15 secondi) e si lascia andare
       } else misses.set(c, 0);
+      c.mancati = misses.get(c) || 0;
+      if (aggiornaQualita(c)) cambiata = true;
       c.alive = false;
       c.beatAt = Date.now();
       c.send({ t: 'beat' });
     }
+    if (cambiata) sendPlayers();
   }, 5000);
 }
 

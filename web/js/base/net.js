@@ -229,6 +229,11 @@ function netHandle(m) {
     case 'beat': netSend({ t: 'pong' }); return;
     case 'eco': clearTimeout(NET._eco); NET._eco = 0; return;   // c'è
     case 'ok': NET.coda = NET.coda.filter(e => e.q !== m.q); return;   // fatto (o rifiutato): esce dalla coda
+    case 'leggera':                              // il server ha visto che il collegamento è debole (o di nuovo buono)
+      NET.leggera = !!m.on;
+      document.body.classList.toggle('net-leggera', NET.leggera);
+      netSay(NET.leggera ? 'Collegamento debole: modalità leggera. Chat, dadi e segnalini arrivano subito; immagini e musica dopo.' : 'Il collegamento è tornato buono.', NET.leggera ? 'warn' : '');
+      return;
     case 'welcome': {
       const back = NET.retrying || NET.hostDown;
       NET.on = true; NET.everOn = true; NET.me = m.you;
@@ -282,6 +287,7 @@ function netHandle(m) {
       if (typeof noteDalServer === 'function' && m.notes) noteDalServer(m.notes, m.from === (NET.me && NET.me.id));
       return;
     case 'music':
+      if (m.state) NET.musicaServer = JSON.stringify(m.state);
       if (typeof musicApply === 'function' && m.state) musicApply(m.state);
       return;
     case 'denied':
@@ -453,6 +459,13 @@ async function applyWorld(w, toccati) {
     settings.publicScene = w.publicScene || null;
     if (!isMaster()) settings.fogColor = w.fogColor || 'auto';     // il colore della nebbia lo decide chi conduce
     if (!isMaster() && t('turni') && typeof turniDaMondo === 'function') turniDaMondo(w.turni);
+    // la musica cambiata mentre eri scollegato (o con la linea debole): arriva con il mondo
+    // (all'ingresso no, come prima: parte quando il master la cambia)
+    if (!isMaster() && t('music')) {
+      const j = JSON.stringify(w.music || null);
+      if (w.music && NET.musicaServer !== undefined && j !== NET.musicaServer && typeof musicApply === 'function') musicApply(w.music);
+      NET.musicaServer = j;
+    }
 
     if (!t('scenes') && !t('active')) { /* le scene non sono cambiate */ }
     else if (isMaster()) {
@@ -921,8 +934,10 @@ function onSheetDeleted(id) {
 }
 
 // Ogni tanto si dice al server che cosa si sta guardando: serve al master per orientarsi.
+NET._tel = 0;
 setInterval(() => {
   if (!NET.on || !cur) return;
+  if (NET.leggera && (++NET._tel % 5)) return;                // con il collegamento debole, una volta ogni 20 secondi
   netSend({ t: 'telemetry', scene: cur.id, view: { x: view.x, y: view.y, s: view.s } });
 }, 4000);
 
@@ -949,6 +964,18 @@ function netSyncForm() {
             : `Sei un giocatore in questa sessione (${NET.me.name}).`;
   const lv = $('netLeave');
   if (lv) lv.hidden = !(NET.on || NET.retrying || NET.hostDown);
+  // per chi conduce: com'è il collegamento di ciascun giocatore (pallino verde, giallo, rosso)
+  const ul = $('netGiocatori');
+  if (ul) {
+    const altri = NET.on && isMaster() ? NET.players.filter(p => p.token !== (NET.me && NET.me.token) && !p.pending) : [];
+    ul.hidden = !altri.length;
+    const DETTO = { verde: 'Collegamento buono', giallo: 'Collegamento debole', rosso: 'Collegamento pessimo' };
+    const html = altri.map(p => `<li><span class="qDot q-${p.qualita || 'verde'}" title="${DETTO[p.qualita || 'verde']}"></span><span class="qNome" data-noi18n></span><span class="qRit">${p.rtt == null ? '' : p.rtt + ' ms'}${p.leggera ? ' · ' + tr('modalità leggera') : ''}</span></li>`).join('');
+    if (ul._html !== html) {
+      ul._html = html; ul.innerHTML = html;
+      ul.querySelectorAll('.qNome').forEach((el, i) => { el.textContent = altri[i].name; });
+    }
+  }
 }
 // Il collegamento «torna all'avvio» ha senso solo se sei partito dall'app.
 // Sta anche nel menu delle scene, dove si trova subito.

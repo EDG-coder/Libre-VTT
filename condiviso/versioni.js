@@ -70,13 +70,42 @@
     return k.slice(2);
   }
 
-  /** Applica una differenza { set: {chiave: valore}, via: [chiavi] } ai pezzi. Restituisce i campi toccati. */
+  /** Una scena o una scheda cambiata: solo i campi cambiati (per le schede anche dentro a «f», i valori della
+   *  scheda: un punto ferita in meno sono poche decine di byte invece della scheda intera).
+   *  { p: [[percorso, valore]…], v: [percorso…] }, con percorso = ['campo'] o ['f', 'campo']. */
+  function toppa(vecchio, nuovo) {
+    const p = [], v = [], j = x => JSON.stringify(x === undefined ? null : x);
+    const ogg = x => x && typeof x === 'object' && !Array.isArray(x);
+    const c = (o, k) => o[k] !== undefined;                       // un campo undefined è come se non ci fosse
+    for (const k of Object.keys(nuovo)) {
+      if (!c(nuovo, k)) continue;
+      if (k === 'f' && ogg(vecchio.f) && ogg(nuovo.f)) {
+        for (const fk of Object.keys(nuovo.f)) if (c(nuovo.f, fk) && j(vecchio.f[fk]) !== j(nuovo.f[fk])) p.push([['f', fk], nuovo.f[fk]]);
+        for (const fk of Object.keys(vecchio.f)) if (!c(nuovo.f, fk)) v.push(['f', fk]);
+      } else if (j(vecchio[k]) !== j(nuovo[k])) p.push([[k], nuovo[k]]);
+    }
+    for (const k of Object.keys(vecchio)) if (!c(nuovo, k)) v.push([k]);
+    return { p, v };
+  }
+
+  /** Applica una differenza { set: {chiave: valore}, via: [chiavi], toppe: {chiave: toppa} } ai pezzi.
+   *  Restituisce i campi del mondo toccati. */
   function applica(P, d) {
     const toccati = new Set();
     for (const k of d.via || []) { P.delete(k); toccati.add(campo(k)); }
     for (const k of Object.keys(d.set || {})) { P.set(k, d.set[k]); toccati.add(campo(k)); }
+    for (const k of Object.keys(d.toppe || {})) {
+      const o = P.get(k), t = d.toppe[k];
+      if (!o || typeof o !== 'object') continue;
+      for (const pp of t.v || []) { if (pp.length === 2) { if (o[pp[0]]) delete o[pp[0]][pp[1]]; } else delete o[pp[0]]; }
+      for (const [pp, val] of t.p || []) {
+        if (pp.length === 2) { if (!o[pp[0]] || typeof o[pp[0]] !== 'object') o[pp[0]] = {}; o[pp[0]][pp[1]] = val; }
+        else o[pp[0]] = val;
+      }
+      toccati.add(campo(k));
+    }
     return toccati;
   }
 
-  return { pezzi, ricomponi, applica, campo };
+  return { pezzi, ricomponi, applica, campo, toppa };
 });
