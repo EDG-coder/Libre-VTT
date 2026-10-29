@@ -124,10 +124,38 @@ pub async fn host(porta: u16, cartella: PathBuf, voce: Arc<dyn Voce>, fermo: imp
 
 // ======================= Lato giocatore =======================
 
+/// La prima riga di un collegamento che chiede il canale stabile (la scrive il server di gioco del giocatore).
+const SEGNO_STABILE: &[u8] = b"{\"t\":\"canale\",\"tipo\":\"stabile\"}";
+
+/// Il collegamento appena arrivato chiede il canale stabile? Si guarda la prima riga senza toglierla
+/// (arriva comunque all'host, che sa cosa farne); se in un secondo e mezzo non arriva niente, è uno normale.
+async fn vuole_stabile(tcp: &TcpStream) -> bool {
+    let mut buf = [0u8; 64];
+    let fine = tokio::time::Instant::now() + Duration::from_millis(1500);
+    loop {
+        let n = match tokio::time::timeout_at(fine, tcp.peek(&mut buf)).await {
+            Ok(Ok(n)) => n,
+            _ => return false,
+        };
+        if n == 0 { return false; }
+        if n >= SEGNO_STABILE.len() { return &buf[..SEGNO_STABILE.len()] == SEGNO_STABILE; }
+        if !SEGNO_STABILE.starts_with(&buf[..n]) { return false; }
+        // ne è arrivato solo un pezzo: si aspetta il resto
+        if tokio::time::Instant::now() >= fine { return false; }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+}
+
 /// Apre 127.0.0.1:<porta> e porta all'host ogni connessione che ci arriva, finché `fermo` non si compie.
 pub async fn join(id: &str, porta: u16, voce: Arc<dyn Voce>, fermo: impl Future<Output = ()>) -> Result<()> {
     let remote: EndpointId = id.trim().parse().anyerr()?;
     let endpoint = Endpoint::bind(presets::N0).await?;
+    // Il canale stabile: un secondo endpoint che passa solo dai relay (niente UDP diretto). È più lento, ma
+    // il relay viaggia sulla porta 443 come il web: regge Wi-Fi ballerini, cambi di rete e firewall che
+    // bloccano l'UDP. Il server di gioco ci fa passare solo i messaggi piccoli e importanti (chat, dadi,
+    // segnalini…), doppi rispetto al collegamento normale: se uno dei due si inceppa, arrivano dall'altro.
+    // Si apre la prima volta che serve.
+    let stabile: Arc<tokio::sync::OnceCell<Endpoint>> = Arc::new(tokio::sync::OnceCell::new());
 
     let listen: SocketAddr = format!("127.0.0.1:{porta}").parse().anyerr()?;
     let listener = TcpListener::bind(listen).await.anyerr()?;
@@ -145,10 +173,19 @@ pub async fn join(id: &str, porta: u16, voce: Arc<dyn Voce>, fermo: impl Future<
         };
         let _ = tcp.set_nodelay(true);
         let ep = endpoint.clone();
+        let stabile = stabile.clone();
         let voce = voce.clone();
 
         tokio::spawn(async move {
-            voce.di("→ mi collego alla sessione…");
+            let ep = if vuole_stabile(&tcp).await {
+                match stabile.get_or_try_init(|| async { Endpoint::builder(presets::N0).clear_ip_transports().bind().await }).await {
+                    Ok(e) => { voce.di("→ apro il canale stabile (solo relay)…"); e.clone() }
+                    Err(e) => { voce.errore(&format!("Canale stabile non disponibile: {e}")); return; }
+                }
+            } else {
+                voce.di("→ mi collego alla sessione…");
+                ep
+            };
             let conn = match tokio::time::timeout(Duration::from_secs(30), ep.connect(remote, ALPN)).await {
                 Ok(Ok(c)) => c,
                 Ok(Err(e)) => { voce.errore(&format!("Non riesco a collegarmi: {e}")); return; }
@@ -169,6 +206,7 @@ pub async fn join(id: &str, porta: u16, voce: Arc<dyn Voce>, fermo: impl Future<
     }
 
     endpoint.close().await;
+    if let Some(e) = stabile.get() { e.close().await; }
     Ok(())
 }
 
