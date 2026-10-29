@@ -14,6 +14,7 @@
 'use strict';
 const http = require('http'), net = require('net'), fs = require('fs'), path = require('path'), crypto = require('crypto');
 const LUCE = require('../condiviso/luce-calcolo.js');
+const VERS = require('../condiviso/versioni.js');
 
 const MODE = (process.argv[2] || 'host').toLowerCase();
 const PORT = +(process.env.PORT || 4000);
@@ -409,7 +410,45 @@ function viewFor(c) {
     turni: turniPerChi(c)
   };
 }
-function pushWorld(c) { c.send({ t: 'world', world: viewFor(c) }); }
+// ======================= Versioni e differenze =======================
+// Ogni giocatore ha il suo mondo filtrato. Il server si ricorda, per gettone, l'ultimo mondo che gli ha
+// mandato (a pezzi: condiviso/versioni.js) e il suo numero; poi gli manda solo i pezzi cambiati
+// («delta», dalla versione N alla N+1), o niente se per lui non è cambiato niente. Il sistema di gioco, il
+// compendio e la chat vecchia viaggiano così solo al primo ingresso o quando cambiano davvero.
+// Il mondo intero si manda: al primo ingresso, se il browser non è alla versione che crediamo (glielo
+// chiede lui con «sync»), e quando cambiano i permessi (cambia anche la chat che può vedere).
+// Un browser vecchio, che non conosce le differenze, riceve il mondo intero come prima.
+const ultime = new Map();          // gettone → { ver, testi: Map(chiave → JSON) }
+function testoDi(v) {
+  if (v && (v === world.sistema || v === world.compendio)) {             // i due pezzi grossi: si contano una volta
+    if (!testoDi.cache.has(v)) testoDi.cache.set(v, JSON.stringify(v));
+    return testoDi.cache.get(v);
+  }
+  return JSON.stringify(v === undefined ? null : v);
+}
+testoDi.cache = new WeakMap();
+function pushWorld(c, piena) {
+  if (!c.token || c.pending) return;                                      // chi non è (ancora) entrato non riceve il mondo
+  const v = viewFor(c);
+  if (!c.delta) { c.send({ t: 'world', world: v }); return; }
+  const P = VERS.pezzi(v), testi = new Map();
+  for (const [k, x] of P) testi.set(k, testoDi(x));
+  const prec = ultime.get(c.token);
+  if (piena || !prec) {
+    const ver = (prec ? prec.ver : 0) + 1;
+    ultime.set(c.token, { ver, testi });
+    c.send({ t: 'world', world: v, ver });
+    return;
+  }
+  const set = {}, via = [];
+  let n = 0;
+  for (const [k, t] of testi) if (prec.testi.get(k) !== t) { set[k] = P.get(k); n++; }
+  for (const k of prec.testi.keys()) if (!testi.has(k)) via.push(k);
+  if (!n && !via.length) return;                                          // nessuna novità per lui
+  const ver = prec.ver + 1;
+  ultime.set(c.token, { ver, testi });
+  c.send({ t: 'delta', da: prec.ver, a: ver, set, via });
+}
 function pushWorldAll() { for (const c of clients) pushWorld(c); }
 
 let pushTimer = 0;
@@ -537,14 +576,15 @@ function handleIntent(c, m) {
         });
       }
       // il compendio che vedono i giocatori: l'elenco dei pacchetti (e per quelli della campagna l'hash del file)
+      // (si sostituisce solo se è cambiato davvero: così il server se ne accorge al volo e non lo rimanda)
       if (b.compendio && typeof b.compendio === 'object' && Array.isArray(b.compendio.pacchetti)) {
         const t = JSON.stringify(b.compendio);
-        if (t.length < 2000000) world.compendio = JSON.parse(t);
+        if (t.length < 2000000 && t !== testoDi(world.compendio)) world.compendio = JSON.parse(t);
       }
       // il sistema di gioco della campagna (regole e formule): lo usano anche i giocatori
       if (b.sistema && typeof b.sistema === 'object' && b.sistema.dati) {
         const t = JSON.stringify(b.sistema);
-        if (t.length < 400000) world.sistema = JSON.parse(t);
+        if (t.length < 400000 && t !== testoDi(world.sistema)) world.sistema = JSON.parse(t);
       }
       if (Array.isArray(b.sheets)) {
         // Il master aggiorna e aggiunge, ma non cancella: le schede si tolgono solo con sheet.del,
@@ -759,6 +799,7 @@ function handleIntent(c, m) {
       if (!msg) return;
       if (c.role !== 'master' && msg.byId !== c.token) return deny(c, m.op, 'puoi cancellare solo i tuoi messaggi');
       world.chat = world.chat.filter(x => x !== msg);
+      chatTolti.push(msg.id); if (chatTolti.length > 50) chatTolti.shift();
       scheduleSave();
       for (const k of clients) k.send({ t: 'chat.del', id: msg.id });
       panelPush({ t: 'chat.del', id: msg.id });
@@ -927,7 +968,8 @@ function applyPerm(m) {
     c.name = rec.name || c.name;
     c.send({ t: 'you', you: { id: c.id, token: c.token, name: c.name, role: c.role, perms: permsFor(c) } });
   }
-  scheduleSave(); sendPlayers(); pushWorldAll();
+  // a lui il mondo intero: con i permessi cambia anche la chat che può vedere
+  scheduleSave(); sendPlayers(); for (const c of clients) pushWorld(c, c.token === m.token);
   return true;
 }
 
@@ -973,6 +1015,10 @@ function onMessage(c, raw) {
     rec.lastSeen = Date.now();
     c.name = rec.name; c.role = rec.role;
     c.client = str(m.client, 40) || '?';
+    // il browser sa ricevere le differenze? a che versione del mondo è rimasto? qual è l'ultimo messaggio di chat che ha?
+    c.delta = m.delta === 1;
+    c.verCliente = Number.isInteger(m.ver) ? m.ver : 0;
+    c.chatDa = str(m.chatDa, 40);
     c.since = Date.now();
     c.needName = !want;
 
@@ -1010,6 +1056,8 @@ function onMessage(c, raw) {
     return;
   }
 
+  if (m.t === 'sync') { pushWorld(c, true); return; }             // il browser ha perso il filo: tutto da capo
+
   if (m.t === 'telemetry') {                                      // che cosa sta guardando
     c.viewScene = str(m.scene, 60) || null;
     c.viewRect = m.view && Number.isFinite(+m.view.x) ? { x: Math.round(+m.view.x), y: Math.round(+m.view.y), s: +(+m.view.s).toFixed(2) } : null;
@@ -1040,15 +1088,33 @@ function shutOut(c, reason) {
   c.send({ t: 'bye', reason });
   setTimeout(() => { try { c.close(); } catch {} }, 150);
 }
+// I messaggi di chat cancellati di recente: chi rientra senza ricaricare il mondo li toglie anche da sé.
+const chatTolti = [];
 function sendWelcome(c) {
   c.pending = false;
   const rec = recOf(c.token);
   rec.firstSeenDone = true;
-  c.send({
-    t: 'welcome', needName: !!c.needName,
-    you: { id: c.id, token: c.token, name: c.name, role: c.role, perms: permsFor(c) },
-    world: viewFor(c)
-  });
+  const you = { id: c.id, token: c.token, name: c.name, role: c.role, perms: permsFor(c) };
+  // Rientra dopo una caduta con il mondo che gli avevamo mandato: niente mondo intero, solo quello che è
+  // cambiato nel frattempo (e la chat che si è perso).
+  const prec = ultime.get(c.token);
+  const chatV = world.chat || [], i = c.chatDa ? chatV.findIndex(x => x.id === c.chatDa) : -1;
+  // (senza un messaggio da cui ripartire vuol dire che non ne aveva nessuno: gli si mandano tutti)
+  if (c.delta && prec && c.verCliente === prec.ver && (i >= 0 || !c.chatDa)) {
+    c.send({ t: 'welcome', needName: !!c.needName, you, riprendi: true,
+      chatDopo: chatV.slice(i + 1).slice(-250).map(m => chatFor(c, m)).filter(Boolean), chatVia: chatTolti.slice() });
+    pushWorld(c);
+  } else {
+    const w = viewFor(c);
+    let ver;
+    if (c.delta) {
+      const P = VERS.pezzi(w), testi = new Map();
+      for (const [k, x] of P) testi.set(k, testoDi(x));
+      ver = (prec ? prec.ver : 0) + 1;
+      ultime.set(c.token, { ver, testi });
+    }
+    c.send({ t: 'welcome', needName: !!c.needName, you, world: w, ver });
+  }
   logAction(c, 'ingresso', true, c.role);
   scheduleSave(); sendPlayers();
 }
@@ -1204,6 +1270,14 @@ function bridgeConnect() {
       if (msg.t === 'asset.data' || msg.t === 'asset.miss') { bridgeAsset(msg); continue; }   // roba nostra
       if (msg.t === 'beat') { bridgeSend({ t: 'pong' }); continue; }   // il ponte è vivo anche senza browser
       if (msg.t === 'bye') lastHello = null;                // allontanato: non lo si ripresenta da soli
+      // dove è arrivato il browser (versione del mondo, ultimo messaggio di chat): se il tubo si riapre
+      // lo ripresentiamo da lì, e l'host gli manda solo quello che si è perso
+      else if (lastHello) {
+        if ((msg.t === 'world' || msg.t === 'welcome') && msg.ver) lastHello.ver = msg.ver;
+        if (msg.t === 'delta') lastHello.ver = msg.a;
+        const ch = msg.t === 'chat' ? [msg.msg] : msg.world && msg.world.chat || msg.chatDopo || [];
+        if (ch.length && ch[ch.length - 1] && ch[ch.length - 1].id) lastHello.chatDa = ch[ch.length - 1].id;
+      }
       for (const c of clients) c.send(msg);                 // tutto il resto va al browser
     }
   });

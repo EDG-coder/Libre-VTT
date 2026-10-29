@@ -89,7 +89,8 @@ function netConnect() {
   try { ws = new WebSocket('ws://127.0.0.1:' + NET.port + '/ws'); } catch { return netRetry(); }
   NET.ws = ws;
   ws.onopen = () => {
-    ws.send(JSON.stringify({ t: 'hello', token: netToken(), name: netName(), client: 'LIBRE VTT 2' }));
+    // delta: sappiamo ricevere solo i pezzi cambiati; ver e chatDa: dove eravamo rimasti (per rientrare senza ricaricare tutto)
+    ws.send(JSON.stringify({ t: 'hello', token: netToken(), name: netName(), client: 'LIBRE VTT 2', delta: 1, ver: NET.ver || 0, chatDa: NET.chatUltimo || '' }));
   };
   ws.onmessage = e => {
     if (NET.ws !== ws) return;
@@ -164,7 +165,8 @@ function netHandle(m) {
         : 'Sei collegato come giocatore (' + m.you.name + ').', 'live');
       if (back) setTimeout(() => { if (netBar.className === 'live') netSayHide(); }, 4000);
       applyRole();
-      if (m.world) applyWorld(m.world);
+      if (m.world) netMondoPieno(m.world, m.ver);
+      else if (m.riprendi) netRiprendi(m);       // rientrato dopo una caduta: solo quello che ci si è persi
       if (isMaster()) netPushBoard();            // da adesso il server ha il mondo del master
       if (m.needName) askName('Scegli il nome con cui ti vedranno gli altri.');
       return;
@@ -188,7 +190,8 @@ function netHandle(m) {
     }
     case 'rename': askName(m.reason || 'Il master ti chiede di cambiare nome.'); return;
     case 'notice': netSay(m.text || '', m.kind || 'warn'); return;
-    case 'world': applyWorld(m.world); return;
+    case 'world': netMondoPieno(m.world, m.ver); return;
+    case 'delta': netDelta(m); return;
     case 'players': NET.players = m.list || []; return;
     case 'chat': netChat(m.msg); return;
     case 'chat.del': netFromServer = true; try { deleteChat(m.id); } finally { netFromServer = false; } return;
@@ -314,7 +317,38 @@ async function netEnsureWorldAssets(scenes2, sheets2) {
   if (jobs.length) await Promise.all(jobs);
 }
 
-// ---------- Il mondo che arriva dal server ----------
+// ---------- Il mondo che arriva dal server: intero o a pezzi (condiviso/versioni.js) ----------
+NET.ver = 0;          // la versione del mondo che abbiamo (0: nessuna, o un server che manda sempre tutto)
+NET.parti = null;     // il mondo a pezzi, come lo tiene il server
+NET.chatUltimo = '';  // l'ultimo messaggio di chat arrivato dal server
+/** Il mondo fatto dai pezzi. Scene e schede sono copie: chi le tocca qui non sporca i pezzi. */
+function netMondoDaiPezzi() {
+  const w = VERSIONI.ricomponi(NET.parti);
+  w.scenes = structuredClone(w.scenes); w.sheets = structuredClone(w.sheets);
+  return w;
+}
+function netMondoPieno(w, ver) {
+  if (Array.isArray(w.chat) && w.chat.length) NET.chatUltimo = w.chat[w.chat.length - 1].id || NET.chatUltimo;
+  if (!ver || typeof VERSIONI === 'undefined') { NET.ver = 0; NET.parti = null; return applyWorld(w); }
+  NET.ver = ver;
+  NET.parti = VERSIONI.pezzi(w);
+  const pronto = netMondoDaiPezzi();
+  pronto.chat = w.chat;
+  return applyWorld(pronto);
+}
+function netDelta(m) {
+  // non siamo alla versione da cui parte la differenza (un pezzo perso per strada): ci si fa mandare tutto
+  if (!NET.parti || m.da !== NET.ver) { netSend({ t: 'sync' }); return; }
+  const toccati = VERSIONI.applica(NET.parti, m);
+  NET.ver = m.a;
+  return applyWorld(netMondoDaiPezzi(), toccati);
+}
+/** Rientrati con il mondo già giusto: si aggiunge la chat persa e si tolgono i messaggi cancellati nel frattempo. */
+function netRiprendi(m) {
+  for (const msg of m.chatDopo || []) if (msg && !chat.some(x => x.id === msg.id)) netChat(msg);
+  for (const id of m.chatVia || []) if (chat.some(x => x.id === id)) { netFromServer = true; try { deleteChat(id); } finally { netFromServer = false; } }
+}
+
 function normScene(s) {
   return {
     id: s.id, name: s.name || 'Scena', type: s.type === 'cinematic' ? 'cinematic' : 'map',
@@ -324,23 +358,26 @@ function normScene(s) {
   };
 }
 
-async function applyWorld(w) {
+/** toccati: i campi del mondo cambiati (da una differenza); senza, si ripassa tutto. */
+async function applyWorld(w, toccati) {
+  const t = k => !toccati || toccati.has(k);
   NET.world = w;
   NET.applying = true;
   try {
-    mergeSheets(w.sheets, w.schedeTolte);
-    if (w.notes && typeof noteDalServer === 'function') noteDalServer(w.notes, false);
-    if (w.sistema && typeof sistemaDalMaster === 'function') sistemaDalMaster(w.sistema);
-    if (w.compendio && typeof compendioDalMaster === 'function') compendioDalMaster(w.compendio);
+    if (t('sheets') || t('schedeTolte')) mergeSheets(w.sheets, w.schedeTolte);
+    if (w.notes && t('notes') && typeof noteDalServer === 'function') noteDalServer(w.notes, false);
+    if (w.sistema && t('sistema') && typeof sistemaDalMaster === 'function') sistemaDalMaster(w.sistema);
+    if (w.compendio && t('compendio') && typeof compendioDalMaster === 'function') compendioDalMaster(w.compendio);
     if (Array.isArray(w.chat)) {
       chat = w.chat;
       if (typeof renderChat === 'function') renderChat();
     }
     settings.publicScene = w.publicScene || null;
     if (!isMaster()) settings.fogColor = w.fogColor || 'auto';     // il colore della nebbia lo decide chi conduce
-    if (!isMaster() && typeof turniDaMondo === 'function') turniDaMondo(w.turni);
+    if (!isMaster() && t('turni') && typeof turniDaMondo === 'function') turniDaMondo(w.turni);
 
-    if (isMaster()) {
+    if (!t('scenes') && !t('active')) { /* le scene non sono cambiate */ }
+    else if (isMaster()) {
       // Il mondo del master è il suo: dal server prende solo quello che hanno fatto gli altri.
       mergeIntoCurrent(w);
     } else if (Array.isArray(w.scenes) && w.scenes.length) {
@@ -578,6 +615,7 @@ var addChat = (prev => function (m) {
   return prev(m);
 })(addChat);
 function netChat(msg) {
+  if (msg && msg.id) NET.chatUltimo = msg.id;
   netFromServer = true;
   try { addChat(msg); } finally { netFromServer = false; }
   // il proprio tiro, tornato dal server: il risultato anche sotto ai dadi
