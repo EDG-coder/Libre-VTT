@@ -47,7 +47,56 @@ function isMaster() { return !netAs() || (NET.me && NET.me.role === 'master'); }
 function can(p) { return !netAs() || !NET.me ? true : !!(NET.me.perms && NET.me.perms[p]); }
 
 const netSend = o => { try { NET.ws && NET.ws.readyState === 1 && NET.ws.send(JSON.stringify(o)); } catch {} };
-const intent = (op, extra) => { if (NET.on) netSend({ t: 'intent', op, ...extra }); };
+// ---------- La coda: quello che si fa senza collegamento non si perde ----------
+// Ogni intento ha un numero (q) e resta in coda finché il server non risponde «ok» (fatto, o rifiutato).
+// Se il collegamento cade, quello che c'è in coda si rimanda al ritorno, in ordine; il server riconosce i
+// doppioni dal numero e li fa una volta sola. I movimenti dello stesso segnalino si fondono in uno (vale
+// l'ultimo), e così i salvataggi della stessa scheda. Il ping, la prova del percorso durante il trascinamento
+// e i pezzi delle immagini non aspettano: senza collegamento non partono (le immagini hanno la loro attesa).
+NET.coda = []; NET.n = 0;
+NET.sessione = [...crypto.getRandomValues(new Uint8Array(4))].map(b => b.toString(16).padStart(2, '0')).join('');
+const NET_SUBITO = new Set(['percorso.prova', 'ping', 'asset.put', 'asset.have', 'asset.get']);
+function netChiave(op, x) {
+  switch (op) {
+    case 'token.move': return 'mv:' + x.scene + ':' + x.id;
+    case 'scatta': return 'sc:' + x.scene + ':' + x.id;
+    case 'sheet.save': return 'sh:' + x.id;
+    case 'board': return 'board';
+    case 'music': return 'music';
+    case 'notes.save': return 'notes';
+    case 'fog.set': return 'fog:' + x.scene;
+    default: return null;
+  }
+}
+const netAperto = () => !!(NET.on && NET.ws && NET.ws.readyState === 1);
+function intent(op, extra) {
+  if (NET_SUBITO.has(op)) { if (NET.on) netSend({ t: 'intent', op, ...extra }); return; }
+  if (!netAs()) return;                                       // da soli: non c'è nessun server
+  const x = extra || {}, k = netChiave(op, x);
+  if (k) NET.coda = NET.coda.filter(e => e.k !== k);
+  const e = { n: ++NET.n, q: NET.sessione + '.' + NET.n, op, x, k };
+  NET.coda.push(e);
+  if (NET.coda.length > 500) NET.coda.splice(0, NET.coda.length - 500);
+  if (netAperto() && !NET.hostDown) { netSend({ t: 'intent', op, q: e.q, ...x }); e.via = true; }
+  else {
+    if (netAperto()) { netSend({ t: 'intent', op, q: e.q, ...x }); e.via = true; }   // il ponte la tiene da parte
+    netAvvisaCoda();
+  }
+}
+const netInAttesa = () => NET.coda.length;
+/** Mentre si è scollegati: quante cose aspettano di partire. */
+function netAvvisaCoda() {
+  if (NET.on && !NET.hostDown) return;
+  netSay(tr('Sei scollegato: {n} cose in attesa, partono appena torna il collegamento.', { n: netInAttesa() }), 'retry', { label: tr('Smetti'), fn: netDisconnect });
+}
+/** Rientrati: si rimanda tutto quello che non ha ancora avuto risposta, in ordine. */
+function netRimanda() {
+  const n = NET.coda.length;
+  for (const e of NET.coda) { netSend({ t: 'intent', op: e.op, q: e.q, ...e.x }); e.via = true; }
+  return n;
+}
+/** Uno spostamento di questo segnalino aspetta ancora la risposta del server: la posizione giusta è quella di qui. */
+const netMossaInAttesa = id => NET.coda.some(e => e.op === 'token.move' && e.x.id === id);
 
 // ---------- Avviso in alto ----------
 const netBar = mk('div', '', '<span class="nbDot"></span><span class="nbTxt"></span><button type="button" class="nbX" aria-label="Chiudi">×</button>');
@@ -143,7 +192,8 @@ function netRetry() {
   }
   const wait = NET.everOn ? Math.min(5000, 500 * NET.tries) : Math.min(8000, 700 * NET.tries);
   if (NET.retrying) {
-    netSay(`Collegamento perso: mi ricollego da solo… (tentativo ${NET.tries})`, 'retry',
+    netSay(netInAttesa() ? tr('Collegamento perso: mi ricollego da solo… (tentativo {n}, {k} cose in attesa)', { n: NET.tries, k: netInAttesa() })
+      : `Collegamento perso: mi ricollego da solo… (tentativo ${NET.tries})`, 'retry',
       { label: 'Smetti', fn: netDisconnect });
   }
   clearTimeout(netTimer);
@@ -178,12 +228,15 @@ function netHandle(m) {
   switch (m.t) {
     case 'beat': netSend({ t: 'pong' }); return;
     case 'eco': clearTimeout(NET._eco); NET._eco = 0; return;   // c'è
+    case 'ok': NET.coda = NET.coda.filter(e => e.q !== m.q); return;   // fatto (o rifiutato): esce dalla coda
     case 'welcome': {
       const back = NET.retrying || NET.hostDown;
       NET.on = true; NET.everOn = true; NET.me = m.you;
       NET.retrying = false; NET.hostDown = false; NET.tries = 0; NET.pending = false;
       try { localStorage.setItem('uffa-token', m.you.token); } catch {}
-      if (back) netSay('Ricollegato: sei di nuovo nella sessione.', 'live');
+      const rimandate = netRimanda();
+      if (back && rimandate) netSay(tr('Ricollegato: ho mandato le {n} cose fatte mentre eri scollegato.', { n: rimandate }), 'live');
+      else if (back) netSay('Ricollegato: sei di nuovo nella sessione.', 'live');
       else netSay(m.you.role === 'master'
         ? 'Sei collegato come master: la sessione è tua.'
         : 'Sei collegato come giocatore (' + m.you.name + ').', 'live');
@@ -232,6 +285,7 @@ function netHandle(m) {
       if (typeof musicApply === 'function' && m.state) musicApply(m.state);
       return;
     case 'denied':
+      if (m.q) NET.coda = NET.coda.filter(e => e.q !== m.q);
       netSay(tr('Non si può:') + ' ' + tr(m.reason || 'il master non te l\'ha permesso.'), 'warn');
       // un movimento rifiutato (un muro, troppo lontano): il segnalino torna indietro piano
       if (m.op === 'token.move' && NET.ultimoMosso && NET.ultimoMosso.isConnected) {
@@ -457,7 +511,8 @@ function aggiornaSulPosto(sc) {
       continue;
     }
     if (!el) { creaDaDati(p); continue; }
-    const muove = el === activeEl && mode;                // lo sta spostando chi guarda: si lascia stare
+    // lo sta spostando chi guarda, o lo ha appena spostato e il server non ha ancora risposto: si lascia stare
+    const muove = (el === activeEl && mode) || netMossaInAttesa(p.id);
     if (!muove) Object.assign(el.style, { left: p.l + 'px', top: p.t + 'px', width: p.w + 'px', height: p.h + 'px' });
     if (p.z && el.dataset.layer !== 'map') el.style.zIndex = p.z;
     if (!p.shape) datiSuSegnalino(el, p);
@@ -581,7 +636,7 @@ async function netPushBoard() {
 }
 
 function netPushPlayerChanges() {
-  if (!NET.on || isMaster() || NET.applying || !cur) return;
+  if (!netAs() || isMaster() || NET.applying || !cur) return;
   const seen = new Set();
   for (const el of world.querySelectorAll('.photo')) {
     const id = el.dataset.pid;
@@ -620,26 +675,35 @@ var applyView = (prev => function () {
 // Salvataggio della mappa: per il master è anche l'invio al server.
 var scheduleBoardSave = (prev => function () {
   prev();
-  if (!NET.on || NET.applying) return;
+  if (!netAs() || NET.applying) return;                    // anche scollegati per un momento: va in coda
   clearTimeout(NET._pushT);
   NET._pushT = setTimeout(() => { isMaster() ? netPushBoard() : netPushPlayerChanges(); }, 160);
 })(scheduleBoardSave);
 
 // Chat e tiri: quando c'è il server, li scrive lui.
 var addChat = (prev => function (m) {
-  if ((NET.retrying || NET.hostDown) && !netFromServer && (m.kind === 'text' || m.kind === 'rule')) {
-    netSay('Sei scollegato: il messaggio non è partito. Riprova appena torna il collegamento.', 'warn');
+  if (netAs() && !netFromServer && (m.kind === 'text' || m.kind === 'rule')) {
+    const op = m.kind === 'text' ? 'chat' : 'rule';
+    const x = m.kind === 'text' ? (m.to ? { text: m.text, to: m.to } : { text: m.text }) : { title: m.title, text: m.text };
+    const via = NET.on && !NET.hostDown;
+    intent(op, x);
+    if (via) return;
+    // scollegati: il messaggio aspetta in coda; intanto lo si vede, in grigio, finché non torna dal server
+    const id = 'attesa-' + NET.n;
+    prev({ ...m, id, by: NET.me && NET.me.name, byId: NET.me && NET.me.token, inAttesa: true });
+    chatLog.querySelectorAll('.msg').forEach(el => { if (el.dataset.id === id) el.classList.add('inAttesa'); });
     return;
   }
-  if (NET.on && !netFromServer) {
-    if (m.kind === 'text') return intent('chat', m.to ? { text: m.text, to: m.to } : { text: m.text });
-    if (m.kind === 'rule') return intent('rule', { title: m.title, text: m.text });
-    if (m.kind === 'roll') return;               // i tiri passano da rollExpr / rollDice
-  }
+  if (NET.on && !netFromServer && m.kind === 'roll') return;   // i tiri passano da rollExpr / rollDice
   return prev(m);
 })(addChat);
 function netChat(msg) {
   if (msg && msg.id) NET.chatUltimo = msg.id;
+  // il proprio messaggio scritto da scollegati è arrivato davvero: via la copia grigia
+  if (msg && NET.me && msg.byId === NET.me.token && (msg.kind === 'text' || msg.kind === 'rule')) {
+    const grigio = chat.find(x => x.inAttesa && x.text === msg.text);
+    if (grigio) { netFromServer = true; try { deleteChat(grigio.id); } finally { netFromServer = false; } }
+  }
   netFromServer = true;
   try { addChat(msg); } finally { netFromServer = false; }
   // il proprio tiro, tornato dal server: il risultato anche sotto ai dadi
@@ -679,7 +743,7 @@ if (typeof musicSet === 'function') {
 
 // Schede: quando c'è il server è lui a tenerle. Si manda quella che si sta scrivendo.
 addEventListener('input', e => {
-  if (!NET.on || isMaster() || NET.applying) return;
+  if (!netAs() || isMaster() || NET.applying) return;
   const w = e.target.closest && e.target.closest('.sheetWin');
   if (!w || !w._sheet) return;
   const s = w._sheet;

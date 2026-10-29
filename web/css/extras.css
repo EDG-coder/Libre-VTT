@@ -892,3 +892,7 @@ body:not(.net-on) .soloRete { display: none !important; }
 #luceBox .visParty { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
 #luceBox .visParty small { opacity: .7; }
 #luceSegni .lStanza { fill: rgba(255, 93, 143, .08); stroke: #ff5d8f; }
+
+/* Un messaggio scritto da scollegati: aspetta in coda, in grigio, finché non torna dal server */
+.msg.inAttesa { opacity: .55; }
+.msg.inAttesa::after { content: ' ⏳'; }

@@ -966,6 +966,9 @@ Object.assign(window.LIBRE_LINGUE.en, {
 Object.assign(window.LIBRE_LINGUE.en, {
 "Nessun server di gioco su questa porta: stai giocando da solo.": "No game server on this port: you're playing alone.",
 "Collegamento perso: mi ricollego da solo… (tentativo {n})": "Connection lost: reconnecting by myself… (attempt {n})",
+"Collegamento perso: mi ricollego da solo… (tentativo {n}, {k} cose in attesa)": "Connection lost: reconnecting by myself… (attempt {n}, {k} things waiting)",
+"Sei scollegato: {n} cose in attesa, partono appena torna il collegamento.": "You're disconnected: {n} things waiting, they'll go out as soon as the connection is back.",
+"Ricollegato: ho mandato le {n} cose fatte mentre eri scollegato.": "Reconnected: I sent the {n} things you did while disconnected.",
 "Smetti": "Stop",
 "Ti sei scollegato dalla sessione.": "You disconnected from the session.",
 "Ricollegati": "Reconnect",

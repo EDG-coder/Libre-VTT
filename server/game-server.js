@@ -532,7 +532,7 @@ function addChat(m) {
 
 // ======================= Le intenzioni dei clienti =======================
 function deny(c, op, why) {
-  c.send({ t: 'denied', op, reason: why });
+  c.send({ t: 'denied', op, reason: why, q: c.qOra || undefined });
   logAction(c, op, false, why);
 }
 const str = (v, n = 200) => String(v == null ? '' : v).slice(0, n);
@@ -1065,12 +1065,21 @@ function onMessage(c, raw) {
     return;
   }
   if (m.t === 'intent') {
+    // Con il suo numero (q) l'intento si fa una volta sola: il browser lo rimanda finché non ha la conferma
+    // («ok»), quindi dopo una caduta (o arrivato da due strade) può arrivare di nuovo.
+    const q = typeof m.q === 'string' && m.q.length <= 40 ? m.q : null;
+    if (q && giaFatto(c.token, q)) { c.send({ t: 'ok', q }); return; }
     const rec = recOf(c.token);
     c.ops = (c.ops || 0) + 1; c.lastOp = str(m.op, 40); c.lastAt = Date.now();
-    if (rec.frozen && MUTATING.has(m.op)) { deny(c, m.op, 'sei congelato: puoi guardare, non toccare'); logAction(c, m.op, false, 'congelato'); return; }
-    if (session.paused && c.role !== 'master' && MUTATING.has(m.op)) { deny(c, m.op, 'la sessione è in pausa'); logAction(c, m.op, false, 'in pausa'); return; }
-    if (rec.muted && (m.op === 'chat' || m.op === 'rule')) { deny(c, m.op, 'sei stato silenziato'); logAction(c, m.op, false, 'silenziato'); return; }
-    try { handleIntent(c, m); } catch (e) { console.error('intento', m.op, e.message); }
+    c.qOra = q;
+    try {
+      if (rec.frozen && MUTATING.has(m.op)) { deny(c, m.op, 'sei congelato: puoi guardare, non toccare'); logAction(c, m.op, false, 'congelato'); }
+      else if (session.paused && c.role !== 'master' && MUTATING.has(m.op)) { deny(c, m.op, 'la sessione è in pausa'); logAction(c, m.op, false, 'in pausa'); }
+      else if (rec.muted && (m.op === 'chat' || m.op === 'rule')) { deny(c, m.op, 'sei stato silenziato'); logAction(c, m.op, false, 'silenziato'); }
+      else handleIntent(c, m);
+    } catch (e) { console.error('intento', m.op, e.message); }
+    c.qOra = null;
+    if (q) c.send({ t: 'ok', q });
     return;
   }
   if (m.t === 'name') {
@@ -1083,6 +1092,16 @@ function onMessage(c, raw) {
   }
 }
 const hasMaster = () => [...clients].some(c => c.role === 'master');
+// Gli intenti già fatti, per gettone (gli ultimi 2000).
+const fatti = new Map();
+function giaFatto(token, q) {
+  let f = fatti.get(token);
+  if (!f) fatti.set(token, f = { set: new Set(), lista: [] });
+  if (f.set.has(q)) return true;
+  f.set.add(q); f.lista.push(q);
+  if (f.lista.length > 2000) f.set.delete(f.lista.shift());
+  return false;
+}
 
 function shutOut(c, reason) {
   logAction(c, 'ingresso', false, reason);
@@ -1231,7 +1250,7 @@ function startLinkServer() {
 
 // ======================= Modo «join»: solo un ponte =======================
 // Il browser parla con noi; noi parliamo con uffa-link, che parla con l'host.
-let bridge = null, bridgeBuf = '', bridgeQueue = [];
+let bridge = null, bridgeBuf = '', bridgeQueue = [], bridgeQueueBytes = 0;
 // Il saluto dell'ultimo browser: se il tubo cade e si riapre, l'host vede una connessione
 // nuova e non sa chi sia. Glielo ripresentiamo noi, così il giocatore rientra da solo,
 // con lo stesso gettone (quindi stesso nome, stessi permessi, stesse schede).
@@ -1262,6 +1281,7 @@ function bridgeConnect() {
     // (prima la coda partiva lì dentro e andava persa).
     if (!sock.pronto) {
       sock.pronto = true;
+      bridgeQueueBytes = 0;
       for (const line of bridgeQueue.splice(0)) {
         if (/^\{"t":"(hello|pong|eco)"/.test(line)) continue;   // via i saluti e le risposte ai battiti vecchi
         sock.write(line);
@@ -1364,7 +1384,9 @@ function bridgeAsset(msg) {
 function bridgeSend(obj) {
   const line = JSON.stringify(obj) + '\n';
   if (bridge && !bridge.destroyed && bridge.readyState === 'open' && bridge.pronto) bridge.write(line);
-  else if (bridgeQueue.length < 200) bridgeQueue.push(line);
+  // mentre il tubo è giù si tiene da parte (fino a 8 MB); quello che non ci sta lo rimanda il browser,
+  // che tiene le sue cose finché l'host non le conferma
+  else if (bridgeQueueBytes + line.length < 8 * 1024 * 1024) { bridgeQueue.push(line); bridgeQueueBytes += line.length; }
 }
 
 // ======================= Pannello di controllo =======================
