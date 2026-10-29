@@ -1730,3 +1730,9 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "quella porta non la vedi": "you can't see that door",
 "porta sconosciuta": "unknown door",
 });
+
+// 3.6.2 — fase 1
+Object.assign(window.LIBRE_LINGUE.en, {
+"Nascondi le tre caselle": "Hide the three boxes",
+"Mostra le tre caselle": "Show the three boxes",
+});

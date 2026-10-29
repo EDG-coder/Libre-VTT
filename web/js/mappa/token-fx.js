@@ -81,7 +81,8 @@
       `<input type="text" inputmode="text" enterkeyhint="done" autocomplete="off" spellcheck="false" data-i="${i}"></label>`).join('')}</div>` +
       `<div class="thFx" role="group" aria-label="Effetti">${EFFETTI.map(([k, nome, col, forma]) =>
         `<button type="button" data-fx="${k}" title="${nome}" aria-label="${nome}" aria-pressed="false"><span class="tfxD ${forma}" style="--c:${col}"></span></button>`).join('')}` +
-      `<button type="button" data-x="1" title="X rossa sul segnalino" aria-label="X rossa sul segnalino" aria-pressed="false"><span class="thX">✕</span></button></div>`;
+      `<button type="button" data-x="1" title="X rossa sul segnalino" aria-label="X rossa sul segnalino" aria-pressed="false"><span class="thX">✕</span></button>` +
+      `<button type="button" data-cas="1" class="thCasBtn" aria-pressed="true"><span class="thTre"><i class="g"></i><i class="r"></i><i class="b"></i></span></button></div>`;
     document.body.appendChild(d);
     d.addEventListener('pointerdown', e => e.stopPropagation());
     d.addEventListener('mousedown', e => e.stopPropagation());
@@ -94,6 +95,9 @@
         if (nuovi.length) el.dataset.fx = nuovi.join(','); else delete el.dataset.fx;
       } else if (b.dataset.x) {
         if (el.dataset.crossed) delete el.dataset.crossed; else el.dataset.crossed = '1';
+      } else if (b.dataset.cas) {                     // le tre caselle: si mostrano o no (preferenza di chi conduce, su questo dispositivo)
+        casellePref(!casellePref());
+        hudDisegna(); return;
       }
       disegnaFx(el); hudDisegna(); scheduleBoardSave();
     });
@@ -120,9 +124,21 @@
     inp.value = vals[i] == null ? '' : String(vals[i]);
     scheduleBoardSave();
   }
+  // le tre caselle verde, rossa e blu sopra il segnalino: chi conduce le può nascondere (resta la riga degli effetti)
+  function casellePref(v) {
+    try {
+      if (v === undefined) return localStorage.getItem('libre-tre-caselle') !== '0';
+      localStorage.setItem('libre-tre-caselle', v ? '1' : '0');
+    } catch {}
+    return v !== false;
+  }
   window.hudDisegna = function (forza) {
     const d = hud.box, el = hud.el;
     if (!d || !el) return;
+    const conCaselle = casellePref();
+    d.classList.toggle('senzaCaselle', !conCaselle);
+    const cb = d.querySelector('[data-cas]'), t = tr(conCaselle ? 'Nascondi le tre caselle' : 'Mostra le tre caselle');
+    cb.setAttribute('aria-pressed', String(conCaselle)); cb.title = t; cb.setAttribute('aria-label', t);
     const vals = leggiVals(el), fx = leggiFx(el), lab = (typeof settings !== 'undefined' && settings.boxLabels) || [];
     d.querySelectorAll('.thCas').forEach((c, i) => {
       const nome = lab[i] || '', inp = c.querySelector('input');

@@ -845,3 +845,9 @@ body.net-player #caselleSect { display: none; }
 /* danni di più tipi in un tiro solo: il totale di ciascuno */
 .msg.roll .rParti { display: block; margin-top: 3px; font-size: 14px; color: var(--text); }
 .msg.roll .rParti b { font-size: 17px; }
+/* le tre caselle sopra il segnalino si possono nascondere (l'interruttore sta in fondo alla riga degli effetti) */
+#tokHud.senzaCaselle .thCaselle { display: none; }
+.thTre { display: flex; gap: 2px; }
+.thTre i { width: 6px; height: 12px; border-radius: 2px; }
+.thTre i.g { background: #2ee66b; } .thTre i.r { background: #ff4d4d; } .thTre i.b { background: #3d7bff; }
+.thFx .thCasBtn { margin-left: 4px; }
