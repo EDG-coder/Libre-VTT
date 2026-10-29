@@ -333,7 +333,8 @@
     const fuori = (x, y) => x < b.x || y < b.y || x > b.x + b.w || y > b.y + b.h;
     const cheb = Math.max(Math.abs(bx - ax), Math.abs(by - ay)) / cs;
     if (fuori(ax, ay) || fuori(bx, by) || cols * rows > 250000) {          // fuori dalla griglia: la linea retta
-      return muri.some(w => taglia(w, ax, ay, bx, by)) ? null : { caselle: Math.round(cheb), punti: [ax, ay, bx, by] };
+      // (anche qui conta il massimo: altrimenti bastava portarlo fuori dalla mappa per andare lontano quanto si vuole)
+      return muri.some(w => taglia(w, ax, ay, bx, by)) || Math.round(cheb) > lim ? null : { caselle: Math.round(cheb), punti: [ax, ay, bx, by] };
     }
     const cella0 = (x, y) => [Math.min(cols - 1, Math.floor((x - b.x) / cs)), Math.min(rows - 1, Math.floor((y - b.y) / cs))];
     const [c0, r0] = cella0(ax, ay), [c1, r1] = cella0(bx, by);
