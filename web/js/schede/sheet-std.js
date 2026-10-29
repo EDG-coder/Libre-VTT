@@ -162,8 +162,9 @@ function stdPage1() {
 
   h += box(222, 260, 44, 46, '', 'sBox') + inp('fatigue', 227, 266, 36, 33, 'sScore');
   h += lab('AFFATICAMENTO', 216, 300, 56, 'c', 'sNano');
-  h += box(274, 260, 50, 46, '', 'sBox') + chk('darkv', 280, 263, 8) + lab('SCUROVISIONE', 289, 264, 36, 'l', 'sNano');
-  h += inp('vision', 282, 275, 36, 25, 'sScore') + lab('VISIONE', 274, 300, 50, 'c', 'sNano');
+  // scurovisione: un campo che si scrive come si vuole («60 ft», «18 m», «no»); sotto, la visione normale
+  h += box(274, 260, 50, 46, '', 'sBox') + lab('SCUROVISIONE', 274, 262, 50, 'c', 'sNano') + inp('scuroV', 277, 267, 44, 12, 'sCell scuroStd');
+  h += inp('vision', 277, 283, 44, 15, 'sCell') + lab('VISIONE', 274, 300, 50, 'c', 'sNano');
   h += box(330, 260, 48, 46, '', 'sBox') + inp('speed', 337, 266, 36, 33, 'sScore');
   h += lab('VELOCITÀ', 330, 300, 48, 'c', 'sNano');
 

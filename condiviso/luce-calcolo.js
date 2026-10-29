@@ -115,19 +115,36 @@
     return on;
   }
 
-  /** Scurovisione dalla scheda, in caselle (0 = niente). Casella «Scurovisione», campo Visione o tratti. */
-  function scurovisione(f) {
+  /**
+   * Una distanza scritta come viene: «60», «60 ft», «18 m», «scurovisione 120», «12 caselle», «no».
+   * Senza unità vale quella della campagna (unita: 'ft' o 'm', come il righello). → { caselle, ok }
+   * (ok = false se non si capisce: chi scrive vede un avviso sotto il campo).
+   */
+  function leggiDistanza(testo, unita) {
+    const t = String(testo == null ? '' : testo).trim().toLowerCase();
+    if (!t || /^(no|nessuna|niente|none|-|—|0)$/.test(t)) return { caselle: 0, ok: true };
+    const m = t.match(/(\d+(?:[.,]\d+)?)\s*(m\b|mt\b|metri|metres?|meters?|ft\b|feet|foot|piedi|'|caselle|quadretti|squares?)?/);
+    if (!m) return { caselle: 0, ok: false };
+    const v = parseFloat(m[1].replace(',', '.'));
+    const u = m[2] ? (/^(m|mt|metri|metre|meter)/.test(m[2]) ? 'm' : /^(caselle|quadretti|square)/.test(m[2]) ? 'c' : 'ft') : (unita === 'm' ? 'm' : 'ft');
+    const caselle = u === 'c' ? v : u === 'm' ? v / 1.5 : v / 5;
+    return { caselle: Math.max(0, Math.min(200, caselle)), ok: true };
+  }
+
+  /**
+   * Scurovisione dalla scheda, in caselle (0 = niente). Prima il campo «Scurovisione» (scuroV), poi le
+   * parole «scurovisione / darkvision» in Visione, tratti e sensi (anche i mostri importati), poi la
+   * vecchia casella (= 60 ft).
+   */
+  function scurovisione(f, unita) {
     if (!f || typeof f !== 'object') return 0;
+    if (f.scuroV != null && String(f.scuroV).trim() !== '') return leggiDistanza(f.scuroV, unita).caselle;
     const testi = [f.vision, f.racial, f.traits, f.features, f.sensi].filter(Boolean).map(String);
     for (const t of testi) {
-      const m = t.match(/(?:scurovisione|darkvision|vista\s+nel\s+buio)[^\d\n]{0,12}(\d+(?:[.,]\d+)?)\s*(m\b|metri|ft\b|feet|piedi|')?/i);
-      if (m) {
-        const v = parseFloat(m[1].replace(',', '.'));
-        const metri = /^m|metri/i.test(m[2] || '') || (!m[2] && v <= 40 && v % 1.5 === 0 && v % 5 !== 0);
-        return Math.max(0, Math.min(200, metri ? v / 1.5 : v / 5));
-      }
+      const m = t.match(/(?:scurovisione|darkvision|vista\s+nel\s+buio)[^\d\n]{0,12}(\d+(?:[.,]\d+)?\s*(?:m\b|metri|ft\b|feet|piedi|')?)/i);
+      if (m) return leggiDistanza(m[1], /m\b|metri/i.test(m[1]) ? 'm' : 'ft').caselle;
     }
-    return f.darkv === true || f.darkv === 'true' || f.darkv === 1 ? 12 : 0;     // 60 ft
+    return f.darkv === true || f.darkv === 'true' || f.darkv === 1 || f.darkv === '1' ? 12 : 0;     // 60 ft
   }
 
   /**
@@ -238,5 +255,5 @@
     return false;
   }
 
-  return { attraversa, pulisci, segmenti, visuale, dentro, scurovisione, vista, visibile, griglia, riempi, segnaVisto, comprimi, espandi };
+  return { leggiDistanza, attraversa, pulisci, segmenti, visuale, dentro, scurovisione, vista, visibile, griglia, riempi, segnaVisto, comprimi, espandi };
 });

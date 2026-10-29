@@ -1756,3 +1756,10 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Danni critici": "Critical damage",
 "Non trovo più quell'attacco nella scheda.": "I can't find that attack in the sheet anymore.",
 });
+Object.assign(window.LIBRE_LINGUE.en, {
+"Non capisco: scrivi per esempio 60 ft": "I don't understand: write for example 60 ft",
+"{m} = {n} caselle": "{m} = {n} squares",
+"Scurovisione: per esempio 60 ft, 18 m, no": "Darkvision: for example 60 ft, 18 m, no",
+"Su misura…": "Custom…",
+"es. 60 ft, 18 m, no": "e.g. 60 ft, 18 m, no",
+});

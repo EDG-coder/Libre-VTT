@@ -864,3 +864,7 @@ body.net-player #caselleSect { display: none; }
 .ui-touch .msg.roll .rDanni button { min-height: 40px; }
 /* ordine dei turni acceso: un puntino sull'icona (si vede anche a pannello chiuso) */
 #turniBox.toolOn > .tgrip::after { content: ''; position: absolute; right: 7px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: #2ee6a6; box-shadow: 0 0 6px #2ee6a6; }
+/* scurovisione nella scheda */
+.scuroLab .scuroNota { display: block; min-height: 1em; font-size: 11px; opacity: .75; font-weight: 400; }
+input.nonCapito { outline: 2px solid #ff6b6b; outline-offset: 0; }
+#scuroAnte { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; z-index: 2147483002; }

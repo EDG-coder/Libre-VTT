@@ -39,7 +39,7 @@ function openPagina1() {
       <div class="hp" style="margin-top:8px">${fld('PF massimi', 'hpmax', 'number')}${fld('PF attuali', 'hp', 'number')}${fld('PF temporanei', 'hpt', 'number')}</div>
       <div class="hp" style="margin-top:8px">${fld('Dadi vita', 'hd')}${fld('Totali', 'hdt', 'number')}${fld('Usati', 'hdu', 'number')}</div>
       <div class="hp" style="margin-top:4px">${fld('Altri dadi vita', 'hd2')}${fld('Totali', 'hdt2', 'number')}${fld('Usati', 'hdu2', 'number')}</div>
-      <div class="hdr" style="margin-top:8px">${fld('Affaticamento', 'fatigue')}${fld('Visione', 'vision')}<label class="rl2">${ck('darkv')}<span>Scurovisione</span></label></div>
+      <div class="hdr" style="margin-top:8px">${fld('Affaticamento', 'fatigue')}${fld('Visione', 'vision')}<label class="lab scuroLab">Scurovisione<input type="text" data-f="scuroV" placeholder="es. 60 ft, 18 m, no"><small class="scuroNota" aria-live="polite"></small></label></div>
       <div class="ds"><span>Successi</span>${ck('ds1')}${ck('ds2')}${ck('ds3')}<span>Fallimenti</span>${ck('df1')}${ck('df2')}${ck('df3')}<small>Tiri salvezza contro la morte</small></div>`)}
     ${oBox('Livello di follia <button type="button" class="oInfo" title="' + eh(INFO_FOLLIA) + '">che cos\'è?</button>', `<div class="row2">${fld('Livello', 'madness')}${fld('CD prova abilità', 'madcd', 'number')}</div>`)}
     ${oBox('Attacchi', atk + `<h5 style="margin-top:8px">Munizioni</h5>` +

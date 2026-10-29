@@ -62,7 +62,7 @@
       if (lt && (lt.r > 0 || lt.rf > 0)) luciT.push({ x, y, r: lt.r, rf: lt.rf, col: lt.col || '#ffd27a' });
       if (delParty(p)) {
         const sh = p.dataset.sheet && sheets.find(s => s.id === p.dataset.sheet);
-        occhi.push({ x, y, scuro: p.dataset.scuro != null ? +p.dataset.scuro || 0 : C.scurovisione(sh && sh.f) });
+        occhi.push({ x, y, scuro: p.dataset.scuro != null ? +p.dataset.scuro || 0 : C.scurovisione(sh && sh.f, settings.unit) });
       }
     }
     const v = C.vista(l, b, cs, occhi, luciT);
@@ -451,7 +451,7 @@
       const pc = perCasella(), u = unita(), lt = luceSegnalino(el);
       const metti = v => { if (v) el.dataset.luce = JSON.stringify(v); else delete el.dataset.luce; cambiata(); };
       const tipi = [['Candela', 1, 1, '#ffb347'], ['Torcia', 4, 4, '#ffb347'], ['Lanterna', 6, 6, '#ffd27a'], ['Luce (incantesimo)', 4, 4, '#ffffff']];
-      const sh = el.dataset.sheet && sheets.find(s => s.id === el.dataset.sheet), scSch = C.scurovisione(sh && sh.f);
+      const sh = el.dataset.sheet && sheets.find(s => s.id === el.dataset.sheet), scSch = C.scurovisione(sh && sh.f, settings.unit);
       const scuro = el.dataset.scuro;
       const party = delParty(el);
       const voce = {
@@ -468,7 +468,14 @@
           { label: (party ? '✓ ' : '') + tr('Fa parte del party (vede e scopre la mappa)'), fn: () => { el.dataset.party = party ? '0' : '1'; cambiata(); } },
           { label: tr('Scurovisione'), items: [
             { label: (scuro == null ? '✓ ' : '') + tr('Dalla scheda') + (scSch ? ` (${+(scSch * pc).toFixed(1)} ${u})` : ` (${tr('nessuna')})`), fn: () => { delete el.dataset.scuro; cambiata(); } },
-            ...[0, 12, 24].map(c => ({ label: (scuro != null && +scuro === c ? '✓ ' : '') + (c ? `${c * pc} ${u}` : tr('Nessuna')), fn: () => { el.dataset.scuro = String(c); cambiata(); } }))
+            ...[0, 12, 24].map(c => ({ label: (scuro != null && +scuro === c ? '✓ ' : '') + (c ? `${c * pc} ${u}` : tr('Nessuna')), fn: () => { el.dataset.scuro = String(c); cambiata(); } })),
+            { label: (scuro != null && ![0, 12, 24].includes(+scuro) ? '✓ ' : '') + tr('Su misura…'), fn: () => {
+              const v = prompt(tr('Scurovisione: per esempio 60 ft, 18 m, no'), scuro != null ? `${+(+scuro * pc).toFixed(1)} ${u}` : '');
+              if (v == null) return;
+              const r = C.leggiDistanza(v, settings.unit);
+              if (!r.ok) { alert(tr('Non capisco: scrivi per esempio 60 ft')); return; }
+              el.dataset.scuro = String(+r.caselle.toFixed(2)); cambiata();
+            } }
           ] }
         ]
       };

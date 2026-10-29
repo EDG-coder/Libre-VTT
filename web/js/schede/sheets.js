@@ -692,7 +692,7 @@ function standardHtml() {
     <div class="box"><h5>Combattimento</h5>
       <div class="hdr">${fld('CA', 'ac', 'number')}${fld('CA temporanea', 'actemp', 'number')}<div class="stat"><span class="lab">Iniziativa</span><button type="button" class="rb" data-r="init" data-c="init"></button></div></div>
       <div class="hp" style="margin-top:8px">${fld('PF max', 'hpmax', 'number')}${fld('PF attuali', 'hp', 'number')}${fld('PF temporanei', 'hpt', 'number')}</div>
-      <div class="hdr" style="margin-top:8px">${fld('Affaticamento', 'fatigue')}${fld('Visione', 'vision')}${fld('Velocità', 'speed')}<label class="rl2">${ck('darkv')}<span>Scurovisione</span></label></div>
+      <div class="hdr" style="margin-top:8px">${fld('Affaticamento', 'fatigue')}${fld('Visione', 'vision')}${fld('Velocità', 'speed')}<label class="lab scuroLab">Scurovisione<input type="text" data-f="scuroV" placeholder="es. 60 ft, 18 m, no"><small class="scuroNota" aria-live="polite"></small></label></div>
       <div class="hp" style="margin-top:8px">${fld('Dadi vita (DV)', 'hd')}${fld('Totali', 'hdt', 'number')}${fld('Usati', 'hdu', 'number')}</div>
       <div class="ds"><span>Successi</span>${ck('ds1')}${ck('ds2')}${ck('ds3')}<span>Fallimenti</span>${ck('df1')}${ck('df2')}${ck('df3')}<small>TS contro morte</small></div></div>
     <div class="box"><h5>Livello di follia</h5><div class="row2">${fld('Livello', 'madness')}${fld('CD prova abilità', 'madcd', 'number')}</div></div>

@@ -230,7 +230,7 @@ function vistaDi(sc, c) {
     if ((ph.layer || 'tokens') !== 'tokens' || ph.shape) continue;
     const [x, y] = centro(ph);
     if (ph.luce && (ph.luce.r > 0 || ph.luce.rf > 0)) luciT.push({ x, y, r: Math.min(200, +ph.luce.r || 0), rf: Math.min(200, +ph.luce.rf || 0), col: /^#[0-9a-f]{6}$/i.test(ph.luce.col || '') ? ph.luce.col : '#ffd27a' });
-    if (delParty(sc, ph) && (luce.condivisa || !c || isTheirs(c, sc, ph))) occhi.push({ x, y, scuro: ph.scuro != null ? Math.max(0, Math.min(200, +ph.scuro || 0)) : LUCE.scurovisione(schedaDi(ph) && schedaDi(ph).f) });
+    if (delParty(sc, ph) && (luce.condivisa || !c || isTheirs(c, sc, ph))) occhi.push({ x, y, scuro: ph.scuro != null ? Math.max(0, Math.min(200, +ph.scuro || 0)) : LUCE.scurovisione(schedaDi(ph) && schedaDi(ph).f, world.unita) });
   }
   const chi = luce.condivisa || !c ? sc.id : sc.id + '|' + (c.token || c.id);   // di chi è il «già visto»
   const chiave = JSON.stringify([luce, board, cella, occhi, luciT]);
@@ -526,6 +526,7 @@ function handleIntent(c, m) {
       if ('active' in b) world.active = b.active;
       if ('publicScene' in b) world.publicScene = b.publicScene;
       if ('turni' in b) world.turni = turniPuliti(b.turni);
+      if (b.unita === 'm' || b.unita === 'ft') world.unita = b.unita;   // piedi o metri: per leggere «60» nella scurovisione
       if ('fogColor' in b) world.fogColor = /^#[0-9a-f]{6}$/i.test(String(b.fogColor || '')) ? String(b.fogColor) : 'auto';
       scheduleSave(); schedulePush();
       return;
