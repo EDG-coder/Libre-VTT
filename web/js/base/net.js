@@ -77,11 +77,10 @@ function intent(op, extra) {
   const e = { n: ++NET.n, q: NET.sessione + '.' + NET.n, op, x, k };
   NET.coda.push(e);
   if (NET.coda.length > 500) NET.coda.splice(0, NET.coda.length - 500);
-  if (netAperto() && !NET.hostDown) { netSend({ t: 'intent', op, q: e.q, ...x }); e.via = true; }
-  else {
-    if (netAperto()) { netSend({ t: 'intent', op, q: e.q, ...x }); e.via = true; }   // il ponte la tiene da parte
-    netAvvisaCoda();
-  }
+  if (netAperto()) { netSend({ t: 'intent', op, q: e.q, ...x }); e.via = true; }   // (col tubo giù il ponte la tiene da parte)
+  // un host di prima della 3.7 non conferma: quello che è partito non resta in coda (al ritorno lo rifarebbe)
+  if (e.via && NET.conferme === false) NET.coda = NET.coda.filter(y => y !== e);
+  if (!netAperto() || NET.hostDown) netAvvisaCoda();
 }
 const netInAttesa = () => NET.coda.length;
 /** Mentre si è scollegati: quante cose aspettano di partire. */
@@ -239,7 +238,9 @@ function netHandle(m) {
       NET.on = true; NET.everOn = true; NET.me = m.you;
       NET.retrying = false; NET.hostDown = false; NET.tries = 0; NET.pending = false;
       try { localStorage.setItem('uffa-token', m.you.token); } catch {}
+      NET.conferme = Array.isArray(m.sa) && m.sa.includes('ok');   // l'host conferma gli intenti? (dalla 3.7)
       const rimandate = netRimanda();
+      if (!NET.conferme) NET.coda = [];
       if (back && rimandate) netSay(tr('Ricollegato: ho mandato le {n} cose fatte mentre eri scollegato.', { n: rimandate }), 'live');
       else if (back) netSay('Ricollegato: sei di nuovo nella sessione.', 'live');
       else netSay(m.you.role === 'master'

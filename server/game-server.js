@@ -1252,6 +1252,11 @@ function shutOut(c, reason) {
   c.send({ t: 'bye', reason });
   setTimeout(() => { try { c.close(); } catch {} }, 150);
 }
+// Quello che questo host sa fare in più rispetto alle versioni prima della 3.7: conferme degli intenti
+// («ok», per la coda del browser) e canale stabile. Un giocatore con la versione nuova usa queste cose solo
+// se l'host le annuncia: con un host vecchio il canale stabile sembrerebbe un secondo ingresso (e
+// butterebbe fuori il primo), e le conferme non arriverebbero mai.
+const SA = ['ok', 'stabile'];
 // I messaggi di chat cancellati di recente: chi rientra senza ricaricare il mondo li toglie anche da sé.
 const chatTolti = [];
 function sendWelcome(c) {
@@ -1265,7 +1270,7 @@ function sendWelcome(c) {
   const chatV = world.chat || [], i = c.chatDa ? chatV.findIndex(x => x.id === c.chatDa) : -1;
   // (senza un messaggio da cui ripartire vuol dire che non ne aveva nessuno: gli si mandano tutti)
   if (c.delta && prec && c.verCliente === prec.ver && (i >= 0 || !c.chatDa)) {
-    c.send({ t: 'welcome', needName: !!c.needName, you, riprendi: true,
+    c.send({ t: 'welcome', needName: !!c.needName, you, riprendi: true, sa: SA,
       chatDopo: chatV.slice(i + 1).slice(-250).map(m => chatFor(c, m)).filter(Boolean), chatVia: chatTolti.slice() });
     pushWorld(c);
   } else {
@@ -1277,7 +1282,7 @@ function sendWelcome(c) {
       ver = (prec ? prec.ver : 0) + 1;
       ultime.set(c.token, { ver, testi });
     }
-    c.send({ t: 'welcome', needName: !!c.needName, you, world: w, ver });
+    c.send({ t: 'welcome', needName: !!c.needName, you, world: w, ver, sa: SA });
   }
   logAction(c, 'ingresso', true, c.role);
   scheduleSave(); sendPlayers();
@@ -1444,6 +1449,7 @@ function bridgeConnect() {
       if (msg.t === 'asset.data' || msg.t === 'asset.miss') { bridgeAsset(msg); continue; }   // roba nostra
       if (msg.t === 'beat') { bridgeSend({ t: 'pong' }); continue; }   // il ponte è vivo anche senza browser
       if (msg.t === 'eco') continue;                        // la risposta al nostro «ci sei?»: basta che sia arrivata
+      if (msg.t === 'welcome') hostSaStabile = Array.isArray(msg.sa) && msg.sa.includes('stabile');
       versoBrowser(msg);
     }
     stabileApri();                                         // l'host c'è: apriamo anche il canale stabile
@@ -1507,10 +1513,10 @@ function versoBrowser(msg, giaInOrdine) {
 // Una seconda connessione verso uffa-link, che riconosce la prima riga e la fa passare solo dai relay.
 // Si apre quando il tubo è su e c'è un browser da presentare; se cade si riapre da sola.
 const STABILE = process.env.LINK_STABILE !== '0';
-let stabile = null, stabileBuf = '', stabileTimer = 0, stabileUltimo = 0;
+let stabile = null, stabileBuf = '', stabileTimer = 0, stabileUltimo = 0, hostSaStabile = false;
 const OPS_A = new Set(['chat', 'rule', 'roll', 'roll.prov', 'token.move', 'scatta', 'luce.porta', 'chat.del']);
 function stabileApri() {
-  if (!STABILE || stabile || stabileTimer || !lastHello || !lastHello.token) return;
+  if (!STABILE || !hostSaStabile || stabile || stabileTimer || !lastHello || !lastHello.token) return;
   const sock = net.connect(LINK_PORT, '127.0.0.1');
   stabile = sock; sock.setNoDelay(true);
   stabileBuf = '';
@@ -1622,7 +1628,8 @@ function bridgeAsset(msg) {
 
 function bridgeSend(obj) {
   const line = JSON.stringify(obj) + '\n';
-  if (bridge && !bridge.destroyed && bridge.readyState === 'open' && bridge.pronto) bridge.write(line);
+  // il saluto parte subito anche se l'host non ha ancora risposto: è quello che lo fa rispondere
+  if (bridge && !bridge.destroyed && bridge.readyState === 'open' && (bridge.pronto || obj.t === 'hello')) bridge.write(line);
   // mentre il tubo è giù si tiene da parte (fino a 8 MB); quello che non ci sta lo rimanda il browser,
   // che tiene le sue cose finché l'host non le conferma
   else if (bridgeQueueBytes + line.length < 8 * 1024 * 1024) { bridgeQueue.push(line); bridgeQueueBytes += line.length; }
