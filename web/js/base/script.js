@@ -1104,7 +1104,7 @@ function msgEl(m) {
       m.rolls.forEach((v, i) => {
         if (i) box.append(document.createTextNode(' · '));
         const b = document.createElement('b'); b.textContent = v + mod;
-        if (m.sides === 20 && v === 20) b.className = 'max'; else if (m.sides === 20 && v === 1) b.className = 'min';
+        if (m.sides === 20 && v >= (m.crit || 20)) b.className = 'max'; else if (m.sides === 20 && v === 1) b.className = 'min';
         if (mod) b.title = `${v} ${mod > 0 ? '+' : '−'} ${Math.abs(mod)}`;
         box.append(b);
       });
@@ -1117,7 +1117,8 @@ function msgEl(m) {
     const kept = m.rolls.filter((_, i) => !drop.has(i));
     const single = kept.length === 1 && !mod;
     if (single) d.classList.add('single');
-    if (m.sides === 20 && kept.length === 1 && kept[0] === 20) d.classList.add('max');
+    // critico: 20 naturale, o dal valore «Critico da» della scheda (19, 18…); l'1 naturale resta sempre un fallimento
+    if (m.sides === 20 && kept.length === 1 && kept[0] >= (m.crit || 20)) d.classList.add('max');
     if (m.sides === 20 && kept.length === 1 && kept[0] === 1) d.classList.add('min');
     const body = document.createElement('span'); body.className = 'rr';
     if (single) {

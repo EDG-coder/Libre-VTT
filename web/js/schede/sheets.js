@@ -65,6 +65,7 @@ function rollExpr(expr, label) {
   const m = { kind: 'roll', label: label || String(expr).replace(/\s+/g, ''), ...r };
   if (d.secret) m.secret = true;
   if (window.tiroDoppio && r.rolls && r.rolls.length === 2) m.doppio = true;
+  if (window.tiroCritico >= 15 && window.tiroCritico <= 19) m.crit = window.tiroCritico;
   addChat(m);
   diceShowLast(m);
   return m;
@@ -550,7 +551,19 @@ function doRoll(s, key) {
     const nm = t === 'mod' ? 'Prova di ' + abilName(a) : t === 'save' ? 'Tiro salvezza ' + abilName(a) : t === 'skill' ? SKILLS.find(x => x[0] === a)[1] : 'Iniziativa';
     label = `${s.name} · ${nm}`;
   }
-  if (!rollExpr(expr, label)) addChat({ kind: 'text', text: `${s.name}: tiro non valido («${expr}»)` });
+  window.tiroCritico = t === 'atk' || t === 'spatk' ? criticoDa(s, t === 'atk' ? a : null) : 0;
+  try { if (!rollExpr(expr, label)) addChat({ kind: 'text', text: `${s.name}: tiro non valido («${expr}»)` }); }
+  finally { window.tiroCritico = 0; }
+}
+// Da che numero il d20 dell'attacco è un critico: «19-20» scritto nel nome o nel bonus di quell'attacco
+// (armi speciali), altrimenti «Critico da» della scheda, altrimenti 20.
+function criticoDa(s, i) {
+  if (i != null) {
+    const m = /(?:^|[^\d])(1[5-9])\s*[-–]\s*20(?!\d)/.exec(String(s.f['an' + i] || '') + ' ' + String(s.f['ab' + i] || ''));
+    if (m) return +m[1];
+  }
+  const v = parseInt(s.f.critDa, 10);
+  return v >= 15 && v <= 19 ? v : 20;
 }
 // sotto ogni area di testo: un pulsante per ogni [[espressione | nome]] scritta dentro
 function chipsFor(ta, s) {

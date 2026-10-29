@@ -660,6 +660,8 @@ function handleIntent(c, m) {
       const msg = { kind: 'roll', label: str(m.label || m.expr, 80), by: c.name, byId: c.token, ...r };
       if (m.secret) msg.secret = true;
       if (m.doppio && r.rolls && r.rolls.length === 2) msg.doppio = true;   // due tiri mostrati alla pari (scheda in vantaggio/svantaggio)
+      const cr = Math.round(+m.crit);
+      if (cr >= 15 && cr <= 19) msg.crit = cr;                                 // «Critico da» della scheda: il d20 da quel numero in su è un critico
       addChat(msg);
       return;
     }

@@ -1736,3 +1736,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Nascondi le tre caselle": "Hide the three boxes",
 "Mostra le tre caselle": "Show the three boxes",
 });
+Object.assign(window.LIBRE_LINGUE.en, {
+"Critico da": "Crit from",
+"Da che numero il d20 di un attacco è un critico. Per una sola arma scrivi «19-20» nel suo nome o nel bonus.": "From which d20 roll an attack is a critical hit. For a single weapon write «19-20» in its name or bonus.",
+});

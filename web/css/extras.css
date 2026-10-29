@@ -851,3 +851,6 @@ body.net-player #caselleSect { display: none; }
 .thTre i { width: 6px; height: 12px; border-radius: 2px; }
 .thTre i.g { background: #2ee66b; } .thTre i.r { background: #ff4d4d; } .thTre i.b { background: #3d7bff; }
 .thFx .thCasBtn { margin-left: 4px; }
+/* «Critico da» nella barra in cima alla scheda */
+.tiroBar .tiroCrit { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--sh-fg, var(--text)); opacity: .85; white-space: nowrap; }
+.tiroBar .tiroCrit select { font: inherit; font-size: 12.5px; padding: 2px 4px; border-radius: 7px; border: 1px solid var(--sh-line, var(--line)); background: transparent; color: inherit; }

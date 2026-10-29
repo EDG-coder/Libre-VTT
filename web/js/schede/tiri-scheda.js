@@ -32,6 +32,17 @@
       modi.set(id, x); scrivi(id, x); segna();
     });
     segna();
+    // da che numero il d20 di un attacco è un critico (il campione: 19-20, poi 18-20). È un campo della scheda;
+    // per una sola arma basta scrivere «19-20» nel suo nome o nel bonus.
+    const sh = typeof sheets !== 'undefined' && sheets.find(x => x.id === id);
+    if (sh && sh.f && typeof bindField === 'function') {
+      const l = document.createElement('label');
+      l.className = 'tiroCrit';
+      l.title = tr('Da che numero il d20 di un attacco è un critico. Per una sola arma scrivi «19-20» nel suo nome o nel bonus.');
+      l.innerHTML = `${tr('Critico da')} <select data-f="critDa">${['', '19', '18', '17', '16', '15'].map(v => `<option value="${v}">${v || '20'}</option>`).join('')}</select>`;
+      b.append(l);
+      bindField(l.querySelector('select'), w._body, sh);
+    }
     w._body.prepend(b);
     void m;
   }
