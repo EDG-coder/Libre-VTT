@@ -66,6 +66,7 @@ function rollExpr(expr, label) {
   if (d.secret) m.secret = true;
   if (window.tiroDoppio && r.rolls && r.rolls.length === 2) m.doppio = true;
   if (window.tiroCritico >= 15 && window.tiroCritico <= 19) m.crit = window.tiroCritico;
+  if (window.tiroRif) m.rif = { ...window.tiroRif };
   addChat(m);
   diceShowLast(m);
   return m;
@@ -571,8 +572,21 @@ function doRoll(s, key) {
     label = `${s.name} · ${nm}`;
   }
   window.tiroCritico = t === 'atk' || t === 'spatk' ? criticoDa(s, t === 'atk' ? a : null) : 0;
+  window.tiroRif = t === 'atk' && s.f['ad' + a] ? { sh: s.id, at: +a } : null;    // per i pulsanti «Danni» nel messaggio
   try { if (!rollExpr(expr, label)) addChat({ kind: 'text', text: `${s.name}: tiro non valido («${expr}»)` }); }
-  finally { window.tiroCritico = 0; }
+  finally { window.tiroCritico = 0; window.tiroRif = null; }
+}
+// I danni di un attacco, dal pulsante nel messaggio del tiro per colpire. Col critico si raddoppiano i dadi
+// (non i bonus: 1d8+3 → 2d8+3), anche quelli in più scritti nella formula. Segreto se lo era l'attacco.
+const raddoppiaDadi = expr => String(expr).replace(/(^|[^\w])(\d*)d(\d+)/gi, (_, pre, n, f) => `${pre}${(parseInt(n || '1', 10)) * 2}d${f}`);
+function tiraDanni(rif, critico, segreto) {
+  const s = sheets.find(x => x.id === rif.sh), expr = s && s.f['ad' + rif.at];
+  if (!s || !expr) { addChat({ kind: 'text', text: tr('Non trovo più quell\'attacco nella scheda.') }); return; }
+  const label = `${s.name} · ${critico ? tr('Danni critici') : tr('Danni')} ${s.f['an' + rif.at] || ''}`.trim();
+  const prima = diceMode.secret;
+  if (segreto) diceMode.secret = true;
+  try { if (!rollExpr(critico ? raddoppiaDadi(expr) : expr, label)) addChat({ kind: 'text', text: `${s.name}: tiro non valido («${expr}»)` }); }
+  finally { diceMode.secret = prima; }
 }
 // Da che numero il d20 dell'attacco è un critico: «19-20» scritto nel nome o nel bonus di quell'attacco
 // (armi speciali), altrimenti «Critico da» della scheda, altrimenti 20.

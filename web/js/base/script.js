@@ -1085,6 +1085,19 @@ function whoTag(m) {
   return b;
 }
 
+// Nel messaggio del tiro per colpire: «Danni» e, se il d20 è un critico, «Danni critici». Li vedono solo chi
+// ha tirato e il master (gli altri non devono tirare i danni al posto suo).
+function pulsantiDanni(d, m, critico) {
+  if (!m.rif || typeof tiraDanni !== 'function') return;
+  const inRete = typeof NET !== 'undefined' && NET.on;
+  if (inRete && !(isMaster() || (NET.me && m.byId === NET.me.token))) return;
+  const box = document.createElement('span'); box.className = 'rDanni';
+  const b = (t, crit) => { const x = document.createElement('button'); x.type = 'button'; x.textContent = tr(t); if (crit) x.className = 'crit'; x.addEventListener('click', () => tiraDanni(m.rif, crit, !!m.secret)); return x; };
+  box.append(b('🗡 Danni', false));
+  if (critico) box.append(b('💥 Danni critici', true));
+  d.append(box);
+}
+
 function msgEl(m) {
   const d = document.createElement('div');
   d.dataset.id = m.id;
@@ -1116,6 +1129,7 @@ function msgEl(m) {
         box.append(b);
       });
       d.append(box);
+      pulsantiDanni(d, m, m.sides === 20 && m.rolls.some(v => v >= (m.crit || 20)));   // critico se lo è almeno uno dei due: sceglie chi tira
       return d;
     }
     if (m.adv) { const a = document.createElement('span'); a.className = 'adv ' + m.adv; a.textContent = m.adv === 'adv' ? 'vantaggio' : 'svantaggio'; d.append(a); }
@@ -1155,6 +1169,7 @@ function msgEl(m) {
         d.append(pt);
       }
     }
+    pulsantiDanni(d, m, m.sides === 20 && kept.length === 1 && kept[0] >= (m.crit || 20));
   } else if (m.kind === 'rule') {
     d.className = 'msg rule';
     const h = document.createElement('b'), t = document.createElement('div');

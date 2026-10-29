@@ -856,3 +856,9 @@ body.net-player #caselleSect { display: none; }
 .tiroBar .tiroCrit select { font: inherit; font-size: 12.5px; padding: 2px 4px; border-radius: 7px; border: 1px solid var(--sh-line, var(--line)); background: transparent; color: inherit; }
 /* chi non può caricare negli assets della partita non vede il pannello Assets (l'icona del suo personaggio la sceglie dalla scheda) */
 .no-uploadAssets .tab[data-tab="assets"] { display: none; }
+/* i pulsanti dei danni nel messaggio del tiro per colpire */
+.msg.roll .rDanni { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+.msg.roll .rDanni button { font: inherit; font-size: 12.5px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); cursor: pointer; }
+.msg.roll .rDanni button.crit { border-color: #2ee6a6; color: #2ee6a6; font-weight: 700; }
+.msg.roll .rDanni button:hover { background: var(--panel-3); }
+.ui-touch .msg.roll .rDanni button { min-height: 40px; }

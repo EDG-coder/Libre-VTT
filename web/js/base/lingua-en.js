@@ -1750,3 +1750,9 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Mando la tua immagine…": "Sending your image…",
 "Non sono riuscito a mandare l'immagine.": "I couldn't send the image.",
 });
+Object.assign(window.LIBRE_LINGUE.en, {
+"🗡 Danni": "🗡 Damage",
+"💥 Danni critici": "💥 Critical damage",
+"Danni critici": "Critical damage",
+"Non trovo più quell'attacco nella scheda.": "I can't find that attack in the sheet anymore.",
+});

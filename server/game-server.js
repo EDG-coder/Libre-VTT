@@ -668,6 +668,8 @@ function handleIntent(c, m) {
       if (m.doppio && r.rolls && r.rolls.length === 2) msg.doppio = true;   // due tiri mostrati alla pari (scheda in vantaggio/svantaggio)
       const cr = Math.round(+m.crit);
       if (cr >= 15 && cr <= 19) msg.crit = cr;                                 // «Critico da» della scheda: il d20 da quel numero in su è un critico
+      // da quale scheda e attacco viene (per i pulsanti «Danni» nel messaggio di chi ha tirato)
+      if (m.rif && typeof m.rif === 'object' && Number.isInteger(+m.rif.at) && +m.rif.at >= 0 && +m.rif.at < 60) msg.rif = { sh: str(m.rif.sh, 60), at: +m.rif.at };
       addChat(msg);
       return;
     }
