@@ -641,7 +641,21 @@ function handleIntent(c, m) {
     // --- dadi: il risultato lo decide il server ---
     case 'roll': {
       if (!p.roll) return deny(c, m.op, 'non puoi tirare');
-      const r = parseExpr(m.expr);
+      let r;
+      if (Array.isArray(m.parti) && m.parti.length > 1) {
+        // danni di più tipi («2d6+3 tagliente + 1d6 fuoco»): una formula per tipo, un messaggio solo
+        const tiri = m.parti.slice(0, 6).map(x => ({ tipo: str(x && x.tipo, 30), r: parseExpr(x && x.expr) }));
+        if (tiri.some(t => !t.r)) return deny(c, m.op, 'tiro non valido');
+        const rolls = [], drop = []; let mod = 0, total = 0, sides = null;
+        for (const t of tiri) {
+          const base = rolls.length;
+          rolls.push(...t.r.rolls); for (const i of t.r.drop || []) drop.push(base + i);
+          mod += t.r.mod || 0; total += t.r.total;
+          sides = sides === null ? t.r.sides : sides === t.r.sides ? sides : 0;
+        }
+        r = { rolls, mod, total, sides: sides || 0, parti: tiri.map(t => ({ tipo: t.tipo, total: t.r.total })) };
+        if (drop.length) r.drop = drop;
+      } else r = parseExpr(m.expr);
       if (!r) return deny(c, m.op, 'tiro non valido');
       const msg = { kind: 'roll', label: str(m.label || m.expr, 80), by: c.name, byId: c.token, ...r };
       if (m.secret) msg.secret = true;

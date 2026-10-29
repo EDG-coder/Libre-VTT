@@ -841,3 +841,7 @@ body.net-player #caselleSect { display: none; }
 #luceBox .tbody button.on, #fogZone button.on { background: rgba(255, 176, 0, .55); box-shadow: 0 0 8px rgba(255, 176, 0, .6); }
 #luceBox input[type=number] { width: 64px; }
 #luceBox [hidden] { display: none !important; }
+
+/* danni di più tipi in un tiro solo: il totale di ciascuno */
+.msg.roll .rParti { display: block; margin-top: 3px; font-size: 14px; color: var(--text); }
+.msg.roll .rParti b { font-size: 17px; }

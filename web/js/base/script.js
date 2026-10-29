@@ -1140,6 +1140,12 @@ function msgEl(m) {
       if (mod) body.append((mod > 0 ? ' + ' : ' − ') + Math.abs(mod));
       const t = document.createElement('b'); t.className = 'tot'; t.textContent = '= ' + m.total;
       d.append(body, t);
+      // danni di più tipi: il totale di ciascuno («8 tagliente + 3 fuoco»)
+      if (Array.isArray(m.parti) && m.parti.length > 1) {
+        const pt = document.createElement('span'); pt.className = 'rParti';
+        m.parti.forEach((p, i) => { if (i) pt.append(' + '); const b = document.createElement('b'); b.textContent = p.total; pt.append(b, ' ' + (p.tipo || '')); });
+        d.append(pt);
+      }
     }
   } else if (m.kind === 'rule') {
     d.className = 'msg rule';
