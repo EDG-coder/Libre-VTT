@@ -182,7 +182,7 @@
 
     // un dito solo
     if (strumentoAttivo() || selezioneArea || suCornice(e) || e.target.closest('.lPorta')) return;   // penna, righello, nebbia, luci, rettangolo, porte: come col mouse
-    const foto = e.target.closest('.photo');
+    const foto = typeof fotoDelClic === 'function' ? fotoDelClic(e) : e.target.closest('.photo');
     if (foto) {                                // un segnalino: lo muove la mappa; se resta fermo a lungo, il menu
       lungo = { id: e.pointerId, timer: setTimeout(() => {
         const d = dita.get(e.pointerId);

@@ -595,9 +595,19 @@ function netCanMove(el) {
   const sh = p.sheet && sheets.find(s => s.id === p.sheet);
   return !!(sh && (sh.owner === NET.me.token || sh._access === 'rw'));
 }
+// Segnalini impilati: per un giocatore vale il primo, dall'alto, che può muovere; se nessuno è suo,
+// quello più in alto (e il messaggio qui sotto). Il master sceglie sempre quello in cima.
+fotoDelClic = function (e) {                                                   // eslint-disable-line no-global-assign
+  const sopra = e.target.closest('.photo');
+  if (!sopra || !netAs() || isMaster() || netCanMove(sopra)) return sopra;
+  const sotto = document.elementsFromPoint(e.clientX, e.clientY)
+    .map(x => x.closest && x.closest('.photo')).filter(Boolean)
+    .find(p => (p.dataset.layer || 'tokens') === 'tokens' && netCanMove(p));
+  return sotto || sopra;
+};
 viewport.addEventListener('pointerdown', e => {
   if (e.button !== 0 || !netAs() || isMaster()) return;
-  const el = e.target.closest('.photo');
+  const el = fotoDelClic(e);
   if (el && !netCanMove(el)) {
     e.stopImmediatePropagation(); e.preventDefault();
     netSay('Questo segnalino non è tuo.', 'warn');

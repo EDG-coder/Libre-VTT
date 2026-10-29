@@ -282,6 +282,10 @@ targetSwitch.querySelectorAll('button').forEach(b => b.addEventListener('click',
 // ---------- Interazione: destro = vista, sinistro = foto (o rettangolo/sfondo nel livello Mappa) ----------
 viewport.addEventListener('contextmenu', e => e.preventDefault());
 
+// Il segnalino su cui agisce un clic: quello più in alto. Per un giocatore net.js lo cambia: tra quelli
+// impilati sotto il puntatore, il primo che può muovere (così il suo si prende anche se un altro lo copre).
+function fotoDelClic(e) { return e.target.closest('.photo'); }
+
 let mode = null;           // 'pan' | 'photo' | 'frame' | 'resize' | 'ping' | null
 let startX = 0, startY = 0;
 let origX = 0, origY = 0;  // posizione iniziale (vista o elemento)
@@ -310,7 +314,7 @@ viewport.addEventListener('pointerdown', e => {
     activeEl = el; origX = r.x; origY = r.y; origW = r.w; origH = r.h;
     companion = el === board && !bgBox.hidden ? { x: num(bgBox, 'left'), y: num(bgBox, 'top') } : null;
   } else if (e.button === 0) {                // livello Segnalini: seleziona / sposta / ridimensiona la foto
-    const photo = e.target.closest('.photo');
+    const photo = fotoDelClic(e);
     if (!photo) {                             // clic su un punto libero: deseleziona; se si tiene premuto parte il ping
       select(null);
       mode = 'ping';
@@ -324,7 +328,7 @@ viewport.addEventListener('pointerdown', e => {
       origX = num(photo, 'left'); origY = num(photo, 'top');
       origW = num(photo, 'width'); origH = num(photo, 'height');
       const handle = e.target.closest('.handle');
-      if (handle) { mode = 'resize'; dir = handle.dataset.d; }
+      if (handle && photo.contains(handle)) { mode = 'resize'; dir = handle.dataset.d; }
       else { mode = 'photo'; photo.classList.add('dragging'); }
     }
   } else return;
