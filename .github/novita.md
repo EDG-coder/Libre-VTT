@@ -1,3 +1,7 @@
+## Novità della 3.7.1
+
+- **Versioni diverse allo stesso tavolo:** un giocatore con la 3.7 ora gioca anche con un master che ha ancora una versione di prima. Con la 3.7.0 veniva buttato fuori appena entrava. Il canale stabile e le conferme della coda si usano solo se il master ha la 3.7 o successive.
+
 ## Novità della 3.7.0
 
 **Al tavolo**
