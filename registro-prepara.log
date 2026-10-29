@@ -1,0 +1,42 @@
+→ Scarico nodejs-mobile 18.20.4 per Android
+→ Compilo il collegamento per arm64-v8a (aarch64-linux-android)
+info: component rust-std for target aarch64-linux-android is up to date
+[1m[92m    Updating[0m crates.io index
+[1m[92m     Locking[0m 363 packages to highest Rust 1.91 compatible versions
+[1m[92m      Adding[0m generic-array v0.14.7 [1m[33m(available: v0.14.9)[0m
+[1m[92m      Adding[0m jni v0.21.1 [1m[33m(available: v0.22.4)[0m
+[1m[92m      Adding[0m libc v0.2.189 [1m[33m(available: v0.2.191)[0m
+[1m[92m Downloading[0m crates ...
+[1m[92m  Downloaded[0m ctutils v0.4.7
+[1m[92m   Compiling[0m jni-sys v0.3.1
+[1m[92m   Compiling[0m ctutils v0.4.7
+[1m[92m   Compiling[0m jni v0.21.1
+[1m[92m   Compiling[0m netdev v0.46.3
+[1m[92m   Compiling[0m netwatch v0.19.3
+[1m[92m   Compiling[0m portmapper v0.19.3
+[1m[92m   Compiling[0m iroh v1.4.1
+[1m[92m   Compiling[0m uffa-link v0.2.0 (/home/runner/work/Libre-VTT/Libre-VTT/pacchetti/uffa-link)
+[1m[92m    Finished[0m `release` profile [optimized] target(s) in 37.69s
+→ Compilo il collegamento per armeabi-v7a (armv7-linux-androideabi)
+info: component rust-std for target armv7-linux-androideabi is up to date
+[1m[92m   Compiling[0m jni-sys v0.3.1
+[1m[92m   Compiling[0m ctutils v0.4.7
+[1m[92m   Compiling[0m jni v0.21.1
+[1m[92m   Compiling[0m netdev v0.46.3
+[1m[92m   Compiling[0m netwatch v0.19.3
+[1m[92m   Compiling[0m portmapper v0.19.3
+[1m[92m   Compiling[0m iroh v1.4.1
+[1m[92m   Compiling[0m uffa-link v0.2.0 (/home/runner/work/Libre-VTT/Libre-VTT/pacchetti/uffa-link)
+[1m[92m    Finished[0m `release` profile [optimized] target(s) in 26.43s
+→ Compilo il collegamento per x86_64 (x86_64-linux-android)
+info: component rust-std for target x86_64-linux-android is up to date
+[1m[92m   Compiling[0m jni-sys v0.3.1
+[1m[92m   Compiling[0m ctutils v0.4.7
+[1m[92m   Compiling[0m jni v0.21.1
+[1m[92m   Compiling[0m netdev v0.46.3
+[1m[92m   Compiling[0m netwatch v0.19.3
+[1m[92m   Compiling[0m portmapper v0.19.3
+[1m[92m   Compiling[0m iroh v1.4.1
+[1m[92m   Compiling[0m uffa-link v0.2.0 (/home/runner/work/Libre-VTT/Libre-VTT/pacchetti/uffa-link)
+[1m[92m    Finished[0m `release` profile [optimized] target(s) in 24.95s
+✓ Pronto. Ora: cd "/home/runner/work/Libre-VTT/Libre-VTT/pacchetti/mobile/android" && ./gradlew assembleRelease
