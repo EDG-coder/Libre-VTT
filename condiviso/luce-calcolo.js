@@ -54,6 +54,73 @@
     return t > 1e-9 && u >= -1e-9 && u <= 1 + 1e-9 ? t : Infinity;
   }
 
+  function piuVicino(segs, ox, oy, dx, dy) {
+    let t = Infinity;
+    for (const s of segs) { const k = incrocio(ox, oy, dx, dy, s); if (k < t) t = k; }
+    return t;
+  }
+  // ---------- Indice a blocchi dei muri (per le mappe con tanti muri) ----------
+  // Una griglia di blocchi quadrati: ogni muro sta nei blocchi che il suo rettangolo tocca. Un raggio
+  // attraversa i blocchi in ordine (come si traccia una linea su una griglia) e si ferma al primo blocco
+  // dove ha già trovato il muro più vicino. L'indice si fa una volta per elenco di muri.
+  const indici = new WeakMap();
+  function indiceDi(segs) {
+    let ix = indici.get(segs);
+    if (ix) return ix;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const s of segs) { x0 = Math.min(x0, s[0], s[2]); x1 = Math.max(x1, s[0], s[2]); y0 = Math.min(y0, s[1], s[3]); y1 = Math.max(y1, s[1], s[3]); }
+    const W = Math.max(1, x1 - x0), H = Math.max(1, y1 - y0);
+    const lato = Math.max(24, Math.min(600, Math.sqrt(W * H * 3 / segs.length)));
+    const cols = Math.max(1, Math.ceil(W / lato) + 1), rows = Math.max(1, Math.ceil(H / lato) + 1);
+    const celle = Array.from({ length: cols * rows }, () => []);
+    segs.forEach((s, i) => {
+      const c0 = Math.floor((Math.min(s[0], s[2]) - x0) / lato), c1 = Math.floor((Math.max(s[0], s[2]) - x0) / lato);
+      const r0 = Math.floor((Math.min(s[1], s[3]) - y0) / lato), r1 = Math.floor((Math.max(s[1], s[3]) - y0) / lato);
+      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) celle[r * cols + c].push(i);
+    });
+    ix = { segs, x0, y0, lato, cols, rows, celle, visto: new Uint32Array(segs.length), giro: 0 };
+    indici.set(segs, ix);
+    return ix;
+  }
+  function primoIncrocio(ix, ox, oy, dx, dy) {
+    const { segs, x0, y0, lato, cols, rows, celle, visto } = ix;
+    const giro = ++ix.giro;
+    if (giro > 4e9) { visto.fill(0); ix.giro = 1; }
+    // il punto di partenza dentro la griglia (se è fuori, si entra dal bordo)
+    let t0 = 0;
+    const fx = (ox - x0) / lato, fy = (oy - y0) / lato;
+    if (fx < 0 || fy < 0 || fx >= cols || fy >= rows) {
+      let te = 0, tu = Infinity;
+      for (const [o, d, n] of [[fx, dx / lato, cols], [fy, dy / lato, rows]]) {
+        if (Math.abs(d) < 1e-12) { if (o < 0 || o >= n) return Infinity; continue; }
+        const a = (0 - o) / d, b = (n - o) / d;
+        te = Math.max(te, Math.min(a, b)); tu = Math.min(tu, Math.max(a, b));
+      }
+      if (te > tu) return Infinity;
+      t0 = te + 1e-9;
+    }
+    let cx = Math.floor(fx + dx / lato * t0), cy = Math.floor(fy + dy / lato * t0);
+    cx = Math.min(cols - 1, Math.max(0, cx)); cy = Math.min(rows - 1, Math.max(0, cy));
+    const sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1;
+    const ddx = Math.abs(dx) < 1e-12 ? Infinity : lato / Math.abs(dx), ddy = Math.abs(dy) < 1e-12 ? Infinity : lato / Math.abs(dy);
+    let tx = Math.abs(dx) < 1e-12 ? Infinity : ((cx + (dx > 0 ? 1 : 0)) * lato + x0 - ox) / dx;
+    let ty = Math.abs(dy) < 1e-12 ? Infinity : ((cy + (dy > 0 ? 1 : 0)) * lato + y0 - oy) / dy;
+    let migliore = Infinity;
+    for (let passi = 0; passi < cols + rows + 2; passi++) {
+      for (const i of celle[cy * cols + cx]) {
+        if (visto[i] === giro) continue;
+        visto[i] = giro;
+        const k = incrocio(ox, oy, dx, dy, segs[i]);
+        if (k < migliore) migliore = k;
+      }
+      const uscita = Math.min(tx, ty);
+      if (migliore <= uscita) return migliore;
+      if (tx < ty) { cx += sx; tx += ddx; } else { cy += sy; ty += ddy; }
+      if (cx < 0 || cy < 0 || cx >= cols || cy >= rows) break;
+    }
+    return migliore;
+  }
+
   /**
    * Il poligono di quello che si vede da (ox, oy): un raggio verso ogni estremo di ogni segmento
    * (e appena a destra e a sinistra), fermato dal segmento più vicino. Con «raggio» si guarda solo
@@ -66,6 +133,8 @@
       usati = segs.filter(s => !(Math.max(s[0], s[2]) < x0 || Math.min(s[0], s[2]) > x1 || Math.max(s[1], s[3]) < y0 || Math.min(s[1], s[3]) > y1));
       usati.push([x0, y0, x1, y0], [x1, y0, x1, y1], [x1, y1, x0, y1], [x0, y1, x0, y0]);
     }
+    // con tanti muri, ogni raggio guarda solo i blocchi che attraversa (indice a griglia), non tutti i muri
+    const indice = usati.length > 48 ? indiceDi(usati) : null;
     const angoli = [];
     for (const s of usati) for (const [px, py] of [[s[0], s[1]], [s[2], s[3]]]) {
       const a = Math.atan2(py - oy, px - ox);
@@ -78,8 +147,7 @@
       if (ultimo !== null && a - ultimo < 1e-7) continue;
       ultimo = a;
       const dx = Math.cos(a), dy = Math.sin(a);
-      let t = Infinity;
-      for (const s of usati) { const k = incrocio(ox, oy, dx, dy, s); if (k < t) t = k; }
+      const t = indice ? primoIncrocio(indice, ox, oy, dx, dy) : piuVicino(usati, ox, oy, dx, dy);
       if (t === Infinity) continue;
       pts.push(arrot(ox + dx * t), arrot(oy + dy * t));
     }
