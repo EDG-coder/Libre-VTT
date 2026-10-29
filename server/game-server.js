@@ -107,7 +107,7 @@ let roster = readJson('players.json', null) || {};
 let session = Object.assign({ locked: false, approval: false, maxPlayers: 0, paused: false }, readJson('session.json', null) || {});
 
 // Le cose che cambiano il mondo: chi è congelato o in pausa non le può fare.
-const MUTATING = new Set(['board', 'token.move', 'token.add', 'token.del', 'fog.set', 'luce.dimentica', 'luce.porta', 'scene.show',
+const MUTATING = new Set(['board', 'token.move', 'scatta', 'token.add', 'token.del', 'fog.set', 'luce.dimentica', 'luce.porta', 'scene.show',
   'sheet.add', 'sheet.save', 'sheet.del', 'music', 'asset.put', 'notes.save', 'notes.edit']);
 
 let saveTimer = 0;
@@ -284,6 +284,47 @@ function lucePerGiocatore(c, sc) {
   const out = { amb: v.amb, ricordo: v.ricordo, occhi: v.occhi.map(o => ({ x: o.x, y: o.y, scuro: o.scuro, poly: o.poly })), luci: v.luci };
   if (v.ricordo === 'scuro') { const g = visti.get(v.chi); if (g) out.visto = { x: g.x, y: g.y, q: g.q, cols: g.cols, rows: g.rows, rle: LUCE.comprimi(g.d) }; }
   return { luce: { on: true, ambiente: v.amb, ricordo: v.ricordo, porte }, vista: out };
+}
+
+// ======================= Movimento dei giocatori: muri e velocità =======================
+// Al rilascio (il browser manda solo la posizione finale) il server guarda se ci si arriva: con i muri «non
+// attraversabili» cerca un percorso sulla griglia che li giri (le porte aperte si passano). Nelle scene di
+// battaglia (tipo «mappa», non cinematiche) un segnalino collegato a una scheda con la Velocità non va oltre
+// quella (il doppio con «Scatta»). Con l'ordine dei turni acceso e il segnalino in fila, i passi si sommano
+// nel suo turno. Il master non ha limiti.
+function turnoDi(sc, ph) {
+  const t = world.turni;
+  if (!t || !t.on || !Array.isArray(t.righe) || !t.righe.some(r => r.pid === ph.id)) return null;
+  return (t.round || 1) + ':' + (t.cur || 0);
+}
+function velocitaCaselle(ph) {
+  const sh = schedaDi(ph);
+  if (!sh || !sh.f || !String(sh.f.speed || '').trim()) return null;
+  const r = LUCE.leggiDistanza(sh.f.speed, world.unita);
+  return r.ok && r.caselle > 0 ? r.caselle : null;
+}
+function controllaMovimento(sc, ph, pos) {
+  const [ax, ay] = centro(ph);
+  const bx = (+pos.l || 0) + (pos.w > 0 ? +pos.w : ph.w) / 2, by = (+pos.t || 0) + (pos.h > 0 ? +pos.h : ph.h) / 2;
+  if (Math.hypot(bx - ax, by - ay) < 1) return { ok: true, caselle: 0 };
+  const muri = sc.luce && sc.luce.solidi ? LUCE.pulisci(sc.luce) : null;
+  const battaglia = (sc.type || 'map') !== 'cinematic' && !(sc.luce && sc.luce.velocita === false);
+  const vel = battaglia ? velocitaCaselle(ph) : null;
+  const turno = vel ? turnoDi(sc, ph) : null;
+  if (!muri && !vel) return { ok: true, caselle: 0 };
+  const usate = turno && ph.mossoTurno === turno ? +ph.mosso || 0 : 0;
+  // «Scatta» vale per il turno in cui l'hai chiesto (senza turni, per un movimento)
+  const scatto = ph.scatta === true || (!!turno && ph.scatta === turno);
+  const totale = vel ? vel * (scatto ? 2 : 1) : Infinity, resto = Math.max(0, totale - usate);
+  const cella = (sc.grid && +sc.grid.size) || 50;
+  const strada = LUCE.percorso(muri || { muri: [] }, sc.board, cella, ax, ay, bx, by, resto + 0.01);
+  if (!strada) {
+    // non trovato: o c'è un muro di mezzo, o è troppo lontano
+    const senzaLimite = muri ? LUCE.percorso(muri, sc.board, cella, ax, ay, bx, by) : { caselle: Infinity };
+    if (!senzaLimite) return { ok: false, perche: 'di là non ci arrivi: c\'è un muro' };
+    return { ok: false, perche: `troppo lontano: ti restano ${+resto.toFixed(1)} caselle` };
+  }
+  return { ok: true, caselle: strada.caselle, turno };
 }
 
 /** Il percorso locale del master non vale per gli altri: fuori va «gs:<hash>». */
@@ -542,16 +583,34 @@ function handleIntent(c, m) {
       if (!(p.moveAnyToken || (p.moveOwnTokens && mine))) return deny(c, m.op, 'non è un tuo segnalino');
       if ((ph.layer || 'tokens') === 'hidden' && !p.seeHiddenLayer) return deny(c, m.op, 'non puoi');
       const pos = m.pos || {};
-      // muri non attraversabili: un giocatore non porta il segnalino dall'altra parte di un muro o di una porta chiusa
-      if (!p.moveAnyToken && sc.luce && sc.luce.solidi) {
-        const l = LUCE.pulisci(sc.luce), [ax, ay] = centro(ph);
-        const bx = (+pos.l || 0) + (pos.w > 0 ? +pos.w : ph.w) / 2, by = (+pos.t || 0) + (pos.h > 0 ? +pos.h : ph.h) / 2;
-        if (LUCE.attraversa(l, ax, ay, bx, by)) { schedulePush(); return deny(c, m.op, 'c\'è un muro'); }
-      }
+      // il movimento di un giocatore: muri non attraversabili e, nelle scene di battaglia, la velocità
+      const mov = p.moveAnyToken ? { ok: true } : controllaMovimento(sc, ph, pos);
+      if (!mov.ok) { schedulePush(); return deny(c, m.op, mov.perche); }
+      if (mov.turno) { ph.mosso = (ph.mossoTurno === mov.turno ? +ph.mosso || 0 : 0) + mov.caselle; ph.mossoTurno = mov.turno; }
+      else if (mov.caselle > 0 && ph.scatta === true) delete ph.scatta;                 // senza turni lo scatto vale per un movimento
       ph.l = +pos.l || 0; ph.t = +pos.t || 0;
       if (pos.w > 0) ph.w = +pos.w;
       if (pos.h > 0) ph.h = +pos.h;
       changed();
+      return;
+    }
+    // «Scatta»: velocità doppia per questo turno (o per il prossimo movimento, se i turni sono spenti)
+    case 'scatta': {
+      const sc = findScene(m.scene) || findScene(world.active);
+      const ph = sc && (sc.photos || []).find(x => x.id === m.id);
+      if (!ph) return deny(c, m.op, 'segnalino sconosciuto');
+      if (!(p.moveAnyToken || (p.moveOwnTokens && isTheirs(c, sc, ph)))) return deny(c, m.op, 'non è un tuo segnalino');
+      if (m.on === false) delete ph.scatta; else ph.scatta = turnoDi(sc, ph) || true;
+      changed();
+      return;
+    }
+    // durante il trascinamento: ci si arriva? (solo sì/no e le caselle: i muri restano segreti)
+    case 'percorso.prova': {
+      const sc = findScene(m.scene) || findScene(world.active);
+      const ph = sc && (sc.photos || []).find(x => x.id === m.id);
+      if (!ph || !(p.moveAnyToken || (p.moveOwnTokens && isTheirs(c, sc, ph)))) return;
+      const r = p.moveAnyToken ? { ok: true } : controllaMovimento(sc, ph, m.pos || {});
+      c.send({ t: 'percorso', id: ph.id, ok: !!r.ok, perche: r.ok ? '' : r.perche, n: m.n });
       return;
     }
     case 'token.add': {

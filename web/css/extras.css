@@ -868,3 +868,10 @@ body.net-player #caselleSect { display: none; }
 .scuroLab .scuroNota { display: block; min-height: 1em; font-size: 11px; opacity: .75; font-weight: 400; }
 input.nonCapito { outline: 2px solid #ff6b6b; outline-offset: 0; }
 #scuroAnte { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; z-index: 2147483002; }
+/* movimento: dove non arrivi il segnalino si tinge di rosso; rifiutato, torna indietro piano */
+.photo.nonArrivi { filter: drop-shadow(0 0 6px #ff3b3b) sepia(1) saturate(6) hue-rotate(-50deg); }
+.photo.torna { transition: left .35s ease, top .35s ease; }
+#percorsoNota { position: fixed; left: 0; top: 0; z-index: 100040; pointer-events: none; padding: 3px 8px; border-radius: 8px; font: 600 12px system-ui, sans-serif; color: #fff; background: rgba(200, 40, 40, .9); white-space: nowrap; }
+#percorsoNota[hidden] { display: none; }
+.tiroBar .scattaBtn { padding: 4px 10px; font-size: 12.5px; border-radius: 8px; border: 1px solid var(--sh-line, var(--line)); background: transparent; color: inherit; cursor: pointer; }
+body:not(.net-on) .soloRete { display: none !important; }

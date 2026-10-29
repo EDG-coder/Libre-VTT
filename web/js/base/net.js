@@ -205,8 +205,15 @@ function netHandle(m) {
       if (typeof musicApply === 'function' && m.state) musicApply(m.state);
       return;
     case 'denied':
-      netSay('Non si può: ' + (m.reason || 'il master non te l\'ha permesso.'), 'warn');
+      netSay(tr('Non si può:') + ' ' + tr(m.reason || 'il master non te l\'ha permesso.'), 'warn');
+      // un movimento rifiutato (un muro, troppo lontano): il segnalino torna indietro piano
+      if (m.op === 'token.move' && NET.ultimoMosso && NET.ultimoMosso.isConnected) {
+        const el = NET.ultimoMosso; el.classList.add('torna'); setTimeout(() => el.classList.remove('torna'), 600);
+      }
       if (NET.world) applyWorld(NET.world);      // rimetti le cose come stanno davvero
+      return;
+    case 'percorso':                             // risposta alla prova durante il trascinamento
+      if (typeof percorsoRisposta === 'function') percorsoRisposta(m);
       return;
     case 'asset.ok': {
       const res = NET.assetWait.get(m.id);
@@ -523,6 +530,7 @@ function netPushPlayerChanges() {
       const was = NET.photosById.get(id);
       if (Math.abs(was.l - box.l) > 0.5 || Math.abs(was.t - box.t) > 0.5 || Math.abs(was.w - box.w) > 0.5) {
         intent('token.move', { scene: cur.id, id, pos: box });
+        NET.ultimoMosso = el;
         Object.assign(was, box);
       }
     } else if (!id) {

@@ -311,6 +311,81 @@
   }
 
   /** Il tratto da (ax,ay) a (bx,by) attraversa un muro o una porta chiusa? */
+  /** Il tratto da (ax,ay) a (bx,by) taglia il muro w? */
+  function taglia(w, ax, ay, bx, by) {
+    const d = (bx - ax) * (w.y2 - w.y1) - (by - ay) * (w.x2 - w.x1);
+    if (Math.abs(d) < 1e-9) return false;
+    const t = ((w.x1 - ax) * (w.y2 - w.y1) - (w.y1 - ay) * (w.x2 - w.x1)) / d;
+    const u = ((w.x1 - ax) * (by - ay) - (w.y1 - ay) * (bx - ax)) / d;
+    return t > 1e-6 && t <= 1 && u >= 0 && u <= 1;
+  }
+
+  /**
+   * Il percorso più breve sulla griglia da (ax,ay) a (bx,by), girando attorno a muri e porte chiuse (le porte
+   * aperte si passano). Si va anche in diagonale, e ogni passo vale una casella (la regola base del 5e).
+   * max: oltre quante caselle non serve cercare. → { caselle, punti: [x, y, …] } oppure null (non ci si arriva).
+   */
+  function percorso(luce, board, cella, ax, ay, bx, by, max) {
+    const cs = cella > 0 ? cella : 50, lim = max >= 0 ? max : Infinity;
+    const muri = ((luce && luce.muri) || []).filter(w => !(w.porta && w.aperta));
+    const b = board || { x: 0, y: 0, w: 1000, h: 1000 };
+    const cols = Math.max(1, Math.ceil(b.w / cs)), rows = Math.max(1, Math.ceil(b.h / cs));
+    const fuori = (x, y) => x < b.x || y < b.y || x > b.x + b.w || y > b.y + b.h;
+    const cheb = Math.max(Math.abs(bx - ax), Math.abs(by - ay)) / cs;
+    if (fuori(ax, ay) || fuori(bx, by) || cols * rows > 250000) {          // fuori dalla griglia: la linea retta
+      return muri.some(w => taglia(w, ax, ay, bx, by)) ? null : { caselle: Math.round(cheb), punti: [ax, ay, bx, by] };
+    }
+    const cella0 = (x, y) => [Math.min(cols - 1, Math.floor((x - b.x) / cs)), Math.min(rows - 1, Math.floor((y - b.y) / cs))];
+    const [c0, r0] = cella0(ax, ay), [c1, r1] = cella0(bx, by);
+    if (c0 === c1 && r0 === r1) return muri.some(w => taglia(w, ax, ay, bx, by)) ? null : { caselle: 0, punti: [ax, ay, bx, by] };
+    // i muri divisi per casella (ognuno in quelle che il suo rettangolo tocca)
+    const perCella = new Map();
+    for (const w of muri) {
+      const x0 = Math.floor((Math.min(w.x1, w.x2) - b.x) / cs) - 1, x1 = Math.floor((Math.max(w.x1, w.x2) - b.x) / cs) + 1;
+      const y0 = Math.floor((Math.min(w.y1, w.y2) - b.y) / cs) - 1, y1 = Math.floor((Math.max(w.y1, w.y2) - b.y) / cs) + 1;
+      for (let r = Math.max(0, y0); r <= Math.min(rows - 1, y1); r++) for (let c = Math.max(0, x0); c <= Math.min(cols - 1, x1); c++) {
+        const k = r * cols + c; (perCella.get(k) || perCella.set(k, []).get(k)).push(w);
+      }
+    }
+    const centro = (c, r) => [b.x + (c + 0.5) * cs, b.y + (r + 0.5) * cs];
+    const bloccato = (c, r, c2, r2, pa, pb) => {
+      const [x1, y1] = pa || centro(c, r), [x2, y2] = pb || centro(c2, r2);
+      for (const k of new Set([r * cols + c, r2 * cols + c2, r * cols + c2, r2 * cols + c])) for (const w of perCella.get(k) || []) if (taglia(w, x1, y1, x2, y2)) return true;
+      return false;
+    };
+    // dal punto vero di partenza al centro della sua casella (e così all'arrivo): anche lì non si passa un muro
+    if (bloccato(c0, r0, c0, r0, [ax, ay], centro(c0, r0)) || bloccato(c1, r1, c1, r1, centro(c1, r1), [bx, by])) return null;
+    const N = cols * rows, g = new Float64Array(N).fill(Infinity), da = new Int32Array(N).fill(-1), chiuso = new Uint8Array(N);
+    const h = k => Math.max(Math.abs((k % cols) - c1), Math.abs(Math.floor(k / cols) - r1));
+    const coda = [];                                                        // mucchio binario su f = g + h
+    const metti = (k, f) => { coda.push([f, k]); let i = coda.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (coda[p][0] <= coda[i][0]) break; [coda[p], coda[i]] = [coda[i], coda[p]]; i = p; } };
+    const togli = () => { const top = coda[0], last = coda.pop(); if (coda.length) { coda[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < coda.length && coda[l][0] < coda[m][0]) m = l; if (r < coda.length && coda[r][0] < coda[m][0]) m = r; if (m === i) break; [coda[m], coda[i]] = [coda[i], coda[m]]; i = m; } } return top; };
+    const s0 = r0 * cols + c0, s1 = r1 * cols + c1;
+    g[s0] = 0; metti(s0, h(s0));
+    while (coda.length) {
+      const [, k] = togli();
+      if (chiuso[k]) continue;
+      chiuso[k] = 1;
+      if (k === s1) break;
+      if (g[k] + h(k) > lim) break;                                         // oltre il massimo: inutile continuare
+      const c = k % cols, r = Math.floor(k / cols);
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const cn = c + dx, rn = r + dy;
+        if (cn < 0 || rn < 0 || cn >= cols || rn >= rows) continue;
+        const kn = rn * cols + cn;
+        if (chiuso[kn] || g[k] + 1 >= g[kn]) continue;
+        if (bloccato(c, r, cn, rn)) continue;
+        g[kn] = g[k] + 1; da[kn] = k; metti(kn, g[kn] + h(kn));
+      }
+    }
+    if (!Number.isFinite(g[s1]) || g[s1] > lim) return null;
+    const punti = [bx, by];
+    for (let k = da[s1]; k >= 0 && k !== s0; k = da[k]) { const [x, y] = centro(k % cols, Math.floor(k / cols)); punti.unshift(x, y); }
+    punti.unshift(ax, ay);
+    return { caselle: g[s1], punti };
+  }
+
   function attraversa(luce, ax, ay, bx, by) {
     for (const w of (luce && luce.muri) || []) {
       if (w.porta && w.aperta) continue;
@@ -323,5 +398,5 @@
     return false;
   }
 
-  return { leggiDistanza, attraversa, pulisci, segmenti, visuale, dentro, scurovisione, vista, visibile, griglia, riempi, segnaVisto, comprimi, espandi };
+  return { leggiDistanza, percorso, attraversa, pulisci, segmenti, visuale, dentro, scurovisione, vista, visibile, griglia, riempi, segnaVisto, comprimi, espandi };
 });

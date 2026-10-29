@@ -352,6 +352,7 @@
         <button type="button" data-v="scuro" title="${tr('Quello che il party ha già visto resta, scuro e senza i segnalini degli altri')}">${tr('Resta, scuro')}</button><button type="button" data-v="nero" title="${tr('Si vede solo quello che il party vede adesso')}">${tr('Torna nero')}</button></span></div>
       <label class="trow"><input id="luceCond" type="checkbox"> ${tr('Visione condivisa (tutti vedono quello che vede il party)')}</label>
       <label class="trow"><input id="luceSolidi" type="checkbox"> ${tr('I muri non si attraversano (i giocatori non ci passano)')}</label>
+      <label class="trow"><input id="luceVel" type="checkbox"> ${tr('Nelle scene di battaglia il movimento dei giocatori è limitato dalla Velocità della scheda')}</label>
       <div class="trow lModi" id="luceModi">
         <button type="button" data-m="muro" title="${tr('Un clic per ogni angolo; doppio clic, Invio o di nuovo sullo stesso punto per finire')}">🧱 ${tr('Muro')}</button>
         <button type="button" data-m="porta" title="${tr('Due clic: dove comincia e dove finisce la porta')}">🚪 ${tr('Porta')}</button>
@@ -384,6 +385,7 @@
     $l('luceOn').checked = !!(l && l.on);
     $l('luceCond').checked = !(l && l.condivisa === false);
     $l('luceSolidi').checked = !!(l && l.solidi);
+    $l('luceVel').checked = !(l && l.velocita === false);
     box.querySelectorAll('#luceAmb button').forEach(b => b.classList.toggle('on', b.dataset.v === ((l && l.ambiente) || 'buio')));
     box.querySelectorAll('#luceRic button').forEach(b => b.classList.toggle('on', b.dataset.v === ((l && l.ricordo) || 'scuro')));
     box.querySelectorAll('#luceModi button').forEach(b => b.classList.toggle('on', b.dataset.m === stato.modo));
@@ -401,6 +403,7 @@
   $l('luceOn').addEventListener('input', e => { luceDi(true).on = e.target.checked; cambiata(); });
   $l('luceCond').addEventListener('input', e => { luceDi(true).condivisa = e.target.checked; cambiata(); });
   $l('luceSolidi').addEventListener('input', e => { luceDi(true).solidi = e.target.checked; cambiata(); });
+  $l('luceVel').addEventListener('input', e => { luceDi(true).velocita = e.target.checked; cambiata(); });
   $l('luceAmb').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) { luceDi(true).ambiente = b.dataset.v; cambiata(); } });
   $l('luceRic').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) { luceDi(true).ricordo = b.dataset.v; cambiata(); } });
   $l('luceModi').addEventListener('click', e => {

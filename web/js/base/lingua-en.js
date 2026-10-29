@@ -1763,3 +1763,15 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Su misura…": "Custom…",
 "es. 60 ft, 18 m, no": "e.g. 60 ft, 18 m, no",
 });
+Object.assign(window.LIBRE_LINGUE.en, {
+"Non si può:": "Not allowed:",
+"di là non ci arrivi: c'è un muro": "you can't get there: there's a wall",
+"troppo lontano: ti restano {n} caselle": "too far: you have {n} squares left",
+"🏃 Scatto: velocità doppia per questo turno.": "🏃 Dash: double speed for this turn.",
+"Scatto tolto.": "Dash removed.",
+"🏃 Scatta (velocità doppia)": "🏃 Dash (double speed)",
+"🏃 Scatta": "🏃 Dash",
+"Velocità doppia per questo turno (senza turni: per il prossimo movimento)": "Double speed for this turn (without turn order: for the next move)",
+"Questa scheda non ha un segnalino nella scena.": "This sheet has no token in the scene.",
+"Nelle scene di battaglia il movimento dei giocatori è limitato dalla Velocità della scheda": "In battle scenes players' movement is limited by the sheet's Speed",
+});
