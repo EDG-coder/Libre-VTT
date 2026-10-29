@@ -321,7 +321,7 @@ async function applyWorld(w) {
   NET.world = w;
   NET.applying = true;
   try {
-    mergeSheets(w.sheets);
+    mergeSheets(w.sheets, w.schedeTolte);
     if (w.notes && typeof noteDalServer === 'function') noteDalServer(w.notes, false);
     if (w.sistema && typeof sistemaDalMaster === 'function') sistemaDalMaster(w.sistema);
     if (w.compendio && typeof compendioDalMaster === 'function') compendioDalMaster(w.compendio);
@@ -410,11 +410,21 @@ function aggiornaSulPosto(sc) {
   if (typeof hudDisegna === 'function') hudDisegna();
 }
 
-/** Le schede: si aggiornano quelle che ci sono, si aggiungono quelle nuove. */
-function mergeSheets(list) {
+/** Le schede: si aggiornano quelle che ci sono, si aggiungono quelle nuove. Il master toglie quelle che un
+ *  giocatore ha cancellato (il server le elenca in «schedeTolte»), altrimenti al salvataggio dopo le rimanderebbe. */
+function mergeSheets(list, tolte) {
   if (!Array.isArray(list)) return;
   if (!isMaster()) { sheets = list; if (typeof renderSheetList === 'function') renderSheetList(); return; }
   let touched = false;
+  if (Array.isArray(tolte) && tolte.length) {
+    const via = new Set(tolte.filter(id => !list.some(s => s.id === id)));
+    for (const s of sheets.filter(x => via.has(x.id))) {
+      if (typeof wins !== 'undefined' && wins.get(s.id)) closeWin(wins.get(s.id));
+      world.querySelectorAll('.photo').forEach(p => { if (p.dataset.sheet === s.id) delete p.dataset.sheet; });
+      touched = true;
+    }
+    if (touched) sheets = sheets.filter(x => !via.has(x.id));
+  }
   const have = new Map(sheets.map(s => [s.id, s]));
   for (const s of list) {
     const old = have.get(s.id);
@@ -721,6 +731,8 @@ var deleteChat = (prev => function (id) {
   if (NET.on && !netFromServer) { intent('chat.del', { id }); return; }
   prev(id);
 })(deleteChat);
+/** Una scheda che chi guarda può cancellare: in partita il giocatore solo le sue. */
+function schedaMia(s) { return !NET.on || isMaster() || !!s._mia || (!!NET.me && s.owner === NET.me.token); }
 function onSheetDeleted(id) {
   if (!NET.on || NET.applying) return;
   intent('sheet.del', { id });

@@ -361,6 +361,7 @@ function viewFor(c) {
     sheets, chat: (world.chat || []).slice(-250).map(m => chatFor(c, m)).filter(Boolean), music: world.music,
     notes: world.notes || { text: '', editable: false },
     sistema: world.sistema || null,
+    schedeTolte: p.editAnySheet ? (world.schedeTolte || []).slice(-200) : undefined,
     compendio: world.compendio || null,
     turni: turniPerChi(c)
   };
@@ -512,7 +513,12 @@ function handleIntent(c, m) {
           if (nw) { nw.owner = nw.owner || sh.owner; out.push(nw); incoming.delete(sh.id); }
           else out.push(sh);
         }
-        for (const nw of incoming.values()) { if (!nw.owner && shOwners.has(nw.id)) nw.owner = shOwners.get(nw.id); out.push(nw); }
+        const tolte = new Set(world.schedeTolte || []);
+        for (const nw of incoming.values()) {
+          if (tolte.has(nw.id)) continue;                 // cancellata da un giocatore: il master non la rimette
+          if (!nw.owner && shOwners.has(nw.id)) nw.owner = shOwners.get(nw.id);
+          out.push(nw);
+        }
         world.sheets = out;
       }
       if ('active' in b) world.active = b.active;
@@ -732,6 +738,8 @@ function handleIntent(c, m) {
       if (!s) return;
       if (c.role !== 'master' && s.owner !== c.token) return deny(c, m.op, 'questa scheda non è tua');
       world.sheets = world.sheets.filter(x => x !== s);
+      // il master potrebbe averla ancora: se la rimanda col suo salvataggio non deve tornare
+      world.schedeTolte = (world.schedeTolte || []).filter(x => x !== s.id).concat(s.id).slice(-500);
       changed();
       return;
     }

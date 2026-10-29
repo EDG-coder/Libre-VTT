@@ -1740,3 +1740,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Critico da": "Crit from",
 "Da che numero il d20 di un attacco è un critico. Per una sola arma scrivi «19-20» nel suo nome o nel bonus.": "From which d20 roll an attack is a critical hit. For a single weapon write «19-20» in its name or bonus.",
 });
+Object.assign(window.LIBRE_LINGUE.en, {
+"👁 Mostra le schede nascoste ({n})": "👁 Show hidden sheets ({n})",
+"🙈 Nascondi dalla mia lista": "🙈 Hide from my list",
+});

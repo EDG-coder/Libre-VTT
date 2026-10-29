@@ -207,10 +207,20 @@ $('sheetCancel').addEventListener('click', () => $('sheetDialog').close());
 $('pickCancel').addEventListener('click', () => $('pickDialog').close());
 
 // ---------- Elenco ----------
+// Le schede che un giocatore ha tolto dalla sua lista (quelle del master o di altri: non le può cancellare).
+// Restano solo su questo dispositivo; «Mostra le nascoste» le rimette.
+const schedeNascoste = {
+  leggi() { try { return new Set(JSON.parse(localStorage.getItem('libre-schede-nascoste') || '[]')); } catch { return new Set(); } },
+  scrivi(set) { try { localStorage.setItem('libre-schede-nascoste', JSON.stringify([...set].slice(-500))); } catch {} }
+};
 function renderSheetList() {
   const list = $('sheetList');
   if (!sheets.length) { list.innerHTML = '<div class="empty">Nessuna scheda. Creane una con «Nuova scheda».</div>'; return; }
-  list.replaceChildren(...sheets.map(s => {
+  const nascoste = schedeNascoste.leggi(), viste = sheets.filter(s => !nascoste.has(s.id)), quante = sheets.length - viste.length;
+  const mostra = document.createElement('button');
+  mostra.type = 'button'; mostra.className = 'btn ghost mostraNascoste'; mostra.textContent = tr('👁 Mostra le schede nascoste ({n})', { n: quante });
+  mostra.addEventListener('click', () => { schedeNascoste.scrivi(new Set()); renderSheetList(); });
+  list.replaceChildren(...viste.map(s => {
     const d = document.createElement('div'), im = new Image(), nm = document.createElement('span'), sm = document.createElement('small');
     d.className = 'sheetItem'; d.dataset.id = s.id; d.draggable = true; d.title = document.documentElement.classList.contains('ui-touch') ? 'Tocca per aprire, tieni premuto per le altre opzioni' : 'Doppio clic per aprire, trascina sulla mappa per il segnalino';
     im.className = 'sicon'; im.src = iconOf(s); im.alt = ''; im.draggable = false;
@@ -219,7 +229,12 @@ function renderSheetList() {
     d.addEventListener('dblclick', () => openSheet(s.id));
     d.addEventListener('dragstart', e => { e.dataTransfer.setData('application/x-sheet', s.id); e.dataTransfer.effectAllowed = 'copy'; });
     return d;
-  }));
+  }), ...(quante ? [mostra] : []));
+}
+function nascondiScheda(id) {
+  const n = schedeNascoste.leggi(); n.add(id); schedeNascoste.scrivi(n);
+  wins.get(id) && closeWin(wins.get(id));
+  renderSheetList();
 }
 function deleteSheet(id) {
   const s = sheets.find(x => x.id === id);
@@ -237,12 +252,16 @@ function duplicateSheet(id) {
   sheets.push(c); renderSheetList(); scheduleSheets();
   if (typeof onSheetCreated === 'function') onSheetCreated(c);
 }
-const sheetItemMenu = id => [
-  { label: '📜 Apri', fn: () => openSheet(id) },
-  { label: '🖼 Cambia icona…', fn: () => pickAsset(a => setSheetIcon(sheets.find(x => x.id === id), a)) },
-  { label: 'Duplica', fn: () => duplicateSheet(id) },
-  '-', { label: 'Elimina', danger: true, fn: () => deleteSheet(id) }
-];
+// In partita un giocatore cancella solo le schede sue; quelle degli altri le può nascondere dalla sua lista.
+const sheetItemMenu = id => {
+  const s = sheets.find(x => x.id === id), mia = !s || typeof schedaMia !== 'function' || schedaMia(s);
+  return [
+    { label: '📜 Apri', fn: () => openSheet(id) },
+    { label: '🖼 Cambia icona…', fn: () => (typeof scegliIconaScheda === 'function' ? scegliIconaScheda(s) : pickAsset(a => setSheetIcon(s, a))) },
+    { label: 'Duplica', fn: () => duplicateSheet(id) },
+    '-', mia ? { label: 'Elimina', danger: true, fn: () => deleteSheet(id) } : { label: '🙈 Nascondi dalla mia lista', fn: () => nascondiScheda(id) }
+  ];
+};
 
 // ---------- Segnalini collegati ----------
 function tokenFromSheet(s, wx, wy) {
