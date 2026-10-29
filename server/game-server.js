@@ -992,6 +992,7 @@ function onMessage(c, raw) {
 
   if (m.t === 'peer') { c.peer = str(m.id, 80); return; }        // riga scritta da uffa-link
   if (m.t === 'pong') { c.alive = true; if (c.beatAt) c.rtt = Date.now() - c.beatAt; return; }
+  if (m.t === 'eco') { c.alive = true; c.send({ t: 'eco' }); return; }   // «ci sei?» (chi si è appena svegliato)
 
   if (m.t === 'hello') {
     // Il gettone è l'identità: il browser se lo tiene e lo rimanda. Se non ce l'ha, gliene do uno.
@@ -1235,7 +1236,7 @@ let bridge = null, bridgeBuf = '', bridgeQueue = [];
 // nuova e non sa chi sia. Glielo ripresentiamo noi, così il giocatore rientra da solo,
 // con lo stesso gettone (quindi stesso nome, stessi permessi, stesse schede).
 let lastHello = null;
-let hostUp = false, lastFromHost = 0, bridgeTries = 0;
+let hostUp = false, lastFromHost = 0, bridgeTries = 0, bridgeTimer = 0;
 const linkState = up => {
   if (hostUp === up) return;
   hostUp = up;
@@ -1251,15 +1252,21 @@ function bridgeConnect() {
     lastFromHost = Date.now();
     console.log('Ponte aperto verso uffa-link.');
     if (lastHello) sock.write(JSON.stringify(lastHello) + '\n');
-    // Quello che si era accumulato mentre eravamo giù: via i saluti e le risposte ai battiti vecchi.
-    for (const line of bridgeQueue.splice(0)) {
-      if (/^\{"t":"(hello|pong)"/.test(line)) continue;
-      sock.write(line);
-    }
+    else sock.write('{"t":"eco"}\n');                   // nessun saluto da ripresentare: almeno sapere se l'host c'è
   });
   sock.on('data', d => {
     lastFromHost = Date.now();
     bridgeTries = 0;
+    // Quello che si era accumulato mentre eravamo giù parte solo adesso che l'host ha risposto: uffa-link
+    // accetta subito il collegamento anche quando l'host non lo raggiunge, e lo chiude poco dopo
+    // (prima la coda partiva lì dentro e andava persa).
+    if (!sock.pronto) {
+      sock.pronto = true;
+      for (const line of bridgeQueue.splice(0)) {
+        if (/^\{"t":"(hello|pong|eco)"/.test(line)) continue;   // via i saluti e le risposte ai battiti vecchi
+        sock.write(line);
+      }
+    }
     linkState(true);                                     // l'host ha risposto: il tubo è davvero aperto
     bridgeBuf += d.toString('utf8');
     let i;
@@ -1269,6 +1276,7 @@ function bridgeConnect() {
       let msg; try { msg = JSON.parse(line); } catch { continue; }
       if (msg.t === 'asset.data' || msg.t === 'asset.miss') { bridgeAsset(msg); continue; }   // roba nostra
       if (msg.t === 'beat') { bridgeSend({ t: 'pong' }); continue; }   // il ponte è vivo anche senza browser
+      if (msg.t === 'eco') continue;                        // la risposta al nostro «ci sei?»: basta che sia arrivata
       if (msg.t === 'bye') lastHello = null;                // allontanato: non lo si ripresenta da soli
       // dove è arrivato il browser (versione del mondo, ultimo messaggio di chat): se il tubo si riapre
       // lo ripresentiamo da lì, e l'host gli manda solo quello che si è perso
@@ -1288,21 +1296,37 @@ function bridgeConnect() {
     if (bridge === sock) bridge = null;
     linkState(false);
     bridgeTries++;
-    setTimeout(bridgeConnect, Math.min(1500 * bridgeTries, 6000));
+    clearTimeout(bridgeTimer);
+    bridgeTimer = setTimeout(bridgeConnect, Math.min(1000 * bridgeTries, 4000));
   };
   sock.on('close', retry);
   sock.on('error', () => {});
 }
-// L'host manda un battito ogni 8 secondi. Se per 30 secondi non arriva niente il tubo è
+// L'host manda un battito ogni 5 secondi. Se per 15 secondi non arriva niente il tubo è
 // morto anche se nessuno ce l'ha detto (wifi caduto, portatile chiuso…): lo chiudiamo noi
 // e ne apriamo uno nuovo.
+const BRIDGE_MORTO = 15000;
 function bridgeWatchdog() {
   setInterval(() => {
-    if (bridge && !bridge.connecting && Date.now() - lastFromHost > 30000) {
-      console.log('L\'host non risponde da 30 secondi: riapro il collegamento.');
+    if (bridge && !bridge.connecting && Date.now() - lastFromHost > BRIDGE_MORTO) {
+      console.log('L\'host non risponde da 15 secondi: riapro il collegamento.');
       bridge.destroy();
     }
-  }, 5000);
+  }, 1000);
+}
+/** Il browser si è appena svegliato (rete tornata, app di nuovo in primo piano): il tubo c'è ancora? Se è
+ *  giù si riprova subito (senza aspettare il prossimo tentativo); se è su ma zitto da un po', «ci sei?»,
+ *  e se in 3 secondi non risponde lo si riapre. */
+let bridgeEco = 0;
+function bridgeSveglia() {
+  if (!bridge || bridge.destroyed) { bridgeTries = 0; clearTimeout(bridgeTimer); if (!bridge) bridgeConnect(); return; }
+  if (bridge.connecting || bridgeEco || Date.now() - lastFromHost < 4000) return;
+  const prima = lastFromHost, sock = bridge;
+  bridgeSend({ t: 'eco' });
+  bridgeEco = setTimeout(() => {
+    bridgeEco = 0;
+    if (bridge === sock && lastFromHost === prima) { console.log('L\'host non risponde al risveglio: riapro il collegamento.'); sock.destroy(); }
+  }, 3000);
 }
 // ---------- Richieste di file all'host (solo in modo «join») ----------
 // Il browser chiede un'immagine al suo server locale; se qui non c'è, se la fa mandare
@@ -1339,7 +1363,7 @@ function bridgeAsset(msg) {
 
 function bridgeSend(obj) {
   const line = JSON.stringify(obj) + '\n';
-  if (bridge && !bridge.destroyed && bridge.readyState === 'open') bridge.write(line);
+  if (bridge && !bridge.destroyed && bridge.readyState === 'open' && bridge.pronto) bridge.write(line);
   else if (bridgeQueue.length < 200) bridgeQueue.push(line);
 }
 
@@ -1530,6 +1554,7 @@ if (MODE === 'join') {
   // In «join» il browser manda tutto all'host e riceve tutto dall'host: qui non si decide niente.
   onMessage = function (c, raw) {
     let m; try { m = JSON.parse(raw); } catch { return; }
+    if (m.t === 'eco') { c.send({ t: 'eco' }); bridgeSveglia(); return; }   // il browser c'è; e il tubo?
     if (m.t === 'hello') lastHello = m;
     if (m.t === 'name' && lastHello) lastHello = { ...lastHello, name: m.name };
     if (m.t === 'leave') lastHello = null;                   // scollegato a mano: non ripresentarlo
@@ -1550,13 +1575,13 @@ if (MODE === 'host') {
       if (c.alive === false) {
         const n = (misses.get(c) || 0) + 1;
         misses.set(c, n);
-        if (n >= 3) { c.close(); detach(c); continue; }     // tre battiti a vuoto e si lascia andare
+        if (n >= 3) { c.close(); detach(c); continue; }     // tre battiti a vuoto (15 secondi) e si lascia andare
       } else misses.set(c, 0);
       c.alive = false;
       c.beatAt = Date.now();
       c.send({ t: 'beat' });
     }
-  }, 8000);
+  }, 5000);
 }
 
 process.on('uncaughtException', e => console.error(e));

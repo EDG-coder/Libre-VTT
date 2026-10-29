@@ -94,20 +94,43 @@ function netConnect() {
   };
   ws.onmessage = e => {
     if (NET.ws !== ws) return;
+    NET.ultimo = Date.now();
     let m; try { m = JSON.parse(e.data); } catch { return; }
     netHandle(m);
   };
-  ws.onclose = () => {
-    if (NET.ws !== ws) return;                                // uno vecchio, già sostituito
-    NET.ws = null;
-    const was = NET.on;
-    NET.on = false;
-    if (NET.everOn && !NET.manual && !NET.stopped) NET.retrying = true;
-    if (was) applyRole();
-    netRetry();
-  };
+  ws.onclose = () => netCaduto(ws);
   ws.onerror = () => {};
 }
+/** Il collegamento locale è caduto (o lo diamo per morto noi): ci si ricollega. */
+function netCaduto(ws) {
+  if (NET.ws !== ws) return;                                  // uno vecchio, già sostituito
+  NET.ws = null;
+  clearTimeout(NET._eco); NET._eco = 0;
+  try { ws.close(); } catch {}
+  const was = NET.on;
+  NET.on = false;
+  if (NET.everOn && !NET.manual && !NET.stopped) NET.retrying = true;
+  if (was) applyRole();
+  netRetry();
+}
+// ---------- Accorgersi prima ----------
+// Quando la rete torna o l'app torna in primo piano (il telefono tirato fuori dalla tasca) non si aspetta il
+// prossimo tentativo: se il collegamento è giù ci si ricollega subito; se sembra su si chiede «ci sei?» e, se in
+// 3 secondi nessuno risponde, lo si dà per morto. Il server del giocatore, ricevuto il «ci sei?», controlla a
+// sua volta il tubo verso l'host. Lo stesso controllo si fa da soli se da 20 secondi non arriva niente.
+NET.ultimo = Date.now();
+function netControlla() {
+  if (NET.manual || NET.stopped || !NET.port || !NET.everOn) return;
+  const ws = NET.ws;
+  if (!ws || ws.readyState > 1) { NET.tries = 0; netConnect(); return; }
+  if (ws.readyState !== 1 || NET._eco) return;
+  NET._eco = setTimeout(() => { NET._eco = 0; netCaduto(ws); }, 3000);
+  netSend({ t: 'eco' });
+}
+addEventListener('online', netControlla);
+addEventListener('pageshow', netControlla);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) netControlla(); });
+setInterval(() => { if (NET.on && !document.hidden && Date.now() - NET.ultimo > 20000) netControlla(); }, 5000);
 function netRetry() {
   if (NET.manual || NET.stopped) { if (NET.retrying) { NET.retrying = false; applyRole(); } return; }
   NET.tries++;
@@ -154,6 +177,7 @@ function netReconnectNow() {
 function netHandle(m) {
   switch (m.t) {
     case 'beat': netSend({ t: 'pong' }); return;
+    case 'eco': clearTimeout(NET._eco); NET._eco = 0; return;   // c'è
     case 'welcome': {
       const back = NET.retrying || NET.hostDown;
       NET.on = true; NET.everOn = true; NET.me = m.you;
