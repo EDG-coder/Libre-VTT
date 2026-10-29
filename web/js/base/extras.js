@@ -44,8 +44,17 @@ function registerTool(id, el, grip, name) {
   slotsEl.appendChild(slot); slot.appendChild(el);               // all'inizio tutti stanno nel menu
   const t = { id, el, grip, slot, name, docked: true };
   TOOLS.push(t);
-  const body = el.querySelector('.tbody');
-  if (body && osservaPannelli) for (const c of body.children) osservaPannelli.observe(c);
+  // si osserva il contenuto intero (non solo i pezzi che c'erano all'inizio): righe nuove dei turni,
+  // finestre messe nella cartella, testi che vanno a capo… il pannello aperto si allunga da solo
+  // (il pannello ha un'altezza massima, quindi si osservano i pezzi dentro, anche quelli aggiunti dopo)
+  const body = el.querySelector('.tbody') || el.querySelector('#diceBody');
+  if (body && osservaPannelli) {
+    for (const c of body.children) osservaPannelli.observe(c);
+    new MutationObserver(ms => {
+      for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) osservaPannelli.observe(n);
+      if (el.classList.contains('open')) requestAnimationFrame(() => misuraPannello(el));
+    }).observe(body, { childList: true });
+  }
   grip.addEventListener('pointerdown', e => startToolDrag(e, t));
   return t;
 }
@@ -133,14 +142,14 @@ function toggleOpen(box, open) {                                 // pannello che
 }
 // Alto quanto il contenuto, ma mai oltre il fondo della finestra: quello che non ci sta si scorre.
 function misuraPannello(box) {
-  const body = box.querySelector('.tbody');
+  const body = box.querySelector('.tbody') || box.querySelector('#diceBody');
   if (!body) return;
   const top = Math.max(0, box.getBoundingClientRect().top), spazio = innerHeight - top - 10;
   box.style.setProperty('--dh', Math.max(120, Math.min(body.scrollHeight, spazio)) + 'px');
 }
 // Il contenuto può crescere mentre è aperto (una scaletta, un testo che va a capo): si rimisura.
 const osservaPannelli = typeof ResizeObserver === 'function'
-  ? new ResizeObserver(es => es.forEach(e => { const b = e.target.closest('.tool'); if (b && b.classList.contains('open')) misuraPannello(b); }))
+  ? new ResizeObserver(es => es.forEach(e => { const b = e.target.closest('.tool'); if (b && b.classList.contains('open')) requestAnimationFrame(() => misuraPannello(b)); }))
   : null;
 addEventListener('resize', () => document.querySelectorAll('.tool.glass.open').forEach(misuraPannello));
 // Aprendo un pannello, quelli già aperti che gli finirebbero sotto si chiudono.
