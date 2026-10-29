@@ -165,7 +165,7 @@ function pickAsset(cb) {                     // finestra con le immagini degli a
   dlg.showModal();
 }
 function setSheetIcon(s, a) {
-  s.icon = { url: a.url, aid: a.id };
+  s.icon = a.gid ? { url: a.url, gid: a.gid } : { url: a.url, aid: a.id };
   renderSheetList(); wins.get(s.id) && refreshWinIcon(wins.get(s.id));
   scheduleSheets();
   if (typeof onSheetIcon === 'function') onSheetIcon(s);     // in partita l'icona nuova va anche agli altri
@@ -414,7 +414,7 @@ const sheetWinMenu = w => {
   return [
     st === 'open' ? { label: 'Riduci a barra', fn: () => setWinState(w, 'min') } : { label: 'Ripristina', fn: () => setWinState(w, 'open') },
     ...(w._sheet && st !== 'icon' ? [{ label: 'Riduci a icona', fn: () => setWinState(w, 'icon') }] : []),
-    ...(w._sheet ? [{ label: '🖼 Cambia icona…', fn: () => pickAsset(a => setSheetIcon(w._sheet, a)) }] : []),
+    ...(w._sheet ? [{ label: '🖼 Cambia icona…', fn: () => (typeof scegliIconaScheda === 'function' ? scegliIconaScheda(w._sheet) : pickAsset(a => setSheetIcon(w._sheet, a))) }] : []),
     ...(w._sheet && w._sheet.tpl !== 'simple' && w._sheet.tpl !== 'generica' ? [{ label: (vistaScheda.get(w._sheet.id) || w._sheet.tpl) === 'standard' ? '📋 Vedi come scheda Open' : '📜 Vedi come scheda Standard', fn: () => cambiaVista(w) }] : []),
     ...(w._sheet && typeof vociFileScheda === 'function' ? vociFileScheda(w) : []),
     ...(w._sheet && typeof vociSaliLivello === 'function' ? vociSaliLivello(w) : []),

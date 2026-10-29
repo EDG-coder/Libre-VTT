@@ -854,3 +854,5 @@ body.net-player #caselleSect { display: none; }
 /* «Critico da» nella barra in cima alla scheda */
 .tiroBar .tiroCrit { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--sh-fg, var(--text)); opacity: .85; white-space: nowrap; }
 .tiroBar .tiroCrit select { font: inherit; font-size: 12.5px; padding: 2px 4px; border-radius: 7px; border: 1px solid var(--sh-line, var(--line)); background: transparent; color: inherit; }
+/* chi non può caricare negli assets della partita non vede il pannello Assets (l'icona del suo personaggio la sceglie dalla scheda) */
+.no-uploadAssets .tab[data-tab="assets"] { display: none; }

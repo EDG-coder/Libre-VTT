@@ -1744,3 +1744,9 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "👁 Mostra le schede nascoste ({n})": "👁 Show hidden sheets ({n})",
 "🙈 Nascondi dalla mia lista": "🙈 Hide from my list",
 });
+Object.assign(window.LIBRE_LINGUE.en, {
+"Non sono riuscito a mandare l'immagine: gli altri vedranno l'icona di prima.": "I couldn't send the image: the others will see the previous icon.",
+"Il master non ti ha dato il permesso di usare una tua immagine.": "The GM hasn't allowed you to use your own image.",
+"Mando la tua immagine…": "Sending your image…",
+"Non sono riuscito a mandare l'immagine.": "I couldn't send the image.",
+});

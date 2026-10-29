@@ -729,7 +729,16 @@ function handleIntent(c, m) {
       if (sheetVisible(c, s) !== 'rw') return deny(c, m.op, 'questa scheda non è tua');
       if (typeof m.name === 'string') s.name = str(m.name, 60);
       if (m.f && typeof m.f === 'object') s.f = m.f;
-      if (m.icon !== undefined) s.icon = m.icon;
+      if (m.icon !== undefined) {
+        s.icon = m.icon;
+        // un giocatore che cambia la sua icona cambia anche i suoi segnalini collegati a quella scheda
+        const u = m.icon && String(m.icon.url || '');
+        if (c.role !== 'master' && /^gs:[a-f0-9]{64}$/.test(u)) {
+          for (const sc of world.scenes || []) for (const ph of sc.photos || []) {
+            if (ph.sheet === s.id && !ph.shape && isTheirs(c, sc, ph)) { ph.url = u; ph.gid = u.slice(3); delete ph.aid; }
+          }
+        }
+      }
       changed();
       return;
     }

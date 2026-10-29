@@ -432,6 +432,11 @@ function mergeSheets(list, tolte) {
     if (JSON.stringify(old.f) !== JSON.stringify(s.f) || old.name !== s.name) {
       old.f = s.f; old.name = s.name; old.owner = s.owner; touched = true;
     }
+    // l'icona cambiata da un giocatore (solo quelle già nel deposito della partita: le altre sono del master)
+    if (s.icon && String(s.icon.url || '').startsWith('gs:') && JSON.stringify(old.icon || null) !== JSON.stringify(s.icon)) {
+      old.icon = s.icon; touched = true;
+      if (typeof wins !== 'undefined' && wins.get(old.id)) refreshWinIcon(wins.get(old.id));
+    }
   }
   if (touched && typeof renderSheetList === 'function') renderSheetList();
 }
@@ -452,6 +457,11 @@ function mergeIntoCurrent(w) {
     if (el === activeEl || mode) continue;                           // il master lo sta muovendo adesso
     if (Math.abs(num(el, 'left') - p.l) > 0.5) el.style.left = p.l + 'px';
     if (Math.abs(num(el, 'top') - p.t) > 0.5) el.style.top = p.t + 'px';
+    // l'immagine cambiata da un giocatore (la sua icona nuova): la prende anche il master
+    const prima = NET.photosById.get(id), img = el.querySelector('img');
+    if (img && prima && prima.url !== p.url && String(p.url || '').startsWith('gs:')) {
+      const u = resolveUrl(p); if (u) { img.src = u; el.dataset.gid = p.url.slice(3); }
+    }
   }
   for (const [id, p] of byId) {
     if (here.has(id)) continue;
@@ -477,7 +487,7 @@ function mergeIntoCurrent(w) {
 function rememberPhotos() {
   NET.photosById = new Map();
   const sc = NET.world && (NET.world.scenes || []).find(s => s.id === (cur && cur.id));
-  for (const p of (sc && sc.photos) || []) NET.photosById.set(p.id, { l: p.l, t: p.t, w: p.w, h: p.h });
+  for (const p of (sc && sc.photos) || []) NET.photosById.set(p.id, { l: p.l, t: p.t, w: p.w, h: p.h, url: p.url });
 }
 
 // ---------- Quello che manda il browser ----------
@@ -717,13 +727,51 @@ function onSheetCreated(s) {
 }
 // L'icona di una scheda cambiata dal menu: senza questo restava solo su questo computer,
 // e chi trascinava la scheda sulla mappa (o ricaricava) vedeva ancora quella di prima.
-function onSheetIcon(s) {
+async function onSheetIcon(s) {
   if (!NET.on || NET.applying) return;
   if (isMaster()) { netPushBoard(); return; }
-  // un giocatore manda solo immagini che gli altri possono vedere (quelle della sessione)
-  const u = s.icon && (s.icon.gid ? 'gs:' + s.icon.gid : String(s.icon.url || ''));
-  if (u && !/^(gs:|data:image\/)/.test(u)) { netSay('Questa immagine c\'è solo sul tuo computer: gli altri vedranno l\'icona di prima.', 'warn'); return; }
+  // un giocatore: un'immagine del suo computer va prima nel deposito della partita (piccola: 256 px, WebP),
+  // così la vedono tutti; poi la scheda (e i suoi segnalini) la usano con «gs:<hash>»
+  let u = s.icon && (s.icon.gid ? 'gs:' + s.icon.gid : String(s.icon.url || ''));
+  if (u && !/^(gs:|data:image\/)/.test(u)) {
+    const hash = await netCaricaIcona(u, s.name);
+    if (!hash) { netSay('Non sono riuscito a mandare l\'immagine: gli altri vedranno l\'icona di prima.', 'warn'); return; }
+    s.icon = { url: 'gs:' + hash, gid: hash }; u = s.icon.url;
+  }
   intent('sheet.save', { id: s.id, name: s.name, f: s.f, icon: u ? { url: u, gid: s.icon.gid } : null });
+}
+/** Un'immagine (indirizzo o file) → al massimo 256 px, WebP → nel deposito della partita. Restituisce l'hash. */
+async function netCaricaIcona(sorgente, nome) {
+  if (!can('uploadTokenImage') && !can('uploadAssets')) return null;
+  try {
+    const blob = sorgente instanceof Blob ? sorgente : await (await fetch(sorgente)).blob();
+    const bmp = await createImageBitmap(blob);
+    const k = Math.min(1, 256 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const out = await new Promise(r => c.toBlob(r, 'image/webp', 0.86));
+    const buf = new Uint8Array(await out.arrayBuffer());
+    const hash = toHex(await crypto.subtle.digest('SHA-256', buf));
+    if (!NET.assetKnown.has(hash) && !await netPutAsset(hash, buf, 'image/webp', (nome || 'segnalino') + '.webp')) return null;
+    NET.assetKnown.add(hash);
+    return hash;
+  } catch (e) { console.warn('icona', e); return null; }
+}
+/** «Cambia icona…» di una scheda. Un giocatore senza il permesso degli assets sceglie una foto dal suo computer. */
+function scegliIconaScheda(s) {
+  if (!s) return;
+  if (!NET.on || isMaster() || can('uploadAssets')) { pickAsset(a => setSheetIcon(s, a)); return; }
+  if (!can('uploadTokenImage')) { netSay('Il master non ti ha dato il permesso di usare una tua immagine.', 'warn'); return; }
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.addEventListener('change', async () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    netSay('Mando la tua immagine…');
+    const hash = await netCaricaIcona(f, s.name);
+    if (!hash) { netSay('Non sono riuscito a mandare l\'immagine.', 'warn'); return; }
+    setSheetIcon(s, { url: 'gs:' + hash, gid: hash });
+  });
+  inp.click();
 }
 // Messaggi cancellati: lo decide il server, che lo dice a tutti.
 function chatPuoCancellare(m) { return !NET.on || isMaster() || (!!m.byId && !!NET.me && m.byId === NET.me.token); }
