@@ -875,3 +875,20 @@ input.nonCapito { outline: 2px solid #ff6b6b; outline-offset: 0; }
 #percorsoNota[hidden] { display: none; }
 .tiroBar .scattaBtn { padding: 4px 10px; font-size: 12.5px; border-radius: 8px; border: 1px solid var(--sh-line, var(--line)); background: transparent; color: inherit; cursor: pointer; }
 body:not(.net-on) .soloRete { display: none !important; }
+/* ---------- Pannello «Visibilità» (nebbia + luci) ---------- */
+#luceBox { --tw: 340px; }
+#luceBox .visTesta { display: flex; flex-direction: column; gap: 6px; padding-bottom: 6px; border-bottom: 1px solid rgba(255, 255, 255, .15); }
+#luceBox .lSeg { display: flex; flex-wrap: wrap; gap: 4px; }
+#luceBox .visModi button, #luceBox .visAmb button { flex: 1 1 auto; }
+#luceBox .visCheck { list-style: none; margin: 0; padding: 0; font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
+#luceBox .visCheck li.ok { color: #7ff0c0; } #luceBox .visCheck li.no { color: #ffb0b0; cursor: pointer; text-decoration: underline dotted; } #luceBox .visCheck li.info { color: #c3cad8; }
+#luceBox .visPrimi { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; padding: 6px 8px; border-radius: 10px; background: rgba(255, 176, 0, .12); border: 1px solid rgba(255, 176, 0, .4); }
+#luceBox .visPrimi button { text-align: left; }
+#luceBox .visTab { display: flex; gap: 2px; border-bottom: 1px solid rgba(255, 255, 255, .15); }
+#luceBox .visTab button { flex: 1 1 auto; border-radius: 8px 8px 0 0; font-size: 12px; padding: 6px 4px; background: transparent; }
+#luceBox .visTab button.on { background: rgba(255, 176, 0, .35); }
+#luceBox .visPane { display: flex; flex-direction: column; gap: 8px; }
+#luceBox .visPane[hidden] { display: none !important; }
+#luceBox .visParty { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+#luceBox .visParty small { opacity: .7; }
+#luceSegni .lStanza { fill: rgba(255, 93, 143, .08); stroke: #ff5d8f; }

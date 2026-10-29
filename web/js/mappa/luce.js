@@ -197,7 +197,7 @@
     segni.hidden = false;
     const s = typeof view !== 'undefined' ? view.s : 1, px = v => v / s;           // spessori costanti a schermo
     let h = '';
-    if (nelLivello) {
+    if (nelLivello && l) {
       for (const w of l.muri) {
         if (w.porta) continue;
         h += `<line x1="${w.x1}" y1="${w.y1}" x2="${w.x2}" y2="${w.y2}" class="lMuro" stroke-width="${px(4)}"/>`;
@@ -208,6 +208,10 @@
         h += `<circle cx="${x.x}" cy="${x.y}" r="${R2}" class="lAlone" stroke-width="${px(1.5)}" style="--c:${x.col}"/>`;
         if (R1 > 0) h += `<circle cx="${x.x}" cy="${x.y}" r="${R1}" class="lAlone forte" stroke-width="${px(1.5)}" style="--c:${x.col}"/>`;
         h += `<circle cx="${x.x}" cy="${x.y}" r="${px(11)}" class="lFonte" stroke-width="${px(2)}" style="--c:${x.col}"/>`;
+      }
+      if (stato.stanza) {
+        const { a, b } = stato.stanza;
+        h += `<rect x="${Math.min(a.x, b.x)}" y="${Math.min(a.y, b.y)}" width="${Math.abs(b.x - a.x)}" height="${Math.abs(b.y - a.y)}" class="lStanza" stroke-width="${px(3)}" stroke-dasharray="${px(8)} ${px(6)}"/>`;
       }
       const c = stato.catena, p = stato.cursore;
       if (c && p) h += `<line x1="${c.x}" y1="${c.y}" x2="${p.x}" y2="${p.y}" class="lAnteprima ${stato.modo === 'porta' ? 'porta' : ''}" stroke-width="${px(3)}" stroke-dasharray="${px(8)} ${px(6)}"/>`;
@@ -271,11 +275,34 @@
     return best ? { muro: best } : null;
   }
   function fineCatena() { stato.catena = null; disegnaSegni(); }
+  /** Una porta larga una casella dove hai cliccato sul muro: il muro resta prima e dopo. */
+  function metteiPorta(l, w, p) {
+    const dx = w.x2 - w.x1, dy = w.y2 - w.y1, L = Math.hypot(dx, dy) || 1;
+    let t = ((p.x - w.x1) * dx + (p.y - w.y1) * dy) / (L * L);
+    const meta = Math.min(0.5, cella() / 2 / L);
+    t = Math.max(meta, Math.min(1 - meta, t));
+    const a = { x: w.x1 + dx * (t - meta), y: w.y1 + dy * (t - meta) }, b = { x: w.x1 + dx * (t + meta), y: w.y1 + dy * (t + meta) };
+    const i = l.muri.indexOf(w), pezzi = [];
+    if (t - meta > 1e-3) pezzi.push({ id: nuovoId(), x1: w.x1, y1: w.y1, x2: a.x, y2: a.y });
+    pezzi.push({ id: nuovoId(), x1: a.x, y1: a.y, x2: b.x, y2: b.y, porta: true, aperta: false });
+    if (t + meta < 1 - 1e-3) pezzi.push({ id: nuovoId(), x1: b.x, y1: b.y, x2: w.x2, y2: w.y2 });
+    l.muri.splice(i, 1, ...pezzi);
+  }
 
   viewport.addEventListener('pointerdown', e => {
     if (!luceAttiva() || e.button !== 0 || e.target.closest('.lPorta')) return;
     e.stopImmediatePropagation(); e.preventDefault();
     const l = luceDi(true), p0 = nelMondo(e);
+    if (stato.modo === 'porta' && !stato.catena) {
+      // clic su un muro: lì diventa una porta larga una casella (il muro si divide in due pezzi)
+      const q = sotto(p0);
+      if (q && q.muro && !q.muro.porta) { metteiPorta(l, q.muro, p0); cambiata(); return; }
+    }
+    if (stato.modo === 'stanza') {
+      const p = agganciaPunto(p0, e);
+      stato.stanza = { a: p, b: p, id: e.pointerId }; viewport.setPointerCapture(e.pointerId); disegnaSegni();
+      return;
+    }
     if (stato.modo === 'muro' || stato.modo === 'porta') {
       const p = agganciaPunto(p0, e);
       if (!stato.catena) { stato.catena = p; stato.cursore = p; disegnaSegni(); return; }
@@ -314,6 +341,7 @@
     if (!luceAttiva()) return;
     const p0 = nelMondo(e);
     if (stato.catena) { stato.cursore = agganciaPunto(p0, e); disegnaSegni(); }
+    if (stato.stanza && stato.stanza.id === e.pointerId) { e.stopImmediatePropagation(); stato.stanza.b = agganciaPunto(p0, e); disegnaSegni(); return; }
     const g = stato.presa;
     if (!g || g.id !== e.pointerId) return;
     e.stopImmediatePropagation();
@@ -323,6 +351,15 @@
     disegnaSegni(); if (stato.anteprima) disegna();
   }, true);
   const lascia = e => {
+    if (stato.stanza && stato.stanza.id === e.pointerId) {
+      const { a, b } = stato.stanza; stato.stanza = null;
+      if (Math.abs(b.x - a.x) * view.s > 6 && Math.abs(b.y - a.y) * view.s > 6) {
+        const l = luceDi(true), x0 = Math.min(a.x, b.x), x1 = Math.max(a.x, b.x), y0 = Math.min(a.y, b.y), y1 = Math.max(a.y, b.y);
+        for (const [p, q, r, t] of [[x0, y0, x1, y0], [x1, y0, x1, y1], [x1, y1, x0, y1], [x0, y1, x0, y0]]) l.muri.push({ id: nuovoId(), x1: p, y1: q, x2: r, y2: t });
+        cambiata();
+      } else disegnaSegni();
+      return;
+    }
     if (!stato.presa || stato.presa.id !== e.pointerId) return;
     stato.presa = null; cambiata();
   };
@@ -341,55 +378,120 @@
     scheduleBoardSave();
   }
 
-  // ======================= Lo strumento nel menu =======================
-  const ICONA = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2.2h5c.1-1 .5-1.7 1.1-2.2A6 6 0 0 0 12 3z"/></svg>';
-  const box = mk('div', 'tool glass', `<button class="tgrip" type="button" aria-label="${tr('Luci e muri')}" title="${tr('Luci e muri')}">${ICONA}</button>
+  // ======================= Lo strumento nel menu: «Visibilità» (nebbia + luci in un pannello solo) =======================
+  // In cima: come vedono i giocatori (tutto, nebbia, luce dinamica, entrambe), l'anteprima e una lista di
+  // controllo che dice cosa manca. Sotto, quattro schede: Nebbia (gli strumenti di fog.js, spostati qui),
+  // Luci, Muri e porte, Party e visione. La logica resta in fog.js e qui sopra: cambia solo il pannello.
+  const ICONA = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const MODI_VISTA = [
+    ['tutto', '👁 Tutto visibile', 'I giocatori vedono tutta la mappa.'],
+    ['nebbia', '☁ Nebbia', 'Vedono solo quello che scopri tu con la nebbia.'],
+    ['luce', '💡 Luce dinamica', 'Vedono quello che il party vede davvero: muri, luci e buio.'],
+    ['entrambe', '☁💡 Entrambe', 'La luce dinamica dove segni le «zone luce», la nebbia altrove.']
+  ];
+  const AMBIENTI = [
+    ['luce', '☀ Giorno', 'Si vede tutto quello che il party ha davanti, fin dove non ci sono muri.'],
+    ['penombra', '⛅ Penombra', 'Si vede tutto, ma scuro: le luci e la scurovisione fanno vedere meglio.'],
+    ['buio', '🌑 Buio', 'Si vede solo dove arrivano le luci o la scurovisione.']
+  ];
+  const box = mk('div', 'tool glass', `<button class="tgrip" type="button" aria-label="${tr('Visibilità')}" title="${tr('Visibilità: nebbia, luci, muri')}">${ICONA}</button>
     <div class="tbody" inert>
-      <label class="trow"><input id="luceOn" type="checkbox"> ${tr('Illuminazione dinamica in questa scena')}</label>
-      <div class="trow lRiga"><span>${tr('Ambiente')}</span><span class="lSeg" id="luceAmb">
-        <button type="button" data-v="luce">☀ ${tr('Luce')}</button><button type="button" data-v="penombra">⛅ ${tr('Penombra')}</button><button type="button" data-v="buio">🌑 ${tr('Buio')}</button></span></div>
-      <div class="trow lRiga"><span>${tr('Già visto')}</span><span class="lSeg" id="luceRic">
-        <button type="button" data-v="scuro" title="${tr('Quello che il party ha già visto resta, scuro e senza i segnalini degli altri')}">${tr('Resta, scuro')}</button><button type="button" data-v="nero" title="${tr('Si vede solo quello che il party vede adesso')}">${tr('Torna nero')}</button></span></div>
-      <label class="trow"><input id="luceCond" type="checkbox"> ${tr('Visione condivisa (tutti vedono quello che vede il party)')}</label>
-      <label class="trow"><input id="luceSolidi" type="checkbox"> ${tr('I muri non si attraversano (i giocatori non ci passano)')}</label>
-      <label class="trow"><input id="luceVel" type="checkbox"> ${tr('Nelle scene di battaglia il movimento dei giocatori è limitato dalla Velocità della scheda')}</label>
-      <div class="trow lModi" id="luceModi">
-        <button type="button" data-m="muro" title="${tr('Un clic per ogni angolo; doppio clic, Invio o di nuovo sullo stesso punto per finire')}">🧱 ${tr('Muro')}</button>
-        <button type="button" data-m="porta" title="${tr('Due clic: dove comincia e dove finisce la porta')}">🚪 ${tr('Porta')}</button>
-        <button type="button" data-m="luce" title="${tr('Un clic per mettere una luce; trascina una luce per spostarla')}">💡 ${tr('Luce')}</button>
-        <button type="button" data-m="sposta" title="${tr('Trascina un muro, un suo estremo o una luce')}">✋ ${tr('Sposta')}</button>
-        <button type="button" data-m="gomma" title="${tr('Tocca un muro, una porta o una luce per toglierli')}">🧽 ${tr('Gomma')}</button>
+      <div class="visTesta">
+        <div class="lSeg visModi" id="visModi" role="radiogroup" aria-label="${tr('Come vedono i giocatori')}">${MODI_VISTA.map(([v, n]) => `<button type="button" role="radio" data-v="${v}">${tr(n)}</button>`).join('')}</div>
+        <p class="tnote" id="visModoNota"></p>
+        <label class="trow visAnte"><input id="luceAnte" type="checkbox"> ${tr('Anteprima: come la vedono i giocatori')}</label>
+        <ul class="visCheck" id="visCheck"></ul>
+        <div class="visPrimi" id="visPrimi" hidden>
+          <b>${tr('Primi passi')}</b>
+          <button type="button" data-vai="muri">1. ${tr('Disegna i muri')}</button>
+          <button type="button" data-vai="luci">2. ${tr('Metti una luce')}</button>
+          <button type="button" data-vai="party">3. ${tr('Scegli chi è del party')}</button>
+        </div>
+      </div>
+      <div class="visTab" role="tablist">
+        <button type="button" role="tab" data-tab="nebbia">☁ ${tr('Nebbia')}</button><button type="button" role="tab" data-tab="luci">💡 ${tr('Luci')}</button><button type="button" role="tab" data-tab="muri">🧱 ${tr('Muri e porte')}</button><button type="button" role="tab" data-tab="party">🧑‍🤝‍🧑 ${tr('Party')}</button>
+      </div>
+      <div class="visPane" data-pane="nebbia" id="visNebbia"></div>
+      <div class="visPane" data-pane="luci">
+        <div class="lSeg visAmb" id="luceAmb">${AMBIENTI.map(([v, n]) => `<button type="button" data-v="${v}">${tr(n)}</button>`).join('')}</div>
+        <p class="tnote" id="luceAmbNota"></p>
+        <div class="trow lModi" data-modi="luci">
+          <button type="button" data-m="luce" title="${tr('Un clic per mettere una luce; trascina una luce per spostarla')}">💡 ${tr('Metti')}</button>
+          <button type="button" data-m="sposta">✋ ${tr('Sposta')}</button>
+          <button type="button" data-m="gomma">🧽 ${tr('Gomma')}</button>
+        </div>
+        <div id="luceNuova">
+          <label class="trow">${tr('Luce intensa')} <input id="luceR" type="number" min="0" max="200" step="5"> <span class="lU"></span></label>
+          <label class="trow">${tr('Luce fioca oltre')} <input id="luceRf" type="number" min="0" max="200" step="5"> <span class="lU"></span></label>
+          <label class="trow">${tr('Colore')} <input id="luceCol" type="color"></label>
+        </div>
+        <p class="tnote">${tr('Una torcia o una lanterna in mano a un personaggio: menu del segnalino → «Luce e visione».')}</p>
+      </div>
+      <div class="visPane" data-pane="muri">
+        <div class="trow lModi" data-modi="muri">
+          <button type="button" data-m="muro">🧱 ${tr('Muro')}</button>
+          <button type="button" data-m="stanza">▭ ${tr('Stanza')}</button>
+          <button type="button" data-m="porta">🚪 ${tr('Porta')}</button>
+          <button type="button" data-m="sposta">✋ ${tr('Sposta')}</button>
+          <button type="button" data-m="gomma">🧽 ${tr('Gomma')}</button>
+        </div>
+        <div class="trow"><button id="luceFine" type="button">${tr('Fine muro')}</button><button id="luceAnnulla" type="button" title="Cmd/Ctrl+Z">↶ ${tr('Annulla')}</button><button id="luceRipeti" type="button" title="Cmd/Ctrl+Maiusc+Z">↷ ${tr('Ripeti')}</button></div>
+        <label class="trow"><input id="luceSolidi" type="checkbox"> ${tr('I muri non si attraversano (i giocatori non ci passano)')}</label>
+        <label class="trow"><input id="luceVel" type="checkbox"> ${tr('Nelle scene di battaglia il movimento dei giocatori è limitato dalla Velocità della scheda')}</label>
+      </div>
+      <div class="visPane" data-pane="party">
+        <label class="trow"><input id="luceCond" type="checkbox"> ${tr('Visione condivisa (tutti vedono quello che vede il party)')}</label>
+        <div class="trow lRiga"><span>${tr('Già visto')}</span><span class="lSeg" id="luceRic">
+          <button type="button" data-v="scuro" title="${tr('Quello che il party ha già visto resta, scuro e senza i segnalini degli altri')}">${tr('Resta, scuro')}</button><button type="button" data-v="nero" title="${tr('Si vede solo quello che il party vede adesso')}">${tr('Torna nero')}</button></span></div>
+        <div class="trow"><button id="luceDim" type="button">${tr('Dimentica il già visto')}</button></div>
+        <p class="tnote">${tr('I segnalini della scena: spunta chi fa parte del party (vede e scopre la mappa).')}</p>
+        <ul class="visParty" id="visParty"></ul>
       </div>
       <p class="tnote" id="luceTip"></p>
-      <div id="luceNuova">
-        <label class="trow">${tr('Luce intensa')} <input id="luceR" type="number" min="0" max="200" step="5"> <span class="lU"></span></label>
-        <label class="trow">${tr('Luce fioca oltre')} <input id="luceRf" type="number" min="0" max="200" step="5"> <span class="lU"></span></label>
-        <label class="trow">${tr('Colore')} <input id="luceCol" type="color"></label>
-      </div>
-      <label class="trow"><input id="luceAnte" type="checkbox"> ${tr('Anteprima: come la vede il party')}</label>
-      <div class="trow"><button id="luceDim" type="button">${tr('Dimentica il già visto')}</button><button id="luceFine" type="button">${tr('Fine muro')}</button></div>
-      <p class="tnote">${tr('Le zone dove vale si segnano con la nebbia di guerra («💡 Zona luce»): se non ne segni nessuna vale su tutta la mappa. Luce e scurovisione dei segnalini: menu del segnalino.')}</p>
     </div>`);
   box.id = 'luceBox';
   document.body.appendChild(box);
   const $l = id => document.getElementById(id);
+  // gli strumenti della nebbia (fog.js) vengono qui, nella loro scheda: restano gli stessi elementi, con gli stessi comandi
+  if (typeof fogBox !== 'undefined' && fogBox) {
+    const fb = fogBox.querySelector('.tbody');
+    if (fb) $l('visNebbia').append(...fb.childNodes);
+    const acceso = $l('fogOn'); if (acceso) acceso.closest('label').hidden = true;   // lo sostituisce «come vedono i giocatori»
+    fogBox.remove();
+  }
   const TIP = {
     muro: 'Un clic per ogni angolo del muro. Doppio clic, Invio o un altro clic sullo stesso punto per finire. Gli estremi si agganciano ai muri vicini e agli incroci della griglia (Alt: no).',
-    porta: 'Due clic: dove comincia e dove finisce la porta. Poi un tocco sul simbolo la apre o la chiude, anche dagli altri livelli.',
+    stanza: 'Trascina da un angolo all\'altro: quattro muri. Poi le porte con «Porta», cliccando su un muro.',
+    porta: 'Clicca su un muro: lì diventa una porta larga una casella. Oppure due clic: dove comincia e dove finisce. Un tocco sul simbolo la apre o la chiude, anche dagli altri livelli.',
     luce: 'Un clic dove vuoi la luce (con le misure qui sotto). Trascina una luce per spostarla.',
     sposta: 'Trascina un estremo (si spostano insieme tutti i muri che ci arrivano), un muro intero o una luce.',
     gomma: 'Tocca un muro, una porta o una luce per toglierli.'
   };
+  let scheda = 'luci';
+  const MODI_TAB = { luci: ['luce', 'sposta', 'gomma'], muri: ['muro', 'stanza', 'porta', 'sposta', 'gomma'] };
+  function modoVista() {
+    const l = luceDi(false), f = cur && cur.fog;
+    const n = !!(f && f.on), lu = !!(l && l.on);
+    return n && lu ? 'entrambe' : lu ? 'luce' : n ? 'nebbia' : 'tutto';
+  }
+  function partyDiScena() {
+    return [...world.querySelectorAll('.photo')].filter(p => (p.dataset.layer || 'tokens') === 'tokens' && !p._shape);
+  }
   function sincronizza() {
-    const l = luceDi(false);
-    $l('luceOn').checked = !!(l && l.on);
+    const l = luceDi(false), mv = modoVista(), aperto = box.classList.contains('open');
+    box.querySelectorAll('#visModi button').forEach(b => { const on = b.dataset.v === mv; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+    $l('visModoNota').textContent = tr(MODI_VISTA.find(x => x[0] === mv)[2]);
+    const amb = (l && l.ambiente) || 'buio';
+    box.querySelectorAll('#luceAmb button').forEach(b => b.classList.toggle('on', b.dataset.v === amb));
+    $l('luceAmbNota').textContent = tr(AMBIENTI.find(x => x[0] === amb)[2]);
+    box.querySelectorAll('.visTab button').forEach(b => { const on = b.dataset.tab === scheda; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    box.querySelectorAll('.visPane').forEach(p => { p.hidden = p.dataset.pane !== scheda; });
     $l('luceCond').checked = !(l && l.condivisa === false);
     $l('luceSolidi').checked = !!(l && l.solidi);
     $l('luceVel').checked = !(l && l.velocita === false);
-    box.querySelectorAll('#luceAmb button').forEach(b => b.classList.toggle('on', b.dataset.v === ((l && l.ambiente) || 'buio')));
     box.querySelectorAll('#luceRic button').forEach(b => b.classList.toggle('on', b.dataset.v === ((l && l.ricordo) || 'scuro')));
-    box.querySelectorAll('#luceModi button').forEach(b => b.classList.toggle('on', b.dataset.m === stato.modo));
-    $l('luceTip').textContent = tr(TIP[stato.modo] || '');
+    box.querySelectorAll('[data-modi] button').forEach(b => b.classList.toggle('on', b.dataset.m === stato.modo));
+    $l('luceTip').textContent = scheda === 'luci' || scheda === 'muri' ? tr(TIP[stato.modo] || '') : '';
     $l('luceNuova').hidden = stato.modo !== 'luce';
     $l('luceFine').hidden = !(stato.modo === 'muro' || stato.modo === 'porta');
     if (document.activeElement !== $l('luceR')) $l('luceR').value = +(stato.r * perCasella()).toFixed(1);
@@ -398,25 +500,84 @@
     $l('luceCol').value = stato.col;
     box.querySelectorAll('.lU').forEach(s => { s.textContent = unita(); });
     $l('luceAnte').checked = stato.anteprima;
-    box.classList.toggle('toolOn', luceAttiva());
+    // la lista di controllo: con la luce dinamica accesa, cosa c'è e cosa manca (così un'anteprima nera ha sempre una spiegazione)
+    const muri = l ? l.muri.filter(w => !w.porta).length : 0, porte = l ? l.muri.filter(w => w.porta).length : 0;
+    const tokens = partyDiScena(), party = tokens.filter(delParty);
+    const luciT = tokens.filter(p => { const x = luceSegnalino(p); return x && (x.r > 0 || x.rf > 0); }).length, luci = (l ? l.luci.length : 0) + luciT;
+    const scuro = party.some(p => (p.dataset.scuro != null ? +p.dataset.scuro : C.scurovisione((sheets.find(s => s.id === p.dataset.sheet) || {}).f, settings.unit)) > 0);
+    const voci = [];
+    if (l && l.on) {
+      voci.push([true, tr('Luce dinamica accesa')]);
+      voci.push([muri + porte > 0, muri + porte ? tr('{n} muri, {p} porte', { n: muri, p: porte }) : tr('nessun muro: si vede fino al bordo della mappa'), 'muri', true]);
+      voci.push([amb !== 'buio' || luci > 0 || scuro, amb !== 'buio' ? tr('è giorno o penombra: le luci non servono') : luci ? tr('{n} luci', { n: luci }) : scuro ? tr('nessuna luce, ma c\'è la scurovisione') : tr('al buio e senza luci: il party non vede niente'), 'luci']);
+      voci.push([party.length > 0, party.length ? tr('{n} segnalini nel party', { n: party.length }) : tr('nessun segnalino del party (tocca per sceglierlo)'), 'party']);
+    }
+    $l('visCheck').replaceChildren(...voci.map(([ok, t, vai, solo]) => {
+      const li = document.createElement('li'); li.className = ok ? 'ok' : (solo ? 'info' : 'no');
+      li.textContent = (ok ? '✓ ' : solo ? '· ' : '✗ ') + t;
+      if (vai) { li.dataset.vai = vai; li.tabIndex = 0; li.setAttribute('role', 'button'); }
+      return li;
+    }));
+    $l('visPrimi').hidden = !(l && l.on && !l.muri.length && !l.luci.length);
+    // i segnalini della scena, per scegliere il party
+    $l('visParty').replaceChildren(...tokens.map(p => {
+      const li = document.createElement('li'), c = document.createElement('input'), sh = sheets.find(s => s.id === p.dataset.sheet);
+      c.type = 'checkbox'; c.checked = delParty(p);
+      c.addEventListener('change', () => { p.dataset.party = c.checked ? '1' : '0'; cambiata(); });
+      const sc = p.dataset.scuro != null ? +p.dataset.scuro : C.scurovisione(sh && sh.f, settings.unit), lt = luceSegnalino(p);
+      const info = [sc > 0 ? '🌒 ' + +(sc * perCasella()).toFixed(1) + ' ' + unita() : '', lt && (lt.r || lt.rf) ? '💡' : ''].filter(Boolean).join(' ');
+      const lab = document.createElement('label'); lab.append(c, ' ' + (p.dataset.name || (sh && sh.name) || tr('Segnalino')), info ? Object.assign(document.createElement('small'), { textContent: ' ' + info }) : '');
+      li.append(lab);
+      return li;
+    }));
+    if (!tokens.length) $l('visParty').innerHTML = `<li class="vuoto">${tr('Nessun segnalino in questa scena.')}</li>`;
+    box.classList.toggle('toolOn', aperto || !!(l && l.on) || !!(cur && cur.fog && cur.fog.on));
+    if (aperto && typeof misuraPannello === 'function') misuraPannello(box);
   }
-  $l('luceOn').addEventListener('input', e => { luceDi(true).on = e.target.checked; cambiata(); });
+  /** La scheda aperta decide che cosa fa il mouse sulla mappa: dipingere la nebbia, mettere luci, muri… */
+  function applicaScheda() {
+    const aperto = box.classList.contains('open');
+    if (typeof fogTool !== 'undefined') fogTool.on = aperto && scheda === 'nebbia';
+    if (aperto && (scheda === 'luci' || scheda === 'muri')) {
+      if (!MODI_TAB[scheda].includes(stato.modo)) stato.modo = MODI_TAB[scheda][0];
+      if (layer !== 'luce') setLayer('luce');
+    } else if (layer === 'luce') setLayer('tokens');
+    stato.catena = null;
+    if (typeof fogSync === 'function') fogSync();
+    if (typeof fogApply === 'function') fogApply();
+    disegnaSegni(); sincronizza();
+  }
+  function vaiScheda(t) { scheda = t; applicaScheda(); }
+  box.querySelector('.visTab').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) vaiScheda(b.dataset.tab); });
+  box.addEventListener('click', e => { const v = e.target.closest('[data-vai]'); if (v) vaiScheda(v.dataset.vai); });
+  box.addEventListener('keydown', e => { const v = e.target.closest('li[data-vai]'); if (v && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); vaiScheda(v.dataset.vai); } });
+  $l('visModi').addEventListener('click', e => {
+    const b = e.target.closest('[data-v]'); if (!b) return;
+    const v = b.dataset.v, l = luceDi(true);
+    l.on = v === 'luce' || v === 'entrambe';
+    const conNebbia = v === 'nebbia' || v === 'entrambe';
+    if (conNebbia || (cur && cur.fog)) { const f = fogOf(true); f.on = conNebbia; if (typeof fogPush === 'function') fogPush(); }
+    if (conNebbia && !l.on) scheda = 'nebbia'; else if (l.on && scheda === 'nebbia' && !conNebbia) scheda = 'luci';
+    applicaScheda(); cambiata();
+  });
   $l('luceCond').addEventListener('input', e => { luceDi(true).condivisa = e.target.checked; cambiata(); });
   $l('luceSolidi').addEventListener('input', e => { luceDi(true).solidi = e.target.checked; cambiata(); });
   $l('luceVel').addEventListener('input', e => { luceDi(true).velocita = e.target.checked; cambiata(); });
   $l('luceAmb').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) { luceDi(true).ambiente = b.dataset.v; cambiata(); } });
   $l('luceRic').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) { luceDi(true).ricordo = b.dataset.v; cambiata(); } });
-  $l('luceModi').addEventListener('click', e => {
+  box.querySelectorAll('[data-modi]').forEach(g => g.addEventListener('click', e => {
     const b = e.target.closest('[data-m]'); if (!b) return;
-    stato.modo = b.dataset.m; stato.catena = null;
+    stato.modo = b.dataset.m; stato.catena = null; stato.stanza = null;
     if (typeof layer !== 'undefined' && layer !== 'luce') setLayer('luce');
     sincronizza(); disegnaSegni();
-  });
+  }));
   $l('luceR').addEventListener('input', e => { stato.r = Math.max(0, +e.target.value || 0) / perCasella(); });
   $l('luceRf').addEventListener('input', e => { stato.rf = Math.max(0, +e.target.value || 0) / perCasella(); });
   $l('luceCol').addEventListener('input', e => { stato.col = e.target.value; });
   $l('luceAnte').addEventListener('input', e => { stato.anteprima = e.target.checked; disegna(); });
   $l('luceFine').addEventListener('click', fineCatena);
+  $l('luceAnnulla').addEventListener('click', () => { if (typeof annullaMappa === 'function') annullaMappa().then(() => { disegnaSegni(); sincronizza(); }); });
+  $l('luceRipeti').addEventListener('click', () => { if (typeof ripetiMappa === 'function') ripetiMappa().then(() => { disegnaSegni(); sincronizza(); }); });
   $l('luceDim').addEventListener('click', () => {
     if (!cur) return;
     if (typeof NET !== 'undefined' && NET.on && typeof intent === 'function') intent('luce.dimentica', { scene: cur.id });
@@ -425,10 +586,11 @@
   box.querySelector('.tgrip').addEventListener('click', () => {
     const open = !box.classList.contains('open');
     toggleOpen(box, open);
-    if (open) { if (typeof setPen === 'function') setPen(false); if (layer !== 'luce') setLayer('luce'); }
-    sincronizza();
+    if (open && typeof setPen === 'function') setPen(false);
+    applicaScheda();
   });
-  registerTool('luce', box, box.querySelector('.tgrip'), 'Luci e muri');
+  registerTool('luce', box, box.querySelector('.tgrip'), 'Visibilità');
+  window.visibilitaScheda = vaiScheda;
 
   // ======================= Il livello «Luci» =======================
   if (typeof setLayer === 'function') {

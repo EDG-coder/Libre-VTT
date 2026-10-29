@@ -319,7 +319,7 @@ fogBox.querySelector('.tgrip').addEventListener('click', () => {
   if (open && typeof setPen === 'function') setPen(false);
   fogSync(); fogApply();
 });
-registerTool('fog', fogBox, fogBox.querySelector('.tgrip'), 'Nebbia di guerra');
+// non è più uno strumento a sé: i suoi comandi stanno nella scheda «Nebbia» del pannello «Visibilità» (luce.js)
 
 function fogMenuExtra() {
   return [
