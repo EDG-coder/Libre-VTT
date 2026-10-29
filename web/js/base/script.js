@@ -689,31 +689,38 @@ function resolveUrl(o) {
   return o.url.startsWith('blob:') ? null : o.url;
 }
 
+/** Un segnalino (o un disegno) dai dati salvati o arrivati dal server; null se l'immagine non c'è. */
+function creaDaDati(p) {
+  if (p.shape) {
+    const el = createShape(p.shape, p.w, p.h, p.l, p.t, p.layer, true);
+    if (p.sheet) el.dataset.sheet = p.sheet;
+    if (p.id) el.dataset.pid = p.id;
+    if (p.owner) el.dataset.owner = p.owner;
+    return el;
+  }
+  const url = resolveUrl(p);
+  if (!url) return null;
+  const el = createPhoto(url, p.w, p.h, p.l, p.t, p.aid, true, p.layer);
+  datiSuSegnalino(el, p);
+  return el;
+}
+/** Nome, scheda, proprietario, effetti, immagine condivisa: dai dati al segnalino che c'è già. */
+function datiSuSegnalino(el, p) {
+  for (const k of ['sheet', 'name', 'round', 'ring']) if (p[k]) el.dataset[k] = p[k]; else delete el.dataset[k];
+  if (p.id) el.dataset.pid = p.id;
+  if (p.owner) el.dataset.owner = p.owner; else delete el.dataset.owner;
+  if (typeof fxDaDati === 'function') fxDaDati(el, p);
+  const g = p.gid || (String(p.url).startsWith('gs:') ? p.url.slice(3) : '');
+  if (g) el.dataset.gid = g; else delete el.dataset.gid;
+  applyLook(el);
+}
+
 async function showScene(sc) {
   if (cur && cur !== sc) captureScene();
   cur = sc; grid = sc.grid;
   stopTween(); select(null);
   world.replaceChildren();
-  for (const p of sc.photos.slice().sort((a, b) => a.z - b.z)) {
-    if (p.shape) {
-      const el = createShape(p.shape, p.w, p.h, p.l, p.t, p.layer, true);
-      if (p.sheet) el.dataset.sheet = p.sheet;
-      if (p.id) el.dataset.pid = p.id;
-      if (p.owner) el.dataset.owner = p.owner;
-      continue;
-    }
-    const url = resolveUrl(p);
-    if (url) {
-      const el = createPhoto(url, p.w, p.h, p.l, p.t, p.aid, true, p.layer);
-      for (const k of ['sheet', 'name', 'round', 'ring']) if (p[k]) el.dataset[k] = p[k];
-      if (p.id) el.dataset.pid = p.id;
-      if (p.owner) el.dataset.owner = p.owner;
-      if (typeof fxDaDati === 'function') fxDaDati(el, p);
-      const g = p.gid || (String(p.url).startsWith('gs:') ? p.url.slice(3) : '');
-      if (g) el.dataset.gid = g;
-      applyLook(el);
-    }
-  }
+  for (const p of sc.photos.slice().sort((a, b) => a.z - b.z)) creaDaDati(p);
   if (typeof drawLoad === 'function') drawLoad(sc.draw);
   if (typeof updateTokenBars === 'function') updateTokenBars();
   setBoard(sc.board);

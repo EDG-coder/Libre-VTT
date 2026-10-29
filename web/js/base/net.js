@@ -343,8 +343,8 @@ async function applyWorld(w) {
       // La prima volta che vedi una scena si adatta allo schermo, poi resta dove l'hai portata tu.
       for (const s of scenes) s.view = NET.views[s.id] || null;
       const want = scenes.find(s => s.id === w.active) || scenes.find(s => s.id === keepId) || scenes[0];
-      cur = null;                                  // ridisegna da zero con quello che manda il server
-      await showScene(want);
+      if (cur && want.id === keepId && world.isConnected) aggiornaSulPosto(want);   // stessa scena: si cambia solo quello che è cambiato
+      else { cur = null; await showScene(want); }  // scena nuova: si ridisegna da zero
     }
     rememberPhotos();
     if (typeof fogApply === 'function') fogApply();
@@ -352,6 +352,62 @@ async function applyWorld(w) {
   } finally {
     NET.applying = false;
   }
+}
+
+/**
+ * Per il giocatore, quando arriva il mondo e la scena è la stessa: si aggiornano solo i segnalini cambiati
+ * (posizione, nome, effetti, immagine), si aggiungono quelli nuovi e si tolgono quelli spariti. Così la
+ * selezione resta e un trascinamento in corso non si interrompe (prima si ridisegnava tutto).
+ */
+function aggiornaSulPosto(sc) {
+  const prima = cur;
+  cur = sc; grid = sc.grid;
+  const uguale = (a, b) => JSON.stringify(a || null) === JSON.stringify(b || null);
+  if (!uguale(prima.board, sc.board)) setBoard(sc.board);
+  if (!uguale(prima.grid, sc.grid)) paintGrid();
+  if (!uguale(prima.bg, sc.bg)) {
+    const url = resolveUrl(sc.bg);
+    setBgBox(url ? { ...sc.bg, url, gid: sc.bg.gid || (String(sc.bg.url).startsWith('gs:') ? sc.bg.url.slice(3) : undefined) } : null);
+    if (typeof updatePageColor === 'function') updatePageColor();
+  }
+  if (!uguale(prima.draw, sc.draw) && typeof drawLoad === 'function') drawLoad(sc.draw);
+  const tutti = [...world.querySelectorAll('.photo')].filter(e => e.dataset.pid);
+  const qui = new Map(tutti.filter(e => e.dataset.pid !== 'pending').map(e => [e.dataset.pid, e]));
+  const vecchi = new Map((prima.photos || []).map(p => [p.id, p]));
+  const visti = new Set();
+  for (const p of sc.photos.slice().sort((a, b) => a.z - b.z)) {
+    if (!p.id) continue;
+    visti.add(p.id);
+    let el = qui.get(p.id);
+    const v = vecchi.get(p.id);
+    // un disegno cambiato, un'immagine diversa o un altro livello: si rifà quel segnalino solo
+    if (el && (p.shape ? !uguale(el._shape, p.shape) : (v && (v.url !== p.url || v.gid !== p.gid))) || (el && (el.dataset.layer || 'tokens') !== (p.layer || 'tokens'))) {
+      const eraSel = selection.includes(el);
+      el.remove(); el = null;
+      const nuovo = creaDaDati(p);
+      if (nuovo && eraSel) setSelection(selection.filter(x => x.isConnected).concat(nuovo));
+      continue;
+    }
+    if (!el) { creaDaDati(p); continue; }
+    const muove = el === activeEl && mode;                // lo sta spostando chi guarda: si lascia stare
+    if (!muove) Object.assign(el.style, { left: p.l + 'px', top: p.t + 'px', width: p.w + 'px', height: p.h + 'px' });
+    if (p.z && el.dataset.layer !== 'map') el.style.zIndex = p.z;
+    if (!p.shape) datiSuSegnalino(el, p);
+  }
+  let tolti = false;
+  for (const el of tutti) if (!visti.has(el.dataset.pid) && el !== activeEl) {
+    const id = el.dataset.pid;
+    // uno appena creato qui, che il server non aveva ancora confermato: al suo posto c'è quello vero
+    if (id === 'pending' && selection.includes(el)) {
+      const nuovo = [...world.querySelectorAll('.photo')].find(x => x.dataset.pid && !vecchi.has(x.dataset.pid) && x.dataset.owner === (NET.me && NET.me.token));
+      if (nuovo) setSelection(selection.filter(x => x !== el).concat(nuovo));
+    }
+    el.remove(); tolti = true;
+  }
+  if (tolti) setSelection(selection.filter(x => x.isConnected));
+  zTop = Math.max(zTop, ...sc.photos.map(p => +p.z || 0));
+  if (typeof updateTokenBars === 'function') updateTokenBars();
+  if (typeof hudDisegna === 'function') hudDisegna();
 }
 
 /** Le schede: si aggiornano quelle che ci sono, si aggiungono quelle nuove. */
