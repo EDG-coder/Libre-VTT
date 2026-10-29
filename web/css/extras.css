@@ -862,3 +862,5 @@ body.net-player #caselleSect { display: none; }
 .msg.roll .rDanni button.crit { border-color: #2ee6a6; color: #2ee6a6; font-weight: 700; }
 .msg.roll .rDanni button:hover { background: var(--panel-3); }
 .ui-touch .msg.roll .rDanni button { min-height: 40px; }
+/* ordine dei turni acceso: un puntino sull'icona (si vede anche a pannello chiuso) */
+#turniBox.toolOn > .tgrip::after { content: ''; position: absolute; right: 7px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: #2ee6a6; box-shadow: 0 0 6px #2ee6a6; }

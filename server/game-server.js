@@ -343,8 +343,10 @@ function turniPerChi(c) {
   const nascosti = new Set();
   for (const sc of world.scenes || []) for (const ph of sc.photos || []) if ((ph.layer || 'tokens') === 'hidden' || nascostoA(c, sc, ph)) nascosti.add(ph.id);
   const righe = t.righe.filter(r => !(r.pid && nascosti.has(r.pid)));
+  // il turno corrente per id: se tocca a un segnalino che il giocatore non vede, nessuna riga è «ora»
+  // (prima saltava alla prima riga, come se toccasse a un altro)
   const ora = t.righe[t.cur];
-  return { ...t, righe, cur: Math.max(0, righe.indexOf(ora)) };
+  return { ...t, righe, cur: righe.indexOf(ora), curId: ora ? ora.id : null };
 }
 
 function viewFor(c) {

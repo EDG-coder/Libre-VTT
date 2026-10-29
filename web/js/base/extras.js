@@ -160,6 +160,7 @@ function chiudiSovrapposti(box) {
   const mio = { l: r.left, t: r.top, r: r.left + w, b: r.top + h };
   for (const t of TOOLS) {
     if (t.el === box || !t.el.classList.contains('open')) continue;
+    if (t.id === 'turni' && t.el.classList.contains('toolOn')) continue;   // l'ordine dei turni acceso dal master resta aperto
     const q = t.el.getBoundingClientRect();
     if (q.left < mio.r && q.right > mio.l && q.top < mio.b && q.bottom > mio.t) t.grip.click();
   }

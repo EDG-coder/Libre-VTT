@@ -124,7 +124,7 @@
       return riga;
     }));
     const ora = tb.querySelector('tr.ora'); if (ora) ora.scrollIntoView({ block: 'nearest' });
-    if (box.classList.contains('open')) box.style.setProperty('--dh', box.querySelector('.tbody').scrollHeight + 'px');
+    if (box.classList.contains('open') && typeof misuraPannello === 'function') misuraPannello(box);
   }
   window.turniDisegna = () => { if (conduco()) ordina(stato()); disegna(); };
 
@@ -187,7 +187,8 @@
   let eraAcceso = null;
   window.turniDaMondo = function (t) {
     T = t && Array.isArray(t.righe) ? t : nuovo();
-    // quando il master avvia i turni, il pannello si apre da solo anche ai giocatori (solo lettura)
+    // quando il master avvia i turni, il pannello si apre da solo anche ai giocatori (solo lettura); se poi
+    // lo chiudono, l'icona col puntino resta accesa e lo riaprono quando vogliono
     if (eraAcceso !== true && T.on && !box.classList.contains('open')) { toggleOpen(box, true); }
     eraAcceso = !!T.on;
     disegna();
