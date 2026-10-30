@@ -947,6 +947,44 @@ async function controllaAggiornamento(forza) {
   if (dati.nuova) say(`C'è una versione nuova di LIBRE VTT: ${dati.nuova} (questa è la ${VERSIONE}).`, 'ok');
   return dati;
 }
+/** Dopo un aggiornamento: toglie l'installatore che aveva scaricato l'app (e su Mac smonta il .dmg).
+ *  Solo quel file, riconosciuto dal percorso salvato: niente altro in Download. Se la versione in
+ *  uso è ancora più vecchia l'aggiornamento non è riuscito, e il file resta. */
+function pulisciAggiornamento() {
+  const x = conf.aggiornamentoScaricato;
+  if (!x || MOBILE) return;
+  if (!x.file || typeof x.file !== 'string' || !x.versione) { delete conf.aggiornamentoScaricato; return salvaConf(); }
+  if (confrontaVersioni(VERSIONE, x.versione) < 0) {
+    say(`L'aggiornamento alla ${x.versione} non sembra riuscito (questa è ancora la ${VERSIONE}): l'installatore è in ${x.file}.`, 'warn');
+    state.aggiornamentoFallito = { versione: x.versione, file: x.file };
+    return;
+  }
+  const togli = () => {
+    let resta = false;   // l'installatore può essere ancora aperto (Windows): si riprova la volta dopo
+    for (const f of [x.file, x.file + '.part']) {
+      try { fs.unlinkSync(f); say('Tolto l\'installatore dell\'aggiornamento: ' + f, 'ok'); }
+      catch (e) { if (e.code !== 'ENOENT') resta = true; }
+    }
+    if (!resta) { delete conf.aggiornamentoScaricato; salvaConf(); }
+  };
+  if (!MAC) return togli();
+  // il disco montato da quel .dmg (non quello da cui gira l'app, se è partita dal disco)
+  execFile('hdiutil', ['info'], { encoding: 'utf8', timeout: 10000 }, (e, out) => {
+    const dischi = [];
+    for (const blocco of String(out || '').split(/^=+$/m)) {
+      const img = (blocco.match(/^image-path\s*:\s*(.+)$/m) || [])[1];
+      const dev = (blocco.match(/^(\/dev\/disk\d+)\b/m) || [])[1];
+      const vol = (blocco.match(/\t(\/Volumes\/.+)$/m) || [])[1];
+      if (img && dev && path.resolve(img.trim()) === path.resolve(x.file) && !(vol && ROOT.startsWith(vol.trim()))) dischi.push(dev);
+    }
+    if (!dischi.length) return togli();
+    let restano = dischi.length;
+    for (const d of dischi) execFile('hdiutil', ['detach', d], { timeout: 20000 }, err => {
+      if (err) say('Non riesco a smontare il disco dell\'aggiornamento (' + d + '): ' + err.message, 'warn');
+      if (!--restano) togli();
+    });
+  });
+}
 let aggiornando = false;
 async function installaAggiornamento() {
   if (aggiornando) return { errore: 'Sto già scaricando l\'aggiornamento.' };
@@ -974,6 +1012,8 @@ async function installaAggiornamento() {
     if (MOBILE === 'android') return { apk: dest };
     // sul computer si avvia l'installatore; LIBRE VTT si chiude, così i suoi file si possono sostituire
     if (!WIN) fs.chmodSync(dest, 0o755);
+    // si ricorda che cosa ha scaricato: alla prossima partenza, se l'aggiornamento è andato, lo toglie
+    conf.aggiornamentoScaricato = { file: dest, versione: a.nuova }; salvaConf();
     const [cmd, args] = WIN ? (dest.endsWith('.cmd') ? ['cmd', ['/c', 'start', '', dest]] : [dest, []])
       : MAC ? ['open', [dest]] : ['bash', [dest]];
     const p = spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: false, cwd: dir });
@@ -1387,6 +1427,7 @@ function segnalaPronto() {
 }
 (async () => {
   conf.porte = conf.porte || {};
+  try { pulisciAggiornamento(); } catch (e) { say('Pulizia dopo l\'aggiornamento: ' + e.message, 'warn'); }
   const pref = +(process.env.UI_PORT || conf.porte.ui || PREF.ui);
   if (!MOBILE && await èMyVtt(pref)) return mostraFinestraEsistente(pref);
   UI_PORT = await portaLibera(pref);
