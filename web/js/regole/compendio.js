@@ -497,10 +497,13 @@
         const accurata = (v.proprieta || []).some(p => /accurata|finesse/i.test(p));
         const distanza = /distanza|ranged/i.test((v.sottocategoria || '') + ' ' + (v.categoria || ''));
         const md = accurata ? Math.max(abMod(s, 'str'), abMod(s, 'dex')) : distanza ? abMod(s, 'dex') : abMod(s, 'str');
-        const ab = md + profB(s);
+        const piu = iv(v.bonus);                              // armi +1, +2, +3: a colpire e ai danni
+        const ab = md + profB(s) + piu, mdd = md + piu;
         let a = 0; while (a < 200 && ((f['an' + a] || '').trim() || (f['ab' + a] || '').trim() || (f['ad' + a] || '').trim())) a++;
         f['an' + a] = v.nome; f['ab' + a] = (ab >= 0 ? '+' : '') + ab;
-        f['ad' + a] = v.danno + (md ? (md > 0 ? '+' : '') + md : '') + (v.tipoDanno ? ' ' + v.tipoDanno.toLowerCase() : '');
+        f['ad' + a] = v.danno + (mdd ? (mdd > 0 ? '+' : '') + mdd : '') + (v.tipoDanno ? ' ' + v.tipoDanno.toLowerCase() : '');
+      } else if (!v.arma && iv(v.bonus) && (f.ac || '').trim()) {
+        f.ac = String(iv(f.ac) + iv(v.bonus));                // armature +1, +2, +3: alla CA
       }
     } else if (v.tipo === 'incantesimo') {
       const L = v.livello || 0;
