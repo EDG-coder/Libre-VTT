@@ -423,12 +423,23 @@
   if (ci) { ci.addEventListener('input', suggerisci); ci.addEventListener('blur', () => setTimeout(() => { sugg.hidden = true; }, 150)); }
 
   // ---------- un mostro sulla mappa: segnalino + scheda collegata ----------
+  // I segnalini dei mostri dell'SRD (condiviso/token-srd/): indice.json lega il nome inglese al file.
+  // Nelle partite in rete l'immagine finisce nel deposito come le altre (netEnsureWorldAssets).
+  let tokenSrd = null;
+  fetch('/condiviso/token-srd/indice.json').then(r => r.ok ? r.json() : null).then(j => { tokenSrd = j; }).catch(() => {});
+  function tokenDelMostro(v) {
+    if (!tokenSrd) return null;
+    const k = n => String(n || '').toLowerCase().replace(/’/g, "'").replace(/\s+/g, ' ').trim();
+    const f = tokenSrd[k(v.en)] || tokenSrd[k(v.nome)] || tokenSrd[k(v.it)];
+    return f ? { url: '/condiviso/token-srd/' + f } : null;
+  }
   function schedaDaMostro(v) {
     const D = typeof SISTEMA !== 'undefined' && SISTEMA.dati;
     const vuoi = D && Array.isArray(D.schede) ? D.schede : ['standard', 'dnd5e', 'simple'];
     const tpl = vuoi.includes('dnd5e') ? 'dnd5e' : vuoi.includes('standard') ? 'standard' : 'simple';
     const s = newSheet(v.nome, tpl);
     const f = s.f;
+    const icona = tokenDelMostro(v); if (icona) s.icon = icona;
     if (tpl !== 'simple') {
       for (const [k, n] of Object.entries(v.car || {})) f[k] = String(n);
       f.ac = String(v.ca ?? ''); f.hpmax = String(v.pf ?? ''); f.hp = String(v.pf ?? '');
