@@ -100,15 +100,24 @@ function clipBg() {
 }
 setBoard(DEFAULT_RECT);
 
-// tutto quello che si deve poter raggiungere: rettangolo + sfondo + segnalini
+// tutto quello che si deve poter raggiungere: rettangolo + sfondo + segnalini.
+// L'ingombro dei segnalini si ricalcola solo quando cambiano (non a ogni movimento delle dita).
+let ingombroFoto = null;
+new MutationObserver(() => { ingombroFoto = null; }).observe(world, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
 function contentBounds() {
   const r = boardRect(), g = bgRect();
   let l = r.x, t = r.y, rr = r.x + r.w, b = r.y + r.h;
   if (g) { l = Math.min(l, g.x); t = Math.min(t, g.y); rr = Math.max(rr, g.x + g.w); b = Math.max(b, g.y + g.h); }
-  for (const p of world.querySelectorAll('.photo')) {
-    const q = rectOf(p);
-    l = Math.min(l, q.x); t = Math.min(t, q.y); rr = Math.max(rr, q.x + q.w); b = Math.max(b, q.y + q.h);
+  if (!ingombroFoto) {
+    let fl = Infinity, ft = Infinity, fr = -Infinity, fb = -Infinity;
+    for (const p of world.querySelectorAll('.photo')) {
+      const q = rectOf(p);
+      fl = Math.min(fl, q.x); ft = Math.min(ft, q.y); fr = Math.max(fr, q.x + q.w); fb = Math.max(fb, q.y + q.h);
+    }
+    ingombroFoto = { l: fl, t: ft, r: fr, b: fb };
   }
+  const f = ingombroFoto;
+  if (f.l !== Infinity) { l = Math.min(l, f.l); t = Math.min(t, f.t); rr = Math.max(rr, f.r); b = Math.max(b, f.b); }
   return { x: l, y: t, w: rr - l, h: b - t };
 }
 const fitScale = r => Math.min(innerWidth / r.w, innerHeight / r.h);
@@ -125,10 +134,24 @@ function clampView() {
   view.y = clamp(view.y, KEEP - (b.y + b.h) * view.s, innerHeight - KEEP - b.y * view.s);
 }
 function applyView() {
+  cancelAnimationFrame(vistaRaf); vistaRaf = 0;
   clampView();
   const t = `translate(${view.x}px, ${view.y}px) scale(${view.s})`;
   for (const el of [stage, world]) { el.style.transform = t; el.style.setProperty('--inv', 1 / view.s); }
   placeGrid();
+  inMovimento();
+}
+// Durante un gesto (dita, rotellina) la vista si ridisegna una volta per fotogramma, e la mappa sta
+// su un livello a parte (will-change) che si sposta senza ridisegnarla. Finito il gesto si toglie:
+// il browser la ridisegna nitida alla nuova scala, solo la parte che si vede. Tenerlo sempre
+// (com'era) su Android fissava la risoluzione e, ingrandendo molto, le tessere finivano la memoria
+// della scheda grafica: mappa a blocchi, poi un rettangolo, poi niente.
+let vistaRaf = 0, fermaMovimento = 0;
+function richiediVista() { if (!vistaRaf) vistaRaf = requestAnimationFrame(() => { vistaRaf = 0; applyView(); }); }
+function inMovimento() {
+  document.body.classList.add('vistaMuove');
+  clearTimeout(fermaMovimento);
+  fermaMovimento = setTimeout(() => document.body.classList.remove('vistaMuove'), 180);
 }
 
 // animazione breve per i pulsanti dello zoom
@@ -185,7 +208,7 @@ viewport.addEventListener('wheel', e => {
   view.x = e.clientX - (e.clientX - view.x) * f;
   view.y = e.clientY - (e.clientY - view.y) * f;
   view.s = newS;
-  applyView();
+  richiediVista();
   scheduleBoardSave();
 }, { passive: false });
 
@@ -573,8 +596,35 @@ function setBgBox(bg) {
   Object.assign(bgBox.style, { left: bg.x + 'px', top: bg.y + 'px', width: bg.w + 'px', height: bg.h + 'px' });
   bgBox.dataset.url = bg.url; bgBox.dataset.aid = bg.aid ?? ''; bgBox.dataset.gid = bg.gid || '';
   map.src = bg.url;
+  riduciSulTelefono(bg.url);
   refreshEditing();
 }
+// Sul telefono una mappa enorme (oltre 4096 px di lato) si mostra da una copia ridotta, fatta qui
+// e tenuta solo in memoria: la campagna resta com'è. Le misure restano quelle dell'originale.
+const LATO_TELEFONO = 4096, copieRidotte = new Map();
+async function riduciSulTelefono(url) {
+  map.dataset.nw = map.dataset.nh = '';
+  if (!matchMedia('(pointer: coarse)').matches || !url || typeof createImageBitmap !== 'function') return;
+  try {
+    let copia = copieRidotte.get(url);
+    if (!copia) {
+      const im = new Image(); im.src = url; await im.decode();
+      const lato = Math.max(im.naturalWidth, im.naturalHeight);
+      if (lato <= LATO_TELEFONO) return;
+      const k = LATO_TELEFONO / lato, w = Math.round(im.naturalWidth * k), h = Math.round(im.naturalHeight * k);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(im, 0, 0, w, h);
+      const blob = await new Promise(r => c.toBlob(r, 'image/webp', .9));
+      if (!blob) return;
+      copia = { src: URL.createObjectURL(blob), nw: im.naturalWidth, nh: im.naturalHeight };
+      copieRidotte.set(url, copia);
+    }
+    if (bgBox.dataset.url !== url) return;            // nel frattempo è cambiato lo sfondo
+    map.dataset.nw = copia.nw; map.dataset.nh = copia.nh;
+    map.src = copia.src;
+  } catch {}
+}
+const misuraMappa = () => ({ w: +map.dataset.nw || map.naturalWidth, h: +map.dataset.nh || map.naturalHeight });
 // legge le misure naturali dell'immagine: {url, aid, x, y, w, h} oppure null se non si carica
 const loadBg = (url, aid) => new Promise(res => {
   const im = new Image();
@@ -972,7 +1022,7 @@ $('applyDefault').addEventListener('click', () => {
 $('bgReset').addEventListener('click', () => {
   if (bgBox.hidden) setBoard({ ...DEFAULT_RECT });
   else {
-    const w = map.naturalWidth, h = map.naturalHeight;
+    const { w, h } = misuraMappa();
     Object.assign(bgBox.style, { left: '0px', top: '0px', width: w + 'px', height: h + 'px' });
     setBoard({ x: 0, y: 0, w, h });
   }

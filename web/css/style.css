@@ -27,10 +27,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page-b
 #world {
   position: absolute; left: 0; top: 0;
   transform-origin: 0 0;
-  will-change: transform;
 }
 
-#stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+#stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+/* livello a parte solo mentre la vista si muove: a gesto finito si ridisegna nitida (vedi applyView) */
+body.vistaMuove #world, body.vistaMuove #stage { will-change: transform; }
 #boardFill, #board { position: absolute; }
 #boardFill { background: var(--board-fill); pointer-events: none; }
 /* bordo: spessore costante a schermo (--inv = 1/zoom), colore e spessore dalle impostazioni; sta fuori dal rettangolo */
