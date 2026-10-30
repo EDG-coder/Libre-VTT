@@ -508,10 +508,11 @@ const tokBox = mk('div', 'tool glass',
      <div class="trow">Immagine <button id="tkImg" type="button">Scegli…</button><button id="tkImgX" type="button" hidden>Togli</button></div>
      <label class="trow">Grandezza <select id="tkSize"><option value="0.5">½ casella</option><option value="1" selected>1 casella</option><option value="2">2 caselle</option><option value="3">3 caselle</option><option value="4">4 caselle</option></select></label>
      <label class="trow">Scheda <select id="tkSheet"></select></label>
+     <label class="trow"><input id="tkUseIcon" type="checkbox" disabled> Usa come immagine della scheda</label>
      <div class="trow"><div id="tkPrev" draggable="true" title="Trascinalo sulla mappa"></div><button id="tkAdd" type="button">＋ Aggiungi al centro</button></div>
    </div>`);
 tokBox.id = 'tokBox'; document.body.appendChild(tokBox);
-const tok = { name: '', round: true, color: '#d9534f', ring: '#ffffff', noRing: false, img: null, baked: false, size: 1, sheet: '' };
+const tok = { name: '', round: true, color: '#d9534f', ring: '#ffffff', noRing: false, img: null, baked: false, size: 1, sheet: '', useIcon: true };
 function applyLook(el) {                                         // bordo colorato dei segnalini con immagine
   if (el.dataset.ring) el.style.setProperty('--ring', el.dataset.ring); else el.style.removeProperty('--ring');
 }
@@ -535,6 +536,51 @@ function refreshTokSheets() {
   sel.replaceChildren(new Option('— nessuna scheda —', ''), ...sheets.map(s => new Option(s.name, s.id)));
   sel.value = sheets.some(s => s.id === tok.sheet) ? tok.sheet : '';
   tok.sheet = sel.value;
+  syncUseIcon();
+}
+// «Usa come immagine della scheda»: solo con una scheda scelta (e allora acceso, salvo scelta diversa)
+function syncUseIcon() {
+  const c = $('tkUseIcon');
+  c.disabled = !tok.sheet; c.checked = !!tok.sheet && tok.useIcon;
+}
+/** Il segnalino così come si vede (forma, immagine e bordo) in un'immagine WebP di 256 px. */
+async function tokenComeImmagine() {
+  const L = 256, c = document.createElement('canvas'); c.width = c.height = L;
+  const g = c.getContext('2d');
+  const blob = await (await fetch(tokUrl())).blob();
+  const im = await immagineDisegnabile(blob);
+  try {
+    if (tok.img && !tok.baked) {
+      // un'immagine scelta: riempie la forma (tonda o quadrata), con il bordo sopra
+      const k = Math.max(L / im.width, L / im.height), w = im.width * k, h = im.height * k;
+      g.save(); g.beginPath();
+      if (tok.round) g.arc(L / 2, L / 2, L / 2, 0, Math.PI * 2); else g.rect(0, 0, L, L);
+      g.clip(); g.drawImage(im.img, (L - w) / 2, (L - h) / 2, w, h); g.restore();
+      if (!tok.noRing) {
+        g.lineWidth = L * .06; g.strokeStyle = tok.ring; g.beginPath();
+        if (tok.round) g.arc(L / 2, L / 2, L / 2 - g.lineWidth / 2, 0, Math.PI * 2); else g.rect(g.lineWidth / 2, g.lineWidth / 2, L - g.lineWidth, L - g.lineWidth);
+        g.stroke();
+      }
+    } else {
+      const k = Math.min(L / im.width, L / im.height), w = im.width * k, h = im.height * k;
+      g.drawImage(im.img, (L - w) / 2, (L - h) / 2, w, h);
+    }
+  } finally { im.close(); }
+  return await new Promise(r => c.toBlob(r, 'image/webp', .88));
+}
+/** Il segnalino appena creato diventa l'icona della scheda collegata (come «Cambia icona…»). */
+async function iconaDalSegnalino(sh) {
+  try {
+    const blob = await tokenComeImmagine();
+    if (!blob) return;
+    const giocatore = typeof NET !== 'undefined' && NET.on && !isMaster();
+    // il giocatore la manda nel deposito della partita (onSheetIcon: 256 px, WebP, «gs:<hash>»);
+    // chi conduce (o gioca da solo) la tiene tra le sue immagini
+    const a = giocatore ? { url: URL.createObjectURL(blob) }
+      : await store.add(((sh.name || 'segnalino').replace(/[^\p{L}\p{N}._-]+/gu, '_').slice(0, 40) || 'segnalino') + '.webp', current, blob);
+    setSheetIcon(sh, a);
+    if (!giocatore && typeof reload === 'function') reload();
+  } catch (e) { console.warn('icona dal segnalino', e); }
 }
 // «Goblin» aggiunto quando c'è già un «Goblin»: il primo diventa «Goblin 1», il nuovo «Goblin 2»
 function numeraNome(nm, altri) {
@@ -561,6 +607,7 @@ function makeToken(wx, wy) {
   if (tok.img && !tok.baked) { if (tok.round) el.dataset.round = '1'; if (!tok.noRing) el.dataset.ring = tok.ring; }
   if (sh) el.dataset.sheet = sh.id;
   applyLook(el); updateTokenBars(); scheduleBoardSave();
+  if (sh && tok.useIcon && (!sh._access || sh._access === 'rw')) iconaDalSegnalino(sh);
 }
 for (const [c, n] of SWATCHES.slice(0, 7)) {
   const b = mk('button', 'sw'); b.type = 'button'; b.dataset.color = c; b.title = n; b.style.background = c; b.setAttribute('aria-label', n);
@@ -576,7 +623,8 @@ $('tkNoRing').addEventListener('input', e => { tok.noRing = e.target.checked; re
 $('tkImg').addEventListener('click', () => pickAsset(a => { tok.img = a; refreshTok(); }));
 $('tkImgX').addEventListener('click', () => { tok.img = null; refreshTok(); });
 $('tkSize').addEventListener('input', e => { tok.size = +e.target.value; });
-$('tkSheet').addEventListener('input', e => { tok.sheet = e.target.value; });
+$('tkSheet').addEventListener('input', e => { const prima = tok.sheet; tok.sheet = e.target.value; if (tok.sheet && !prima) tok.useIcon = true; syncUseIcon(); });
+$('tkUseIcon').addEventListener('input', e => { tok.useIcon = e.target.checked; });
 $('tkAdd').addEventListener('click', () => makeToken((innerWidth / 2 - view.x) / view.s, (innerHeight / 2 - view.y) / view.s));
 $('tkPrev').addEventListener('dragstart', e => { e.dataTransfer.setData('application/x-token', '1'); e.dataTransfer.effectAllowed = 'copy'; });
 viewport.addEventListener('dragover', e => { if (e.dataTransfer.types.includes('application/x-token')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
