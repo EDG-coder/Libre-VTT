@@ -10,7 +10,7 @@
 - **Mostri dell'SRD con il loro segnalino:** 329 token, già messi quando un mostro arriva dal compendio. Armi e armature +1, +2 e +3 per tutte quelle dell'SRD, con il bonus già nei tiri e nella CA.
 - **Mi unisco:** le campagne in cui sei già entrato sono in un elenco, con la miniatura dell'ultima scena e se sono online o in sessione. Il codice resta lo stesso a ogni apertura della campagna.
 - **Cambia codice:** il master fa un codice nuovo; chi è collegato lo riceve da solo, chi è fuori resta fuori.
-- **Identità dei giocatori:** chi entra tiene la sua identità anche se cambia browser o cancella i dati; un'identità copiata da un altro non basta più per entrare al suo posto.
+- **Identità dei giocatori:** chi entra tiene la sua identità anche se cancella i dati del browser (l'avvio la ricorda per ogni campagna), e chi conosce solo l'ID di un altro non può più entrare al suo posto.
 - **Pannello del master:** per ogni giocatore si vede se il collegamento è diretto o passa dal relay; chi non c'è si può togliere dall'elenco.
 - **Aggiornamento:** si vedono le novità di tutte le versioni saltate; dopo l'installazione il file scaricato si toglie (e su Mac il disco si smonta).
 - **Mac:** niente più finestra vuota quando il browser si chiude subito dopo l'avvio.
