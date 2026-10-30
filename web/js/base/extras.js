@@ -398,25 +398,71 @@ function setRuler(on) {
   rulerOn = on; rulerBox.classList.toggle('toolOn', on); viewport.classList.toggle('ruler-on', on);
   if (on) { if (penPanel) setPen(false); select(null); } else clearRuler();
 }
+// Sul tocco non c'è il tasto destro: «+» fissa il segmento (lo si tocca con un altro dito mentre si misura)
+const rulerPlus = mk('button', 'glass', '+'); rulerPlus.id = 'rulerPlus'; rulerPlus.type = 'button';
+rulerPlus.title = 'Fissa il segmento e continua da qui'; document.body.appendChild(rulerPlus);
+const syncRulerPlus = () => rulerPlus.classList.toggle('on', !!(ruler && ruler.touch && ruler.id !== -1));
+rulerPlus.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); rulerJoint(); });
 rulerGrip.addEventListener('click', () => setRuler(!rulerOn));
 $('unitSel').addEventListener('change', rulerTitle);
-function clearRuler() { clearTimeout(rulerFade); rulerSvg.replaceChildren(); ruler = null; }
+function clearRuler() { clearTimeout(rulerFade); rulerSvg.replaceChildren(); ruler = null; syncRulerPlus(); }
 const cellCenter = (x, y) => { const b = boardRect(), s = grid.size; return { x: b.x + (Math.floor((x - b.x) / s) + .5) * s, y: b.y + (Math.floor((y - b.y) / s) + .5) * s }; };
 const rp = e => { const x = (e.clientX - view.x) / view.s, y = (e.clientY - view.y) / view.s; return settings.rulerCenter ? cellCenter(x, y) : snapPoint(x, y); };
+// Il righello è un percorso: ruler.pts sono i punti fissati (il primo è la partenza, gli altri le
+// giunzioni) e ruler.b è la fine, che segue il puntatore. Il tasto destro (o «+») fissa la fine e
+// ne parte un altro segmento; Backspace toglie l'ultima giunzione, Esc cancella. Il totale è la somma.
+const misura = cells => `${+(cells * (settings.unit === 'm' ? 1.5 : 5)).toFixed(1)} ${settings.unit === 'm' ? 'm' : 'ft'}`;
 function drawRuler() {
-  const { a, b } = ruler, k = view.s;
-  const x1 = a.x * k + view.x, y1 = a.y * k + view.y, x2 = b.x * k + view.x, y2 = b.y * k + view.y;
-  const cells = Math.hypot(b.x - a.x, b.y - a.y) / grid.size, v = cells * (settings.unit === 'm' ? 1.5 : 5);
-  const txt = `${+v.toFixed(1)} ${settings.unit === 'm' ? 'm' : 'ft'} · ${+cells.toFixed(1)} caselle`;
-  rulerSvg.innerHTML =
-    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-opacity=".55" stroke-width="6" stroke-linecap="round"/>` +
-    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ffd93d" stroke-width="3" stroke-linecap="round"/>` +
-    `<circle cx="${x1}" cy="${y1}" r="5" fill="#ffd93d" stroke="#000" stroke-opacity=".6"/><circle cx="${x2}" cy="${y2}" r="5" fill="#ffd93d" stroke="#000" stroke-opacity=".6"/>` +
-    `<text x="${(x1 + x2) / 2 + 10}" y="${(y1 + y2) / 2 - 10}">${txt}</text>`;
+  const k = view.s, mondo = [...ruler.pts, ruler.b], pts = mondo.map(p => ({ x: p.x * k + view.x, y: p.y * k + view.y }));
+  const tratti = [];
+  let cells = 0;
+  for (let i = 1; i < mondo.length; i++) {
+    const c = Math.hypot(mondo[i].x - mondo[i - 1].x, mondo[i].y - mondo[i - 1].y) / grid.size;
+    cells += c; tratti.push(c);
+  }
+  const linea = pts.map(p => `${p.x},${p.y}`).join(' '), fine = pts[pts.length - 1];
+  let svg = `<polyline points="${linea}" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<polyline points="${linea}" fill="none" stroke="#ffd93d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` +
+    pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="5" fill="#ffd93d" stroke="#000" stroke-opacity=".6"/>`).join('');
+  // con più segmenti, in piccolo la lunghezza di ognuno
+  if (tratti.length > 1) tratti.forEach((c, i) => {
+    if (c < .05) return;
+    svg += `<text class="pezzo" x="${(pts[i].x + pts[i + 1].x) / 2 + 8}" y="${(pts[i].y + pts[i + 1].y) / 2 + 16}">${misura(c)}</text>`;
+  });
+  svg += `<text x="${fine.x + 12}" y="${fine.y - 12}">${misura(cells)} · ${+cells.toFixed(1)} ${tr('caselle')}</text>`;
+  rulerSvg.innerHTML = svg;
 }
+/** Fissa la fine del segmento: diventa una giunzione e ne parte un altro, collegato. */
+function rulerJoint() {
+  if (!ruler || ruler.id === -1) return;
+  const ultimo = ruler.pts[ruler.pts.length - 1];
+  if (Math.hypot(ruler.b.x - ultimo.x, ruler.b.y - ultimo.y) < 1) return;
+  ruler.pts.push({ ...ruler.b }); drawRuler();
+}
+/** Riprende un righello appena rilasciato: la sua fine diventa una giunzione e il nuovo tratto
+ *  segue il mouse (senza tenere premuto) fino al prossimo clic. */
+function rulerResume(e) {
+  clearTimeout(rulerFade);
+  ruler.pts.push({ ...ruler.b }); ruler.b = rp(e); ruler.id = -2; ruler.hover = true; drawRuler();
+}
+addEventListener('keydown', e => {
+  if (!ruler || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  if (e.key === 'Escape') { clearRuler(); e.preventDefault(); e.stopPropagation(); }
+  else if (e.key === 'Backspace') {
+    e.preventDefault();
+    if (ruler.pts.length > 1) { ruler.pts.pop(); drawRuler(); }
+    else if (ruler.id === -1) clearRuler();
+  }
+}, true);
 
 // ---- puntatore per penna, gomma e righello (prima di script.js) ----
 viewport.addEventListener('pointerdown', e => {
+  if (e.button === 2 && rulerOn) {
+    // tasto destro a righello acceso: fissa il segmento (o riprende quello appena rilasciato)
+    e.stopImmediatePropagation(); e.preventDefault();
+    if (ruler && ruler.id === -1) rulerResume(e); else rulerJoint();
+    return;
+  }
   if (e.button === 2) clearRuler();
   if (e.button !== 0) return;
   if (penOn) {
@@ -426,19 +472,27 @@ viewport.addEventListener('pointerdown', e => {
     else if (tool === 'erase') { erasing = e.pointerId; eraseAt(e.clientX, e.clientY); viewport.setPointerCapture(e.pointerId); }
     else startShape(e);
   } else if (rulerOn) {
-    clearRuler(); const a = rp(e); ruler = { id: e.pointerId, a, b: a }; drawRuler(); viewport.setPointerCapture(e.pointerId);
     e.stopImmediatePropagation(); e.preventDefault();
+    if (ruler && ruler.hover) {           // il clic che chiude un righello ripreso col tasto destro
+      ruler.b = rp(e); ruler.hover = false; ruler.id = -1; drawRuler(); rulerFade = setTimeout(clearRuler, 5000); return;
+    }
+    clearRuler(); const a = rp(e); ruler = { id: e.pointerId, pts: [a], b: a, touch: e.pointerType !== 'mouse' }; drawRuler(); viewport.setPointerCapture(e.pointerId);
+    syncRulerPlus();
   }
 }, true);
 viewport.addEventListener('pointermove', e => {
   if (shp && e.pointerId === shp.id) { moveShape(e); e.stopImmediatePropagation(); }
   else if (erasing === e.pointerId) { eraseAt(e.clientX, e.clientY); e.stopImmediatePropagation(); }
-  else if (ruler && e.pointerId === ruler.id) { ruler.b = rp(e); drawRuler(); e.stopImmediatePropagation(); }
+  else if (ruler && (e.pointerId === ruler.id || (ruler.hover && e.pointerType === 'mouse'))) {
+    // il tasto destro premuto mentre si tiene il sinistro arriva come movimento, non come pressione
+    if (e.button === 2 && (e.buttons & 2)) rulerJoint();
+    ruler.b = rp(e); drawRuler(); e.stopImmediatePropagation();
+  }
 }, true);
 viewport.addEventListener('pointerup', e => {
   if (shp && e.pointerId === shp.id) { endShape(e); e.stopImmediatePropagation(); }
   else if (erasing === e.pointerId) { erasing = null; e.stopImmediatePropagation(); }
-  else if (ruler && e.pointerId === ruler.id) { ruler.id = -1; rulerFade = setTimeout(clearRuler, 5000); e.stopImmediatePropagation(); }
+  else if (ruler && e.pointerId === ruler.id) { ruler.id = -1; syncRulerPlus(); rulerFade = setTimeout(clearRuler, 5000); e.stopImmediatePropagation(); }
 }, true);
 viewport.addEventListener('pointermove', e => { lastPtr = wpt(e); });
 viewport.addEventListener('wheel', clearRuler);
@@ -736,6 +790,7 @@ addEventListener('pointerup', e => {
   if (e.button !== 2 || !rc) return;
   const r = rc; rc = null;
   if (r.moved || performance.now() - r.at > 450 || r.t.closest(NATIVE)) return;
+  if (rulerOn && r.t.closest('#viewport')) return;          // a righello acceso il tasto destro fissa il segmento
   const items = contextItems(r.t, { clientX: r.x, clientY: r.y });
   if (items && items.length) showMenu(r.x, r.y, items); else closeCtx();
 }, true);
