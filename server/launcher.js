@@ -94,6 +94,7 @@ const state = {
 
 // ---------- registro, mostrato nella finestra ----------
 const listeners = new Set();
+let finestraVista = false;                // una pagina di LIBRE VTT si è collegata almeno una volta
 function say(line, kind) {
   const e = { t: Date.now(), line: String(line).replace(/\s+$/, ''), kind: kind || '' };
   if (!e.line) return;
@@ -1163,6 +1164,26 @@ async function prepara() {
   state.busy = null; cache.at = 0; push();
 }
 // ---------- la finestra ----------
+// Su Mac i browser possono stare anche in ~/Applications, o altrove: lì li trova Spotlight (mdfind).
+const BROWSER_MAC = [
+  ['Google Chrome', 'com.google.Chrome'], ['Microsoft Edge', 'com.microsoft.edgemac'],
+  ['Brave Browser', 'com.brave.Browser'], ['Chromium', 'org.chromium.Chromium'],
+  ['Vivaldi', 'com.vivaldi.Vivaldi'], ['Google Chrome Canary', 'com.google.Chrome.canary']
+];
+let browserMacTrovati = null;
+function browserMac() {
+  if (browserMacTrovati) return browserMacTrovati;
+  const out = [];
+  for (const [nome, id] of BROWSER_MAC) {
+    for (const dir of ['/Applications', path.join(os.homedir(), 'Applications')]) out.push(path.join(dir, nome + '.app', 'Contents', 'MacOS', nome));
+    try {
+      const trovate = require('child_process').execFileSync('mdfind', [`kMDItemCFBundleIdentifier == '${id}'`], { encoding: 'utf8', timeout: 3000 })
+        .split(/\r?\n/).map(r => r.trim()).filter(r => r.endsWith('.app') && !r.startsWith('/Volumes/'));
+      for (const app of trovate) out.push(path.join(app, 'Contents', 'MacOS', nome));
+    } catch {}
+  }
+  return (browserMacTrovati = out);
+}
 function trovaBrowser() {
   const prove = WIN ? [
     path.join(process.env['PROGRAMFILES'] || 'C:\\Program Files', 'Google\\Chrome\\Application\\chrome.exe'),
@@ -1170,12 +1191,7 @@ function trovaBrowser() {
     path.join(process.env['LOCALAPPDATA'] || '', 'Google\\Chrome\\Application\\chrome.exe'),
     path.join(process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)', 'Microsoft\\Edge\\Application\\msedge.exe'),
     path.join(process.env['PROGRAMFILES'] || 'C:\\Program Files', 'Microsoft\\Edge\\Application\\msedge.exe')
-  ] : MAC ? [
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
-    '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
-    '/Applications/Chromium.app/Contents/MacOS/Chromium'
-  ] : [
+  ] : MAC ? browserMac() : [
     '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium',
     '/usr/bin/chromium-browser', '/usr/bin/microsoft-edge', '/usr/bin/brave-browser', '/snap/bin/chromium'
   ];
@@ -1191,27 +1207,43 @@ function apriFinestra(url) {
       q.on('error', e => say('Non riesco ad aprire il browser: ' + e.message, 'warn'));
       q.unref();
     } catch (e) { say('Non riesco ad aprire il browser: ' + e.message, 'warn'); }
-    say('Chrome non trovato: ho aperto il browser normale.', 'warn');
+    say(`Chrome (o Edge, Brave, Chromium) non trovato: ho aperto ${url} nel browser normale con «${cmd}».`, 'warn');
     sorvegliaSenzaFinestra();
     return null;
   }
-  const p = spawn(b, [
+  const args = [
     '--app=' + url,
     '--user-data-dir=' + PROFILE,
     '--no-first-run', '--no-default-browser-check',
     '--window-size=1440,900',
     ...argScala()
-  ], { detached: false, stdio: 'ignore' });
-  // Chiusa la finestra, si spegne tutto.
-  p.on('exit', () => { say('Finestra chiusa: spengo.'); stopAll(); setTimeout(() => process.exit(0), 300); });
+  ];
+  say(`Apro la finestra con ${b} ${args.join(' ')}`);
+  const partita = Date.now();
+  const p = spawn(b, args, { detached: false, stdio: 'ignore' });
+  p.on('error', e => say('Non riesco ad avviare il browser della finestra: ' + e.message, 'warn'));
+  p.on('exit', codice => {
+    // Uscito subito: il browser con quel profilo era già aperto (per esempio un LIBRE VTT di prima,
+    // appena aggiornato) e gli ha passato la finestra. Spegnere qui lasciava la finestra vuota:
+    // si resta accesi finché la pagina dà segni di vita, come col browser normale.
+    if (Date.now() - partita < 8000 && !finestraVista) {
+      say(`Il browser è uscito subito (codice ${codice}): la finestra l'ha aperta un'altra sua copia. Resto acceso finché la pagina è aperta.`, 'warn');
+      return sorvegliaSenzaFinestra();
+    }
+    say('Finestra chiusa: spengo.'); stopAll(); setTimeout(() => process.exit(0), 300);
+  });
+  // se dopo un po' la pagina non si è fatta viva, il registro lo dice (con il browser usato)
+  setTimeout(() => { if (!finestraVista) say(`La finestra non ha ancora caricato la pagina (${url}, browser ${path.basename(b)}). Se resta vuota, aprila a mano in un browser.`, 'warn'); }, 20000).unref();
   return p;
 }
 
 // Nel browser normale non si sa quando la scheda viene chiusa: le pagine di LIBRE VTT dicono
 // «ci sono» ogni 20 secondi. Se per qualche minuto non c'è più nessuno, si spegne tutto
 // (altrimenti i server resterebbero accesi per sempre, di nascosto).
-let ultimoSegno = Date.now();
+let ultimoSegno = Date.now(), sorvegliando = false;
 function sorvegliaSenzaFinestra() {
+  if (sorvegliando) return;
+  sorvegliando = true; ultimoSegno = Date.now();
   setInterval(() => {
     if (listeners.size) ultimoSegno = Date.now();
     if (Date.now() - ultimoSegno > +(process.env.MYVTT_ATTESA_MS || 180000)) {
@@ -1269,7 +1301,7 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/api/eventi') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
     res.write(': ciao\n\n');
-    listeners.add(res);
+    listeners.add(res); finestraVista = true;
     req.on('close', () => listeners.delete(res));
     return;
   }
