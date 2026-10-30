@@ -253,8 +253,8 @@
     }
     if (best) return best;
     if (e && e.altKey) return p;
-    const b = rectOf(board), cs = cella();
-    const gx = b.x + Math.round((p.x - b.x) / cs) * cs, gy = b.y + Math.round((p.y - b.y) / cs) * cs;
+    const o = typeof gridOrigin === 'function' ? gridOrigin() : rectOf(board), cs = cella();
+    const gx = o.x + Math.round((p.x - o.x) / cs) * cs, gy = o.y + Math.round((p.y - o.y) / cs) * cs;
     if ((typeof grid !== 'undefined' && grid.snap) || Math.hypot(gx - p.x, gy - p.y) < 10 / view.s) return { x: gx, y: gy };
     return p;
   }

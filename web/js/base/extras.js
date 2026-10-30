@@ -406,7 +406,7 @@ rulerPlus.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventD
 rulerGrip.addEventListener('click', () => setRuler(!rulerOn));
 $('unitSel').addEventListener('change', rulerTitle);
 function clearRuler() { clearTimeout(rulerFade); rulerSvg.replaceChildren(); ruler = null; syncRulerPlus(); }
-const cellCenter = (x, y) => { const b = boardRect(), s = grid.size; return { x: b.x + (Math.floor((x - b.x) / s) + .5) * s, y: b.y + (Math.floor((y - b.y) / s) + .5) * s }; };
+const cellCenter = (x, y) => { const c = cellOf(x, y), p = cellPos(c.i, c.j); return { x: p.x + grid.size / 2, y: p.y + grid.size / 2 }; };
 const rp = e => { const x = (e.clientX - view.x) / view.s, y = (e.clientY - view.y) / view.s; return settings.rulerCenter ? cellCenter(x, y) : snapPoint(x, y); };
 // Il righello è un percorso: ruler.pts sono i punti fissati (il primo è la partenza, gli altri le
 // giunzioni) e ruler.b è la fine, che segue il puntatore. Il tasto destro (o «+») fissa la fine e

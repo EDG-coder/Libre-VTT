@@ -225,30 +225,39 @@ for (const t of ['gesturestart', 'gesturechange']) addEventListener(t, e => e.pr
 
 // ---------- Griglia (disegnata a schermo ma solo dentro il rettangolo, con linee sempre sottili) ----------
 function paintGrid() {
-  const gc = `color-mix(in srgb, ${grid.color} ${grid.opacity}%, transparent)`, dk = 'rgba(0, 0, 0, .4)';
+  const gc = gridPreview ? '#ff2bd6' : `color-mix(in srgb, ${grid.color} ${grid.opacity}%, transparent)`, dk = 'rgba(0, 0, 0, .4)';
   gridEl.style.backgroundImage =
     `linear-gradient(to right, ${gc} 1px, transparent 0), linear-gradient(to bottom, ${gc} 1px, transparent 0),` +
     `linear-gradient(to right, ${dk} 3px, transparent 0), linear-gradient(to bottom, ${dk} 3px, transparent 0)`;
   placeGrid();
 }
 function placeGrid() {
-  const r = boardRect(), s = view.s;
+  const r = boardRect(), s = view.s, o = gridOrigin();
   const x0 = Math.round(view.x + r.x * s), y0 = Math.round(view.y + r.y * s);
   const x1 = Math.round(view.x + (r.x + r.w) * s), y1 = Math.round(view.y + (r.y + r.h) * s);
   const l = Math.max(0, x0), t = Math.max(0, y0), rr = Math.min(innerWidth, x1), bb = Math.min(innerHeight, y1);
-  const visible = !!grid.show && rr > l && bb > t;
+  const visible = (!!grid.show && !grid.hideLines || gridPreview) && rr > l && bb > t;
   gridEl.classList.toggle('on', visible);
   if (!visible) return;
-  const c = Math.max(3, grid.size * s), px = x0 - l, py = y0 - t;
+  const c = Math.max(3, grid.size * s), px = view.x + o.x * s - l, py = view.y + o.y * s - t;
   Object.assign(gridEl.style, { left: l + 'px', top: t + 'px', width: rr - l + 'px', height: bb - t + 'px', backgroundSize: `${c}px ${c}px` });
   gridEl.style.backgroundPosition = `${px}px ${py}px, ${px}px ${py}px, ${px - 1}px ${py - 1}px, ${px - 1}px ${py - 1}px`;
 }
-// le celle partono dall'angolo in alto a sinistra del rettangolo
+// Le celle partono dall'angolo in alto a sinistra del rettangolo, spostate di grid.ox, grid.oy
+// (per farle combaciare con la griglia disegnata sulla mappa). Tutti passano da queste funzioni.
+function gridOrigin(g = grid) { const b = boardRect(); return { x: b.x + (+g.ox || 0), y: b.y + (+g.oy || 0) }; }
+/** La casella che contiene il punto: { i, j } (colonna, riga). */
+function cellOf(x, y) { const o = gridOrigin(), s = grid.size; return { i: Math.floor((x - o.x) / s), j: Math.floor((y - o.y) / s) }; }
+/** L'angolo in alto a sinistra della casella i, j. */
+function cellPos(i, j) { const o = gridOrigin(), s = grid.size; return { x: o.x + i * s, y: o.y + j * s }; }
+/** Il punto messo dentro la casella sotto (x, y), per un oggetto w × h: centrato. */
+function cellFit(x, y, w, h) { const c = cellOf(x, y), p = cellPos(c.i, c.j); return { x: p.x + (grid.size - w) / 2, y: p.y + (grid.size - h) / 2 }; }
 const snapPoint = (x, y) => {
   if (!grid.snap) return { x, y };
-  const b = boardRect();
-  return { x: b.x + Math.round((x - b.x) / grid.size) * grid.size, y: b.y + Math.round((y - b.y) / grid.size) * grid.size };
+  const o = gridOrigin(), s = grid.size;
+  return { x: o.x + Math.round((x - o.x) / s) * s, y: o.y + Math.round((y - o.y) / s) * s };
 };
+let gridPreview = false;     // la griglia in colore acceso, sopra quella della mappa, mentre la si regola
 
 function paintBorder() {
   const b = settings.border;
@@ -530,9 +539,7 @@ function addPhotoToMap(url, at, aid) {
     if (fit) { const k = grid.size / Math.max(img.naturalWidth, img.naturalHeight); w = img.naturalWidth * k; h = img.naturalHeight * k; }
     let l, t;
     if (at && fit && grid.snap) {                     // al centro della casella sotto il rilascio
-      const b = boardRect();
-      l = b.x + Math.floor((at.x - b.x) / grid.size) * grid.size + (grid.size - w) / 2;
-      t = b.y + Math.floor((at.y - b.y) / grid.size) * grid.size + (grid.size - h) / 2;
+      ({ x: l, y: t } = cellFit(at.x, at.y, w, h));
     }
     else if (at) { l = at.x - w / 2; t = at.y - h / 2; }
     else {
@@ -881,7 +888,13 @@ const gridFields = withShow => [
   ...(withShow ? [{ f: 'show', type: 'check', label: 'Mostra la griglia' }] : []),
   { f: 'snap', type: 'check', label: 'Aggancia le immagini alla griglia' },
   { f: 'fitToken', type: 'check', label: 'Nuovi segnalini grandi quanto una casella (con la griglia visibile)' },
-  { f: 'size', type: 'range', label: 'Cella', min: 20, max: 200, step: 5 },
+  { f: 'size', type: 'range', label: 'Cella', min: 10, max: 300, step: 0.1 },
+  ...(withShow ? [
+    { f: 'size', type: 'number', label: 'Cella esatta', min: 10, max: 300, step: 0.1, unit: ' px', cls: 'fine' },
+    { f: 'ox', type: 'number', label: 'Spostamento →', min: -300, max: 300, step: 1, unit: ' px', cls: 'fine' },
+    { f: 'oy', type: 'number', label: 'Spostamento ↓', min: -300, max: 300, step: 1, unit: ' px', cls: 'fine' },
+    { f: 'hideLines', type: 'check', label: 'Nascondi le linee di LIBRE VTT (resta l\'aggancio)' }
+  ] : []),
   { f: 'color', type: 'color', label: 'Colore' },
   { f: 'opacity', type: 'range', label: 'Opacità', min: 10, max: 100, step: 5, unit: '%' }
 ];
@@ -900,7 +913,7 @@ function fieldHtml(d) {
   const rng = `min="${d.min}" max="${d.max}" step="${d.step}"`;
   if (d.type === 'check') return `<label class="check"><input data-f="${d.f}" type="checkbox"> ${d.label}</label>`;
   if (d.type === 'range') return `<label class="row">${d.label} <input data-f="${d.f}" type="range" ${rng}> <output data-o="${d.f}"></output>${d.unit || ''}</label>`;
-  if (d.type === 'number') return `<label class="row">${d.label} <input data-f="${d.f}" type="number" ${rng}>${d.unit || ''}</label>`;
+  if (d.type === 'number') return `<label class="row${d.cls ? ' ' + d.cls : ''}">${d.label} <input data-f="${d.f}" type="number" ${rng}>${d.unit || ''}</label>`;
   return `<div class="row">${d.label} <div class="swatches">` +
     SWATCHES.map(([c, n]) => `<button type="button" data-color="${c}" title="${n}" aria-label="${n}" style="background:${c}"></button>`).join('') +
     `</div><input data-f="${d.f}" type="color" title="Altro colore"></div>`;
@@ -911,9 +924,9 @@ function buildForm(root, fields, { get, onChange }) {
     const g = get();
     root.querySelectorAll('[data-f]').forEach(i => {
       if (i.type === 'checkbox') i.checked = !!g[i.dataset.f];
-      else if (!(i.type === 'number' && i === document.activeElement)) i.value = g[i.dataset.f];   // non disturbare chi sta scrivendo
+      else if (!(i.type === 'number' && i === document.activeElement)) i.value = g[i.dataset.f] ?? 0;   // non disturbare chi sta scrivendo
     });
-    root.querySelectorAll('[data-o]').forEach(o => { o.textContent = g[o.dataset.o]; });
+    root.querySelectorAll('[data-o]').forEach(o => { o.textContent = +(+g[o.dataset.o]).toFixed(1); });
     root.querySelectorAll('.swatches button').forEach(b => b.classList.toggle('active', !g.transparent && b.dataset.color === g.color));
   };
   root.addEventListener('input', e => {
@@ -932,6 +945,94 @@ function buildForm(root, fields, { get, onChange }) {
   return sync;
 }
 const syncSceneGrid = buildForm($('gridScene'), gridFields(true), { get: () => grid, onChange: () => { paintGrid(); scheduleBoardSave(); } });
+// Regolazione fine: frecce su e giù di 1 px, con Maiusc di 0,1 px; intanto la griglia è in colore
+// acceso, così si vede sopra quella disegnata sulla mappa.
+let finePreview = 0;
+function anteprimaGriglia(ms = 1500) {
+  gridPreview = true; paintGrid();
+  clearTimeout(finePreview);
+  if (ms) finePreview = setTimeout(() => { if (!fitGrid) { gridPreview = false; paintGrid(); } }, ms);
+}
+$('gridScene').addEventListener('keydown', e => {
+  const i = e.target;
+  if (!i.matches('.fine input') || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+  e.preventDefault();
+  const passo = (e.shiftKey ? 0.1 : 1) * (e.key === 'ArrowUp' ? 1 : -1);
+  grid[i.dataset.f] = clamp(Math.round(((+grid[i.dataset.f] || 0) + passo) * 10) / 10, +i.min, +i.max);
+  i.value = grid[i.dataset.f];
+  syncSceneGrid(); paintGrid(); scheduleBoardSave(); anteprimaGriglia();
+});
+$('gridScene').addEventListener('input', e => { if (e.target.matches('.fine input, [data-f=size]')) anteprimaGriglia(); });
+
+// ---- Adatta la griglia a quella disegnata sulla mappa ----
+// Due clic su due angoli opposti di una casella dell'immagine (o di un blocco di N × M caselle):
+// da lì misura e spostamento. Con «mappa» si ridimensiona invece lo sfondo, e la griglia resta.
+let fitGrid = null;      // { modo: 'griglia' | 'mappa', a: primo angolo }
+function avviaAdatta(modo) {
+  if (modo === 'mappa' && bgBox.hidden) return setStatus('Questa scena non ha uno sfondo.');
+  fitGrid = { modo, a: null };
+  viewport.classList.add('fitGrid');
+  anteprimaGriglia(0);
+  setStatus('Clicca un angolo di una casella disegnata sulla mappa, poi l\'angolo opposto (Esc annulla).');
+}
+function fineAdatta(msg) {
+  fitGrid = null; viewport.classList.remove('fitGrid');
+  gridPreview = false; paintGrid();
+  if (msg) setStatus(msg);
+}
+function caselleTra() {
+  const r = prompt('Quante caselle ci sono tra i due angoli? Una sola (1), oppure larghezza x altezza (es. 5x3).', '1');
+  if (r == null) return null;
+  const m = String(r).trim().match(/^(\d+)(?:\s*[x×*]\s*(\d+))?$/i);
+  if (!m) return null;
+  const n = Math.max(1, +m[1]), k = Math.max(1, +(m[2] || m[1]));
+  return { n, m: k };
+}
+viewport.addEventListener('pointerdown', e => {
+  if (!fitGrid || e.button !== 0) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  const p = { x: (e.clientX - view.x) / view.s, y: (e.clientY - view.y) / view.s };
+  if (!fitGrid.a) { fitGrid.a = p; setStatus('Ora l\'angolo opposto.'); return; }
+  const a = fitGrid.a, modo = fitGrid.modo, dx = Math.abs(p.x - a.x), dy = Math.abs(p.y - a.y);
+  if (dx < 4 || dy < 4) return setStatus('I due angoli sono troppo vicini: riprova con l\'angolo opposto.');
+  const quante = caselleTra();
+  if (!quante) return fineAdatta('Adattamento annullato.');
+  const misura = (dx / quante.n + dy / quante.m) / 2;      // le caselle sono quadrate: la media dei due lati
+  const x0 = Math.min(a.x, p.x), y0 = Math.min(a.y, p.y);
+  if (modo === 'griglia') {
+    if (misura < 10 || misura > 300) return fineAdatta('La casella misurata è fuori misura (10-300 px): riprova.');
+    grid.size = Math.round(misura * 10) / 10;
+    allineaOrigine(x0, y0);
+  } else {
+    // si ridimensiona lo sfondo (e il rettangolo, se lo copriva) attorno al primo angolo
+    const k = grid.size / misura, r = rectOf(bgBox), b = boardRect();
+    const copre = Math.abs(b.x - r.x) < 1 && Math.abs(b.y - r.y) < 1 && Math.abs(b.w - r.w) < 1 && Math.abs(b.h - r.h) < 1;
+    const nr = { x: x0 - (x0 - r.x) * k, y: y0 - (y0 - r.y) * k, w: r.w * k, h: r.h * k };
+    Object.assign(bgBox.style, { left: nr.x + 'px', top: nr.y + 'px', width: nr.w + 'px', height: nr.h + 'px' });
+    if (copre) setBoard({ ...nr });
+    allineaOrigine(x0, y0);
+  }
+  if (!grid.snap) grid.snap = true;
+  fineAdatta(`Griglia adattata: casella di ${+grid.size.toFixed(1)} px.`);
+  // una volta sola per scena: le linee di LIBRE VTT servono ancora, o basta l'aggancio?
+  if (!grid.chiesto) {
+    grid.chiesto = true;
+    if (confirm('Nascondere le linee della griglia di LIBRE VTT? Resta quella della mappa, e i segnalini si agganciano lo stesso.')) grid.hideLines = true;
+  }
+  grid.show = true;
+  syncSceneGrid(); paintGrid(); applyView(); scheduleBoardSave();
+}, true);
+/** Sposta l'origine della griglia perché un angolo di casella cada in (x, y). */
+function allineaOrigine(x, y) {
+  const b = boardRect(), s = grid.size, mod = v => Math.round((((v % s) + s) % s) * 10) / 10;
+  grid.ox = mod(x - b.x); grid.oy = mod(y - b.y);
+}
+addEventListener('keydown', e => { if (fitGrid && e.key === 'Escape') { e.preventDefault(); fineAdatta('Adattamento annullato.'); } }, true);
+$('gridScene').insertAdjacentHTML('beforeend',
+  `<div class="row gridFit"><button id="gridFitMap" type="button" class="btn">Adatta alla griglia della mappa</button>` +
+  `<button id="mapFitGrid" type="button" class="btn ghost" title="Ridimensiona lo sfondo perché le sue caselle siano grandi quanto quelle di LIBRE VTT">Adatta la mappa alla griglia</button></div>`);
+$('gridFitMap').addEventListener('click', () => avviaAdatta('griglia'));
+$('mapFitGrid').addEventListener('click', () => avviaAdatta('mappa'));
 const syncDefaultGrid = buildForm($('gridDefault'), gridFields(false), { get: () => settings.gridDefault, onChange: scheduleBoardSave });
 const syncBorder = buildForm($('borderForm'), BORDER_FIELDS, { get: () => settings.border, onChange: () => { paintBorder(); scheduleBoardSave(); } });
 const syncPingForm = buildForm($('pingForm'), PING_FIELDS, { get: () => settings.ping, onChange: scheduleBoardSave });
@@ -1016,7 +1117,7 @@ function syncFog() {
 
 $('applyDefault').addEventListener('click', () => {
   const show = grid.show;
-  Object.assign(grid, settings.gridDefault, { show });
+  Object.assign(grid, settings.gridDefault, { show, ox: 0, oy: 0, hideLines: false });
   syncSceneGrid(); paintGrid(); scheduleBoardSave();
 });
 $('bgReset').addEventListener('click', () => {

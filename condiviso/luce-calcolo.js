@@ -325,6 +325,14 @@
    * aperte si passano). Si va anche in diagonale, e ogni passo vale una casella (la regola base del 5e).
    * max: oltre quante caselle non serve cercare. → { caselle, punti: [x, y, …] } oppure null (non ci si arriva).
    */
+  /** Il rettangolo su cui contare le caselle: quello di gioco, allargato perché le caselle partano
+   *  dall'origine della griglia (spostata di grid.ox, grid.oy per combaciare con quella della mappa). */
+  function rettangoloGriglia(board, grid) {
+    const b = board || { x: 0, y: 0, w: 1000, h: 1000 }, cs = grid && +grid.size > 0 ? +grid.size : 50;
+    const ox = ((((grid && +grid.ox) || 0) % cs) + cs) % cs, oy = ((((grid && +grid.oy) || 0) % cs) + cs) % cs;
+    if (!ox && !oy) return b;
+    return { x: b.x + ox - (ox ? cs : 0), y: b.y + oy - (oy ? cs : 0), w: b.w + (ox ? cs : 0), h: b.h + (oy ? cs : 0) };
+  }
   function percorso(luce, board, cella, ax, ay, bx, by, max) {
     const cs = cella > 0 ? cella : 50, lim = max >= 0 ? max : Infinity;
     const muri = ((luce && luce.muri) || []).filter(w => !(w.porta && w.aperta));
@@ -399,5 +407,5 @@
     return false;
   }
 
-  return { leggiDistanza, percorso, attraversa, pulisci, segmenti, visuale, dentro, scurovisione, vista, visibile, griglia, riempi, segnaVisto, comprimi, espandi };
+  return { leggiDistanza, percorso, rettangoloGriglia, attraversa, pulisci, segmenti, visuale, dentro, scurovisione, vista, visibile, griglia, riempi, segnaVisto, comprimi, espandi };
 });

@@ -318,10 +318,11 @@ function controllaMovimento(sc, ph, pos) {
   const scatto = ph.scatta === true || (!!turno && ph.scatta === turno);
   const totale = vel ? vel * (scatto ? 2 : 1) : Infinity, resto = Math.max(0, totale - usate);
   const cella = (sc.grid && +sc.grid.size) || 50;
-  const strada = LUCE.percorso(muri || { muri: [] }, sc.board, cella, ax, ay, bx, by, resto + 0.01);
+  const campo = LUCE.rettangoloGriglia(sc.board, sc.grid);
+  const strada = LUCE.percorso(muri || { muri: [] }, campo, cella, ax, ay, bx, by, resto + 0.01);
   if (!strada) {
     // non trovato: o c'è un muro di mezzo, o è troppo lontano
-    const senzaLimite = muri ? LUCE.percorso(muri, sc.board, cella, ax, ay, bx, by) : { caselle: Infinity };
+    const senzaLimite = muri ? LUCE.percorso(muri, campo, cella, ax, ay, bx, by) : { caselle: Infinity };
     if (!senzaLimite) return { ok: false, perche: 'di là non ci arrivi: c\'è un muro' };
     return { ok: false, perche: `troppo lontano: ti restano ${+resto.toFixed(1)} caselle` };
   }
