@@ -42,7 +42,13 @@ try { assetIndex = JSON.parse(fs.readFileSync(path.join(DATA, 'assets.json'), 'u
 const saveAssetIndex = () => { try { fs.writeFileSync(path.join(DATA, 'assets.json'), JSON.stringify(assetIndex)); } catch {} };
 const assetFile = h => assetIndex[h] ? path.join(ASSETS, h + assetIndex[h].ext) : null;
 const haveAsset = h => { const f = assetFile(h); return !!(f && fs.existsSync(f)); };
+const SVG = require('../condiviso/svg-pulito.js');
 function storeAsset(buf, mime, name) {
+  if (mime === 'image/svg+xml') {            // un SVG (anche di un giocatore) si tiene solo ripulito
+    const p = SVG.pulisci(buf.toString('utf8'));
+    if (p.errore) { console.error('asset svg:', p.errore); return null; }
+    buf = Buffer.from(p.svg, 'utf8');
+  }
   const hash = crypto.createHash('sha256').update(buf).digest('hex');
   const ext = MIME_EXT[mime] || '.bin';
   if (!haveAsset(hash)) {
@@ -1692,7 +1698,9 @@ function httpHandler(req, res) {
         if (e) return sendHttp(res, 404, 'Immagine non trovata');
         res.writeHead(200, {
           'Content-Type': (assetIndex[hash] && assetIndex[hash].mime) || 'application/octet-stream',
-          'Cache-Control': 'public, max-age=31536000, immutable'
+          'Cache-Control': 'public, max-age=31536000, immutable',
+          // un SVG aperto da solo non deve poter eseguire niente
+          'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src data:"
         });
         res.end(d);
       });

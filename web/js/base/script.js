@@ -1604,23 +1604,46 @@ $('newFolder').addEventListener('click', () => {
   if (n && n.trim()) act(async () => { current = await store.addFolder(n.trim()); });
 });
 
+/** Un'immagine da disegnare su un canvas: { img, width, height, close }. createImageBitmap non sa
+ *  leggere gli SVG: quelli passano da un <img> (con le misure del file, o 512 px se non le ha). */
+async function immagineDisegnabile(blob) {
+  if (blob.type !== 'image/svg+xml') { const b = await createImageBitmap(blob); return { img: b, width: b.width, height: b.height, close: () => b.close() }; }
+  const url = URL.createObjectURL(blob), im = new Image();
+  try { im.src = url; await im.decode(); } catch (e) { URL.revokeObjectURL(url); throw new Error(tr('Non riesco a leggere questa immagine.')); }
+  const w = im.naturalWidth || 512, h = im.naturalHeight || 512;
+  return { img: im, width: w, height: h, close: () => URL.revokeObjectURL(url) };
+}
 // WebP con il lato corto limitato alla risoluzione scelta (0 = originale), sRGB senza profili ICC incorporati
 async function toWebp(file, res) {
-  const bmp = await createImageBitmap(file);
+  const bmp = await immagineDisegnabile(file);
   const k = res ? Math.min(1, res * 16 / 9 / Math.max(bmp.width, bmp.height), res / Math.min(bmp.width, bmp.height)) : 1;
   const c = document.createElement('canvas');
   c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  c.getContext('2d').drawImage(bmp.img, 0, 0, c.width, c.height);
   bmp.close();
   const blob = await new Promise(res => c.toBlob(res, 'image/webp', 0.82));
   if (!blob || blob.type !== 'image/webp') throw new Error('questo browser non sa creare WebP');
   return blob;
 }
 
+// Un SVG resta vettoriale (si ingrandisce senza sgranare): si ripulisce e si tiene così com'è.
+const eSvg = file => file.type === 'image/svg+xml' || /\.svg$/i.test(file.name);
+async function comeSvg(file) {
+  if (file.size > SVG_PULITO.MAX_BYTE) throw new Error(tr('SVG troppo grande (massimo 8 MB)'));
+  const p = SVG_PULITO.pulisci(await file.text());
+  if (p.errore) throw new Error(tr(p.errore));
+  return new Blob([p.svg], { type: 'image/svg+xml' });
+}
+// l'immagine pronta da salvare: { nome, blob } (WebP alla risoluzione scelta, o l'SVG ripulito)
+async function preparaImmagine(file, res) {
+  const nome = file.name.replace(/\.[^.]+$/, '');
+  return eSvg(file) ? { nome: nome + '.svg', blob: await comeSvg(file) } : { nome: nome + '.webp', blob: await toWebp(file, res) };
+}
 // salva l'immagine nella cartella degli sfondi (creandola se serve) e restituisce l'asset
 async function uploadBackground(file) {
   try { await store.addFolder(BG_FOLDER); } catch { /* esiste già */ }
-  return store.add(file.name.replace(/\.[^.]+$/, '') + '.webp', BG_FOLDER, await toWebp(file, settings.resBg));
+  const im = await preparaImmagine(file, settings.resBg);
+  return store.add(im.nome, BG_FOLDER, im.blob);
 }
 
 upload.addEventListener('change', async () => {
@@ -1631,7 +1654,7 @@ upload.addEventListener('change', async () => {
   for (const file of files) {
     try {
       if (uploadAs === 'bg') { const rec = await uploadBackground(file); first ||= rec; }
-      else await store.add(file.name.replace(/\.[^.]+$/, '') + '.webp', current, await toWebp(file, settings.resToken));
+      else { const im = await preparaImmagine(file, settings.resToken); await store.add(im.nome, current, im.blob); }
     } catch (err) { setStatus('❌ ' + err.message); }
   }
   if (first) current = BG_FOLDER;
