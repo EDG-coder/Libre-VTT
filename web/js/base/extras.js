@@ -398,25 +398,71 @@ function setRuler(on) {
   rulerOn = on; rulerBox.classList.toggle('toolOn', on); viewport.classList.toggle('ruler-on', on);
   if (on) { if (penPanel) setPen(false); select(null); } else clearRuler();
 }
+// Sul tocco non c'è il tasto destro: «+» fissa il segmento (lo si tocca con un altro dito mentre si misura)
+const rulerPlus = mk('button', 'glass', '+'); rulerPlus.id = 'rulerPlus'; rulerPlus.type = 'button';
+rulerPlus.title = 'Fissa il segmento e continua da qui'; document.body.appendChild(rulerPlus);
+const syncRulerPlus = () => rulerPlus.classList.toggle('on', !!(ruler && ruler.touch && ruler.id !== -1));
+rulerPlus.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); rulerJoint(); });
 rulerGrip.addEventListener('click', () => setRuler(!rulerOn));
 $('unitSel').addEventListener('change', rulerTitle);
-function clearRuler() { clearTimeout(rulerFade); rulerSvg.replaceChildren(); ruler = null; }
-const cellCenter = (x, y) => { const b = boardRect(), s = grid.size; return { x: b.x + (Math.floor((x - b.x) / s) + .5) * s, y: b.y + (Math.floor((y - b.y) / s) + .5) * s }; };
+function clearRuler() { clearTimeout(rulerFade); rulerSvg.replaceChildren(); ruler = null; syncRulerPlus(); }
+const cellCenter = (x, y) => { const c = cellOf(x, y), p = cellPos(c.i, c.j); return { x: p.x + grid.size / 2, y: p.y + grid.size / 2 }; };
 const rp = e => { const x = (e.clientX - view.x) / view.s, y = (e.clientY - view.y) / view.s; return settings.rulerCenter ? cellCenter(x, y) : snapPoint(x, y); };
+// Il righello è un percorso: ruler.pts sono i punti fissati (il primo è la partenza, gli altri le
+// giunzioni) e ruler.b è la fine, che segue il puntatore. Il tasto destro (o «+») fissa la fine e
+// ne parte un altro segmento; Backspace toglie l'ultima giunzione, Esc cancella. Il totale è la somma.
+const misura = cells => `${+(cells * (settings.unit === 'm' ? 1.5 : 5)).toFixed(1)} ${settings.unit === 'm' ? 'm' : 'ft'}`;
 function drawRuler() {
-  const { a, b } = ruler, k = view.s;
-  const x1 = a.x * k + view.x, y1 = a.y * k + view.y, x2 = b.x * k + view.x, y2 = b.y * k + view.y;
-  const cells = Math.hypot(b.x - a.x, b.y - a.y) / grid.size, v = cells * (settings.unit === 'm' ? 1.5 : 5);
-  const txt = `${+v.toFixed(1)} ${settings.unit === 'm' ? 'm' : 'ft'} · ${+cells.toFixed(1)} caselle`;
-  rulerSvg.innerHTML =
-    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-opacity=".55" stroke-width="6" stroke-linecap="round"/>` +
-    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ffd93d" stroke-width="3" stroke-linecap="round"/>` +
-    `<circle cx="${x1}" cy="${y1}" r="5" fill="#ffd93d" stroke="#000" stroke-opacity=".6"/><circle cx="${x2}" cy="${y2}" r="5" fill="#ffd93d" stroke="#000" stroke-opacity=".6"/>` +
-    `<text x="${(x1 + x2) / 2 + 10}" y="${(y1 + y2) / 2 - 10}">${txt}</text>`;
+  const k = view.s, mondo = [...ruler.pts, ruler.b], pts = mondo.map(p => ({ x: p.x * k + view.x, y: p.y * k + view.y }));
+  const tratti = [];
+  let cells = 0;
+  for (let i = 1; i < mondo.length; i++) {
+    const c = Math.hypot(mondo[i].x - mondo[i - 1].x, mondo[i].y - mondo[i - 1].y) / grid.size;
+    cells += c; tratti.push(c);
+  }
+  const linea = pts.map(p => `${p.x},${p.y}`).join(' '), fine = pts[pts.length - 1];
+  let svg = `<polyline points="${linea}" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<polyline points="${linea}" fill="none" stroke="#ffd93d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` +
+    pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="5" fill="#ffd93d" stroke="#000" stroke-opacity=".6"/>`).join('');
+  // con più segmenti, in piccolo la lunghezza di ognuno
+  if (tratti.length > 1) tratti.forEach((c, i) => {
+    if (c < .05) return;
+    svg += `<text class="pezzo" x="${(pts[i].x + pts[i + 1].x) / 2 + 8}" y="${(pts[i].y + pts[i + 1].y) / 2 + 16}">${misura(c)}</text>`;
+  });
+  svg += `<text x="${fine.x + 12}" y="${fine.y - 12}">${misura(cells)} · ${+cells.toFixed(1)} ${tr('caselle')}</text>`;
+  rulerSvg.innerHTML = svg;
 }
+/** Fissa la fine del segmento: diventa una giunzione e ne parte un altro, collegato. */
+function rulerJoint() {
+  if (!ruler || ruler.id === -1) return;
+  const ultimo = ruler.pts[ruler.pts.length - 1];
+  if (Math.hypot(ruler.b.x - ultimo.x, ruler.b.y - ultimo.y) < 1) return;
+  ruler.pts.push({ ...ruler.b }); drawRuler();
+}
+/** Riprende un righello appena rilasciato: la sua fine diventa una giunzione e il nuovo tratto
+ *  segue il mouse (senza tenere premuto) fino al prossimo clic. */
+function rulerResume(e) {
+  clearTimeout(rulerFade);
+  ruler.pts.push({ ...ruler.b }); ruler.b = rp(e); ruler.id = -2; ruler.hover = true; drawRuler();
+}
+addEventListener('keydown', e => {
+  if (!ruler || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  if (e.key === 'Escape') { clearRuler(); e.preventDefault(); e.stopPropagation(); }
+  else if (e.key === 'Backspace') {
+    e.preventDefault();
+    if (ruler.pts.length > 1) { ruler.pts.pop(); drawRuler(); }
+    else if (ruler.id === -1) clearRuler();
+  }
+}, true);
 
 // ---- puntatore per penna, gomma e righello (prima di script.js) ----
 viewport.addEventListener('pointerdown', e => {
+  if (e.button === 2 && rulerOn) {
+    // tasto destro a righello acceso: fissa il segmento (o riprende quello appena rilasciato)
+    e.stopImmediatePropagation(); e.preventDefault();
+    if (ruler && ruler.id === -1) rulerResume(e); else rulerJoint();
+    return;
+  }
   if (e.button === 2) clearRuler();
   if (e.button !== 0) return;
   if (penOn) {
@@ -426,19 +472,27 @@ viewport.addEventListener('pointerdown', e => {
     else if (tool === 'erase') { erasing = e.pointerId; eraseAt(e.clientX, e.clientY); viewport.setPointerCapture(e.pointerId); }
     else startShape(e);
   } else if (rulerOn) {
-    clearRuler(); const a = rp(e); ruler = { id: e.pointerId, a, b: a }; drawRuler(); viewport.setPointerCapture(e.pointerId);
     e.stopImmediatePropagation(); e.preventDefault();
+    if (ruler && ruler.hover) {           // il clic che chiude un righello ripreso col tasto destro
+      ruler.b = rp(e); ruler.hover = false; ruler.id = -1; drawRuler(); rulerFade = setTimeout(clearRuler, 5000); return;
+    }
+    clearRuler(); const a = rp(e); ruler = { id: e.pointerId, pts: [a], b: a, touch: e.pointerType !== 'mouse' }; drawRuler(); viewport.setPointerCapture(e.pointerId);
+    syncRulerPlus();
   }
 }, true);
 viewport.addEventListener('pointermove', e => {
   if (shp && e.pointerId === shp.id) { moveShape(e); e.stopImmediatePropagation(); }
   else if (erasing === e.pointerId) { eraseAt(e.clientX, e.clientY); e.stopImmediatePropagation(); }
-  else if (ruler && e.pointerId === ruler.id) { ruler.b = rp(e); drawRuler(); e.stopImmediatePropagation(); }
+  else if (ruler && (e.pointerId === ruler.id || (ruler.hover && e.pointerType === 'mouse'))) {
+    // il tasto destro premuto mentre si tiene il sinistro arriva come movimento, non come pressione
+    if (e.button === 2 && (e.buttons & 2)) rulerJoint();
+    ruler.b = rp(e); drawRuler(); e.stopImmediatePropagation();
+  }
 }, true);
 viewport.addEventListener('pointerup', e => {
   if (shp && e.pointerId === shp.id) { endShape(e); e.stopImmediatePropagation(); }
   else if (erasing === e.pointerId) { erasing = null; e.stopImmediatePropagation(); }
-  else if (ruler && e.pointerId === ruler.id) { ruler.id = -1; rulerFade = setTimeout(clearRuler, 5000); e.stopImmediatePropagation(); }
+  else if (ruler && e.pointerId === ruler.id) { ruler.id = -1; syncRulerPlus(); rulerFade = setTimeout(clearRuler, 5000); e.stopImmediatePropagation(); }
 }, true);
 viewport.addEventListener('pointermove', e => { lastPtr = wpt(e); });
 viewport.addEventListener('wheel', clearRuler);
@@ -454,10 +508,11 @@ const tokBox = mk('div', 'tool glass',
      <div class="trow">Immagine <button id="tkImg" type="button">Scegli…</button><button id="tkImgX" type="button" hidden>Togli</button></div>
      <label class="trow">Grandezza <select id="tkSize"><option value="0.5">½ casella</option><option value="1" selected>1 casella</option><option value="2">2 caselle</option><option value="3">3 caselle</option><option value="4">4 caselle</option></select></label>
      <label class="trow">Scheda <select id="tkSheet"></select></label>
+     <label class="trow"><input id="tkUseIcon" type="checkbox" disabled> Usa come immagine della scheda</label>
      <div class="trow"><div id="tkPrev" draggable="true" title="Trascinalo sulla mappa"></div><button id="tkAdd" type="button">＋ Aggiungi al centro</button></div>
    </div>`);
 tokBox.id = 'tokBox'; document.body.appendChild(tokBox);
-const tok = { name: '', round: true, color: '#d9534f', ring: '#ffffff', noRing: false, img: null, baked: false, size: 1, sheet: '' };
+const tok = { name: '', round: true, color: '#d9534f', ring: '#ffffff', noRing: false, img: null, baked: false, size: 1, sheet: '', useIcon: true };
 function applyLook(el) {                                         // bordo colorato dei segnalini con immagine
   if (el.dataset.ring) el.style.setProperty('--ring', el.dataset.ring); else el.style.removeProperty('--ring');
 }
@@ -481,6 +536,51 @@ function refreshTokSheets() {
   sel.replaceChildren(new Option('— nessuna scheda —', ''), ...sheets.map(s => new Option(s.name, s.id)));
   sel.value = sheets.some(s => s.id === tok.sheet) ? tok.sheet : '';
   tok.sheet = sel.value;
+  syncUseIcon();
+}
+// «Usa come immagine della scheda»: solo con una scheda scelta (e allora acceso, salvo scelta diversa)
+function syncUseIcon() {
+  const c = $('tkUseIcon');
+  c.disabled = !tok.sheet; c.checked = !!tok.sheet && tok.useIcon;
+}
+/** Il segnalino così come si vede (forma, immagine e bordo) in un'immagine WebP di 256 px. */
+async function tokenComeImmagine() {
+  const L = 256, c = document.createElement('canvas'); c.width = c.height = L;
+  const g = c.getContext('2d');
+  const blob = await (await fetch(tokUrl())).blob();
+  const im = await immagineDisegnabile(blob);
+  try {
+    if (tok.img && !tok.baked) {
+      // un'immagine scelta: riempie la forma (tonda o quadrata), con il bordo sopra
+      const k = Math.max(L / im.width, L / im.height), w = im.width * k, h = im.height * k;
+      g.save(); g.beginPath();
+      if (tok.round) g.arc(L / 2, L / 2, L / 2, 0, Math.PI * 2); else g.rect(0, 0, L, L);
+      g.clip(); g.drawImage(im.img, (L - w) / 2, (L - h) / 2, w, h); g.restore();
+      if (!tok.noRing) {
+        g.lineWidth = L * .06; g.strokeStyle = tok.ring; g.beginPath();
+        if (tok.round) g.arc(L / 2, L / 2, L / 2 - g.lineWidth / 2, 0, Math.PI * 2); else g.rect(g.lineWidth / 2, g.lineWidth / 2, L - g.lineWidth, L - g.lineWidth);
+        g.stroke();
+      }
+    } else {
+      const k = Math.min(L / im.width, L / im.height), w = im.width * k, h = im.height * k;
+      g.drawImage(im.img, (L - w) / 2, (L - h) / 2, w, h);
+    }
+  } finally { im.close(); }
+  return await new Promise(r => c.toBlob(r, 'image/webp', .88));
+}
+/** Il segnalino appena creato diventa l'icona della scheda collegata (come «Cambia icona…»). */
+async function iconaDalSegnalino(sh) {
+  try {
+    const blob = await tokenComeImmagine();
+    if (!blob) return;
+    const giocatore = typeof NET !== 'undefined' && NET.on && !isMaster();
+    // il giocatore la manda nel deposito della partita (onSheetIcon: 256 px, WebP, «gs:<hash>»);
+    // chi conduce (o gioca da solo) la tiene tra le sue immagini
+    const a = giocatore ? { url: URL.createObjectURL(blob) }
+      : await store.add(((sh.name || 'segnalino').replace(/[^\p{L}\p{N}._-]+/gu, '_').slice(0, 40) || 'segnalino') + '.webp', current, blob);
+    setSheetIcon(sh, a);
+    if (!giocatore && typeof reload === 'function') reload();
+  } catch (e) { console.warn('icona dal segnalino', e); }
 }
 // «Goblin» aggiunto quando c'è già un «Goblin»: il primo diventa «Goblin 1», il nuovo «Goblin 2»
 function numeraNome(nm, altri) {
@@ -507,6 +607,7 @@ function makeToken(wx, wy) {
   if (tok.img && !tok.baked) { if (tok.round) el.dataset.round = '1'; if (!tok.noRing) el.dataset.ring = tok.ring; }
   if (sh) el.dataset.sheet = sh.id;
   applyLook(el); updateTokenBars(); scheduleBoardSave();
+  if (sh && tok.useIcon && (!sh._access || sh._access === 'rw')) iconaDalSegnalino(sh);
 }
 for (const [c, n] of SWATCHES.slice(0, 7)) {
   const b = mk('button', 'sw'); b.type = 'button'; b.dataset.color = c; b.title = n; b.style.background = c; b.setAttribute('aria-label', n);
@@ -522,7 +623,8 @@ $('tkNoRing').addEventListener('input', e => { tok.noRing = e.target.checked; re
 $('tkImg').addEventListener('click', () => pickAsset(a => { tok.img = a; refreshTok(); }));
 $('tkImgX').addEventListener('click', () => { tok.img = null; refreshTok(); });
 $('tkSize').addEventListener('input', e => { tok.size = +e.target.value; });
-$('tkSheet').addEventListener('input', e => { tok.sheet = e.target.value; });
+$('tkSheet').addEventListener('input', e => { const prima = tok.sheet; tok.sheet = e.target.value; if (tok.sheet && !prima) tok.useIcon = true; syncUseIcon(); });
+$('tkUseIcon').addEventListener('input', e => { tok.useIcon = e.target.checked; });
 $('tkAdd').addEventListener('click', () => makeToken((innerWidth / 2 - view.x) / view.s, (innerHeight / 2 - view.y) / view.s));
 $('tkPrev').addEventListener('dragstart', e => { e.dataTransfer.setData('application/x-token', '1'); e.dataTransfer.effectAllowed = 'copy'; });
 viewport.addEventListener('dragover', e => { if (e.dataTransfer.types.includes('application/x-token')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
@@ -698,12 +800,21 @@ function folderMenu(name) {
   return items;
 }
 function sceneRowMenu(row) {
+  if (row.dataset.cartella) {                      // una cartella: gli stessi pulsanti della riga
+    const btn = t => row.querySelector(`button[title="${t}"]`);
+    return [
+      { label: 'Rinomina la cartella', fn: () => btn('Rinomina').click() },
+      ...(btn('Nuova cartella dentro') ? [{ label: 'Nuova cartella dentro', fn: () => btn('Nuova cartella dentro').click() }] : []),
+      '-', { label: 'Elimina la cartella (le scene restano)', danger: true, fn: () => btn('Elimina la cartella').click() }
+    ];
+  }
   const sc = scenes.find(s => s.id === row.dataset.id); if (!sc) return null;
   const on = settings.publicScene === sc.id, byTitle = t => row.querySelector(`button[title="${t}"]`);
   return [
     { label: 'Vai a questa scena', fn: () => switchScene(sc.id) },
     { label: 'Rinomina', fn: () => byTitle('Rinomina') && byTitle('Rinomina').click() },
     { label: on ? 'I giocatori non vedano più questa scena' : '📌 Mostra ai giocatori', fn: () => setPublicScene(on ? null : sc.id) },
+    ...(typeof scegliCartella === 'function' && cartelleAttive() ? [{ label: '📁 Sposta in una cartella…', fn: () => scegliCartella(sc) }] : []),
     ...(scenes.length > 1 ? ['-', { label: 'Elimina', danger: true, fn: () => byTitle('Elimina') && byTitle('Elimina').click() }] : [])
   ];
 }
@@ -736,6 +847,7 @@ addEventListener('pointerup', e => {
   if (e.button !== 2 || !rc) return;
   const r = rc; rc = null;
   if (r.moved || performance.now() - r.at > 450 || r.t.closest(NATIVE)) return;
+  if (rulerOn && r.t.closest('#viewport')) return;          // a righello acceso il tasto destro fissa il segmento
   const items = contextItems(r.t, { clientX: r.x, clientY: r.y });
   if (items && items.length) showMenu(r.x, r.y, items); else closeCtx();
 }, true);

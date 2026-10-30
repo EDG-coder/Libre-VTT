@@ -13,8 +13,9 @@ const ASSETS = path.join(CAMP, 'assets');
 const PORT = process.env.PORT || 3000;
 const MAP_FILE = 'foto.webp';            // la mappa di base: non compare tra gli assets e non si tocca
 const MAX_BYTES = 30 * 1024 * 1024;
-const IMG = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp']);
-const TYPE_EXT = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp', 'image/avif': '.avif', 'image/bmp': '.bmp' };
+const IMG = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.svg']);
+const TYPE_EXT = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp', 'image/avif': '.avif', 'image/bmp': '.bmp', 'image/svg+xml': '.svg' };
+const SVG = require('../condiviso/svg-pulito.js');
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
@@ -28,8 +29,10 @@ const BOOT = Date.now();               // cambia a ogni avvio del server (serve 
 fs.mkdirSync(ASSETS, { recursive: true });
 fs.mkdirSync(DATA, { recursive: true });
 
+// un SVG aperto da solo non deve poter eseguire niente (anche se è già stato ripulito)
+const CSP_SVG = "default-src 'none'; style-src 'unsafe-inline'; img-src data:";
 const send = (res, code, body, type = 'text/plain; charset=utf-8') => {
-  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' });
+  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', ...(type === 'image/svg+xml' ? { 'Content-Security-Policy': CSP_SVG } : {}) });
   res.end(body);
 };
 const json = (res, code, obj) => send(res, code, JSON.stringify(obj), MIME['.json']);
@@ -105,8 +108,14 @@ function saveUpload(req, res, q) {
     if (tooBig) return;
     if (!size) return send(res, 400, 'File vuoto');
     const folder = q.get('folder') || '', final = freeName(dir, folder, name);
+    let dati = Buffer.concat(chunks);
+    if (path.extname(final).toLowerCase() === '.svg') {          // si tiene solo la parte che disegna
+      const p = SVG.pulisci(dati.toString('utf8'));
+      if (p.errore) return send(res, 415, p.errore);
+      dati = Buffer.from(p.svg, 'utf8');
+    }
     try {
-      fs.writeFileSync(path.join(dir, final), Buffer.concat(chunks), { flag: 'wx' });   // mai sovrascrivere
+      fs.writeFileSync(path.join(dir, final), dati, { flag: 'wx' });   // mai sovrascrivere
       json(res, 201, { name: final, folder, url: urlOf(folder, final) });
     } catch { send(res, 500, 'Errore di salvataggio'); }
   });

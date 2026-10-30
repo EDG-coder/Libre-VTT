@@ -1,20 +1,16 @@
-## Novità della 3.7.1
+## Novità della 3.7.2
 
-- **Versioni diverse allo stesso tavolo:** un giocatore con la 3.7 ora gioca anche con un master che ha ancora una versione di prima (con la 3.7.0 veniva buttato fuori appena entrava).
-
-### Dalla 3.7.0
-
-- **Segnalini sovrapposti:** il giocatore prende il proprio anche se un altro lo copre.
-- **Pannelli a sinistra:** si allungano da soli quando cambia il contenuto, anche quello dei dadi.
-- **Tipo di danno dopo la formula:** «1d8+3 tuono»; anche più tipi in un tiro solo, con il totale di ciascuno.
-- **Caselle sopra il segnalino:** un interruttore per mostrare o nascondere le tre caselle verde, rossa e blu.
-- **Critico:** «Critico da» nella scheda, o «19-20» per una sola arma; nel tiro per colpire i pulsanti «Danni» e «Danni critici».
-- **Giocatori:** la selezione non si perde più; le schede cancellate non ricompaiono e quelle degli altri si possono nascondere; l'icona del personaggio cambiata la vedono tutti.
-- **Ordine dei turni:** non lo chiude più un altro strumento, e un puntino sull'icona dice che è acceso.
-- **Scurovisione:** si scrive come viene («60 ft», «18 m», «12 caselle»), con un cerchio di anteprima.
-- **Nuovo pannello «Visibilità»:** nebbia, luci, muri e party in un posto solo; le stanze si disegnano trascinando e le porte si mettono con un clic.
-- **Movimento dei giocatori:** il segnalino gira attorno ai muri; in battaglia conta la Velocità della scheda e «Scatta» la raddoppia.
-- **Luce dinamica:** molto più veloce sulle mappe con tanti muri.
-- **Meno dati:** si mandano solo i pezzi del mondo cambiati (circa 1 kB per spostamento invece di 6–7) e al rientro solo quello che ci si è persi; le cadute si scoprono in 15 secondi.
-- **Niente si perde da scollegati:** spostamenti, chat e schede partono al ritorno. Con la linea debole arriva prima l'importante, e il master vede un pallino verde, giallo o rosso per ogni giocatore.
-- **Canale stabile e dadi provvisori:** un secondo collegamento, solo dai relay, per i messaggi importanti; e, se il master lo permette, si tira anche da scollegati (segnato «⚠ non verificato»).
+- **Zoom sul telefono:** spostare e ingrandire la mappa è molto più fluido su Android, e la mappa non sparisce più; le mappe enormi si mostrano da una copia ridotta (solo in memoria).
+- **Righello a più tratti:** clic destro (o ＋ sul telefono) fissa un tratto e si continua da lì; si vedono la lunghezza di ogni tratto e il totale. Backspace toglie l'ultimo.
+- **Griglia:** misura decimale, spostamento in orizzontale e verticale, linee nascondibili; «Adatta alla griglia della mappa» e «Adatta la mappa alla griglia» si fanno con due clic sugli angoli.
+- **Mappe di Dungeondraft (.dd2vtt, .uvtt):** diventano una scena con sfondo, griglia, muri, porte e luci già pronti. Un Ctrl+Z la toglie.
+- **Mappe e segnalini SVG:** si caricano e restano nitidi a ogni zoom; prima vengono ripuliti da script e collegamenti esterni.
+- **Cartelle nelle scene:** fino a tre livelli, si trascinano scene e cartelle; i giocatori non le vedono.
+- **Creatore di segnalini:** «Usa come immagine della scheda».
+- **Mostri dell'SRD con il loro segnalino:** 329 token, già messi quando un mostro arriva dal compendio. Armi e armature +1, +2 e +3 per tutte quelle dell'SRD, con il bonus già nei tiri e nella CA.
+- **Mi unisco:** le campagne in cui sei già entrato sono in un elenco, con la miniatura dell'ultima scena e se sono online o in sessione. Il codice resta lo stesso a ogni apertura della campagna.
+- **Cambia codice:** il master fa un codice nuovo; chi è collegato lo riceve da solo, chi è fuori resta fuori.
+- **Identità dei giocatori:** chi entra tiene la sua identità anche se cancella i dati del browser (l'avvio la ricorda per ogni campagna), e chi conosce solo l'ID di un altro non può più entrare al suo posto.
+- **Pannello del master:** per ogni giocatore si vede se il collegamento è diretto o passa dal relay; chi non c'è si può togliere dall'elenco.
+- **Aggiornamento:** si vedono le novità di tutte le versioni saltate; dopo l'installazione il file scaricato si toglie (e su Mac il disco si smonta).
+- **Mac:** niente più finestra vuota quando il browser si chiude subito dopo l'avvio.

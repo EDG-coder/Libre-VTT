@@ -42,7 +42,13 @@ try { assetIndex = JSON.parse(fs.readFileSync(path.join(DATA, 'assets.json'), 'u
 const saveAssetIndex = () => { try { fs.writeFileSync(path.join(DATA, 'assets.json'), JSON.stringify(assetIndex)); } catch {} };
 const assetFile = h => assetIndex[h] ? path.join(ASSETS, h + assetIndex[h].ext) : null;
 const haveAsset = h => { const f = assetFile(h); return !!(f && fs.existsSync(f)); };
+const SVG = require('../condiviso/svg-pulito.js');
 function storeAsset(buf, mime, name) {
+  if (mime === 'image/svg+xml') {            // un SVG (anche di un giocatore) si tiene solo ripulito
+    const p = SVG.pulisci(buf.toString('utf8'));
+    if (p.errore) { console.error('asset svg:', p.errore); return null; }
+    buf = Buffer.from(p.svg, 'utf8');
+  }
   const hash = crypto.createHash('sha256').update(buf).digest('hex');
   const ext = MIME_EXT[mime] || '.bin';
   if (!haveAsset(hash)) {
@@ -104,6 +110,39 @@ world = Object.assign({ v: 1, active: null, publicScene: null, scenes: [], sheet
 const newId = pre => pre + Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
 // Chi gioca: gettone -> { name, role, overrides, sheets:{id:'r'|'rw'}, lastSeen }
 let roster = readJson('players.json', null) || {};
+
+// ---------- Identità firmate ----------
+// Il gettone di un giocatore lo dà l'host, con una firma (HMAC con una chiave che resta nella
+// campagna): un gettone inventato dal browser non viene mai preso per buono. Chi ha già una firma
+// deve presentarla: senza, è una persona nuova. I gettoni di prima (o dei programmi più vecchi, che
+// la firma non la conoscono) valgono finché non ne hanno mostrata una.
+// Senza account il ban non può essere assoluto: chi cancella i dati del browser rientra come nuovo,
+// se ha il codice. Per chiudere davvero la porta c'è «Cambia codice».
+const CHIAVE_ID = (() => {
+  const f = path.join(DATA, 'identita.chiave');
+  try { const k = fs.readFileSync(f, 'utf8').trim(); if (/^[a-f0-9]{64}$/.test(k)) return Buffer.from(k, 'hex'); } catch {}
+  const k = crypto.randomBytes(32);
+  try { fs.writeFileSync(f, k.toString('hex')); } catch (e) { console.error('chiave delle identità', e.message); }
+  return k;
+})();
+const firmaDi = token => crypto.createHmac('sha256', CHIAVE_ID).update('libre-vtt/id:' + token).digest('hex').slice(0, 32);
+function firmaValida(token, firma) {
+  if (typeof firma !== 'string' || !/^[a-f0-9]{32}$/.test(firma)) return false;
+  return crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(firmaDi(token)));
+}
+/** L'identità con cui entra chi saluta: il suo gettone se è buono, altrimenti uno nuovo dato da noi.
+ *  Il browser di questo computer (chi conduce) non passa dal tubo: di lui ci si fida come prima. */
+function identitaDi(m, c) {
+  const token = str(m.token, 64), firma = str(m.firma, 64);
+  if (c && c.kind === 'ws' && /^[a-f0-9]{24}$/.test(token)) return token;
+  if (/^[a-f0-9]{24}$/.test(token)) {
+    if (firmaValida(token, firma)) { const rec = roster[token]; if (rec) rec.firmaRichiesta = true; return token; }
+    const rec = roster[token];
+    if (rec && !rec.firmaRichiesta) return token;          // di prima delle firme
+  }
+  return crypto.randomBytes(12).toString('hex');
+}
+const CAMPAGNA_NOME = String(process.env.CAMPAGNA_NOME || '').slice(0, 80);
 // Le regole d'ingresso e la pausa generale: le decide chi conduce, dal pannello.
 let session = Object.assign({ locked: false, approval: false, maxPlayers: 0, paused: false }, readJson('session.json', null) || {});
 
@@ -143,6 +182,33 @@ function uniqueName(token, raw) {
 const permsFor = c => permsOf(recOf(c.token));
 const can = (c, p) => !!permsFor(c)[p];
 
+/** La risposta al riquadro di «Mi unisco». «In sessione»: almeno 2 giocatori collegati da 30 minuti. */
+function statoPerRiquadro(m) {
+  const token = str(m.token, 64), rec = /^[a-f0-9]{24}$/.test(token) ? roster[token] : null;
+  if (!rec || rec.banned || (rec.firmaRichiesta && !firmaValida(token, str(m.firma, 64)))) return { t: 'stato', fuori: true };
+  const now = Date.now(), dentro = [...clients].filter(c => c.token && !c.pending && c.role !== 'master');
+  const lunghi = dentro.filter(c => now - (c.since || now) >= 30 * 60e3);
+  return {
+    t: 'stato', online: true, membriOnline: dentro.length, nomeCampagna: CAMPAGNA_NOME || null,
+    sessioneDa: lunghi.length >= 2 ? Math.min(...lunghi.map(c => c.since)) : null
+  };
+}
+// Da dove passa ogni giocatore (diretto, relay, misto): lo scrive uffa-link accanto al suo ID.
+const PERCORSI_FILE = path.join(path.dirname(LINK_ID_FILE), 'uffa-link.percorsi.json');
+let percorsi = {};
+const percorsoDi = peer => (peer && percorsi[peer] && percorsi[peer].percorso) || null;
+if (MODE === 'host') setInterval(() => {
+  let p = {};
+  try { p = JSON.parse(fs.readFileSync(PERCORSI_FILE, 'utf8')) || {}; } catch {}
+  percorsi = p;
+  let cambiato = false;
+  for (const c of clients) {
+    if (c.kind !== 'link') continue;
+    const nuovo = percorsoDi(c.peer);
+    if (nuovo !== (c.percorso || null)) { c.percorso = nuovo; cambiato = true; }
+  }
+  if (cambiato) sendPlayers();
+}, 3000).unref();
 function playerList() {
   const now = Date.now();
   return [...clients].filter(c => c.token).map(c => {   // un tubo senza saluto non è ancora una persona
@@ -151,7 +217,7 @@ function playerList() {
       id: c.id, token: c.token, name: c.name, role: c.role, kind: c.kind,
       perms: permsFor(c), sheets: rec.sheets || {},
       muted: !!rec.muted, frozen: !!rec.frozen, banned: !!rec.banned, pending: !!c.pending,
-      client: c.client || '?', peer: c.peer || null,
+      client: c.client || '?', peer: c.peer || null, percorso: c.kind === 'link' ? (c.percorso || 'sconosciuto') : 'locale',
       since: c.since || now, onFor: Math.round((now - (c.since || now)) / 1000),
       rtt: c.rtt == null ? null : c.rtt, qualita: c.qualita || 'verde', leggera: !!c.leggera, stabile: stabili.has(c.token),
       lastOp: c.lastOp || null, lastAt: c.lastAt || null, ops: c.ops || 0,
@@ -318,10 +384,11 @@ function controllaMovimento(sc, ph, pos) {
   const scatto = ph.scatta === true || (!!turno && ph.scatta === turno);
   const totale = vel ? vel * (scatto ? 2 : 1) : Infinity, resto = Math.max(0, totale - usate);
   const cella = (sc.grid && +sc.grid.size) || 50;
-  const strada = LUCE.percorso(muri || { muri: [] }, sc.board, cella, ax, ay, bx, by, resto + 0.01);
+  const campo = LUCE.rettangoloGriglia(sc.board, sc.grid);
+  const strada = LUCE.percorso(muri || { muri: [] }, campo, cella, ax, ay, bx, by, resto + 0.01);
   if (!strada) {
     // non trovato: o c'è un muro di mezzo, o è troppo lontano
-    const senzaLimite = muri ? LUCE.percorso(muri, sc.board, cella, ax, ay, bx, by) : { caselle: Infinity };
+    const senzaLimite = muri ? LUCE.percorso(muri, campo, cella, ax, ay, bx, by) : { caselle: Infinity };
     if (!senzaLimite) return { ok: false, perche: 'di là non ci arrivi: c\'è un muro' };
     return { ok: false, perche: `troppo lontano: ti restano ${+resto.toFixed(1)} caselle` };
   }
@@ -334,6 +401,7 @@ const outUrl = o => (o && o.gid) ? { ...o, url: 'gs:' + o.gid, aid: undefined } 
 function sceneFor(c, sc) {
   const p = permsFor(c);
   const out = { ...sc };
+  if (recOf(c.token).role !== 'master') delete out.cartella;     // come il master ordina le scene resta suo
   out.bg = outUrl(sc.bg);
   out.photos = (sc.photos || []).filter(ph => {
     if ((ph.layer || 'tokens') === 'hidden' && !p.seeHiddenLayer) return false;
@@ -1115,7 +1183,10 @@ function onMessage(c, raw) {
   try { m = JSON.parse(raw); } catch { return; }
   if (!m || typeof m !== 'object') return;
 
-  if (m.t === 'peer') { c.peer = str(m.id, 80); return; }        // riga scritta da uffa-link
+  if (m.t === 'peer') { c.peer = str(m.id, 80); c.percorso = percorsoDi(c.peer); return; }   // riga scritta da uffa-link
+  // «Com'è la campagna?» dal riquadro di «Mi unisco» di un giocatore (prima di salutare, poi se ne va).
+  // Si risponde solo a chi è del tavolo: agli altri non si dice niente.
+  if (m.t === 'stato' && !c.token && c.kind === 'link') { c.send(statoPerRiquadro(m)); setTimeout(() => c.close(), 200); return; }
   if (m.t === 'pong') { c.alive = true; if (c.beatAt) c.rtt = Date.now() - c.beatAt; return; }
   if (m.t === 'eco') { c.alive = true; c.send({ t: 'eco' }); return; }   // «ci sei?» (chi si è appena svegliato)
   if (c.stabile) {                                                         // dal canale stabile: solo intenti, a nome del collegamento vero
@@ -1125,6 +1196,7 @@ function onMessage(c, raw) {
   if (m.t === 'hello' && m.canale === 'stabile') {                         // si apre il canale stabile di un giocatore già noto
     const token = str(m.token, 64), rec = roster[token];
     if (c.kind !== 'link' || !/^[a-f0-9]{24}$/.test(token) || !rec || rec.banned) { c.close(); return; }
+    if (rec.firmaRichiesta && !firmaValida(token, str(m.firma, 64))) { c.close(); return; }
     clients.delete(c);                                                     // non è una persona in più
     c.stabile = true; c.token = token;
     const vecchio = stabili.get(token);
@@ -1136,9 +1208,10 @@ function onMessage(c, raw) {
   }
 
   if (m.t === 'hello') {
-    // Il gettone è l'identità: il browser se lo tiene e lo rimanda. Se non ce l'ha, gliene do uno.
-    let token = str(m.token, 64);
-    if (!/^[a-f0-9]{24}$/.test(token)) token = crypto.randomBytes(12).toString('hex');
+    // Il gettone è l'identità: il browser se lo tiene e lo rimanda, con la firma. Se non è buono, gliene do uno.
+    const token = identitaDi(m, c);
+    // chi arriva dal tubo da ora in poi si fa riconoscere solo con la firma (anche per il riquadro)
+    if (c.kind === 'link') recOf(token).firmaRichiesta = true;
     // Rientra qualcuno che risulta ancora collegato: è la stessa persona che si è ricollegata
     // (wifi caduto, tubo riaperto…). Il collegamento vecchio è un fantasma: si chiude quello.
     for (const old of [...clients]) {
@@ -1263,7 +1336,7 @@ function sendWelcome(c) {
   c.pending = false;
   const rec = recOf(c.token);
   rec.firstSeenDone = true;
-  const you = { id: c.id, token: c.token, name: c.name, role: c.role, perms: permsFor(c) };
+  const you = { id: c.id, token: c.token, firma: firmaDi(c.token), name: c.name, role: c.role, perms: permsFor(c), campagna: CAMPAGNA_NOME || undefined };
   // Rientra dopo una caduta con il mondo che gli avevamo mandato: niente mondo intero, solo quello che è
   // cambiato nel frattempo (e la chat che si è perso).
   const prec = ultime.get(c.token);
@@ -1493,6 +1566,11 @@ function versoBrowser(msg, giaInOrdine) {
     }
   }
   if (msg.t === 'world' || msg.t === 'welcome') { attesaDelta = new Map(); clearTimeout(attesaTimer); attesaTimer = 0; }
+  if (msg.t === 'welcome' && msg.you && lastHello) {    // l'identità data dall'host (con la firma): da qui in poi si usa quella
+    lastHello.token = msg.you.token; if (msg.you.firma) lastHello.firma = msg.you.firma;
+    avviatore('identita', { token: msg.you.token, firma: msg.you.firma || null, campagna: msg.you.campagna || null, nome: msg.you.name || null });
+  }
+  if (msg.t === 'invito' && /^[a-f0-9]{64}$/.test(String(msg.codice || ''))) avviatore('nuovo-codice', { codice: msg.codice });
   if (msg.t === 'bye') lastHello = null;                // allontanato: non lo si ripresenta da soli
   // dove è arrivato il browser (versione del mondo, ultimo messaggio di chat): se il tubo si riapre
   // lo ripresentiamo da lì, e l'host gli manda solo quello che si è perso
@@ -1523,7 +1601,7 @@ function stabileApri() {
   sock.on('connect', () => {
     stabileUltimo = Date.now();
     sock.write('{"t":"canale","tipo":"stabile"}\n');
-    sock.write(JSON.stringify({ t: 'hello', canale: 'stabile', token: lastHello ? lastHello.token : '' }) + '\n');
+    sock.write(JSON.stringify({ t: 'hello', canale: 'stabile', token: lastHello ? lastHello.token : '', firma: lastHello ? lastHello.firma : undefined }) + '\n');
   });
   sock.on('data', d => {
     stabileUltimo = Date.now();
@@ -1691,7 +1769,9 @@ function httpHandler(req, res) {
         if (e) return sendHttp(res, 404, 'Immagine non trovata');
         res.writeHead(200, {
           'Content-Type': (assetIndex[hash] && assetIndex[hash].mime) || 'application/octet-stream',
-          'Cache-Control': 'public, max-age=31536000, immutable'
+          'Cache-Control': 'public, max-age=31536000, immutable',
+          // un SVG aperto da solo non deve poter eseguire niente
+          'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src data:"
         });
         res.end(d);
       });
@@ -1802,6 +1882,23 @@ function httpHandler(req, res) {
     });
   }
 
+  // «Cambia codice» dal pannello: l'avviatore (che legge le nostre righe) fa una chiave nuova, poi
+  // chiede di mandare il codice nuovo ai giocatori collegati (/api/invito) e riapre la sessione.
+  if (url.pathname === '/api/invito/cambia' && req.method === 'POST') {
+    if (MODE !== 'host') return sendHttp(res, 409, 'questo è un giocatore, non l\'host');
+    console.log('@@LIBRE cambia-codice');
+    logAction({ name: 'MASTER', token: '' }, 'codice', true, 'nuovo codice d\'invito');
+    return sendHttp(res, 202, '{"ok":true}', 'application/json');
+  }
+  if (url.pathname === '/api/invito' && req.method === 'POST') {
+    return readBody(req, res, m => {
+      const codice = str(m.codice, 80);
+      if (MODE !== 'host' || !/^[a-f0-9]{64}$/.test(codice)) return sendHttp(res, 400, 'codice non valido');
+      // solo a chi è dentro adesso (e passa dal tubo): lo salvano da soli e si ricollegano lì
+      for (const c of clients) if (c.kind === 'link' && c.token && !c.pending) c.send({ t: 'invito', codice, campagna: CAMPAGNA_NOME || undefined });
+      sendHttp(res, 200, '{"ok":true}', 'application/json');
+    });
+  }
   if (url.pathname === '/api/kick' && req.method === 'POST') {
     let body = '';
     req.on('data', d => { body += d; });
@@ -1817,12 +1914,32 @@ function httpHandler(req, res) {
   sendHttp(res, 404, 'Non trovato');
 }
 
+/** Una riga per l'avviatore, che legge quello che scriviamo (vedi launcher.js, «@@LIBRE»). */
+function avviatore(cosa, dati) { console.log('@@LIBRE ' + cosa + ' ' + JSON.stringify(dati || {})); }
+// L'identità salvata dall'avviatore per questa campagna (nel file di configurazione del programma):
+// se il browser ha perso la sua (dati cancellati, un altro browser), si presenta con questa.
+let identitaSalvata = null;
+try { const x = JSON.parse(process.env.IDENTITA || 'null'); if (x && /^[a-f0-9]{24}$/.test(x.token)) identitaSalvata = x; } catch {}
+/** La miniatura dell'ultima scena vista, per il riquadro di «Mi unisco» (la tiene l'avviatore). */
+function salvaMiniatura(m) {
+  const d = /^data:image\/(webp|png|jpeg);base64,([a-z0-9+/=]+)$/i.exec(String(m.data || ''));
+  if (!d || d[2].length > 400000) return;
+  try {
+    fs.writeFileSync(path.join(DATA, 'miniatura-ultima.' + (d[1] === 'jpeg' ? 'jpg' : d[1])), Buffer.from(d[2], 'base64'));
+    avviatore('miniatura', { file: path.join(DATA, 'miniatura-ultima.' + (d[1] === 'jpeg' ? 'jpg' : d[1])), scena: str(m.scena, 80) });
+  } catch {}
+}
+
 // ======================= Avvio =======================
 if (MODE === 'join') {
   // In «join» il browser manda tutto all'host e riceve tutto dall'host: qui non si decide niente.
   onMessage = function (c, raw) {
     let m; try { m = JSON.parse(raw); } catch { return; }
     if (m.t === 'eco') { c.send({ t: 'eco' }); bridgeSveglia(); return; }   // il browser c'è; e il tubo?
+    if (m.t === 'miniatura') return salvaMiniatura(m);         // resta qui: all'host non serve
+    // Vale l'identità salvata per questa campagna: il browser ne tiene una sola per tutte (e può
+    // averla persa: dati cancellati, un altro browser)
+    if (m.t === 'hello' && !m.canale && identitaSalvata) m = { ...m, token: identitaSalvata.token, firma: identitaSalvata.firma || undefined };
     if (m.t === 'hello') lastHello = m;
     if (m.t === 'name' && lastHello) lastHello = { ...lastHello, name: m.name };
     if (m.t === 'leave') { lastHello = null; if (stabile) stabile.destroy(); }   // scollegato a mano: non ripresentarlo

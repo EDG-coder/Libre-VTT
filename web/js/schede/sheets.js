@@ -270,11 +270,8 @@ function tokenFromSheet(s, wx, wy) {
   if (layer === 'map') setLayer('tokens');
   const fit = grid.show && grid.fitToken, size = fit ? grid.size : 60;
   let l = wx - size / 2, t = wy - size / 2;
-  if (fit && grid.snap) {
-    const b = boardRect();
-    l = b.x + Math.floor((wx - b.x) / grid.size) * grid.size + (grid.size - size) / 2;
-    t = b.y + Math.floor((wy - b.y) / grid.size) * grid.size + (grid.size - size) / 2;
-  } else { const p = snapPoint(l, t); l = p.x; t = p.y; }
+  if (fit && grid.snap) ({ x: l, y: t } = cellFit(wx, wy, size, size));
+  else { const p = snapPoint(l, t); l = p.x; t = p.y; }
   const el = createPhoto(iconOf(s), size, size, l, t, s.icon && s.icon.aid, false, layer === 'hidden' ? 'hidden' : 'tokens');
   el.dataset.sheet = s.id; el.dataset.name = s.name;
   updateTokenBars(); scheduleBoardSave();

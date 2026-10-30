@@ -908,3 +908,8 @@ body:not(.net-on) .soloRete { display: none !important; }
 /* Un tiro fatto da scollegati (dadi provvisori): il server ha solo controllato che i dadi tornino */
 .msg.roll .provv { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; letter-spacing: .02em;
   background: rgba(255, 107, 107, .14); color: #ff9a9a; border: 1px dashed rgba(255, 107, 107, .6); }
+#rulerSvg text.pezzo { font-size: 11px; font-weight: 500; opacity: .9; }
+/* righello sul tocco: «+» fissa il segmento (al posto del tasto destro) */
+#rulerPlus { position: fixed; right: 18px; bottom: 110px; z-index: 30; width: 56px; height: 56px; border-radius: 50%;
+  font: 700 30px/1 system-ui, sans-serif; color: inherit; display: none; touch-action: none; }
+#rulerPlus.on { display: block; }

@@ -423,12 +423,23 @@
   if (ci) { ci.addEventListener('input', suggerisci); ci.addEventListener('blur', () => setTimeout(() => { sugg.hidden = true; }, 150)); }
 
   // ---------- un mostro sulla mappa: segnalino + scheda collegata ----------
+  // I segnalini dei mostri dell'SRD (condiviso/token-srd/): indice.json lega il nome inglese al file.
+  // Nelle partite in rete l'immagine finisce nel deposito come le altre (netEnsureWorldAssets).
+  let tokenSrd = null;
+  fetch('/condiviso/token-srd/indice.json').then(r => r.ok ? r.json() : null).then(j => { tokenSrd = j; }).catch(() => {});
+  function tokenDelMostro(v) {
+    if (!tokenSrd) return null;
+    const k = n => String(n || '').toLowerCase().replace(/’/g, "'").replace(/\s+/g, ' ').trim();
+    const f = tokenSrd[k(v.en)] || tokenSrd[k(v.nome)] || tokenSrd[k(v.it)];
+    return f ? { url: '/condiviso/token-srd/' + f } : null;
+  }
   function schedaDaMostro(v) {
     const D = typeof SISTEMA !== 'undefined' && SISTEMA.dati;
     const vuoi = D && Array.isArray(D.schede) ? D.schede : ['standard', 'dnd5e', 'simple'];
     const tpl = vuoi.includes('dnd5e') ? 'dnd5e' : vuoi.includes('standard') ? 'standard' : 'simple';
     const s = newSheet(v.nome, tpl);
     const f = s.f;
+    const icona = tokenDelMostro(v); if (icona) s.icon = icona;
     if (tpl !== 'simple') {
       for (const [k, n] of Object.entries(v.car || {})) f[k] = String(n);
       f.ac = String(v.ca ?? ''); f.hpmax = String(v.pf ?? ''); f.hp = String(v.pf ?? '');
@@ -486,10 +497,13 @@
         const accurata = (v.proprieta || []).some(p => /accurata|finesse/i.test(p));
         const distanza = /distanza|ranged/i.test((v.sottocategoria || '') + ' ' + (v.categoria || ''));
         const md = accurata ? Math.max(abMod(s, 'str'), abMod(s, 'dex')) : distanza ? abMod(s, 'dex') : abMod(s, 'str');
-        const ab = md + profB(s);
+        const piu = iv(v.bonus);                              // armi +1, +2, +3: a colpire e ai danni
+        const ab = md + profB(s) + piu, mdd = md + piu;
         let a = 0; while (a < 200 && ((f['an' + a] || '').trim() || (f['ab' + a] || '').trim() || (f['ad' + a] || '').trim())) a++;
         f['an' + a] = v.nome; f['ab' + a] = (ab >= 0 ? '+' : '') + ab;
-        f['ad' + a] = v.danno + (md ? (md > 0 ? '+' : '') + md : '') + (v.tipoDanno ? ' ' + v.tipoDanno.toLowerCase() : '');
+        f['ad' + a] = v.danno + (mdd ? (mdd > 0 ? '+' : '') + mdd : '') + (v.tipoDanno ? ' ' + v.tipoDanno.toLowerCase() : '');
+      } else if (!v.arma && iv(v.bonus) && (f.ac || '').trim()) {
+        f.ac = String(iv(f.ac) + iv(v.bonus));                // armature +1, +2, +3: alla CA
       }
     } else if (v.tipo === 'incantesimo') {
       const L = v.livello || 0;

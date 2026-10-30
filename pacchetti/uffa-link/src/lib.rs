@@ -24,8 +24,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use iroh::{
-    Endpoint, EndpointId,
+    Endpoint, EndpointId, SecretKey,
     endpoint::{Connection, RecvStream, SendStream, presets},
     protocol::{AcceptError, ProtocolHandler, Router},
 };
@@ -51,6 +54,91 @@ pub trait Voce: Send + Sync + 'static {
 struct Pipe {
     local: SocketAddr,
     voce: Arc<dyn Voce>,
+    percorsi: Percorsi,
+}
+
+/// Per ogni giocatore collegato, da dove passa: «diretto», «relay» o «misto» (c'è una strada
+/// diretta ma si usa ancora il relay), con il tempo di andata e ritorno. Finisce in
+/// `<cartella>/uffa-link.percorsi.json`, che il server di gioco legge per il pannello dell'host.
+#[derive(Clone)]
+struct Percorsi {
+    file: PathBuf,
+    mappa: Arc<Mutex<HashMap<String, (String, u64, u32)>>>,   // id → (percorso, rtt in ms, collegamenti)
+}
+
+impl Percorsi {
+    fn scrivi(&self) {
+        let m = self.mappa.lock().unwrap();
+        let righe: Vec<String> = m.iter()
+            .map(|(id, (p, rtt, _))| format!("\"{id}\":{{\"percorso\":\"{p}\",\"rtt\":{rtt}}}"))
+            .collect();
+        let _ = std::fs::write(&self.file, format!("{{{}}}", righe.join(",")));
+    }
+    fn entra(&self, id: &str) {
+        let mut m = self.mappa.lock().unwrap();
+        let e = m.entry(id.to_string()).or_insert(("sconosciuto".into(), 0, 0));
+        e.2 += 1;
+    }
+    fn esce(&self, id: &str) {
+        {
+            let mut m = self.mappa.lock().unwrap();
+            if let Some(e) = m.get_mut(id) {
+                e.2 = e.2.saturating_sub(1);
+                if e.2 == 0 { m.remove(id); }
+            }
+        }
+        self.scrivi();
+    }
+    /// Guarda le strade aperte del collegamento e aggiorna la voce (scrive il file solo se cambia qualcosa di visibile).
+    fn guarda(&self, id: &str, conn: &Connection) {
+        let paths = conn.paths();
+        let (mut diretta, mut relay, mut scelta, mut rtt) = (false, false, None, 0u64);
+        for p in paths.iter() {
+            if p.is_ip() { diretta = true; }
+            if p.is_relay() { relay = true; }
+            if p.is_selected() {
+                scelta = Some(if p.is_relay() { "relay" } else { "diretto" });
+                rtt = p.rtt().as_millis() as u64;
+            }
+        }
+        let percorso = match scelta {
+            Some("relay") if diretta => "misto",
+            Some(x) => x,
+            None if relay && diretta => "misto",
+            None if relay => "relay",
+            None if diretta => "diretto",
+            None => "sconosciuto",
+        };
+        let cambiato = {
+            let mut m = self.mappa.lock().unwrap();
+            match m.get_mut(id) {
+                Some(e) => {
+                    // il tempo si aggiorna nel file solo se cambia di parecchio (non a ogni giro)
+                    let molto = (e.1 as i64 - rtt as i64).unsigned_abs() > 20;
+                    let c = e.0 != percorso || molto;
+                    e.0 = percorso.to_string();
+                    if molto { e.1 = rtt; }
+                    c
+                }
+                None => false,
+            }
+        };
+        if cambiato { self.scrivi(); }
+    }
+}
+
+/// La chiave della sessione: se in `<cartella>/uffa-link.chiave` ce n'è una (64 cifre esadecimali,
+/// la scrive l'avviatore dalla campagna) l'ID resta lo stesso a ogni avvio, e con lui il codice da
+/// dare ai giocatori. Senza, come prima: una nuova a ogni avvio.
+fn chiave_salvata(cartella: &std::path::Path) -> Option<SecretKey> {
+    let testo = std::fs::read_to_string(cartella.join("uffa-link.chiave")).ok()?;
+    let t = testo.trim();
+    if t.len() != 64 { return None; }
+    let mut b = [0u8; 32];
+    for (i, c) in b.iter_mut().enumerate() {
+        *c = u8::from_str_radix(t.get(i * 2..i * 2 + 2)?, 16).ok()?;
+    }
+    Some(SecretKey::from_bytes(&b))
 }
 
 impl std::fmt::Debug for Pipe {
@@ -63,6 +151,27 @@ impl ProtocolHandler for Pipe {
     async fn accept(&self, connection: Connection) -> Result<(), AcceptError> {
         let who = connection.remote_id();
         self.voce.di(&format!("→ si è collegato {who}"));
+        let chi = who.to_string();
+        self.percorsi.entra(&chi);
+        // da dove passa: si guarda subito e poi ogni tre secondi, finché il collegamento resta aperto
+        let sorveglia = {
+            let (percorsi, conn, chi) = (self.percorsi.clone(), connection.clone(), chi.clone());
+            tokio::spawn(async move {
+                loop {
+                    percorsi.guarda(&chi, &conn);
+                    tokio::time::sleep(Duration::from_secs(3)).await;
+                }
+            })
+        };
+        let esito = self.servi(connection, &chi).await;
+        sorveglia.abort();
+        self.percorsi.esce(&chi);
+        esito
+    }
+}
+
+impl Pipe {
+    async fn servi(&self, connection: Connection, who: &str) -> Result<(), AcceptError> {
 
         let (send, recv) = connection.accept_bi().await?;
 
@@ -97,8 +206,13 @@ impl ProtocolHandler for Pipe {
 /// L'ID da dare ai giocatori finisce anche in `<cartella>/uffa-link.id` (lo legge il pannello).
 pub async fn host(porta: u16, cartella: PathBuf, voce: Arc<dyn Voce>, fermo: impl Future<Output = ()>) -> Result<()> {
     let local: SocketAddr = format!("127.0.0.1:{porta}").parse().anyerr()?;
-    let endpoint = Endpoint::bind(presets::N0).await?;
-    let router = Router::builder(endpoint).accept(ALPN, Pipe { local, voce: voce.clone() }).spawn();
+    let endpoint = match chiave_salvata(&cartella) {
+        Some(k) => Endpoint::builder(presets::N0).secret_key(k).bind().await?,
+        None => Endpoint::bind(presets::N0).await?,
+    };
+    let percorsi = Percorsi { file: cartella.join("uffa-link.percorsi.json"), mappa: Arc::new(Mutex::new(HashMap::new())) };
+    percorsi.scrivi();
+    let router = Router::builder(endpoint).accept(ALPN, Pipe { local, voce: voce.clone(), percorsi: percorsi.clone() }).spawn();
 
     // Serve per farsi trovare da fuori.
     router.endpoint().online().await;
@@ -118,6 +232,7 @@ pub async fn host(porta: u16, cartella: PathBuf, voce: Arc<dyn Voce>, fermo: imp
 
     fermo.await;
     let _ = std::fs::remove_file(&file_id);
+    let _ = std::fs::remove_file(&percorsi.file);
     router.shutdown().await.anyerr()?;
     Ok(())
 }
@@ -316,5 +431,20 @@ mod android {
             unsafe { iroh::dns::install_android_jni_context(vm, ctx) };
         }
         std::panic::catch_unwind(move || super::avvia_controllo(segreto)).unwrap_or(0) as jint
+    }
+}
+
+#[cfg(test)]
+mod prove_chiave {
+    /// L'ID che nasce da una chiave salvata è quello che calcola anche l'avviatore (Node, Ed25519).
+    #[test]
+    fn id_dalla_chiave() {
+        let d = std::env::temp_dir().join("uffa-link-prova-chiave");
+        let _ = std::fs::create_dir_all(&d);
+        std::fs::write(d.join("uffa-link.chiave"), "a2e152049e834d1dc34871837002405f35cc3ef4ea06b0d407d5e56a439670bd").unwrap();
+        let k = super::chiave_salvata(&d).expect("chiave letta");
+        assert_eq!(k.public().to_string(), "99817a06aac57501409c02c2cf2107adaa96c43ebe0e9dd566dd4c6c84d9de9a");
+        std::fs::write(d.join("uffa-link.chiave"), "corta").unwrap();
+        assert!(super::chiave_salvata(&d).is_none());
     }
 }

@@ -37,6 +37,8 @@ const netToken = () => {
   }
   return t;
 };
+// La firma del gettone, data dall'host: senza, il gettone non basta per rientrare con la stessa identità.
+const netFirma = () => { try { const f = localStorage.getItem('uffa-firma') || ''; return /^[a-f0-9]{32}$/.test(f) ? f : undefined; } catch { return undefined; } };
 const netName = () => { try { return localStorage.getItem('uffa-name') || ''; } catch { return ''; } };
 
 // Finché non si sa niente, vale la regola di prima: sei solo, quindi comandi tu.
@@ -138,7 +140,7 @@ function netConnect() {
   NET.ws = ws;
   ws.onopen = () => {
     // delta: sappiamo ricevere solo i pezzi cambiati; ver e chatDa: dove eravamo rimasti (per rientrare senza ricaricare tutto)
-    ws.send(JSON.stringify({ t: 'hello', token: netToken(), name: netName(), client: 'LIBRE VTT 2', delta: 1, ver: NET.ver || 0, chatDa: NET.chatUltimo || '' }));
+    ws.send(JSON.stringify({ t: 'hello', token: netToken(), firma: netFirma(), name: netName(), client: 'LIBRE VTT 2', delta: 1, ver: NET.ver || 0, chatDa: NET.chatUltimo || '' }));
   };
   ws.onmessage = e => {
     if (NET.ws !== ws) return;
@@ -237,7 +239,7 @@ function netHandle(m) {
       const back = NET.retrying || NET.hostDown;
       NET.on = true; NET.everOn = true; NET.me = m.you;
       NET.retrying = false; NET.hostDown = false; NET.tries = 0; NET.pending = false;
-      try { localStorage.setItem('uffa-token', m.you.token); } catch {}
+      try { localStorage.setItem('uffa-token', m.you.token); if (m.you.firma) localStorage.setItem('uffa-firma', m.you.firma); } catch {}
       NET.conferme = Array.isArray(m.sa) && m.sa.includes('ok');   // l'host conferma gli intenti? (dalla 3.7)
       const rimandate = netRimanda();
       if (!NET.conferme) NET.coda = [];
@@ -254,6 +256,9 @@ function netHandle(m) {
       if (m.needName) askName('Scegli il nome con cui ti vedranno gli altri.');
       return;
     }
+    case 'invito':                               // (giocatore) il master ha cambiato il codice: il programma si ricollega da solo
+      netSay(tr('Il master ha cambiato il codice della campagna: lo salvo e mi ricollego da solo.'), 'live');
+      return;
     case 'link':                                 // (giocatore) com'è il tubo verso l'host
       if (m.up) return;                          // quando torna su arriva il «welcome»: lì si avvisa
       if (!NET.everOn || NET.manual || NET.stopped) return;
@@ -918,10 +923,10 @@ async function netCaricaIcona(sorgente, nome) {
   if (!can('uploadTokenImage') && !can('uploadAssets')) return null;
   try {
     const blob = sorgente instanceof Blob ? sorgente : await (await fetch(sorgente)).blob();
-    const bmp = await createImageBitmap(blob);
+    const bmp = await immagineDisegnabile(blob);      // anche un SVG (un segnalino generato) diventa WebP
     const k = Math.min(1, 256 / Math.max(bmp.width, bmp.height));
     const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
-    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    c.getContext('2d').drawImage(bmp.img, 0, 0, c.width, c.height); bmp.close();
     const out = await new Promise(r => c.toBlob(r, 'image/webp', 0.86));
     const buf = new Uint8Array(await out.arrayBuffer());
     const hash = toHex(await crypto.subtle.digest('SHA-256', buf));

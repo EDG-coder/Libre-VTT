@@ -105,12 +105,29 @@
   }
   window.miniaturaScena = id => mini.get(id) || null;
 
+  // Il giocatore: la miniatura della scena in cui è va al suo programma, per il riquadro della
+  // campagna in «Mi unisco» (da fuori la campagna le immagini non ci sono). Resta sul suo computer.
+  let miniTimer = 0;
+  function miniPerRiquadro() {
+    clearTimeout(miniTimer);
+    miniTimer = setTimeout(async () => {
+      if (conduco() || typeof NET === 'undefined' || !NET.on || !NET.ws || !cur) return;
+      try {
+        captureScene();
+        const b = await disegna(cur); if (!b) return;
+        const data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); });
+        NET.ws.send(JSON.stringify({ t: 'miniatura', data, scena: cur.name }));
+      } catch {}
+    }, 2500);
+  }
   // quando lasci una scena (o la cambi), la sua miniatura si rifà
   const primaShow = window.showScene;
   window.showScene = async function (sc) {
     const prima = cur;
     if (prima && prima !== sc && boardReady) { captureScene(); const p = prima; setTimeout(() => aggiorna(p), 50); }
-    return primaShow.apply(this, arguments);
+    const r = await primaShow.apply(this, arguments);
+    miniPerRiquadro();
+    return r;
   };
   // e prima di aprire il menu, quella di adesso
   $('sceneBtn').addEventListener('click', () => {
@@ -131,7 +148,7 @@
   const primaDopo = window.afterSceneUI;
   window.afterSceneUI = function () {
     const r = primaDopo && primaDopo.apply(this, arguments);
-    document.querySelectorAll('#sceneList .sceneRow').forEach(row => {
+    document.querySelectorAll('#sceneList .sceneRow:not(.sceneFolder)').forEach(row => {
       const pick = row.querySelector('.pick');
       if (!pick || pick.querySelector('.sceneMini')) return;
       const im = document.createElement('img');

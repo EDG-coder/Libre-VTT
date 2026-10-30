@@ -109,7 +109,7 @@
       <label class="typeOpt"><input type="radio" name="sceneType" value="map" checked><span><b>🗺 Mappa</b><small>Con la griglia già attiva</small></span></label>
       <label class="typeOpt"><input type="radio" name="sceneType" value="cinematic"><span><b>🎬 Scena cinematografica</b><small>Senza griglia (si può attivare dopo)</small></span></label>
     </fieldset>
-    <label class="field">Sfondo (facoltativo) <input id="sceneBgInput" type="file" accept="image/*"></label>
+    <label class="field">Sfondo (facoltativo) <input id="sceneBgInput" type="file" accept="image/*,.dd2vtt,.uvtt,.df2vtt"><small class="campoNota">Anche una mappa di Dungeondraft (.dd2vtt, .uvtt): arrivano pure griglia, muri, porte e luci.</small></label>
     <div class="dialogBtns">
       <button type="button" id="sceneCancel" class="btn ghost">Annulla</button>
       <button type="submit" id="sceneCreate" class="btn">Crea scena</button>
@@ -380,8 +380,10 @@
 <script src="js/schede/tiri-scheda.js"></script>
 <script src="js/schede/creazione.js"></script>
 <script src="condiviso/luce-calcolo.js"></script>
+<script src="condiviso/svg-pulito.js"></script>
 <script src="condiviso/versioni.js"></script>
 <script src="js/mappa/luce.js"></script>
+<script src="js/mappa/uvtt.js"></script>
 <script src="js/schede/scurovisione.js"></script>
 <script src="js/mappa/movimento.js"></script>
 <script src="js/base/ordine-strumenti.js"></script>

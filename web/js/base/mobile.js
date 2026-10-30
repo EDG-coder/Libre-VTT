@@ -161,7 +161,7 @@
     view.x = cx - (pz.cx - pz.x0) * k;
     view.y = cy - (pz.cy - pz.y0) * k;
     if (Math.abs(d - pz.d0) > SOGLIA || Math.hypot(cx - pz.cx, cy - pz.cy) > SOGLIA) pz.mosso = true;
-    applyView();
+    richiediVista();
   }
 
   addEventListener('pointerdown', e => {
@@ -224,7 +224,7 @@
       if (!pan.mosso && Math.hypot(dx, dy) <= SOGLIA) return;
       pan.mosso = true; clearTimeout(pan.pingTimer);
       view.x = pan.vx + dx; view.y = pan.vy + dy;
-      applyView();
+      richiediVista();
     }
   }, true);
 

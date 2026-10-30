@@ -100,15 +100,24 @@ function clipBg() {
 }
 setBoard(DEFAULT_RECT);
 
-// tutto quello che si deve poter raggiungere: rettangolo + sfondo + segnalini
+// tutto quello che si deve poter raggiungere: rettangolo + sfondo + segnalini.
+// L'ingombro dei segnalini si ricalcola solo quando cambiano (non a ogni movimento delle dita).
+let ingombroFoto = null;
+new MutationObserver(() => { ingombroFoto = null; }).observe(world, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
 function contentBounds() {
   const r = boardRect(), g = bgRect();
   let l = r.x, t = r.y, rr = r.x + r.w, b = r.y + r.h;
   if (g) { l = Math.min(l, g.x); t = Math.min(t, g.y); rr = Math.max(rr, g.x + g.w); b = Math.max(b, g.y + g.h); }
-  for (const p of world.querySelectorAll('.photo')) {
-    const q = rectOf(p);
-    l = Math.min(l, q.x); t = Math.min(t, q.y); rr = Math.max(rr, q.x + q.w); b = Math.max(b, q.y + q.h);
+  if (!ingombroFoto) {
+    let fl = Infinity, ft = Infinity, fr = -Infinity, fb = -Infinity;
+    for (const p of world.querySelectorAll('.photo')) {
+      const q = rectOf(p);
+      fl = Math.min(fl, q.x); ft = Math.min(ft, q.y); fr = Math.max(fr, q.x + q.w); fb = Math.max(fb, q.y + q.h);
+    }
+    ingombroFoto = { l: fl, t: ft, r: fr, b: fb };
   }
+  const f = ingombroFoto;
+  if (f.l !== Infinity) { l = Math.min(l, f.l); t = Math.min(t, f.t); rr = Math.max(rr, f.r); b = Math.max(b, f.b); }
   return { x: l, y: t, w: rr - l, h: b - t };
 }
 const fitScale = r => Math.min(innerWidth / r.w, innerHeight / r.h);
@@ -125,10 +134,24 @@ function clampView() {
   view.y = clamp(view.y, KEEP - (b.y + b.h) * view.s, innerHeight - KEEP - b.y * view.s);
 }
 function applyView() {
+  cancelAnimationFrame(vistaRaf); vistaRaf = 0;
   clampView();
   const t = `translate(${view.x}px, ${view.y}px) scale(${view.s})`;
   for (const el of [stage, world]) { el.style.transform = t; el.style.setProperty('--inv', 1 / view.s); }
   placeGrid();
+  inMovimento();
+}
+// Durante un gesto (dita, rotellina) la vista si ridisegna una volta per fotogramma, e la mappa sta
+// su un livello a parte (will-change) che si sposta senza ridisegnarla. Finito il gesto si toglie:
+// il browser la ridisegna nitida alla nuova scala, solo la parte che si vede. Tenerlo sempre
+// (com'era) su Android fissava la risoluzione e, ingrandendo molto, le tessere finivano la memoria
+// della scheda grafica: mappa a blocchi, poi un rettangolo, poi niente.
+let vistaRaf = 0, fermaMovimento = 0;
+function richiediVista() { if (!vistaRaf) vistaRaf = requestAnimationFrame(() => { vistaRaf = 0; applyView(); }); }
+function inMovimento() {
+  document.body.classList.add('vistaMuove');
+  clearTimeout(fermaMovimento);
+  fermaMovimento = setTimeout(() => document.body.classList.remove('vistaMuove'), 180);
 }
 
 // animazione breve per i pulsanti dello zoom
@@ -185,7 +208,7 @@ viewport.addEventListener('wheel', e => {
   view.x = e.clientX - (e.clientX - view.x) * f;
   view.y = e.clientY - (e.clientY - view.y) * f;
   view.s = newS;
-  applyView();
+  richiediVista();
   scheduleBoardSave();
 }, { passive: false });
 
@@ -202,30 +225,39 @@ for (const t of ['gesturestart', 'gesturechange']) addEventListener(t, e => e.pr
 
 // ---------- Griglia (disegnata a schermo ma solo dentro il rettangolo, con linee sempre sottili) ----------
 function paintGrid() {
-  const gc = `color-mix(in srgb, ${grid.color} ${grid.opacity}%, transparent)`, dk = 'rgba(0, 0, 0, .4)';
+  const gc = gridPreview ? '#ff2bd6' : `color-mix(in srgb, ${grid.color} ${grid.opacity}%, transparent)`, dk = 'rgba(0, 0, 0, .4)';
   gridEl.style.backgroundImage =
     `linear-gradient(to right, ${gc} 1px, transparent 0), linear-gradient(to bottom, ${gc} 1px, transparent 0),` +
     `linear-gradient(to right, ${dk} 3px, transparent 0), linear-gradient(to bottom, ${dk} 3px, transparent 0)`;
   placeGrid();
 }
 function placeGrid() {
-  const r = boardRect(), s = view.s;
+  const r = boardRect(), s = view.s, o = gridOrigin();
   const x0 = Math.round(view.x + r.x * s), y0 = Math.round(view.y + r.y * s);
   const x1 = Math.round(view.x + (r.x + r.w) * s), y1 = Math.round(view.y + (r.y + r.h) * s);
   const l = Math.max(0, x0), t = Math.max(0, y0), rr = Math.min(innerWidth, x1), bb = Math.min(innerHeight, y1);
-  const visible = !!grid.show && rr > l && bb > t;
+  const visible = (!!grid.show && !grid.hideLines || gridPreview) && rr > l && bb > t;
   gridEl.classList.toggle('on', visible);
   if (!visible) return;
-  const c = Math.max(3, grid.size * s), px = x0 - l, py = y0 - t;
+  const c = Math.max(3, grid.size * s), px = view.x + o.x * s - l, py = view.y + o.y * s - t;
   Object.assign(gridEl.style, { left: l + 'px', top: t + 'px', width: rr - l + 'px', height: bb - t + 'px', backgroundSize: `${c}px ${c}px` });
   gridEl.style.backgroundPosition = `${px}px ${py}px, ${px}px ${py}px, ${px - 1}px ${py - 1}px, ${px - 1}px ${py - 1}px`;
 }
-// le celle partono dall'angolo in alto a sinistra del rettangolo
+// Le celle partono dall'angolo in alto a sinistra del rettangolo, spostate di grid.ox, grid.oy
+// (per farle combaciare con la griglia disegnata sulla mappa). Tutti passano da queste funzioni.
+function gridOrigin(g = grid) { const b = boardRect(); return { x: b.x + (+g.ox || 0), y: b.y + (+g.oy || 0) }; }
+/** La casella che contiene il punto: { i, j } (colonna, riga). */
+function cellOf(x, y) { const o = gridOrigin(), s = grid.size; return { i: Math.floor((x - o.x) / s), j: Math.floor((y - o.y) / s) }; }
+/** L'angolo in alto a sinistra della casella i, j. */
+function cellPos(i, j) { const o = gridOrigin(), s = grid.size; return { x: o.x + i * s, y: o.y + j * s }; }
+/** Il punto messo dentro la casella sotto (x, y), per un oggetto w × h: centrato. */
+function cellFit(x, y, w, h) { const c = cellOf(x, y), p = cellPos(c.i, c.j); return { x: p.x + (grid.size - w) / 2, y: p.y + (grid.size - h) / 2 }; }
 const snapPoint = (x, y) => {
   if (!grid.snap) return { x, y };
-  const b = boardRect();
-  return { x: b.x + Math.round((x - b.x) / grid.size) * grid.size, y: b.y + Math.round((y - b.y) / grid.size) * grid.size };
+  const o = gridOrigin(), s = grid.size;
+  return { x: o.x + Math.round((x - o.x) / s) * s, y: o.y + Math.round((y - o.y) / s) * s };
 };
+let gridPreview = false;     // la griglia in colore acceso, sopra quella della mappa, mentre la si regola
 
 function paintBorder() {
   const b = settings.border;
@@ -507,9 +539,7 @@ function addPhotoToMap(url, at, aid) {
     if (fit) { const k = grid.size / Math.max(img.naturalWidth, img.naturalHeight); w = img.naturalWidth * k; h = img.naturalHeight * k; }
     let l, t;
     if (at && fit && grid.snap) {                     // al centro della casella sotto il rilascio
-      const b = boardRect();
-      l = b.x + Math.floor((at.x - b.x) / grid.size) * grid.size + (grid.size - w) / 2;
-      t = b.y + Math.floor((at.y - b.y) / grid.size) * grid.size + (grid.size - h) / 2;
+      ({ x: l, y: t } = cellFit(at.x, at.y, w, h));
     }
     else if (at) { l = at.x - w / 2; t = at.y - h / 2; }
     else {
@@ -551,15 +581,29 @@ addEventListener('keydown', e => {
 
 // Rilascio di una miniatura sulla mappa
 viewport.addEventListener('dragover', e => {
-  if (e.dataTransfer.types.includes('application/x-asset')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
+  const t = e.dataTransfer.types;
+  if (t.includes('application/x-asset') || (t.includes('Files') && cartelleAttive())) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
 });
 viewport.addEventListener('drop', e => {
+  // una mappa di Dungeondraft (.dd2vtt, .uvtt) lasciata sulla mappa diventa una scena nuova
+  const mappe = [...(e.dataTransfer.files || [])].filter(f => typeof eUvtt === 'function' && eUvtt(f));
+  if (mappe.length) { e.preventDefault(); if (cartelleAttive()) importaMappeUvtt(mappe); return; }
   const raw = e.dataTransfer.getData('application/x-asset');
   if (!raw) return;
   e.preventDefault();
   const a = JSON.parse(raw);
   addPhotoToMap(a.url, { x: (e.clientX - view.x) / view.s, y: (e.clientY - view.y) / view.s }, a.id);
 });
+
+async function importaMappeUvtt(files) {
+  let ultima = null;
+  for (const f of files) {
+    const sc = newScene(f.name.replace(/\.[^.]+$/, '').slice(0, 40), 'map');
+    try { setStatus('⏳ ' + tr('Importo {nome}…', { nome: f.name })); const testo = await scenaDaUvtt(f, sc); scenes.push(sc); ultima = sc; setStatus(testo); }
+    catch (err) { setStatus('❌ ' + f.name + ': ' + err.message); }
+  }
+  if (ultima) { await showScene(ultima); scheduleBoardSave(); }
+}
 
 // ---------- Sfondo della scena ----------
 function setBgBox(bg) {
@@ -573,8 +617,35 @@ function setBgBox(bg) {
   Object.assign(bgBox.style, { left: bg.x + 'px', top: bg.y + 'px', width: bg.w + 'px', height: bg.h + 'px' });
   bgBox.dataset.url = bg.url; bgBox.dataset.aid = bg.aid ?? ''; bgBox.dataset.gid = bg.gid || '';
   map.src = bg.url;
+  riduciSulTelefono(bg.url);
   refreshEditing();
 }
+// Sul telefono una mappa enorme (oltre 4096 px di lato) si mostra da una copia ridotta, fatta qui
+// e tenuta solo in memoria: la campagna resta com'è. Le misure restano quelle dell'originale.
+const LATO_TELEFONO = 4096, copieRidotte = new Map();
+async function riduciSulTelefono(url) {
+  map.dataset.nw = map.dataset.nh = '';
+  if (!matchMedia('(pointer: coarse)').matches || !url || typeof createImageBitmap !== 'function') return;
+  try {
+    let copia = copieRidotte.get(url);
+    if (!copia) {
+      const im = new Image(); im.src = url; await im.decode();
+      const lato = Math.max(im.naturalWidth, im.naturalHeight);
+      if (lato <= LATO_TELEFONO) return;
+      const k = LATO_TELEFONO / lato, w = Math.round(im.naturalWidth * k), h = Math.round(im.naturalHeight * k);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(im, 0, 0, w, h);
+      const blob = await new Promise(r => c.toBlob(r, 'image/webp', .9));
+      if (!blob) return;
+      copia = { src: URL.createObjectURL(blob), nw: im.naturalWidth, nh: im.naturalHeight };
+      copieRidotte.set(url, copia);
+    }
+    if (bgBox.dataset.url !== url) return;            // nel frattempo è cambiato lo sfondo
+    map.dataset.nw = copia.nw; map.dataset.nh = copia.nh;
+    map.src = copia.src;
+  } catch {}
+}
+const misuraMappa = () => ({ w: +map.dataset.nw || map.naturalWidth, h: +map.dataset.nh || map.naturalHeight });
 // legge le misure naturali dell'immagine: {url, aid, x, y, w, h} oppure null se non si carica
 const loadBg = (url, aid) => new Promise(res => {
   const im = new Image();
@@ -758,7 +829,8 @@ function renderSceneUI() {
   document.title = 'LIBRE VTT - ' + cur.name;
   $('sceneIcon').textContent = cur.type === 'map' ? '🗺' : '🎬';
   $('gridSceneName').textContent = '«' + cur.name + '»';
-  $('sceneList').replaceChildren(...scenes.map(sc => {
+  if ($('sceneFolderNew')) $('sceneFolderNew').hidden = !cartelleAttive();
+  $('sceneList').replaceChildren(...alberoScene(sc => {
     const row = document.createElement('div');
     row.className = 'sceneRow' + (sc === cur ? ' active' : '');
     row.dataset.id = sc.id;
@@ -775,6 +847,14 @@ function renderSceneUI() {
       if (n && n.trim()) { sc.name = n.trim().slice(0, 40); renderSceneUI(); scheduleBoardSave(); }
     });
     row.append(pick, ren);
+    if (cartelleAttive()) {
+      const sp = document.createElement('button');
+      sp.type = 'button'; sp.textContent = '📁'; sp.title = 'Sposta in una cartella'; sp.setAttribute('aria-label', 'Sposta ' + sc.name + ' in una cartella');
+      sp.addEventListener('click', () => scegliCartella(sc));
+      row.append(sp);
+      row.draggable = true;
+      row.addEventListener('dragstart', e => { e.dataTransfer.setData('application/x-scena', sc.id); e.dataTransfer.effectAllowed = 'move'; });
+    }
     if (typeof decorateSceneRow === 'function') decorateSceneRow(row, sc);
     if (scenes.length > 1) {
       const del = document.createElement('button');
@@ -793,6 +873,103 @@ function renderSceneUI() {
   if (typeof afterSceneUI === 'function') afterSceneUI();
 }
 
+// ---------- Cartelle delle scene (solo per chi conduce) ----------
+// settings.cartelle = [{ id, nome, padre, chiusa }] (al massimo 3 livelli) e sc.cartella = id della
+// cartella, facoltativo: le scene senza cartella stanno in cima, come prima. Eliminare una cartella
+// non cancella le scene: tornano nella cartella di sopra. Ai giocatori non arriva niente (sceneFor).
+const MAX_LIVELLI_CARTELLE = 3;
+const cartelleAttive = () => typeof isMaster !== 'function' || isMaster();
+const cartelle = () => Array.isArray(settings.cartelle) ? settings.cartelle : (settings.cartelle = []);
+const cartella = id => cartelle().find(c => c.id === id) || null;
+function livelloCartella(c) { let n = 0; for (let x = c; x && n < 10; x = cartella(x.padre)) n++; return n; }
+/** Le righe del menu: cartelle (con il loro contenuto, se aperte) e scene, rientrate per livello. */
+function alberoScene(rigaScena) {
+  if (!cartelleAttive() || !cartelle().length) return scenes.map(rigaScena);
+  const out = [], valida = id => !!cartella(id);
+  const giu = (padre, livello) => {
+    for (const c of cartelle().filter(c => (c.padre && valida(c.padre) ? c.padre : null) === padre)) {
+      out.push(rigaCartella(c, livello));
+      if (!c.chiusa) giu(c.id, livello + 1);
+    }
+    for (const sc of scenes.filter(sc => (sc.cartella && valida(sc.cartella) ? sc.cartella : null) === padre)) {
+      const r = rigaScena(sc); r.style.paddingLeft = livello * 14 + 'px'; out.push(r);
+    }
+  };
+  giu(null, 0);
+  return out;
+}
+function rigaCartella(c, livello) {
+  const row = document.createElement('div');
+  row.className = 'sceneRow sceneFolder'; row.dataset.cartella = c.id; row.style.paddingLeft = livello * 14 + 'px';
+  const apri = document.createElement('button');
+  apri.type = 'button'; apri.className = 'pick';
+  const n = scenes.filter(sc => sc.cartella === c.id).length;
+  apri.innerHTML = `<span>${c.chiusa ? '▸' : '▾'} 📁</span><span></span>`;
+  apri.lastChild.textContent = `${c.nome} (${n})`;
+  apri.addEventListener('click', () => { c.chiusa = !c.chiusa; renderSceneUI(); scheduleBoardSave(); });
+  const altro = (txt, tit, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = txt; b.title = tit; b.setAttribute('aria-label', tit + ' ' + c.nome); b.addEventListener('click', fn); return b; };
+  row.append(apri,
+    altro('✎', 'Rinomina', () => { const v = prompt('Nuovo nome della cartella', c.nome); if (v && v.trim()) { c.nome = v.trim().slice(0, 40); renderSceneUI(); scheduleBoardSave(); } }),
+    ...(livelloCartella(c) < MAX_LIVELLI_CARTELLE ? [altro('＋', 'Nuova cartella dentro', () => nuovaCartella(c.id))] : []),
+    altro('🗑', 'Elimina la cartella', () => eliminaCartella(c)));
+  // si può lasciar cadere una scena (o una cartella) qui sopra
+  row.addEventListener('dragover', e => { if (e.dataTransfer.types.includes('application/x-scena') || e.dataTransfer.types.includes('application/x-cartella')) { e.preventDefault(); row.classList.add('sopra'); } });
+  row.addEventListener('dragleave', () => row.classList.remove('sopra'));
+  row.addEventListener('drop', e => { e.preventDefault(); row.classList.remove('sopra'); lasciaCadere(e, c.id); });
+  row.draggable = true;
+  row.addEventListener('dragstart', e => { e.dataTransfer.setData('application/x-cartella', c.id); e.dataTransfer.effectAllowed = 'move'; });
+  return row;
+}
+function lasciaCadere(e, dove) {
+  const idS = e.dataTransfer.getData('application/x-scena'), idC = e.dataTransfer.getData('application/x-cartella');
+  if (idS) { const sc = scenes.find(s => s.id === idS); if (sc) spostaScena(sc, dove); }
+  else if (idC) spostaCartella(cartella(idC), dove);
+}
+function spostaScena(sc, dove) {
+  if ((sc.cartella || null) === (dove || null)) return;
+  if (dove) sc.cartella = dove; else delete sc.cartella;
+  const c = cartella(dove); if (c) c.chiusa = false;
+  renderSceneUI(); scheduleBoardSave();
+}
+function spostaCartella(c, dove) {
+  if (!c || c.id === dove) return;
+  for (let x = cartella(dove); x; x = cartella(x.padre)) if (x.id === c.id) return;     // non dentro sé stessa
+  // tutta la cartella (con quelle dentro) deve restare entro i 3 livelli
+  const prof = id => 1 + Math.max(0, ...cartelle().filter(x => x.padre === id).map(x => prof(x.id)));
+  if ((dove ? livelloCartella(cartella(dove)) : 0) + prof(c.id) > MAX_LIVELLI_CARTELLE) return setStatus(tr('Al massimo 3 livelli di cartelle.'));
+  c.padre = dove || null; renderSceneUI(); scheduleBoardSave();
+}
+function nuovaCartella(padre = null) {
+  const n = prompt('Nome della nuova cartella', tr('Cartella') + ' ' + (cartelle().length + 1));
+  if (!n || !n.trim()) return;
+  cartelle().push({ id: uid(), nome: n.trim().slice(0, 40), padre, chiusa: false });
+  const p = cartella(padre); if (p) p.chiusa = false;
+  renderSceneUI(); scheduleBoardSave();
+}
+function eliminaCartella(c) {
+  if (!confirm(tr('Eliminare la cartella «{nome}»? Le scene restano: tornano fuori.', { nome: c.nome }))) return;
+  for (const sc of scenes) if (sc.cartella === c.id) { if (c.padre) sc.cartella = c.padre; else delete sc.cartella; }
+  for (const x of cartelle()) if (x.padre === c.id) x.padre = c.padre || null;
+  settings.cartelle = cartelle().filter(x => x !== c);
+  renderSceneUI(); scheduleBoardSave();
+}
+/** Dal pulsante 📁 (anche col dito): sceglie la cartella con un numero. */
+function scegliCartella(sc) {
+  const voci = [{ id: null, nome: tr('(fuori dalle cartelle)') }];
+  const giu = (padre, liv) => { for (const c of cartelle().filter(c => (c.padre || null) === padre)) { voci.push({ id: c.id, nome: '  '.repeat(liv) + c.nome }); giu(c.id, liv + 1); } };
+  giu(null, 0);
+  if (voci.length === 1) return nuovaCartella();
+  const r = prompt(tr('In quale cartella spostare «{nome}»? Scrivi il numero.', { nome: sc.name }) + '\n\n' + voci.map((v, i) => `${i}. ${v.nome}`).join('\n'), '');
+  if (r == null || r.trim() === '') return;
+  const v = voci[parseInt(r, 10)];
+  if (v) spostaScena(sc, v.id);
+}
+// lasciando una scena sulla zona vuota del menu, esce dalle cartelle
+$('sceneList').addEventListener('dragover', e => { if (e.dataTransfer.types.includes('application/x-scena') || e.dataTransfer.types.includes('application/x-cartella')) e.preventDefault(); });
+$('sceneList').addEventListener('drop', e => { if (e.target.closest('.sceneFolder')) return; e.preventDefault(); lasciaCadere(e, null); });
+$('sceneNew').insertAdjacentHTML('beforebegin', '<button id="sceneFolderNew" type="button">＋ Nuova cartella</button>');
+$('sceneFolderNew').addEventListener('click', () => nuovaCartella());
+
 // finestra "Nuova scena"
 const sceneDialog = $('sceneDialog'), sceneForm = $('sceneForm');
 $('sceneNew').addEventListener('click', () => {
@@ -809,7 +986,10 @@ sceneForm.addEventListener('submit', async e => {
   const type = sceneForm.elements.sceneType.value;
   const sc = newScene($('sceneNameInput').value.trim().slice(0, 40) || tr('Scena') + ' ' + (scenes.length + 1), type);
   const file = $('sceneBgInput').files[0];
-  if (file) {
+  if (file && typeof eUvtt === 'function' && eUvtt(file)) {
+    try { setStatus(await scenaDaUvtt(file, sc)); }
+    catch (err) { setStatus('❌ ' + err.message); btn.disabled = false; return; }
+  } else if (file) {
     try {
       const rec = await uploadBackground(file);
       sc.bg = await loadBg(rec.url, rec.id);
@@ -831,7 +1011,13 @@ const gridFields = withShow => [
   ...(withShow ? [{ f: 'show', type: 'check', label: 'Mostra la griglia' }] : []),
   { f: 'snap', type: 'check', label: 'Aggancia le immagini alla griglia' },
   { f: 'fitToken', type: 'check', label: 'Nuovi segnalini grandi quanto una casella (con la griglia visibile)' },
-  { f: 'size', type: 'range', label: 'Cella', min: 20, max: 200, step: 5 },
+  { f: 'size', type: 'range', label: 'Cella', min: 10, max: 300, step: 0.1 },
+  ...(withShow ? [
+    { f: 'size', type: 'number', label: 'Cella esatta', min: 10, max: 300, step: 0.1, unit: ' px', cls: 'fine' },
+    { f: 'ox', type: 'number', label: 'Spostamento →', min: -300, max: 300, step: 1, unit: ' px', cls: 'fine' },
+    { f: 'oy', type: 'number', label: 'Spostamento ↓', min: -300, max: 300, step: 1, unit: ' px', cls: 'fine' },
+    { f: 'hideLines', type: 'check', label: 'Nascondi le linee di LIBRE VTT (resta l\'aggancio)' }
+  ] : []),
   { f: 'color', type: 'color', label: 'Colore' },
   { f: 'opacity', type: 'range', label: 'Opacità', min: 10, max: 100, step: 5, unit: '%' }
 ];
@@ -850,7 +1036,7 @@ function fieldHtml(d) {
   const rng = `min="${d.min}" max="${d.max}" step="${d.step}"`;
   if (d.type === 'check') return `<label class="check"><input data-f="${d.f}" type="checkbox"> ${d.label}</label>`;
   if (d.type === 'range') return `<label class="row">${d.label} <input data-f="${d.f}" type="range" ${rng}> <output data-o="${d.f}"></output>${d.unit || ''}</label>`;
-  if (d.type === 'number') return `<label class="row">${d.label} <input data-f="${d.f}" type="number" ${rng}>${d.unit || ''}</label>`;
+  if (d.type === 'number') return `<label class="row${d.cls ? ' ' + d.cls : ''}">${d.label} <input data-f="${d.f}" type="number" ${rng}>${d.unit || ''}</label>`;
   return `<div class="row">${d.label} <div class="swatches">` +
     SWATCHES.map(([c, n]) => `<button type="button" data-color="${c}" title="${n}" aria-label="${n}" style="background:${c}"></button>`).join('') +
     `</div><input data-f="${d.f}" type="color" title="Altro colore"></div>`;
@@ -861,9 +1047,9 @@ function buildForm(root, fields, { get, onChange }) {
     const g = get();
     root.querySelectorAll('[data-f]').forEach(i => {
       if (i.type === 'checkbox') i.checked = !!g[i.dataset.f];
-      else if (!(i.type === 'number' && i === document.activeElement)) i.value = g[i.dataset.f];   // non disturbare chi sta scrivendo
+      else if (!(i.type === 'number' && i === document.activeElement)) i.value = g[i.dataset.f] ?? 0;   // non disturbare chi sta scrivendo
     });
-    root.querySelectorAll('[data-o]').forEach(o => { o.textContent = g[o.dataset.o]; });
+    root.querySelectorAll('[data-o]').forEach(o => { o.textContent = +(+g[o.dataset.o]).toFixed(1); });
     root.querySelectorAll('.swatches button').forEach(b => b.classList.toggle('active', !g.transparent && b.dataset.color === g.color));
   };
   root.addEventListener('input', e => {
@@ -882,6 +1068,94 @@ function buildForm(root, fields, { get, onChange }) {
   return sync;
 }
 const syncSceneGrid = buildForm($('gridScene'), gridFields(true), { get: () => grid, onChange: () => { paintGrid(); scheduleBoardSave(); } });
+// Regolazione fine: frecce su e giù di 1 px, con Maiusc di 0,1 px; intanto la griglia è in colore
+// acceso, così si vede sopra quella disegnata sulla mappa.
+let finePreview = 0;
+function anteprimaGriglia(ms = 1500) {
+  gridPreview = true; paintGrid();
+  clearTimeout(finePreview);
+  if (ms) finePreview = setTimeout(() => { if (!fitGrid) { gridPreview = false; paintGrid(); } }, ms);
+}
+$('gridScene').addEventListener('keydown', e => {
+  const i = e.target;
+  if (!i.matches('.fine input') || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+  e.preventDefault();
+  const passo = (e.shiftKey ? 0.1 : 1) * (e.key === 'ArrowUp' ? 1 : -1);
+  grid[i.dataset.f] = clamp(Math.round(((+grid[i.dataset.f] || 0) + passo) * 10) / 10, +i.min, +i.max);
+  i.value = grid[i.dataset.f];
+  syncSceneGrid(); paintGrid(); scheduleBoardSave(); anteprimaGriglia();
+});
+$('gridScene').addEventListener('input', e => { if (e.target.matches('.fine input, [data-f=size]')) anteprimaGriglia(); });
+
+// ---- Adatta la griglia a quella disegnata sulla mappa ----
+// Due clic su due angoli opposti di una casella dell'immagine (o di un blocco di N × M caselle):
+// da lì misura e spostamento. Con «mappa» si ridimensiona invece lo sfondo, e la griglia resta.
+let fitGrid = null;      // { modo: 'griglia' | 'mappa', a: primo angolo }
+function avviaAdatta(modo) {
+  if (modo === 'mappa' && bgBox.hidden) return setStatus('Questa scena non ha uno sfondo.');
+  fitGrid = { modo, a: null };
+  viewport.classList.add('fitGrid');
+  anteprimaGriglia(0);
+  setStatus('Clicca un angolo di una casella disegnata sulla mappa, poi l\'angolo opposto (Esc annulla).');
+}
+function fineAdatta(msg) {
+  fitGrid = null; viewport.classList.remove('fitGrid');
+  gridPreview = false; paintGrid();
+  if (msg) setStatus(msg);
+}
+function caselleTra() {
+  const r = prompt('Quante caselle ci sono tra i due angoli? Una sola (1), oppure larghezza x altezza (es. 5x3).', '1');
+  if (r == null) return null;
+  const m = String(r).trim().match(/^(\d+)(?:\s*[x×*]\s*(\d+))?$/i);
+  if (!m) return null;
+  const n = Math.max(1, +m[1]), k = Math.max(1, +(m[2] || m[1]));
+  return { n, m: k };
+}
+viewport.addEventListener('pointerdown', e => {
+  if (!fitGrid || e.button !== 0) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  const p = { x: (e.clientX - view.x) / view.s, y: (e.clientY - view.y) / view.s };
+  if (!fitGrid.a) { fitGrid.a = p; setStatus('Ora l\'angolo opposto.'); return; }
+  const a = fitGrid.a, modo = fitGrid.modo, dx = Math.abs(p.x - a.x), dy = Math.abs(p.y - a.y);
+  if (dx < 4 || dy < 4) return setStatus('I due angoli sono troppo vicini: riprova con l\'angolo opposto.');
+  const quante = caselleTra();
+  if (!quante) return fineAdatta('Adattamento annullato.');
+  const misura = (dx / quante.n + dy / quante.m) / 2;      // le caselle sono quadrate: la media dei due lati
+  const x0 = Math.min(a.x, p.x), y0 = Math.min(a.y, p.y);
+  if (modo === 'griglia') {
+    if (misura < 10 || misura > 300) return fineAdatta('La casella misurata è fuori misura (10-300 px): riprova.');
+    grid.size = Math.round(misura * 10) / 10;
+    allineaOrigine(x0, y0);
+  } else {
+    // si ridimensiona lo sfondo (e il rettangolo, se lo copriva) attorno al primo angolo
+    const k = grid.size / misura, r = rectOf(bgBox), b = boardRect();
+    const copre = Math.abs(b.x - r.x) < 1 && Math.abs(b.y - r.y) < 1 && Math.abs(b.w - r.w) < 1 && Math.abs(b.h - r.h) < 1;
+    const nr = { x: x0 - (x0 - r.x) * k, y: y0 - (y0 - r.y) * k, w: r.w * k, h: r.h * k };
+    Object.assign(bgBox.style, { left: nr.x + 'px', top: nr.y + 'px', width: nr.w + 'px', height: nr.h + 'px' });
+    if (copre) setBoard({ ...nr });
+    allineaOrigine(x0, y0);
+  }
+  if (!grid.snap) grid.snap = true;
+  fineAdatta(`Griglia adattata: casella di ${+grid.size.toFixed(1)} px.`);
+  // una volta sola per scena: le linee di LIBRE VTT servono ancora, o basta l'aggancio?
+  if (!grid.chiesto) {
+    grid.chiesto = true;
+    if (confirm('Nascondere le linee della griglia di LIBRE VTT? Resta quella della mappa, e i segnalini si agganciano lo stesso.')) grid.hideLines = true;
+  }
+  grid.show = true;
+  syncSceneGrid(); paintGrid(); applyView(); scheduleBoardSave();
+}, true);
+/** Sposta l'origine della griglia perché un angolo di casella cada in (x, y). */
+function allineaOrigine(x, y) {
+  const b = boardRect(), s = grid.size, mod = v => Math.round((((v % s) + s) % s) * 10) / 10;
+  grid.ox = mod(x - b.x); grid.oy = mod(y - b.y);
+}
+addEventListener('keydown', e => { if (fitGrid && e.key === 'Escape') { e.preventDefault(); fineAdatta('Adattamento annullato.'); } }, true);
+$('gridScene').insertAdjacentHTML('beforeend',
+  `<div class="row gridFit"><button id="gridFitMap" type="button" class="btn">Adatta alla griglia della mappa</button>` +
+  `<button id="mapFitGrid" type="button" class="btn ghost" title="Ridimensiona lo sfondo perché le sue caselle siano grandi quanto quelle di LIBRE VTT">Adatta la mappa alla griglia</button></div>`);
+$('gridFitMap').addEventListener('click', () => avviaAdatta('griglia'));
+$('mapFitGrid').addEventListener('click', () => avviaAdatta('mappa'));
 const syncDefaultGrid = buildForm($('gridDefault'), gridFields(false), { get: () => settings.gridDefault, onChange: scheduleBoardSave });
 const syncBorder = buildForm($('borderForm'), BORDER_FIELDS, { get: () => settings.border, onChange: () => { paintBorder(); scheduleBoardSave(); } });
 const syncPingForm = buildForm($('pingForm'), PING_FIELDS, { get: () => settings.ping, onChange: scheduleBoardSave });
@@ -966,13 +1240,13 @@ function syncFog() {
 
 $('applyDefault').addEventListener('click', () => {
   const show = grid.show;
-  Object.assign(grid, settings.gridDefault, { show });
+  Object.assign(grid, settings.gridDefault, { show, ox: 0, oy: 0, hideLines: false });
   syncSceneGrid(); paintGrid(); scheduleBoardSave();
 });
 $('bgReset').addEventListener('click', () => {
   if (bgBox.hidden) setBoard({ ...DEFAULT_RECT });
   else {
-    const w = map.naturalWidth, h = map.naturalHeight;
+    const { w, h } = misuraMappa();
     Object.assign(bgBox.style, { left: '0px', top: '0px', width: w + 'px', height: h + 'px' });
     setBoard({ x: 0, y: 0, w, h });
   }
@@ -1453,23 +1727,46 @@ $('newFolder').addEventListener('click', () => {
   if (n && n.trim()) act(async () => { current = await store.addFolder(n.trim()); });
 });
 
+/** Un'immagine da disegnare su un canvas: { img, width, height, close }. createImageBitmap non sa
+ *  leggere gli SVG: quelli passano da un <img> (con le misure del file, o 512 px se non le ha). */
+async function immagineDisegnabile(blob) {
+  if (blob.type !== 'image/svg+xml') { const b = await createImageBitmap(blob); return { img: b, width: b.width, height: b.height, close: () => b.close() }; }
+  const url = URL.createObjectURL(blob), im = new Image();
+  try { im.src = url; await im.decode(); } catch (e) { URL.revokeObjectURL(url); throw new Error(tr('Non riesco a leggere questa immagine.')); }
+  const w = im.naturalWidth || 512, h = im.naturalHeight || 512;
+  return { img: im, width: w, height: h, close: () => URL.revokeObjectURL(url) };
+}
 // WebP con il lato corto limitato alla risoluzione scelta (0 = originale), sRGB senza profili ICC incorporati
 async function toWebp(file, res) {
-  const bmp = await createImageBitmap(file);
+  const bmp = await immagineDisegnabile(file);
   const k = res ? Math.min(1, res * 16 / 9 / Math.max(bmp.width, bmp.height), res / Math.min(bmp.width, bmp.height)) : 1;
   const c = document.createElement('canvas');
   c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  c.getContext('2d').drawImage(bmp.img, 0, 0, c.width, c.height);
   bmp.close();
   const blob = await new Promise(res => c.toBlob(res, 'image/webp', 0.82));
   if (!blob || blob.type !== 'image/webp') throw new Error('questo browser non sa creare WebP');
   return blob;
 }
 
+// Un SVG resta vettoriale (si ingrandisce senza sgranare): si ripulisce e si tiene così com'è.
+const eSvg = file => file.type === 'image/svg+xml' || /\.svg$/i.test(file.name);
+async function comeSvg(file) {
+  if (file.size > SVG_PULITO.MAX_BYTE) throw new Error(tr('SVG troppo grande (massimo 8 MB)'));
+  const p = SVG_PULITO.pulisci(await file.text());
+  if (p.errore) throw new Error(tr(p.errore));
+  return new Blob([p.svg], { type: 'image/svg+xml' });
+}
+// l'immagine pronta da salvare: { nome, blob } (WebP alla risoluzione scelta, o l'SVG ripulito)
+async function preparaImmagine(file, res) {
+  const nome = file.name.replace(/\.[^.]+$/, '');
+  return eSvg(file) ? { nome: nome + '.svg', blob: await comeSvg(file) } : { nome: nome + '.webp', blob: await toWebp(file, res) };
+}
 // salva l'immagine nella cartella degli sfondi (creandola se serve) e restituisce l'asset
 async function uploadBackground(file) {
   try { await store.addFolder(BG_FOLDER); } catch { /* esiste già */ }
-  return store.add(file.name.replace(/\.[^.]+$/, '') + '.webp', BG_FOLDER, await toWebp(file, settings.resBg));
+  const im = await preparaImmagine(file, settings.resBg);
+  return store.add(im.nome, BG_FOLDER, im.blob);
 }
 
 upload.addEventListener('change', async () => {
@@ -1480,7 +1777,7 @@ upload.addEventListener('change', async () => {
   for (const file of files) {
     try {
       if (uploadAs === 'bg') { const rec = await uploadBackground(file); first ||= rec; }
-      else await store.add(file.name.replace(/\.[^.]+$/, '') + '.webp', current, await toWebp(file, settings.resToken));
+      else { const im = await preparaImmagine(file, settings.resToken); await store.add(im.nome, current, im.blob); }
     } catch (err) { setStatus('❌ ' + err.message); }
   }
   if (first) current = BG_FOLDER;
@@ -1533,13 +1830,15 @@ async function loadBoard() {
     for (const k of ['tools', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'park', 'music']) if (s[k] && typeof s[k] === 'object') settings[k] = { ...settings[k], ...s[k] };
     settings.sections = s.sections && typeof s.sections === 'object' ? { ...s.sections } : {};
     settings.toolOrder = Array.isArray(s.toolOrder) ? s.toolOrder.filter(x => typeof x === 'string').slice(0, 60) : null;
+    settings.cartelle = Array.isArray(s.cartelle) ? s.cartelle.filter(c => c && typeof c.id === 'string').slice(0, 200)
+      .map(c => ({ id: c.id, nome: String(c.nome || 'Cartella').slice(0, 40), padre: typeof c.padre === 'string' ? c.padre : null, chiusa: !!c.chiusa })) : [];
     paintBorder();
     const okRect = r => r && [r.x, r.y, r.w, r.h].every(Number.isFinite) && r.w > 0 && r.h > 0;
     const pick = r => ({ x: r.x, y: r.y, w: r.w, h: r.h });
     scenes = st.scenes.map(sc => ({
       id: sc.id || uid(), name: sc.name || 'Scena', type: sc.type === 'cinematic' ? 'cinematic' : 'map',
       bg: sc.bg || null, grid: { ...DEFAULT_GRID, ...sc.grid }, photos: sc.photos || [], view: sc.view || null, draw: sc.draw || null,
-      luce: sc.luce || undefined,
+      luce: sc.luce || undefined, cartella: typeof sc.cartella === 'string' ? sc.cartella : undefined,
       // salvataggi precedenti: il rettangolo coincide con la mappa (o è quello di default)
       board: okRect(sc.board) ? pick(sc.board) : okRect(sc.bg) ? pick(sc.bg) : { ...DEFAULT_RECT }
     }));

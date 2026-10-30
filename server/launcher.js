@@ -94,6 +94,7 @@ const state = {
 
 // ---------- registro, mostrato nella finestra ----------
 const listeners = new Set();
+let finestraVista = false;                // una pagina di LIBRE VTT si è collegata almeno una volta
 function say(line, kind) {
   const e = { t: Date.now(), line: String(line).replace(/\s+$/, ''), kind: kind || '' };
   if (!e.line) return;
@@ -271,6 +272,8 @@ function run(key, cmd, args, opts = {}) {
   state.procs[key] = p;
   const pipe = (s, kind) => s.on('data', d => String(d).split(/\r?\n/).forEach(l => {
     if (!l.trim()) return;
+    const cmd = key === 'regole' && /^@@LIBRE ([\w-]+) (.*)$/.exec(l);    // una richiesta del server di gioco (vedi avviatore())
+    if (cmd) { try { dalServerDiGioco(cmd[1], JSON.parse(cmd[2] || '{}')); } catch (e) { say('Richiesta del server di gioco non valida: ' + e.message, 'warn'); } return; }
     const m = l.match(/^\s{6}([a-z0-9]{40,})\s*$/i);          // l'ID stampato da uffa-link
     // nel registro della finestra: niente istruzioni da terminale, e l'ID accorciato (quello intero è nel riquadro «Codice»)
     const daTerminale = /Ctrl\+C|uffa-link\/target|Ora avvia anche|uffa-link (host|join)\b|Il VTT si collega a ws:/.test(l);
@@ -284,7 +287,7 @@ function run(key, cmd, args, opts = {}) {
   p.on('exit', code => {
     say(`[${key}] chiuso (${code})`, code ? 'warn' : '');
     if (state.procs[key] === p) delete state.procs[key];
-    if (!opts.keep || myGen !== gen || !state.mode) return;   // spento apposta
+    if (!opts.keep || myGen !== gen || !state.mode || p.sostituito) return;   // spento apposta
     if (Date.now() - born > 60000) restarts[key] = 0;          // era stato su a lungo: si riparte da capo
     const n = restarts[key] = (restarts[key] || 0) + 1;
     const wait = Math.min(15000, 1000 * n);
@@ -302,8 +305,144 @@ function stopAll() {
   for (const k of Object.keys(restarts)) delete restarts[k];
   for (const [k, p] of Object.entries(state.procs)) { try { p.kill(); } catch {} delete state.procs[k]; }
   try { fs.unlinkSync(LINK_ID_FILE); } catch {}
-  state.mode = null; state.sessionId = null; state.campagna = null; state.porte = null;
+  try { fs.unlinkSync(LINK_CHIAVE_FILE); } catch {}
+  state.mode = null; state.sessionId = null; state.campagna = null; state.porte = null; state.joinCodice = null;
   push();
+}
+
+// ---------- Codice d'invito stabile (punto 24) e campagne a cui ci si è uniti (punto 25) ----------
+// Il codice è l'ID di uffa-link, che nasce da una chiave: la chiave sta nella campagna
+// (data/invito.chiave), quindi il codice resta lo stesso a ogni apertura finché il master non lo
+// cambia. In campagna.json c'è anche, per comodità, invito: { codice, creato }.
+const LINK_CHIAVE_FILE = path.join(USERDIR, 'uffa-link.chiave');
+/** L'ID (il codice) che uffa-link avrà con questa chiave: la chiave pubblica Ed25519, in esadecimale. */
+function idDaChiave(hex) {
+  const k = crypto.createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from(hex, 'hex')]), format: 'der', type: 'pkcs8' });
+  return Buffer.from(crypto.createPublicKey(k).export({ format: 'jwk' }).x, 'base64url').toString('hex');
+}
+function invitoCampagna(dir, nuova) {
+  const f = path.join(dir, 'data', 'invito.chiave');
+  let chiave = null;
+  if (!nuova) try { const t = fs.readFileSync(f, 'utf8').trim(); if (/^[a-f0-9]{64}$/.test(t)) chiave = t; } catch {}
+  if (!chiave) { chiave = crypto.randomBytes(32).toString('hex'); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, chiave); }
+  const codice = idDaChiave(chiave);
+  try {
+    const mf = path.join(dir, 'campagna.json'), meta = leggiJson(mf);
+    if (meta && (!meta.invito || meta.invito.codice !== codice)) { meta.invito = { codice, creato: new Date().toISOString() }; fs.writeFileSync(mf, JSON.stringify(meta, null, 2)); }
+  } catch {}
+  return { chiave, codice };
+}
+/** «Cambia codice»: chiave nuova; il codice nuovo va subito ai giocatori collegati (lo salvano da
+ *  soli), poi la sessione si riapre con la chiave nuova. Il codice vecchio non vale più. */
+let cambiando = false;
+async function cambiaCodice() {
+  if (state.mode !== 'host' || !state.campagna || cambiando) return { errore: 'Non stai conducendo una partita.' };
+  cambiando = true;
+  try {
+    const inv = invitoCampagna(state.campagna.path, true);
+    say('Codice nuovo: lo mando ai giocatori collegati e riapro la sessione.', 'ok');
+    try {
+      await new Promise((res, rej) => {
+        const r = http.request({ host: '127.0.0.1', port: state.porte.game, path: '/api/invito', method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 4000 }, x => { x.resume(); x.on('end', res); });
+        r.on('error', rej); r.on('timeout', () => r.destroy(new Error('tempo scaduto'))); r.end(JSON.stringify({ codice: inv.codice }));
+      });
+    } catch (e) { say('Non sono riuscito ad avvisare i giocatori collegati: ' + e.message, 'warn'); }
+    await attesa(2500);                                   // il tempo di far arrivare il messaggio
+    fs.writeFileSync(LINK_CHIAVE_FILE, inv.chiave);
+    const p = state.procs.sessione;
+    if (p) { try { p.kill(); } catch {} }                 // si riaccende da solo, con la chiave nuova
+    return { codice: inv.codice };
+  } finally { cambiando = false; }
+}
+// Da giocatore: le campagne a cui ci si è uniti, nel file di configurazione (conf.unite), con
+// l'identità data dall'host, l'ultima scena vista e la sua miniatura (in USERDIR/unite/).
+const UNITE_DIR = path.join(USERDIR, 'unite');
+const unite = () => (conf.unite && typeof conf.unite === 'object' ? conf.unite : (conf.unite = {}));
+function ricordaUnita(codice, dati) {
+  if (!/^[a-f0-9]{64}$/.test(String(codice || ''))) return;
+  const u = unite(), e = u[codice] = { codice, ...(u[codice] || {}), ...dati, ultimoAccesso: Date.now() };
+  if (e.firma === null) delete e.firma;
+  salvaConf();
+}
+/** Le righe «@@LIBRE …» del server di gioco. */
+function dalServerDiGioco(cosa, d) {
+  if (cosa === 'cambia-codice' && state.mode === 'host') return cambiaCodice();
+  if (state.mode !== 'join' || !state.joinCodice) return;
+  const codice = state.joinCodice;
+  if (cosa === 'identita' && /^[a-f0-9]{24}$/.test(String(d.token || ''))) {
+    ricordaUnita(codice, { idGiocatore: d.token, firma: d.firma || null, ...(d.campagna ? { nome: String(d.campagna).slice(0, 80) } : {}), ...(d.nome ? { nomeGiocatore: String(d.nome).slice(0, 40) } : {}) });
+  } else if (cosa === 'miniatura' && typeof d.file === 'string' && d.file.startsWith(GUEST_DIR + path.sep)) {
+    try { fs.mkdirSync(UNITE_DIR, { recursive: true }); fs.copyFileSync(d.file, path.join(UNITE_DIR, codice + '.img')); } catch {}
+    ricordaUnita(codice, { ultimaScena: String(d.scena || '').slice(0, 80), miniatura: true });
+  } else if (cosa === 'nuovo-codice' && /^[a-f0-9]{64}$/.test(String(d.codice || '')) && d.codice !== codice) {
+    // il master ha cambiato codice: la voce passa al codice nuovo e ci si ricollega lì
+    const u = unite(), vecchia = u[codice];
+    if (vecchia) { u[d.codice] = { ...vecchia, codice: d.codice }; delete u[codice]; }
+    try { fs.renameSync(path.join(UNITE_DIR, codice + '.img'), path.join(UNITE_DIR, d.codice + '.img')); } catch {}
+    salvaConf();
+    say('Il master ha cambiato il codice: mi ricollego con quello nuovo.', 'ok');
+    state.joinCodice = d.codice;
+    const p = state.procs.sessione;
+    if (p) { p.sostituito = true; try { p.kill(); } catch {} delete state.procs.sessione; }
+    run('sessione', LINK, ['join', d.codice, '--port', String(state.porte.link)], { keep: true, cwd: USERDIR });
+  }
+}
+/** Il riquadro di una campagna: si chiede all'host com'è (online, quanti dentro, in sessione)
+ *  aprendo per un momento un collegamento come quello di «join». Nessuna risposta = offline. */
+async function statoUnita(e) {
+  if (MOBILE ? !LINK_CTRL : !linkBin()) return { online: false };
+  const porta = await portaLibera(PREF.link + 20, [UI_PORT, ...(state.porte ? [state.porte.web, state.porte.game, state.porte.link] : [])]);
+  return new Promise(resolve => {
+    let finito = false, collegato = false, sock = null, buf = '';
+    const p = lancia(LINK, ['join', e.codice, '--port', String(porta)], { cwd: USERDIR });
+    const fine = r => {
+      if (finito) return; finito = true; clearTimeout(timer);
+      try { sock && sock.destroy(); } catch {} try { p.kill(); } catch {}
+      // collegato all'host ma senza risposta: un LIBRE VTT di prima della 3.7.2, acceso
+      resolve(r || (collegato ? { online: true } : { online: false }));
+    };
+    const timer = setTimeout(() => fine(null), 15000);
+    p.on('error', () => fine(null)); p.on('exit', () => fine(null));
+    const leggi = s => s.on('data', d => { if (/collegato!/.test(String(d))) collegato = true; });
+    leggi(p.stdout); leggi(p.stderr);
+    // la porta è pronta poco dopo: si prova a entrare e a chiedere
+    (async () => {
+      for (let i = 0; i < 20 && !finito && !sock; i++) {
+        await attesa(250);
+        await new Promise(ok => {
+          const s = net.connect(porta, '127.0.0.1');
+          s.on('connect', () => { sock = s; s.write(JSON.stringify({ t: 'stato', token: e.idGiocatore || '', firma: e.firma || undefined }) + '\n'); ok(); });
+          s.on('error', () => ok());
+          s.on('data', d => {
+            buf += d.toString('utf8');
+            const i = buf.indexOf('\n'); if (i < 0) return;
+            let m = null; try { m = JSON.parse(buf.slice(0, i)); } catch {}
+            if (m && m.t === 'stato') fine(m.fuori ? { fuori: true } : { online: true, membriOnline: +m.membriOnline || 0, sessioneDa: m.sessioneDa || null, nomeCampagna: m.nomeCampagna || null });
+          });
+        });
+      }
+    })();
+  });
+}
+let statoInCorso = null;
+async function statoUnite() {
+  if (statoInCorso) return statoInCorso;
+  statoInCorso = (async () => {
+    const out = {};
+    const voci = Object.values(unite());
+    // due alla volta: ognuna apre un collegamento per qualche secondo
+    for (let i = 0; i < voci.length; i += 2) {
+      const pezzo = voci.slice(i, i + 2);
+      const r = await Promise.all(pezzo.map(e => state.mode === 'join' && state.joinCodice === e.codice ? { online: true, qui: true } : statoUnita(e)));
+      pezzo.forEach((e, k) => {
+        out[e.codice] = r[k];
+        if (r[k].fuori) { delete unite()[e.codice]; try { fs.unlinkSync(path.join(UNITE_DIR, e.codice + '.img')); } catch {} salvaConf(); }
+        else if (r[k].nomeCampagna && r[k].nomeCampagna !== e.nome) { unite()[e.codice].nome = r[k].nomeCampagna; salvaConf(); }
+      });
+    }
+    return out;
+  })();
+  try { return await statoInCorso; } finally { statoInCorso = null; }
 }
 
 const attesa = ms => new Promise(r => setTimeout(r, ms));
@@ -758,14 +897,26 @@ async function avvia(mode, id, campagna) {
   if (GAME_PORT && GAME_PORT !== (conf.porte.game || PREF.game)) say(`La porta ${conf.porte.game || PREF.game} è usata da un altro programma: il server di gioco va sulla ${GAME_PORT}.`, 'warn');
   conf.porte.web = WEB_PORT; if (GAME_PORT) conf.porte.game = GAME_PORT;
   salvaConf();
-  state.porte = { web: WEB_PORT, game: GAME_PORT };
+  state.porte = { web: WEB_PORT, game: GAME_PORT, link: LINK_PORT };
 
   run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP }, keep: true });
   if (!await aspettaPorta(WEB_PORT)) return fallisci('Il tavolo non si è acceso.');
 
   if (mode !== 'solo') {
+    const extra = {};
+    if (mode === 'host') {
+      // la chiave della campagna: con lei il codice resta lo stesso a ogni apertura
+      try { const inv = invitoCampagna(CAMP); fs.writeFileSync(LINK_CHIAVE_FILE, inv.chiave); } catch (e) { say('Il codice d\'invito non si potrà tenere fisso: ' + e.message, 'warn'); }
+      extra.CAMPAGNA_NOME = state.campagna ? state.campagna.nome : '';
+    } else {
+      try { fs.unlinkSync(LINK_CHIAVE_FILE); } catch {}
+      state.joinCodice = /^[a-f0-9]{64}$/.test(id) ? id : null;
+      const e = state.joinCodice && unite()[state.joinCodice];
+      if (e && e.idGiocatore) extra.IDENTITA = JSON.stringify({ token: e.idGiocatore, firma: e.firma || null });
+      if (state.joinCodice) ricordaUnita(state.joinCodice, {});
+    }
     run('regole', NODE, [path.join('server', 'game-server.js'), mode === 'host' ? 'host' : 'join'],
-      { env: { PORT: String(GAME_PORT), LINK_PORT: String(LINK_PORT), DATA_DIR: path.join(CAMP, 'data'), LINK_ID_FILE }, keep: true });
+      { env: { PORT: String(GAME_PORT), LINK_PORT: String(LINK_PORT), DATA_DIR: path.join(CAMP, 'data'), LINK_ID_FILE, ...extra }, keep: true });
     if (!await aspettaPorta(GAME_PORT)) return fallisci('Il server di gioco non si è acceso.');
 
     if (MOBILE ? !LINK_CTRL : !linkBin()) return fallisci(MOBILE ? 'Il collegamento a distanza dell\'app non è partito: chiudi l\'app e riaprila.' : 'Manca il collegamento a distanza: premi «Prepara» e riprova.');
@@ -894,12 +1045,28 @@ function novitaDa(testo) {
   if (da < 0) return [];
   const out = [];
   for (const r of righe.slice(da + 1)) {
-    if (/^##\s/.test(r)) break;
+    if (/^#{2,}\s/.test(r)) break;      // anche «### Dalla 3.7.0»: quelle righe le dà la release della 3.7.0
     const m = r.match(/^\s*[-*]\s+(.*)$/);
     if (m) out.push(m[1].replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]*)`/g, '$1').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim().slice(0, 600));
     if (out.length >= 15) break;
   }
   return out;
+}
+/** Dalle release di GitHub quelle più nuove di «attuale» (niente bozze né anteprime), dalla più
+ *  recente: { ultima: la release da scaricare, versioni: [{ versione, novita }], forseAltre }. */
+function versioniNuove(lista, attuale) {
+  if (!Array.isArray(lista)) return null;
+  const buone = lista.filter(j => j && j.tag_name && !j.draft && !j.prerelease)
+    .map(j => ({ j, v: String(j.tag_name).replace(/^v/, '') }))
+    .sort((a, b) => confrontaVersioni(b.v, a.v));
+  if (!buone.length) return null;
+  const nuove = buone.filter(x => confrontaVersioni(x.v, attuale) > 0);
+  return {
+    ultima: buone[0].j,
+    versioni: nuove.map(x => ({ versione: x.v, novita: novitaDa(x.j.body), pagina: x.j.html_url || null })),
+    // 30 release lette e tutte più nuove: ce ne possono essere altre più vecchie che non abbiamo visto
+    forseAltre: lista.length >= 30 && nuove.length === buone.length
+  };
 }
 let ultimoControllo = null;
 async function controllaAggiornamento(forza) {
@@ -908,23 +1075,66 @@ async function controllaAggiornamento(forza) {
   if (!forza && ultimoControllo && Date.now() - ultimoControllo.quando < (ultimoControllo.dati.nuova ? 6 * 3600e3 : 10 * 60e3)) return ultimoControllo.dati;
   const repo = repoGitHub();
   if (!VERSIONE || !repo) return { attuale: VERSIONE, nuova: null };
-  let j = null;
-  try { j = JSON.parse(await scaricaTesto(process.env.MYVTT_API_RILASCI || `https://api.github.com/repos/${repo}/releases/latest`) || 'null'); } catch {}
-  if (!j || !j.tag_name) {
+  // le ultime 30 release, per mostrare le novità di tutte quelle uscite dopo la propria
+  let lista = null;
+  try { lista = JSON.parse(await scaricaTesto(process.env.MYVTT_API_RILASCI || `https://api.github.com/repos/${repo}/releases?per_page=30`) || 'null'); } catch {}
+  if (lista && !Array.isArray(lista)) lista = [lista];
+  const nuove = versioniNuove(lista, VERSIONE);
+  if (!nuove) {
     const motivo = ultimoErroreRete || 'risposta non valida';
     say(`Controllo degli aggiornamenti: GitHub non risponde (${motivo}).`, 'warn');
     return { attuale: VERSIONE, nuova: null, offline: true, motivo };
   }
-  const nuova = String(j.tag_name).replace(/^v/, '');
+  const j = nuove.ultima;
   const dati = {
-    attuale: VERSIONE, nuova: confrontaVersioni(nuova, VERSIONE) > 0 ? nuova : null,
-    pagina: j.html_url || `https://github.com/${repo}/releases/latest`,
-    file: fileAggiornamento(Array.isArray(j.assets) ? j.assets : []), mobile: MOBILE,
-    novita: novitaDa(j.body)
+    attuale: VERSIONE, nuova: nuove.versioni.length ? nuove.versioni[0].versione : null,
+    pagina: j ? j.html_url || `https://github.com/${repo}/releases/latest` : `https://github.com/${repo}/releases/latest`,
+    tutte: `https://github.com/${repo}/releases`,
+    file: j ? fileAggiornamento(Array.isArray(j.assets) ? j.assets : []) : null, mobile: MOBILE,
+    novita: j ? novitaDa(j.body) : [],
+    versioni: nuove.versioni, forseAltre: nuove.forseAltre
   };
   ultimoControllo = { quando: Date.now(), dati };
   if (dati.nuova) say(`C'è una versione nuova di LIBRE VTT: ${dati.nuova} (questa è la ${VERSIONE}).`, 'ok');
   return dati;
+}
+/** Dopo un aggiornamento: toglie l'installatore che aveva scaricato l'app (e su Mac smonta il .dmg).
+ *  Solo quel file, riconosciuto dal percorso salvato: niente altro in Download. Se la versione in
+ *  uso è ancora più vecchia l'aggiornamento non è riuscito, e il file resta. */
+function pulisciAggiornamento() {
+  const x = conf.aggiornamentoScaricato;
+  if (!x || MOBILE) return;
+  if (!x.file || typeof x.file !== 'string' || !x.versione) { delete conf.aggiornamentoScaricato; return salvaConf(); }
+  if (confrontaVersioni(VERSIONE, x.versione) < 0) {
+    say(`L'aggiornamento alla ${x.versione} non sembra riuscito (questa è ancora la ${VERSIONE}): l'installatore è in ${x.file}.`, 'warn');
+    state.aggiornamentoFallito = { versione: x.versione, file: x.file };
+    return;
+  }
+  const togli = () => {
+    let resta = false;   // l'installatore può essere ancora aperto (Windows): si riprova la volta dopo
+    for (const f of [x.file, x.file + '.part']) {
+      try { fs.unlinkSync(f); say('Tolto l\'installatore dell\'aggiornamento: ' + f, 'ok'); }
+      catch (e) { if (e.code !== 'ENOENT') resta = true; }
+    }
+    if (!resta) { delete conf.aggiornamentoScaricato; salvaConf(); }
+  };
+  if (!MAC) return togli();
+  // il disco montato da quel .dmg (non quello da cui gira l'app, se è partita dal disco)
+  execFile('hdiutil', ['info'], { encoding: 'utf8', timeout: 10000 }, (e, out) => {
+    const dischi = [];
+    for (const blocco of String(out || '').split(/^=+$/m)) {
+      const img = (blocco.match(/^image-path\s*:\s*(.+)$/m) || [])[1];
+      const dev = (blocco.match(/^(\/dev\/disk\d+)\b/m) || [])[1];
+      const vol = (blocco.match(/\t(\/Volumes\/.+)$/m) || [])[1];
+      if (img && dev && path.resolve(img.trim()) === path.resolve(x.file) && !(vol && ROOT.startsWith(vol.trim()))) dischi.push(dev);
+    }
+    if (!dischi.length) return togli();
+    let restano = dischi.length;
+    for (const d of dischi) execFile('hdiutil', ['detach', d], { timeout: 20000 }, err => {
+      if (err) say('Non riesco a smontare il disco dell\'aggiornamento (' + d + '): ' + err.message, 'warn');
+      if (!--restano) togli();
+    });
+  });
 }
 let aggiornando = false;
 async function installaAggiornamento() {
@@ -953,6 +1163,8 @@ async function installaAggiornamento() {
     if (MOBILE === 'android') return { apk: dest };
     // sul computer si avvia l'installatore; LIBRE VTT si chiude, così i suoi file si possono sostituire
     if (!WIN) fs.chmodSync(dest, 0o755);
+    // si ricorda che cosa ha scaricato: alla prossima partenza, se l'aggiornamento è andato, lo toglie
+    conf.aggiornamentoScaricato = { file: dest, versione: a.nuova }; salvaConf();
     const [cmd, args] = WIN ? (dest.endsWith('.cmd') ? ['cmd', ['/c', 'start', '', dest]] : [dest, []])
       : MAC ? ['open', [dest]] : ['bash', [dest]];
     const p = spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: false, cwd: dir });
@@ -1102,6 +1314,26 @@ async function prepara() {
   state.busy = null; cache.at = 0; push();
 }
 // ---------- la finestra ----------
+// Su Mac i browser possono stare anche in ~/Applications, o altrove: lì li trova Spotlight (mdfind).
+const BROWSER_MAC = [
+  ['Google Chrome', 'com.google.Chrome'], ['Microsoft Edge', 'com.microsoft.edgemac'],
+  ['Brave Browser', 'com.brave.Browser'], ['Chromium', 'org.chromium.Chromium'],
+  ['Vivaldi', 'com.vivaldi.Vivaldi'], ['Google Chrome Canary', 'com.google.Chrome.canary']
+];
+let browserMacTrovati = null;
+function browserMac() {
+  if (browserMacTrovati) return browserMacTrovati;
+  const out = [];
+  for (const [nome, id] of BROWSER_MAC) {
+    for (const dir of ['/Applications', path.join(os.homedir(), 'Applications')]) out.push(path.join(dir, nome + '.app', 'Contents', 'MacOS', nome));
+    try {
+      const trovate = require('child_process').execFileSync('mdfind', [`kMDItemCFBundleIdentifier == '${id}'`], { encoding: 'utf8', timeout: 3000 })
+        .split(/\r?\n/).map(r => r.trim()).filter(r => r.endsWith('.app') && !r.startsWith('/Volumes/'));
+      for (const app of trovate) out.push(path.join(app, 'Contents', 'MacOS', nome));
+    } catch {}
+  }
+  return (browserMacTrovati = out);
+}
 function trovaBrowser() {
   const prove = WIN ? [
     path.join(process.env['PROGRAMFILES'] || 'C:\\Program Files', 'Google\\Chrome\\Application\\chrome.exe'),
@@ -1109,12 +1341,7 @@ function trovaBrowser() {
     path.join(process.env['LOCALAPPDATA'] || '', 'Google\\Chrome\\Application\\chrome.exe'),
     path.join(process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)', 'Microsoft\\Edge\\Application\\msedge.exe'),
     path.join(process.env['PROGRAMFILES'] || 'C:\\Program Files', 'Microsoft\\Edge\\Application\\msedge.exe')
-  ] : MAC ? [
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
-    '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
-    '/Applications/Chromium.app/Contents/MacOS/Chromium'
-  ] : [
+  ] : MAC ? browserMac() : [
     '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium',
     '/usr/bin/chromium-browser', '/usr/bin/microsoft-edge', '/usr/bin/brave-browser', '/snap/bin/chromium'
   ];
@@ -1130,27 +1357,43 @@ function apriFinestra(url) {
       q.on('error', e => say('Non riesco ad aprire il browser: ' + e.message, 'warn'));
       q.unref();
     } catch (e) { say('Non riesco ad aprire il browser: ' + e.message, 'warn'); }
-    say('Chrome non trovato: ho aperto il browser normale.', 'warn');
+    say(`Chrome (o Edge, Brave, Chromium) non trovato: ho aperto ${url} nel browser normale con «${cmd}».`, 'warn');
     sorvegliaSenzaFinestra();
     return null;
   }
-  const p = spawn(b, [
+  const args = [
     '--app=' + url,
     '--user-data-dir=' + PROFILE,
     '--no-first-run', '--no-default-browser-check',
     '--window-size=1440,900',
     ...argScala()
-  ], { detached: false, stdio: 'ignore' });
-  // Chiusa la finestra, si spegne tutto.
-  p.on('exit', () => { say('Finestra chiusa: spengo.'); stopAll(); setTimeout(() => process.exit(0), 300); });
+  ];
+  say(`Apro la finestra con ${b} ${args.join(' ')}`);
+  const partita = Date.now();
+  const p = spawn(b, args, { detached: false, stdio: 'ignore' });
+  p.on('error', e => say('Non riesco ad avviare il browser della finestra: ' + e.message, 'warn'));
+  p.on('exit', codice => {
+    // Uscito subito: il browser con quel profilo era già aperto (per esempio un LIBRE VTT di prima,
+    // appena aggiornato) e gli ha passato la finestra. Spegnere qui lasciava la finestra vuota:
+    // si resta accesi finché la pagina dà segni di vita, come col browser normale.
+    if (Date.now() - partita < 8000 && !finestraVista) {
+      say(`Il browser è uscito subito (codice ${codice}): la finestra l'ha aperta un'altra sua copia. Resto acceso finché la pagina è aperta.`, 'warn');
+      return sorvegliaSenzaFinestra();
+    }
+    say('Finestra chiusa: spengo.'); stopAll(); setTimeout(() => process.exit(0), 300);
+  });
+  // se dopo un po' la pagina non si è fatta viva, il registro lo dice (con il browser usato)
+  setTimeout(() => { if (!finestraVista) say(`La finestra non ha ancora caricato la pagina (${url}, browser ${path.basename(b)}). Se resta vuota, aprila a mano in un browser.`, 'warn'); }, 20000).unref();
   return p;
 }
 
 // Nel browser normale non si sa quando la scheda viene chiusa: le pagine di LIBRE VTT dicono
 // «ci sono» ogni 20 secondi. Se per qualche minuto non c'è più nessuno, si spegne tutto
 // (altrimenti i server resterebbero accesi per sempre, di nascosto).
-let ultimoSegno = Date.now();
+let ultimoSegno = Date.now(), sorvegliando = false;
 function sorvegliaSenzaFinestra() {
+  if (sorvegliando) return;
+  sorvegliando = true; ultimoSegno = Date.now();
   setInterval(() => {
     if (listeners.size) ultimoSegno = Date.now();
     if (Date.now() - ultimoSegno > +(process.env.MYVTT_ATTESA_MS || 180000)) {
@@ -1208,7 +1451,7 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/api/eventi') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
     res.write(': ciao\n\n');
-    listeners.add(res);
+    listeners.add(res); finestraVista = true;
     req.on('close', () => listeners.delete(res));
     return;
   }
@@ -1242,6 +1485,20 @@ const server = http.createServer(async (req, res) => {
   }
   // --- campagne ---
   if (u.pathname === '/api/campagne') return ok(elencoCampagne());
+  if (u.pathname === '/api/unite') {
+    return ok({ unite: Object.values(unite()).sort((a, b) => (b.ultimoAccesso || 0) - (a.ultimoAccesso || 0))
+      .map(e => ({ codice: e.codice, nome: e.nome || null, ultimaScena: e.ultimaScena || null, ultimoAccesso: e.ultimoAccesso || null, miniatura: !!e.miniatura, nomeGiocatore: e.nomeGiocatore || null })) });
+  }
+  if (u.pathname === '/api/unite/stato') return ok(await statoUnite());
+  if (u.pathname === '/api/unite/miniatura') {
+    const c = u.searchParams.get('codice') || '';
+    if (!/^[a-f0-9]{64}$/.test(c)) return invia(res, 404, 'no');
+    return fs.readFile(path.join(UNITE_DIR, c + '.img'), (e, d) => e ? invia(res, 404, 'no') : invia(res, 200, d, d[0] === 0x89 ? 'image/png' : d[0] === 0xff ? 'image/jpeg' : 'image/webp'));
+  }
+  if (u.pathname === '/api/unite/dimentica' && req.method === 'POST') {
+    return corpo(m => { const c = String((m || {}).codice || ''); delete unite()[c]; try { fs.unlinkSync(path.join(UNITE_DIR, c + '.img')); } catch {} salvaConf(); ok({ ok: true }); });
+  }
+  if (u.pathname === '/api/invito/cambia' && req.method === 'POST') return corpo(async () => ok(await cambiaCodice()));
   if (u.pathname === '/api/sfoglia') return ok(sfoglia(u.searchParams.get('path') || ''));
   if (u.pathname === '/api/campagna/info') return ok(infoCampagna(u.searchParams.get('path') || ''));
   if (u.pathname === '/api/campagna/nuova' && req.method === 'POST') {
@@ -1366,6 +1623,7 @@ function segnalaPronto() {
 }
 (async () => {
   conf.porte = conf.porte || {};
+  try { pulisciAggiornamento(); } catch (e) { say('Pulizia dopo l\'aggiornamento: ' + e.message, 'warn'); }
   const pref = +(process.env.UI_PORT || conf.porte.ui || PREF.ui);
   if (!MOBILE && await èMyVtt(pref)) return mostraFinestraEsistente(pref);
   UI_PORT = await portaLibera(pref);

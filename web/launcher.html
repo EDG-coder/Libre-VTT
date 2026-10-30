@@ -76,8 +76,12 @@
   #boxAgg { margin: 0 0 14px; border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
   #boxAgg .t { font-weight: 700; margin-bottom: 2px; }
   #boxAgg p { margin: 0 0 10px; color: var(--muted); font-size: .86rem; }
-  #aggNovita2 { margin: 0 0 12px; padding-left: 20px; font-size: .86rem; max-height: 260px; overflow: auto; }
+  #aggNovita2 { margin: 0 0 12px; font-size: .86rem; max-height: 300px; overflow: auto; }
+  #aggNovita2 .ver { font-weight: 700; margin: 8px 0 4px; }
+  #aggNovita2 .ver:first-child { margin-top: 0; }
+  #aggNovita2 ul { margin: 0; padding-left: 20px; }
   #aggNovita2 li { margin-bottom: 5px; }
+  #aggNovita2 a { color: var(--accent); }
   #aggRiga { text-align: center; margin: 6px 0 0; font-size: .8rem; }
   #aggRiga a { color: var(--muted); }
   .avviso .t { font-weight: 600; margin-bottom: 4px; }
@@ -105,6 +109,21 @@
   .logBox div.ok { color: var(--ok); }
   .hide { display: none !important; }
   footer { text-align: center; color: var(--muted); font-size: .78rem; margin-top: 18px; }
+
+  /* ---------- «Mi unisco»: le campagne a cui ti sei già unito ---------- */
+  #uniteLista { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  #uniteLista:empty { display: none; }
+  .unita { position: relative; display: flex; flex-direction: column; text-align: left; padding: 0; overflow: hidden;
+    border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; font: inherit; cursor: pointer; }
+  .unita:hover { border-color: var(--accent); }
+  .unita .foto { aspect-ratio: 16 / 10; background: var(--panel-3, #222) center / cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; }
+  .unita .nome { font-weight: 700; padding: 8px 10px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .unita .stato { padding: 2px 10px 9px; font-size: .8rem; color: var(--muted); }
+  .unita .stato::before { content: "●"; margin-right: 5px; color: var(--muted); }
+  .unita .stato.online::before { color: var(--ok); }
+  .unita .stato.sessione::before { color: var(--accent); }
+  .unita .via { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: 0;
+    background: rgba(0, 0, 0, .55); color: #fff; cursor: pointer; font-size: .8rem; }
 
   /* ---------- campagne ---------- */
   .clist { display: flex; flex-direction: column; gap: 8px; }
@@ -234,7 +253,7 @@
   <div class="box hide" id="boxAgg">
     <div class="t" id="aggTit">C'è una versione nuova di LIBRE VTT</div>
     <p id="aggTesto"></p>
-    <ul id="aggNovita2" class="hide"></ul>
+    <div id="aggNovita2" class="hide"></div>
     <div class="row">
       <button class="b go" id="aggSi">Aggiorna</button>
       <button class="b" id="aggNovita">Novità</button>
@@ -259,7 +278,8 @@
   </div>
 
   <div class="box hide" id="boxJoin">
-    <h2>Il codice della partita</h2>
+    <div id="uniteLista"></div>
+    <h2 id="codiceTit">Il codice della partita</h2>
     <div class="row">
       <input type="text" id="codice" placeholder="Incolla qui il codice che ti hanno mandato" autocomplete="off" spellcheck="false">
       <button class="b go" id="entra">Entra</button>
@@ -407,7 +427,15 @@ function disegna() {
         const cp = document.createElement('button');
         cp.className = 'b go'; cp.textContent = 'Copia';
         cp.onclick = async () => { try { await navigator.clipboard.writeText(S.sessionId); cp.textContent = 'Copiato'; setTimeout(() => cp.textContent = 'Copia', 1400); } catch {} };
-        righe.append(inp, cp);
+        const nuovo = document.createElement('button');
+        nuovo.className = 'b'; nuovo.textContent = 'Cambia codice';
+        nuovo.title = 'Un codice nuovo: chi è dentro adesso lo riceve da solo, a chi è fuori lo mandi tu. Quello vecchio non vale più.';
+        nuovo.onclick = async () => {
+          if (!confirm('Cambiare il codice della campagna?\n\nChi è collegato adesso riceve quello nuovo da solo. Chi è fuori dovrà averlo da te: il vecchio non vale più. È il modo per chiudere fuori chi non vuoi più.')) return;
+          nuovo.disabled = true; nuovo.textContent = 'Cambio…';
+          try { const r = await post('/api/invito/cambia', {}); if (r.errore) alert(r.errore); } finally { setTimeout(carica, 3500); }
+        };
+        righe.append(inp, cp, nuovo);
         if (NAT.disponibile) {
           const sh = document.createElement('button');
           sh.className = 'b'; sh.textContent = 'Condividi';
@@ -438,11 +466,49 @@ async function carica() {
 $('scelte').addEventListener('click', e => {
   const b = e.target.closest('[data-go]'); if (!b) return;
   const go = b.dataset.go;
-  if (go === 'join') { $('scelte').classList.add('hide'); $('boxJoin').classList.remove('hide'); $('codice').focus(); return; }
+  if (go === 'join') { $('scelte').classList.add('hide'); $('boxJoin').classList.remove('hide'); apriUnite(); $('codice').focus(); return; }
   apriCampagne(go);                                   // da soli o conducendo: prima si sceglie la campagna
 });
-$('indietro').onclick = () => { $('boxJoin').classList.add('hide'); $('scelte').classList.remove('hide'); };
+$('indietro').onclick = () => { $('boxJoin').classList.add('hide'); $('scelte').classList.remove('hide'); chiudiUnite(); };
+// --- le campagne a cui ti sei già unito: un tocco ed entri (il codice non serve più) ---
+let uniteTimer = 0, uniteStato = {};
+async function apriUnite() {
+  await disegnaUnite();
+  aggiornaStatoUnite();
+  clearInterval(uniteTimer);
+  uniteTimer = setInterval(() => { if (!$('boxJoin').classList.contains('hide') && document.visibilityState === 'visible') aggiornaStatoUnite(); }, 45000);
+}
+function chiudiUnite() { clearInterval(uniteTimer); uniteTimer = 0; }
+async function aggiornaStatoUnite() {
+  try { uniteStato = await fetch('/api/unite/stato').then(r => r.json()); } catch { return; }
+  disegnaUnite();
+}
+async function disegnaUnite() {
+  let lista = [];
+  try { lista = (await fetch('/api/unite').then(r => r.json())).unite || []; } catch {}
+  const trp = window.tr || (x => x);
+  $('codiceTit').textContent = lista.length ? trp('Un\'altra partita? Il suo codice') : trp('Il codice della partita');
+  $('uniteLista').replaceChildren(...lista.map(e => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'unita';
+    const foto = document.createElement('div'); foto.className = 'foto';
+    if (e.miniatura) foto.style.backgroundImage = `url("/api/unite/miniatura?codice=${e.codice}&t=${e.ultimoAccesso || 0}")`; else foto.textContent = '🧭';
+    const nome = document.createElement('div'); nome.className = 'nome'; nome.textContent = e.nome || trp('Campagna') + ' ' + e.codice.slice(0, 6);
+    const st = document.createElement('div'), s = uniteStato[e.codice];
+    st.className = 'stato' + (s && s.online ? (s.sessioneDa ? ' sessione' : ' online') : '');
+    st.textContent = !s ? trp('controllo…') : s.qui ? trp('ci sei dentro adesso')
+      : !s.online ? trp('offline')
+      : s.sessioneDa ? trp('in sessione da {m} min', { m: Math.max(30, Math.round((Date.now() - s.sessioneDa) / 60000)) })
+      : s.membriOnline != null ? (s.membriOnline === 1 ? trp('online · 1 giocatore dentro') : trp('online · {n} giocatori dentro', { n: s.membriOnline })) : trp('online');
+    b.title = e.ultimaScena ? trp('Ultima scena: {s}', { s: e.ultimaScena }) : '';
+    const via = document.createElement('button'); via.type = 'button'; via.className = 'via'; via.textContent = '✕'; via.title = trp('Togli dall\'elenco');
+    via.onclick = async ev => { ev.stopPropagation(); if (!confirm(trp('Togliere «{n}» dall\'elenco? Per rientrare servirà di nuovo il codice.', { n: nome.textContent }))) return; await post('/api/unite/dimentica', { codice: e.codice }); disegnaUnite(); };
+    b.append(foto, nome, st, via);
+    b.onclick = () => { $('codice').value = e.codice; $('entra').click(); };
+    return b;
+  }));
+}
 $('entra').onclick = () => {
+  chiudiUnite();
   const id = $('codice').value.trim();
   if (!id) { $('codice').focus(); return; }
   if (!S.link) { codiceInSospeso = id; $('boxJoin').classList.add('hide'); chiediPreparazione('join'); return; }
@@ -832,26 +898,39 @@ function novitaDaTesto(testo) {
   const righe = String(testo || '').split(/\r?\n/), da = righe.findIndex(r => /^##\s+Novit/i.test(r)), out = [];
   if (da < 0) return out;
   for (const r of righe.slice(da + 1)) {
-    if (/^##\s/.test(r)) break;
+    if (/^#{2,}\s/.test(r)) break;      // «### Dalla 3.7.0» la mostra la release della 3.7.0
     const m = r.match(/^\s*[-*]\s+(.*)$/);
     if (m) out.push(m[1].replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]*)`/g, '$1').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim());
   }
   return out.slice(0, 15);
 }
+// Come versioniNuove in launcher.js: le release più nuove della propria, dalla più recente.
+function versioniNuove(lista, attuale) {
+  if (!Array.isArray(lista)) return null;
+  const buone = lista.filter(j => j && j.tag_name && !j.draft && !j.prerelease)
+    .map(j => ({ j, v: String(j.tag_name).replace(/^v/, '') })).sort((a, b) => confrontaV(b.v, a.v));
+  if (!buone.length) return null;
+  const nuove = buone.filter(x => confrontaV(x.v, attuale) > 0);
+  return { ultima: buone[0].j, versioni: nuove.map(x => ({ versione: x.v, novita: novitaDaTesto(x.j.body), pagina: x.j.html_url || null })),
+           forseAltre: lista.length >= 30 && nuove.length === buone.length };
+}
 async function controlloDaApp() {
   const st = S && S.versione ? S : await fetch('/api/stato').then(r => r.json());
   const repo = st.repo || 'EDG-coder/Libre-VTT';
-  let j;
+  let nuove;
   try {
-    const r = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
+    const r = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=30`, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    j = await r.json();
+    nuove = versioniNuove(await r.json(), st.versione);
+    if (!nuove) throw new Error('nessuna release');
   } catch (e) { return { attuale: st.versione, nuova: null, offline: true, motivo: e.message, mobile: st.mobile }; }
-  const nuova = String(j.tag_name || '').replace(/^v/, '');
+  const j = nuove.ultima;
   const nomi = st.mobile === 'android' ? (st.arch === 'arm64' ? ['LIBRE-VTT-Android-arm64.apk', 'LIBRE-VTT-Android.apk'] : ['LIBRE-VTT-Android.apk']) : [];
   let file = null;
   for (const n of nomi) { const a = (j.assets || []).find(x => x.name === n); if (a) { file = { nome: a.name, url: a.browser_download_url, byte: a.size || 0 }; break; } }
-  return { attuale: st.versione, nuova: nuova && confrontaV(nuova, st.versione) > 0 ? nuova : null, pagina: j.html_url, file, mobile: st.mobile, novita: novitaDaTesto(j.body) };
+  return { attuale: st.versione, nuova: nuove.versioni.length ? nuove.versioni[0].versione : null, pagina: j.html_url,
+           tutte: `https://github.com/${repo}/releases`, file, mobile: st.mobile, novita: novitaDaTesto(j.body),
+           versioni: nuove.versioni, forseAltre: nuove.forseAltre };
 }
 const chiediAgg = () => NAT.disponibile ? controlloDaApp() : fetch('/api/aggiornamento?ora=1').then(r => r.json());
 async function controllaAgg() {
@@ -865,8 +944,21 @@ async function controllaAgg() {
     : android ? 'Scarico il file nuovo e Android ti chiede di confermare l\'installazione. Le campagne restano.'
     : 'Scarico l\'installatore e lo avvio; LIBRE VTT si chiude per lasciarlo lavorare. Le campagne restano.');
   $('aggSi').textContent = ios || !AGG.file ? 'Apri la pagina' : 'Aggiorna';
-  const lista = $('aggNovita2');
-  lista.replaceChildren(...(AGG.novita || []).map(t => { const li = document.createElement('li'); li.textContent = t; return li; }));
+  // le novità di tutte le versioni uscite dopo la propria, una sotto l'altra (la più recente in alto)
+  const lista = $('aggNovita2'), el = (tag, testo) => { const e = document.createElement(tag); if (testo != null) e.textContent = testo; return e; };
+  const versioni = AGG.versioni && AGG.versioni.length ? AGG.versioni : [{ versione: AGG.nuova, novita: AGG.novita || [] }];
+  const pezzi = [];
+  for (const v of versioni) {
+    if (!v.novita || !v.novita.length) continue;
+    if (versioni.length > 1) { const t = el('div', v.versione); t.className = 'ver'; pezzi.push(t); }
+    const ul = el('ul'); for (const t of v.novita) ul.append(el('li', t)); pezzi.push(ul);
+  }
+  if (pezzi.length && AGG.forseAltre && AGG.tutte) {
+    const p = el('p'), a = el('a', tr('le altre sono nella pagina delle release'));
+    a.href = '#'; a.onclick = e => { e.preventDefault(); apriPagina(AGG.tutte); };
+    p.append(tr('Qui ci sono solo le ultime 30 versioni:'), ' ', a); pezzi.push(p);
+  }
+  lista.replaceChildren(...pezzi);
   lista.classList.toggle('hide', !lista.children.length);
   $('aggNovita').textContent = lista.children.length ? 'Pagina della versione' : 'Novità';
   $('boxAgg').classList.remove('hide');

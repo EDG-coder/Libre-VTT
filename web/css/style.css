@@ -27,10 +27,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page-b
 #world {
   position: absolute; left: 0; top: 0;
   transform-origin: 0 0;
-  will-change: transform;
 }
 
-#stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+#stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+/* livello a parte solo mentre la vista si muove: a gesto finito si ridisegna nitida (vedi applyView) */
+body.vistaMuove #world, body.vistaMuove #stage { will-change: transform; }
 #boardFill, #board { position: absolute; }
 #boardFill { background: var(--board-fill); pointer-events: none; }
 /* bordo: spessore costante a schermo (--inv = 1/zoom), colore e spessore dalle impostazioni; sta fuori dal rettangolo */
@@ -457,6 +458,7 @@ body.menu-open #sideToggle svg { transform: rotate(180deg); }
 #sceneDialog { width: min(420px, 92vw); padding: 20px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, .55); }
 #sceneDialog::backdrop { background: rgba(0, 0, 0, .55); backdrop-filter: blur(3px); }
 #sceneDialog h3 { margin: 0 0 14px; font-size: 18px; }
+#sceneDialog .campoNota { display: block; margin-top: 4px; font-size: 12px; color: var(--muted, #999); font-weight: normal; }
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; font-size: 13px; color: var(--muted); }
 .field input[type=text] { padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; font-size: 14px; }
 .field input[type=file] { font-size: 13px; color: var(--text); }
@@ -518,3 +520,12 @@ html:not(.ui-tel) body.menu-open #dockZone { left: calc((100vw - min(var(--side-
 /* sussurri */
 .msg.whisper { border-left: 3px solid #b48cff; background: color-mix(in srgb, #b48cff 12%, transparent); font-style: italic; }
 .msg.whisper .wh { font-style: normal; font-size: 12px; color: #c9b2ff; }
+/* griglia: regolazione fine e «adatta alla griglia della mappa» */
+.gridForm .fine input[type=number] { width: 80px; }
+.gridForm .gridFit { flex-wrap: wrap; gap: 6px; }
+#viewport.fitGrid { cursor: crosshair; }
+/* cartelle delle scene */
+.sceneFolder > button.pick span:first-child { color: var(--muted); white-space: nowrap; }
+.sceneFolder.sopra { outline: 2px dashed var(--accent); outline-offset: -2px; }
+#sceneFolderNew { display: block; width: 100%; margin-top: 4px; padding: 7px 10px; border: 1px dashed var(--line); border-radius: 10px; background: none; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
+#sceneFolderNew:hover { background: var(--panel-3); }
