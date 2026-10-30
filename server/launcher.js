@@ -272,6 +272,8 @@ function run(key, cmd, args, opts = {}) {
   state.procs[key] = p;
   const pipe = (s, kind) => s.on('data', d => String(d).split(/\r?\n/).forEach(l => {
     if (!l.trim()) return;
+    const cmd = key === 'regole' && /^@@LIBRE ([\w-]+) (.*)$/.exec(l);    // una richiesta del server di gioco (vedi avviatore())
+    if (cmd) { try { dalServerDiGioco(cmd[1], JSON.parse(cmd[2] || '{}')); } catch (e) { say('Richiesta del server di gioco non valida: ' + e.message, 'warn'); } return; }
     const m = l.match(/^\s{6}([a-z0-9]{40,})\s*$/i);          // l'ID stampato da uffa-link
     // nel registro della finestra: niente istruzioni da terminale, e l'ID accorciato (quello intero è nel riquadro «Codice»)
     const daTerminale = /Ctrl\+C|uffa-link\/target|Ora avvia anche|uffa-link (host|join)\b|Il VTT si collega a ws:/.test(l);
@@ -285,7 +287,7 @@ function run(key, cmd, args, opts = {}) {
   p.on('exit', code => {
     say(`[${key}] chiuso (${code})`, code ? 'warn' : '');
     if (state.procs[key] === p) delete state.procs[key];
-    if (!opts.keep || myGen !== gen || !state.mode) return;   // spento apposta
+    if (!opts.keep || myGen !== gen || !state.mode || p.sostituito) return;   // spento apposta
     if (Date.now() - born > 60000) restarts[key] = 0;          // era stato su a lungo: si riparte da capo
     const n = restarts[key] = (restarts[key] || 0) + 1;
     const wait = Math.min(15000, 1000 * n);
@@ -303,8 +305,144 @@ function stopAll() {
   for (const k of Object.keys(restarts)) delete restarts[k];
   for (const [k, p] of Object.entries(state.procs)) { try { p.kill(); } catch {} delete state.procs[k]; }
   try { fs.unlinkSync(LINK_ID_FILE); } catch {}
-  state.mode = null; state.sessionId = null; state.campagna = null; state.porte = null;
+  try { fs.unlinkSync(LINK_CHIAVE_FILE); } catch {}
+  state.mode = null; state.sessionId = null; state.campagna = null; state.porte = null; state.joinCodice = null;
   push();
+}
+
+// ---------- Codice d'invito stabile (punto 24) e campagne a cui ci si è uniti (punto 25) ----------
+// Il codice è l'ID di uffa-link, che nasce da una chiave: la chiave sta nella campagna
+// (data/invito.chiave), quindi il codice resta lo stesso a ogni apertura finché il master non lo
+// cambia. In campagna.json c'è anche, per comodità, invito: { codice, creato }.
+const LINK_CHIAVE_FILE = path.join(USERDIR, 'uffa-link.chiave');
+/** L'ID (il codice) che uffa-link avrà con questa chiave: la chiave pubblica Ed25519, in esadecimale. */
+function idDaChiave(hex) {
+  const k = crypto.createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from(hex, 'hex')]), format: 'der', type: 'pkcs8' });
+  return Buffer.from(crypto.createPublicKey(k).export({ format: 'jwk' }).x, 'base64url').toString('hex');
+}
+function invitoCampagna(dir, nuova) {
+  const f = path.join(dir, 'data', 'invito.chiave');
+  let chiave = null;
+  if (!nuova) try { const t = fs.readFileSync(f, 'utf8').trim(); if (/^[a-f0-9]{64}$/.test(t)) chiave = t; } catch {}
+  if (!chiave) { chiave = crypto.randomBytes(32).toString('hex'); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, chiave); }
+  const codice = idDaChiave(chiave);
+  try {
+    const mf = path.join(dir, 'campagna.json'), meta = leggiJson(mf);
+    if (meta && (!meta.invito || meta.invito.codice !== codice)) { meta.invito = { codice, creato: new Date().toISOString() }; fs.writeFileSync(mf, JSON.stringify(meta, null, 2)); }
+  } catch {}
+  return { chiave, codice };
+}
+/** «Cambia codice»: chiave nuova; il codice nuovo va subito ai giocatori collegati (lo salvano da
+ *  soli), poi la sessione si riapre con la chiave nuova. Il codice vecchio non vale più. */
+let cambiando = false;
+async function cambiaCodice() {
+  if (state.mode !== 'host' || !state.campagna || cambiando) return { errore: 'Non stai conducendo una partita.' };
+  cambiando = true;
+  try {
+    const inv = invitoCampagna(state.campagna.path, true);
+    say('Codice nuovo: lo mando ai giocatori collegati e riapro la sessione.', 'ok');
+    try {
+      await new Promise((res, rej) => {
+        const r = http.request({ host: '127.0.0.1', port: state.porte.game, path: '/api/invito', method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 4000 }, x => { x.resume(); x.on('end', res); });
+        r.on('error', rej); r.on('timeout', () => r.destroy(new Error('tempo scaduto'))); r.end(JSON.stringify({ codice: inv.codice }));
+      });
+    } catch (e) { say('Non sono riuscito ad avvisare i giocatori collegati: ' + e.message, 'warn'); }
+    await attesa(2500);                                   // il tempo di far arrivare il messaggio
+    fs.writeFileSync(LINK_CHIAVE_FILE, inv.chiave);
+    const p = state.procs.sessione;
+    if (p) { try { p.kill(); } catch {} }                 // si riaccende da solo, con la chiave nuova
+    return { codice: inv.codice };
+  } finally { cambiando = false; }
+}
+// Da giocatore: le campagne a cui ci si è uniti, nel file di configurazione (conf.unite), con
+// l'identità data dall'host, l'ultima scena vista e la sua miniatura (in USERDIR/unite/).
+const UNITE_DIR = path.join(USERDIR, 'unite');
+const unite = () => (conf.unite && typeof conf.unite === 'object' ? conf.unite : (conf.unite = {}));
+function ricordaUnita(codice, dati) {
+  if (!/^[a-f0-9]{64}$/.test(String(codice || ''))) return;
+  const u = unite(), e = u[codice] = { codice, ...(u[codice] || {}), ...dati, ultimoAccesso: Date.now() };
+  if (e.firma === null) delete e.firma;
+  salvaConf();
+}
+/** Le righe «@@LIBRE …» del server di gioco. */
+function dalServerDiGioco(cosa, d) {
+  if (cosa === 'cambia-codice' && state.mode === 'host') return cambiaCodice();
+  if (state.mode !== 'join' || !state.joinCodice) return;
+  const codice = state.joinCodice;
+  if (cosa === 'identita' && /^[a-f0-9]{24}$/.test(String(d.token || ''))) {
+    ricordaUnita(codice, { idGiocatore: d.token, firma: d.firma || null, ...(d.campagna ? { nome: String(d.campagna).slice(0, 80) } : {}), ...(d.nome ? { nomeGiocatore: String(d.nome).slice(0, 40) } : {}) });
+  } else if (cosa === 'miniatura' && typeof d.file === 'string' && d.file.startsWith(GUEST_DIR + path.sep)) {
+    try { fs.mkdirSync(UNITE_DIR, { recursive: true }); fs.copyFileSync(d.file, path.join(UNITE_DIR, codice + '.img')); } catch {}
+    ricordaUnita(codice, { ultimaScena: String(d.scena || '').slice(0, 80), miniatura: true });
+  } else if (cosa === 'nuovo-codice' && /^[a-f0-9]{64}$/.test(String(d.codice || '')) && d.codice !== codice) {
+    // il master ha cambiato codice: la voce passa al codice nuovo e ci si ricollega lì
+    const u = unite(), vecchia = u[codice];
+    if (vecchia) { u[d.codice] = { ...vecchia, codice: d.codice }; delete u[codice]; }
+    try { fs.renameSync(path.join(UNITE_DIR, codice + '.img'), path.join(UNITE_DIR, d.codice + '.img')); } catch {}
+    salvaConf();
+    say('Il master ha cambiato il codice: mi ricollego con quello nuovo.', 'ok');
+    state.joinCodice = d.codice;
+    const p = state.procs.sessione;
+    if (p) { p.sostituito = true; try { p.kill(); } catch {} delete state.procs.sessione; }
+    run('sessione', LINK, ['join', d.codice, '--port', String(state.porte.link)], { keep: true, cwd: USERDIR });
+  }
+}
+/** Il riquadro di una campagna: si chiede all'host com'è (online, quanti dentro, in sessione)
+ *  aprendo per un momento un collegamento come quello di «join». Nessuna risposta = offline. */
+async function statoUnita(e) {
+  if (MOBILE ? !LINK_CTRL : !linkBin()) return { online: false };
+  const porta = await portaLibera(PREF.link + 20, [UI_PORT, ...(state.porte ? [state.porte.web, state.porte.game, state.porte.link] : [])]);
+  return new Promise(resolve => {
+    let finito = false, collegato = false, sock = null, buf = '';
+    const p = lancia(LINK, ['join', e.codice, '--port', String(porta)], { cwd: USERDIR });
+    const fine = r => {
+      if (finito) return; finito = true; clearTimeout(timer);
+      try { sock && sock.destroy(); } catch {} try { p.kill(); } catch {}
+      // collegato all'host ma senza risposta: un LIBRE VTT di prima della 3.7.2, acceso
+      resolve(r || (collegato ? { online: true } : { online: false }));
+    };
+    const timer = setTimeout(() => fine(null), 15000);
+    p.on('error', () => fine(null)); p.on('exit', () => fine(null));
+    const leggi = s => s.on('data', d => { if (/collegato!/.test(String(d))) collegato = true; });
+    leggi(p.stdout); leggi(p.stderr);
+    // la porta è pronta poco dopo: si prova a entrare e a chiedere
+    (async () => {
+      for (let i = 0; i < 20 && !finito && !sock; i++) {
+        await attesa(250);
+        await new Promise(ok => {
+          const s = net.connect(porta, '127.0.0.1');
+          s.on('connect', () => { sock = s; s.write(JSON.stringify({ t: 'stato', token: e.idGiocatore || '', firma: e.firma || undefined }) + '\n'); ok(); });
+          s.on('error', () => ok());
+          s.on('data', d => {
+            buf += d.toString('utf8');
+            const i = buf.indexOf('\n'); if (i < 0) return;
+            let m = null; try { m = JSON.parse(buf.slice(0, i)); } catch {}
+            if (m && m.t === 'stato') fine(m.fuori ? { fuori: true } : { online: true, membriOnline: +m.membriOnline || 0, sessioneDa: m.sessioneDa || null, nomeCampagna: m.nomeCampagna || null });
+          });
+        });
+      }
+    })();
+  });
+}
+let statoInCorso = null;
+async function statoUnite() {
+  if (statoInCorso) return statoInCorso;
+  statoInCorso = (async () => {
+    const out = {};
+    const voci = Object.values(unite());
+    // due alla volta: ognuna apre un collegamento per qualche secondo
+    for (let i = 0; i < voci.length; i += 2) {
+      const pezzo = voci.slice(i, i + 2);
+      const r = await Promise.all(pezzo.map(e => state.mode === 'join' && state.joinCodice === e.codice ? { online: true, qui: true } : statoUnita(e)));
+      pezzo.forEach((e, k) => {
+        out[e.codice] = r[k];
+        if (r[k].fuori) { delete unite()[e.codice]; try { fs.unlinkSync(path.join(UNITE_DIR, e.codice + '.img')); } catch {} salvaConf(); }
+        else if (r[k].nomeCampagna && r[k].nomeCampagna !== e.nome) { unite()[e.codice].nome = r[k].nomeCampagna; salvaConf(); }
+      });
+    }
+    return out;
+  })();
+  try { return await statoInCorso; } finally { statoInCorso = null; }
 }
 
 const attesa = ms => new Promise(r => setTimeout(r, ms));
@@ -759,14 +897,26 @@ async function avvia(mode, id, campagna) {
   if (GAME_PORT && GAME_PORT !== (conf.porte.game || PREF.game)) say(`La porta ${conf.porte.game || PREF.game} è usata da un altro programma: il server di gioco va sulla ${GAME_PORT}.`, 'warn');
   conf.porte.web = WEB_PORT; if (GAME_PORT) conf.porte.game = GAME_PORT;
   salvaConf();
-  state.porte = { web: WEB_PORT, game: GAME_PORT };
+  state.porte = { web: WEB_PORT, game: GAME_PORT, link: LINK_PORT };
 
   run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP }, keep: true });
   if (!await aspettaPorta(WEB_PORT)) return fallisci('Il tavolo non si è acceso.');
 
   if (mode !== 'solo') {
+    const extra = {};
+    if (mode === 'host') {
+      // la chiave della campagna: con lei il codice resta lo stesso a ogni apertura
+      try { const inv = invitoCampagna(CAMP); fs.writeFileSync(LINK_CHIAVE_FILE, inv.chiave); } catch (e) { say('Il codice d\'invito non si potrà tenere fisso: ' + e.message, 'warn'); }
+      extra.CAMPAGNA_NOME = state.campagna ? state.campagna.nome : '';
+    } else {
+      try { fs.unlinkSync(LINK_CHIAVE_FILE); } catch {}
+      state.joinCodice = /^[a-f0-9]{64}$/.test(id) ? id : null;
+      const e = state.joinCodice && unite()[state.joinCodice];
+      if (e && e.idGiocatore) extra.IDENTITA = JSON.stringify({ token: e.idGiocatore, firma: e.firma || null });
+      if (state.joinCodice) ricordaUnita(state.joinCodice, {});
+    }
     run('regole', NODE, [path.join('server', 'game-server.js'), mode === 'host' ? 'host' : 'join'],
-      { env: { PORT: String(GAME_PORT), LINK_PORT: String(LINK_PORT), DATA_DIR: path.join(CAMP, 'data'), LINK_ID_FILE }, keep: true });
+      { env: { PORT: String(GAME_PORT), LINK_PORT: String(LINK_PORT), DATA_DIR: path.join(CAMP, 'data'), LINK_ID_FILE, ...extra }, keep: true });
     if (!await aspettaPorta(GAME_PORT)) return fallisci('Il server di gioco non si è acceso.');
 
     if (MOBILE ? !LINK_CTRL : !linkBin()) return fallisci(MOBILE ? 'Il collegamento a distanza dell\'app non è partito: chiudi l\'app e riaprila.' : 'Manca il collegamento a distanza: premi «Prepara» e riprova.');
@@ -1335,6 +1485,20 @@ const server = http.createServer(async (req, res) => {
   }
   // --- campagne ---
   if (u.pathname === '/api/campagne') return ok(elencoCampagne());
+  if (u.pathname === '/api/unite') {
+    return ok({ unite: Object.values(unite()).sort((a, b) => (b.ultimoAccesso || 0) - (a.ultimoAccesso || 0))
+      .map(e => ({ codice: e.codice, nome: e.nome || null, ultimaScena: e.ultimaScena || null, ultimoAccesso: e.ultimoAccesso || null, miniatura: !!e.miniatura, nomeGiocatore: e.nomeGiocatore || null })) });
+  }
+  if (u.pathname === '/api/unite/stato') return ok(await statoUnite());
+  if (u.pathname === '/api/unite/miniatura') {
+    const c = u.searchParams.get('codice') || '';
+    if (!/^[a-f0-9]{64}$/.test(c)) return invia(res, 404, 'no');
+    return fs.readFile(path.join(UNITE_DIR, c + '.img'), (e, d) => e ? invia(res, 404, 'no') : invia(res, 200, d, d[0] === 0x89 ? 'image/png' : d[0] === 0xff ? 'image/jpeg' : 'image/webp'));
+  }
+  if (u.pathname === '/api/unite/dimentica' && req.method === 'POST') {
+    return corpo(m => { const c = String((m || {}).codice || ''); delete unite()[c]; try { fs.unlinkSync(path.join(UNITE_DIR, c + '.img')); } catch {} salvaConf(); ok({ ok: true }); });
+  }
+  if (u.pathname === '/api/invito/cambia' && req.method === 'POST') return corpo(async () => ok(await cambiaCodice()));
   if (u.pathname === '/api/sfoglia') return ok(sfoglia(u.searchParams.get('path') || ''));
   if (u.pathname === '/api/campagna/info') return ok(infoCampagna(u.searchParams.get('path') || ''));
   if (u.pathname === '/api/campagna/nuova' && req.method === 'POST') {

@@ -65,6 +65,7 @@
   .tag { font-size: .7rem; padding: 2px 8px; border-radius: 99px; background: var(--panel); border: 1px solid var(--line); color: var(--muted); }
   .tag.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
   .tag.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, var(--line)); }
+  .tag.ok { color: var(--ok, #2ecc71); border-color: color-mix(in srgb, var(--ok, #2ecc71) 50%, var(--line)); }
 
   .meta {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 3px 14px;
@@ -116,6 +117,7 @@
     <div class="idBox">
       <div class="idVal" id="sessId">—</div>
       <button id="copyId" class="go">Copia</button>
+      <button id="newId" title="Un codice nuovo: chi è collegato lo riceve da solo; il vecchio non vale più">Cambia codice</button>
     </div>
     <p class="sub" style="margin:10px 0 0" id="idHint"></p>
   </div>
@@ -137,6 +139,7 @@
 
   <div class="card">
     <h2>Chi c'è</h2>
+    <p class="sub" id="giro" style="margin:0 0 8px"></p>
     <div class="who" id="who"><span class="empty">Ancora nessuno.</span></div>
   </div>
 
@@ -199,8 +202,13 @@ function draw() {
   $('rulesCard').hidden = !host;
   $('sessId').textContent = S.sessionId || 'Avvia «uffa-link host» per avere l\'ID.';
   $('idHint').textContent = S.sessionId
-    ? 'I giocatori lo useranno così: uffa-link join ' + S.sessionId.slice(0, 12) + '…'
-    : 'L\'ID compare appena uffa-link è acceso. Cambia a ogni avvio.';
+    ? 'Resta lo stesso a ogni apertura della campagna, finché non lo cambi. Chi è già entrato non deve più scriverlo.'
+    : 'Il codice compare appena il collegamento a distanza è acceso.';
+  // in alto: da dove passano i giocatori collegati
+  const conti = {};
+  for (const p of S.players || []) if (p.kind === 'link' && !p.pending) conti[p.percorso || 'sconosciuto'] = (conti[p.percorso || 'sconosciuto'] || 0) + 1;
+  const parole = { diretto: ['diretto', 'diretti'], relay: ['relay', 'relay'], misto: ['misto', 'misti'], sconosciuto: ['da capire', 'da capire'] };
+  $('giro').textContent = Object.keys(conti).length ? 'Collegamenti: ' + Object.entries(conti).map(([k, n]) => `${n} ${parole[k] ? parole[k][n === 1 ? 0 : 1] : k}`).join(', ') : '';
 
   const se = S.session || {};
   $('rLock').checked = !!se.locked; $('rAppr').checked = !!se.approval;
@@ -252,7 +260,15 @@ function rowFor(r) {
   sel.onchange = () => post('/api/perm', { token: r.token, role: sel.value }).then(load);
   head.append(nm, sel);
   if (L.pending) head.append(chip('in attesa', 'warn'));
-  else head.append(chip(r.online ? 'collegato' : 'non c\'è'));
+  else head.append(chip(r.online ? 'collegato' : 'non c\'è' + (r.lastSeen ? ' · ' + durata(Math.round((Date.now() - r.lastSeen) / 1000)) + ' fa' : '')));
+  // da dove passa: diretto (veloce) o dal relay (un server in mezzo: più lento)
+  if (r.online && L.kind === 'link') {
+    const PERC = { diretto: ['Diretto', 'ok', 'Collegamento diretto tra i due computer'], relay: ['Relay', 'warn', 'Passa da un server intermedio: più lento'],
+      misto: ['Misto', 'warn', 'C\'è una strada diretta ma per ora passa ancora dal relay'], sconosciuto: ['?', '', 'Non si sa ancora (o il collegamento è di una versione di prima)'] };
+    const [t, cls, tip] = PERC[L.percorso] || PERC.sconosciuto;
+    const ch = chip(t, cls); ch.title = tip; head.append(ch);
+  }
+  const idc = chip('ID ' + String(r.token).slice(0, 6)); idc.title = 'Identità: ' + r.token; head.append(idc);
   if (r.banned) head.append(chip('bandito', 'bad'));
   if (r.muted) head.append(chip('silenziato', 'warn'));
   if (r.frozen) head.append(chip('congelato', 'warn'));
@@ -299,6 +315,8 @@ function rowFor(r) {
   }
   if (r.role !== 'master') {
     if (r.online) acts.append(btn('Scollega', () => post('/api/kick', { token: r.token }).then(load)));
+    // togliere qualcuno che non c'è: può rientrare solo col codice (bandire invece non lo fa rientrare)
+    else acts.append(btn('Rimuovi', () => { if (confirm('Togliere ' + (r.name || 'questa persona') + ' dai partecipanti? Le sue schede restano a te. Potrà rientrare solo con il codice.')) post('/api/kick', { token: r.token, forget: true }).then(load); }));
     acts.append(r.banned
       ? btn('Riammetti', () => mod(r.token, 'unban'), 'go')
       : btn('⛔ Bandisci', () => { if (confirm('Bandire ' + (r.name || 'questa persona') + '? Non potrà più entrare finché non la riammetti.')) mod(r.token, 'ban'); }, 'bad'));
@@ -404,6 +422,11 @@ es.onmessage = e => {
 };
 es.onerror = () => {};
 
+$('newId').onclick = async () => {
+  if (!confirm('Cambiare il codice della campagna?\n\nChi è collegato adesso riceve quello nuovo da solo. Chi è fuori dovrà averlo da te: il vecchio non vale più. Senza account non si può bandire per sempre chi cancella i dati del browser: il codice nuovo chiude la porta davvero.')) return;
+  $('newId').disabled = true;
+  try { await post('/api/invito/cambia', {}); } finally { setTimeout(() => { $('newId').disabled = false; load(); }, 5000); }
+};
 $('copyId').onclick = async () => {
   try { await navigator.clipboard.writeText(S.sessionId || ''); $('copyId').textContent = 'Copiato'; setTimeout(() => $('copyId').textContent = 'Copia', 1400); } catch {}
 };

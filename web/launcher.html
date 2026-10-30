@@ -110,6 +110,21 @@
   .hide { display: none !important; }
   footer { text-align: center; color: var(--muted); font-size: .78rem; margin-top: 18px; }
 
+  /* ---------- «Mi unisco»: le campagne a cui ti sei già unito ---------- */
+  #uniteLista { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  #uniteLista:empty { display: none; }
+  .unita { position: relative; display: flex; flex-direction: column; text-align: left; padding: 0; overflow: hidden;
+    border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; font: inherit; cursor: pointer; }
+  .unita:hover { border-color: var(--accent); }
+  .unita .foto { aspect-ratio: 16 / 10; background: var(--panel-3, #222) center / cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; }
+  .unita .nome { font-weight: 700; padding: 8px 10px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .unita .stato { padding: 2px 10px 9px; font-size: .8rem; color: var(--muted); }
+  .unita .stato::before { content: "●"; margin-right: 5px; color: var(--muted); }
+  .unita .stato.online::before { color: var(--ok); }
+  .unita .stato.sessione::before { color: var(--accent); }
+  .unita .via { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: 0;
+    background: rgba(0, 0, 0, .55); color: #fff; cursor: pointer; font-size: .8rem; }
+
   /* ---------- campagne ---------- */
   .clist { display: flex; flex-direction: column; gap: 8px; }
   .crow { display: flex; align-items: stretch; gap: 6px; }
@@ -263,7 +278,8 @@
   </div>
 
   <div class="box hide" id="boxJoin">
-    <h2>Il codice della partita</h2>
+    <div id="uniteLista"></div>
+    <h2 id="codiceTit">Il codice della partita</h2>
     <div class="row">
       <input type="text" id="codice" placeholder="Incolla qui il codice che ti hanno mandato" autocomplete="off" spellcheck="false">
       <button class="b go" id="entra">Entra</button>
@@ -411,7 +427,15 @@ function disegna() {
         const cp = document.createElement('button');
         cp.className = 'b go'; cp.textContent = 'Copia';
         cp.onclick = async () => { try { await navigator.clipboard.writeText(S.sessionId); cp.textContent = 'Copiato'; setTimeout(() => cp.textContent = 'Copia', 1400); } catch {} };
-        righe.append(inp, cp);
+        const nuovo = document.createElement('button');
+        nuovo.className = 'b'; nuovo.textContent = 'Cambia codice';
+        nuovo.title = 'Un codice nuovo: chi è dentro adesso lo riceve da solo, a chi è fuori lo mandi tu. Quello vecchio non vale più.';
+        nuovo.onclick = async () => {
+          if (!confirm('Cambiare il codice della campagna?\n\nChi è collegato adesso riceve quello nuovo da solo. Chi è fuori dovrà averlo da te: il vecchio non vale più. È il modo per chiudere fuori chi non vuoi più.')) return;
+          nuovo.disabled = true; nuovo.textContent = 'Cambio…';
+          try { const r = await post('/api/invito/cambia', {}); if (r.errore) alert(r.errore); } finally { setTimeout(carica, 3500); }
+        };
+        righe.append(inp, cp, nuovo);
         if (NAT.disponibile) {
           const sh = document.createElement('button');
           sh.className = 'b'; sh.textContent = 'Condividi';
@@ -442,11 +466,49 @@ async function carica() {
 $('scelte').addEventListener('click', e => {
   const b = e.target.closest('[data-go]'); if (!b) return;
   const go = b.dataset.go;
-  if (go === 'join') { $('scelte').classList.add('hide'); $('boxJoin').classList.remove('hide'); $('codice').focus(); return; }
+  if (go === 'join') { $('scelte').classList.add('hide'); $('boxJoin').classList.remove('hide'); apriUnite(); $('codice').focus(); return; }
   apriCampagne(go);                                   // da soli o conducendo: prima si sceglie la campagna
 });
-$('indietro').onclick = () => { $('boxJoin').classList.add('hide'); $('scelte').classList.remove('hide'); };
+$('indietro').onclick = () => { $('boxJoin').classList.add('hide'); $('scelte').classList.remove('hide'); chiudiUnite(); };
+// --- le campagne a cui ti sei già unito: un tocco ed entri (il codice non serve più) ---
+let uniteTimer = 0, uniteStato = {};
+async function apriUnite() {
+  await disegnaUnite();
+  aggiornaStatoUnite();
+  clearInterval(uniteTimer);
+  uniteTimer = setInterval(() => { if (!$('boxJoin').classList.contains('hide') && document.visibilityState === 'visible') aggiornaStatoUnite(); }, 45000);
+}
+function chiudiUnite() { clearInterval(uniteTimer); uniteTimer = 0; }
+async function aggiornaStatoUnite() {
+  try { uniteStato = await fetch('/api/unite/stato').then(r => r.json()); } catch { return; }
+  disegnaUnite();
+}
+async function disegnaUnite() {
+  let lista = [];
+  try { lista = (await fetch('/api/unite').then(r => r.json())).unite || []; } catch {}
+  const trp = window.tr || (x => x);
+  $('codiceTit').textContent = lista.length ? trp('Un\'altra partita? Il suo codice') : trp('Il codice della partita');
+  $('uniteLista').replaceChildren(...lista.map(e => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'unita';
+    const foto = document.createElement('div'); foto.className = 'foto';
+    if (e.miniatura) foto.style.backgroundImage = `url("/api/unite/miniatura?codice=${e.codice}&t=${e.ultimoAccesso || 0}")`; else foto.textContent = '🧭';
+    const nome = document.createElement('div'); nome.className = 'nome'; nome.textContent = e.nome || trp('Campagna') + ' ' + e.codice.slice(0, 6);
+    const st = document.createElement('div'), s = uniteStato[e.codice];
+    st.className = 'stato' + (s && s.online ? (s.sessioneDa ? ' sessione' : ' online') : '');
+    st.textContent = !s ? trp('controllo…') : s.qui ? trp('ci sei dentro adesso')
+      : !s.online ? trp('offline')
+      : s.sessioneDa ? trp('in sessione da {m} min', { m: Math.max(30, Math.round((Date.now() - s.sessioneDa) / 60000)) })
+      : s.membriOnline != null ? (s.membriOnline === 1 ? trp('online · 1 giocatore dentro') : trp('online · {n} giocatori dentro', { n: s.membriOnline })) : trp('online');
+    b.title = e.ultimaScena ? trp('Ultima scena: {s}', { s: e.ultimaScena }) : '';
+    const via = document.createElement('button'); via.type = 'button'; via.className = 'via'; via.textContent = '✕'; via.title = trp('Togli dall\'elenco');
+    via.onclick = async ev => { ev.stopPropagation(); if (!confirm(trp('Togliere «{n}» dall\'elenco? Per rientrare servirà di nuovo il codice.', { n: nome.textContent }))) return; await post('/api/unite/dimentica', { codice: e.codice }); disegnaUnite(); };
+    b.append(foto, nome, st, via);
+    b.onclick = () => { $('codice').value = e.codice; $('entra').click(); };
+    return b;
+  }));
+}
 $('entra').onclick = () => {
+  chiudiUnite();
   const id = $('codice').value.trim();
   if (!id) { $('codice').focus(); return; }
   if (!S.link) { codiceInSospeso = id; $('boxJoin').classList.add('hide'); chiediPreparazione('join'); return; }
