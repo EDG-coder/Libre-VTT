@@ -581,15 +581,29 @@ addEventListener('keydown', e => {
 
 // Rilascio di una miniatura sulla mappa
 viewport.addEventListener('dragover', e => {
-  if (e.dataTransfer.types.includes('application/x-asset')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
+  const t = e.dataTransfer.types;
+  if (t.includes('application/x-asset') || (t.includes('Files') && cartelleAttive())) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
 });
 viewport.addEventListener('drop', e => {
+  // una mappa di Dungeondraft (.dd2vtt, .uvtt) lasciata sulla mappa diventa una scena nuova
+  const mappe = [...(e.dataTransfer.files || [])].filter(f => typeof eUvtt === 'function' && eUvtt(f));
+  if (mappe.length) { e.preventDefault(); if (cartelleAttive()) importaMappeUvtt(mappe); return; }
   const raw = e.dataTransfer.getData('application/x-asset');
   if (!raw) return;
   e.preventDefault();
   const a = JSON.parse(raw);
   addPhotoToMap(a.url, { x: (e.clientX - view.x) / view.s, y: (e.clientY - view.y) / view.s }, a.id);
 });
+
+async function importaMappeUvtt(files) {
+  let ultima = null;
+  for (const f of files) {
+    const sc = newScene(f.name.replace(/\.[^.]+$/, '').slice(0, 40), 'map');
+    try { setStatus('⏳ ' + tr('Importo {nome}…', { nome: f.name })); const testo = await scenaDaUvtt(f, sc); scenes.push(sc); ultima = sc; setStatus(testo); }
+    catch (err) { setStatus('❌ ' + f.name + ': ' + err.message); }
+  }
+  if (ultima) { await showScene(ultima); scheduleBoardSave(); }
+}
 
 // ---------- Sfondo della scena ----------
 function setBgBox(bg) {
@@ -972,7 +986,10 @@ sceneForm.addEventListener('submit', async e => {
   const type = sceneForm.elements.sceneType.value;
   const sc = newScene($('sceneNameInput').value.trim().slice(0, 40) || tr('Scena') + ' ' + (scenes.length + 1), type);
   const file = $('sceneBgInput').files[0];
-  if (file) {
+  if (file && typeof eUvtt === 'function' && eUvtt(file)) {
+    try { setStatus(await scenaDaUvtt(file, sc)); }
+    catch (err) { setStatus('❌ ' + err.message); btn.disabled = false; return; }
+  } else if (file) {
     try {
       const rec = await uploadBackground(file);
       sc.bg = await loadBg(rec.url, rec.id);
