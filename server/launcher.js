@@ -894,12 +894,28 @@ function novitaDa(testo) {
   if (da < 0) return [];
   const out = [];
   for (const r of righe.slice(da + 1)) {
-    if (/^##\s/.test(r)) break;
+    if (/^#{2,}\s/.test(r)) break;      // anche «### Dalla 3.7.0»: quelle righe le dà la release della 3.7.0
     const m = r.match(/^\s*[-*]\s+(.*)$/);
     if (m) out.push(m[1].replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]*)`/g, '$1').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim().slice(0, 600));
     if (out.length >= 15) break;
   }
   return out;
+}
+/** Dalle release di GitHub quelle più nuove di «attuale» (niente bozze né anteprime), dalla più
+ *  recente: { ultima: la release da scaricare, versioni: [{ versione, novita }], forseAltre }. */
+function versioniNuove(lista, attuale) {
+  if (!Array.isArray(lista)) return null;
+  const buone = lista.filter(j => j && j.tag_name && !j.draft && !j.prerelease)
+    .map(j => ({ j, v: String(j.tag_name).replace(/^v/, '') }))
+    .sort((a, b) => confrontaVersioni(b.v, a.v));
+  if (!buone.length) return null;
+  const nuove = buone.filter(x => confrontaVersioni(x.v, attuale) > 0);
+  return {
+    ultima: buone[0].j,
+    versioni: nuove.map(x => ({ versione: x.v, novita: novitaDa(x.j.body), pagina: x.j.html_url || null })),
+    // 30 release lette e tutte più nuove: ce ne possono essere altre più vecchie che non abbiamo visto
+    forseAltre: lista.length >= 30 && nuove.length === buone.length
+  };
 }
 let ultimoControllo = null;
 async function controllaAggiornamento(forza) {
@@ -908,19 +924,24 @@ async function controllaAggiornamento(forza) {
   if (!forza && ultimoControllo && Date.now() - ultimoControllo.quando < (ultimoControllo.dati.nuova ? 6 * 3600e3 : 10 * 60e3)) return ultimoControllo.dati;
   const repo = repoGitHub();
   if (!VERSIONE || !repo) return { attuale: VERSIONE, nuova: null };
-  let j = null;
-  try { j = JSON.parse(await scaricaTesto(process.env.MYVTT_API_RILASCI || `https://api.github.com/repos/${repo}/releases/latest`) || 'null'); } catch {}
-  if (!j || !j.tag_name) {
+  // le ultime 30 release, per mostrare le novità di tutte quelle uscite dopo la propria
+  let lista = null;
+  try { lista = JSON.parse(await scaricaTesto(process.env.MYVTT_API_RILASCI || `https://api.github.com/repos/${repo}/releases?per_page=30`) || 'null'); } catch {}
+  if (lista && !Array.isArray(lista)) lista = [lista];
+  const nuove = versioniNuove(lista, VERSIONE);
+  if (!nuove) {
     const motivo = ultimoErroreRete || 'risposta non valida';
     say(`Controllo degli aggiornamenti: GitHub non risponde (${motivo}).`, 'warn');
     return { attuale: VERSIONE, nuova: null, offline: true, motivo };
   }
-  const nuova = String(j.tag_name).replace(/^v/, '');
+  const j = nuove.ultima;
   const dati = {
-    attuale: VERSIONE, nuova: confrontaVersioni(nuova, VERSIONE) > 0 ? nuova : null,
-    pagina: j.html_url || `https://github.com/${repo}/releases/latest`,
-    file: fileAggiornamento(Array.isArray(j.assets) ? j.assets : []), mobile: MOBILE,
-    novita: novitaDa(j.body)
+    attuale: VERSIONE, nuova: nuove.versioni.length ? nuove.versioni[0].versione : null,
+    pagina: j ? j.html_url || `https://github.com/${repo}/releases/latest` : `https://github.com/${repo}/releases/latest`,
+    tutte: `https://github.com/${repo}/releases`,
+    file: j ? fileAggiornamento(Array.isArray(j.assets) ? j.assets : []) : null, mobile: MOBILE,
+    novita: j ? novitaDa(j.body) : [],
+    versioni: nuove.versioni, forseAltre: nuove.forseAltre
   };
   ultimoControllo = { quando: Date.now(), dati };
   if (dati.nuova) say(`C'è una versione nuova di LIBRE VTT: ${dati.nuova} (questa è la ${VERSIONE}).`, 'ok');

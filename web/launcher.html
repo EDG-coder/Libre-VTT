@@ -76,8 +76,12 @@
   #boxAgg { margin: 0 0 14px; border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
   #boxAgg .t { font-weight: 700; margin-bottom: 2px; }
   #boxAgg p { margin: 0 0 10px; color: var(--muted); font-size: .86rem; }
-  #aggNovita2 { margin: 0 0 12px; padding-left: 20px; font-size: .86rem; max-height: 260px; overflow: auto; }
+  #aggNovita2 { margin: 0 0 12px; font-size: .86rem; max-height: 300px; overflow: auto; }
+  #aggNovita2 .ver { font-weight: 700; margin: 8px 0 4px; }
+  #aggNovita2 .ver:first-child { margin-top: 0; }
+  #aggNovita2 ul { margin: 0; padding-left: 20px; }
   #aggNovita2 li { margin-bottom: 5px; }
+  #aggNovita2 a { color: var(--accent); }
   #aggRiga { text-align: center; margin: 6px 0 0; font-size: .8rem; }
   #aggRiga a { color: var(--muted); }
   .avviso .t { font-weight: 600; margin-bottom: 4px; }
@@ -234,7 +238,7 @@
   <div class="box hide" id="boxAgg">
     <div class="t" id="aggTit">C'è una versione nuova di LIBRE VTT</div>
     <p id="aggTesto"></p>
-    <ul id="aggNovita2" class="hide"></ul>
+    <div id="aggNovita2" class="hide"></div>
     <div class="row">
       <button class="b go" id="aggSi">Aggiorna</button>
       <button class="b" id="aggNovita">Novità</button>
@@ -832,26 +836,39 @@ function novitaDaTesto(testo) {
   const righe = String(testo || '').split(/\r?\n/), da = righe.findIndex(r => /^##\s+Novit/i.test(r)), out = [];
   if (da < 0) return out;
   for (const r of righe.slice(da + 1)) {
-    if (/^##\s/.test(r)) break;
+    if (/^#{2,}\s/.test(r)) break;      // «### Dalla 3.7.0» la mostra la release della 3.7.0
     const m = r.match(/^\s*[-*]\s+(.*)$/);
     if (m) out.push(m[1].replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]*)`/g, '$1').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim());
   }
   return out.slice(0, 15);
 }
+// Come versioniNuove in launcher.js: le release più nuove della propria, dalla più recente.
+function versioniNuove(lista, attuale) {
+  if (!Array.isArray(lista)) return null;
+  const buone = lista.filter(j => j && j.tag_name && !j.draft && !j.prerelease)
+    .map(j => ({ j, v: String(j.tag_name).replace(/^v/, '') })).sort((a, b) => confrontaV(b.v, a.v));
+  if (!buone.length) return null;
+  const nuove = buone.filter(x => confrontaV(x.v, attuale) > 0);
+  return { ultima: buone[0].j, versioni: nuove.map(x => ({ versione: x.v, novita: novitaDaTesto(x.j.body), pagina: x.j.html_url || null })),
+           forseAltre: lista.length >= 30 && nuove.length === buone.length };
+}
 async function controlloDaApp() {
   const st = S && S.versione ? S : await fetch('/api/stato').then(r => r.json());
   const repo = st.repo || 'EDG-coder/Libre-VTT';
-  let j;
+  let nuove;
   try {
-    const r = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
+    const r = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=30`, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    j = await r.json();
+    nuove = versioniNuove(await r.json(), st.versione);
+    if (!nuove) throw new Error('nessuna release');
   } catch (e) { return { attuale: st.versione, nuova: null, offline: true, motivo: e.message, mobile: st.mobile }; }
-  const nuova = String(j.tag_name || '').replace(/^v/, '');
+  const j = nuove.ultima;
   const nomi = st.mobile === 'android' ? (st.arch === 'arm64' ? ['LIBRE-VTT-Android-arm64.apk', 'LIBRE-VTT-Android.apk'] : ['LIBRE-VTT-Android.apk']) : [];
   let file = null;
   for (const n of nomi) { const a = (j.assets || []).find(x => x.name === n); if (a) { file = { nome: a.name, url: a.browser_download_url, byte: a.size || 0 }; break; } }
-  return { attuale: st.versione, nuova: nuova && confrontaV(nuova, st.versione) > 0 ? nuova : null, pagina: j.html_url, file, mobile: st.mobile, novita: novitaDaTesto(j.body) };
+  return { attuale: st.versione, nuova: nuove.versioni.length ? nuove.versioni[0].versione : null, pagina: j.html_url,
+           tutte: `https://github.com/${repo}/releases`, file, mobile: st.mobile, novita: novitaDaTesto(j.body),
+           versioni: nuove.versioni, forseAltre: nuove.forseAltre };
 }
 const chiediAgg = () => NAT.disponibile ? controlloDaApp() : fetch('/api/aggiornamento?ora=1').then(r => r.json());
 async function controllaAgg() {
@@ -865,8 +882,21 @@ async function controllaAgg() {
     : android ? 'Scarico il file nuovo e Android ti chiede di confermare l\'installazione. Le campagne restano.'
     : 'Scarico l\'installatore e lo avvio; LIBRE VTT si chiude per lasciarlo lavorare. Le campagne restano.');
   $('aggSi').textContent = ios || !AGG.file ? 'Apri la pagina' : 'Aggiorna';
-  const lista = $('aggNovita2');
-  lista.replaceChildren(...(AGG.novita || []).map(t => { const li = document.createElement('li'); li.textContent = t; return li; }));
+  // le novità di tutte le versioni uscite dopo la propria, una sotto l'altra (la più recente in alto)
+  const lista = $('aggNovita2'), el = (tag, testo) => { const e = document.createElement(tag); if (testo != null) e.textContent = testo; return e; };
+  const versioni = AGG.versioni && AGG.versioni.length ? AGG.versioni : [{ versione: AGG.nuova, novita: AGG.novita || [] }];
+  const pezzi = [];
+  for (const v of versioni) {
+    if (!v.novita || !v.novita.length) continue;
+    if (versioni.length > 1) { const t = el('div', v.versione); t.className = 'ver'; pezzi.push(t); }
+    const ul = el('ul'); for (const t of v.novita) ul.append(el('li', t)); pezzi.push(ul);
+  }
+  if (pezzi.length && AGG.forseAltre && AGG.tutte) {
+    const p = el('p'), a = el('a', tr('le altre sono nella pagina delle release'));
+    a.href = '#'; a.onclick = e => { e.preventDefault(); apriPagina(AGG.tutte); };
+    p.append(tr('Qui ci sono solo le ultime 30 versioni:'), ' ', a); pezzi.push(p);
+  }
+  lista.replaceChildren(...pezzi);
   lista.classList.toggle('hide', !lista.children.length);
   $('aggNovita').textContent = lista.children.length ? 'Pagina della versione' : 'Novità';
   $('boxAgg').classList.remove('hide');
