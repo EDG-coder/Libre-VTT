@@ -29,3 +29,6 @@ node_modules/
 /pacchetti/mobile/ios/LibreVTT/nodejs-project/
 /pacchetti/mobile/ios/build/
 xcuserdata/
+
+# creato da «cargo build/test» in locale: la release risolve le dipendenze da sé
+/pacchetti/uffa-link/Cargo.lock
