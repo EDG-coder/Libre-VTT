@@ -815,7 +815,8 @@ function renderSceneUI() {
   document.title = 'LIBRE VTT - ' + cur.name;
   $('sceneIcon').textContent = cur.type === 'map' ? '🗺' : '🎬';
   $('gridSceneName').textContent = '«' + cur.name + '»';
-  $('sceneList').replaceChildren(...scenes.map(sc => {
+  if ($('sceneFolderNew')) $('sceneFolderNew').hidden = !cartelleAttive();
+  $('sceneList').replaceChildren(...alberoScene(sc => {
     const row = document.createElement('div');
     row.className = 'sceneRow' + (sc === cur ? ' active' : '');
     row.dataset.id = sc.id;
@@ -832,6 +833,14 @@ function renderSceneUI() {
       if (n && n.trim()) { sc.name = n.trim().slice(0, 40); renderSceneUI(); scheduleBoardSave(); }
     });
     row.append(pick, ren);
+    if (cartelleAttive()) {
+      const sp = document.createElement('button');
+      sp.type = 'button'; sp.textContent = '📁'; sp.title = 'Sposta in una cartella'; sp.setAttribute('aria-label', 'Sposta ' + sc.name + ' in una cartella');
+      sp.addEventListener('click', () => scegliCartella(sc));
+      row.append(sp);
+      row.draggable = true;
+      row.addEventListener('dragstart', e => { e.dataTransfer.setData('application/x-scena', sc.id); e.dataTransfer.effectAllowed = 'move'; });
+    }
     if (typeof decorateSceneRow === 'function') decorateSceneRow(row, sc);
     if (scenes.length > 1) {
       const del = document.createElement('button');
@@ -849,6 +858,103 @@ function renderSceneUI() {
   }));
   if (typeof afterSceneUI === 'function') afterSceneUI();
 }
+
+// ---------- Cartelle delle scene (solo per chi conduce) ----------
+// settings.cartelle = [{ id, nome, padre, chiusa }] (al massimo 3 livelli) e sc.cartella = id della
+// cartella, facoltativo: le scene senza cartella stanno in cima, come prima. Eliminare una cartella
+// non cancella le scene: tornano nella cartella di sopra. Ai giocatori non arriva niente (sceneFor).
+const MAX_LIVELLI_CARTELLE = 3;
+const cartelleAttive = () => typeof isMaster !== 'function' || isMaster();
+const cartelle = () => Array.isArray(settings.cartelle) ? settings.cartelle : (settings.cartelle = []);
+const cartella = id => cartelle().find(c => c.id === id) || null;
+function livelloCartella(c) { let n = 0; for (let x = c; x && n < 10; x = cartella(x.padre)) n++; return n; }
+/** Le righe del menu: cartelle (con il loro contenuto, se aperte) e scene, rientrate per livello. */
+function alberoScene(rigaScena) {
+  if (!cartelleAttive() || !cartelle().length) return scenes.map(rigaScena);
+  const out = [], valida = id => !!cartella(id);
+  const giu = (padre, livello) => {
+    for (const c of cartelle().filter(c => (c.padre && valida(c.padre) ? c.padre : null) === padre)) {
+      out.push(rigaCartella(c, livello));
+      if (!c.chiusa) giu(c.id, livello + 1);
+    }
+    for (const sc of scenes.filter(sc => (sc.cartella && valida(sc.cartella) ? sc.cartella : null) === padre)) {
+      const r = rigaScena(sc); r.style.paddingLeft = livello * 14 + 'px'; out.push(r);
+    }
+  };
+  giu(null, 0);
+  return out;
+}
+function rigaCartella(c, livello) {
+  const row = document.createElement('div');
+  row.className = 'sceneRow sceneFolder'; row.dataset.cartella = c.id; row.style.paddingLeft = livello * 14 + 'px';
+  const apri = document.createElement('button');
+  apri.type = 'button'; apri.className = 'pick';
+  const n = scenes.filter(sc => sc.cartella === c.id).length;
+  apri.innerHTML = `<span>${c.chiusa ? '▸' : '▾'} 📁</span><span></span>`;
+  apri.lastChild.textContent = `${c.nome} (${n})`;
+  apri.addEventListener('click', () => { c.chiusa = !c.chiusa; renderSceneUI(); scheduleBoardSave(); });
+  const altro = (txt, tit, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = txt; b.title = tit; b.setAttribute('aria-label', tit + ' ' + c.nome); b.addEventListener('click', fn); return b; };
+  row.append(apri,
+    altro('✎', 'Rinomina', () => { const v = prompt('Nuovo nome della cartella', c.nome); if (v && v.trim()) { c.nome = v.trim().slice(0, 40); renderSceneUI(); scheduleBoardSave(); } }),
+    ...(livelloCartella(c) < MAX_LIVELLI_CARTELLE ? [altro('＋', 'Nuova cartella dentro', () => nuovaCartella(c.id))] : []),
+    altro('🗑', 'Elimina la cartella', () => eliminaCartella(c)));
+  // si può lasciar cadere una scena (o una cartella) qui sopra
+  row.addEventListener('dragover', e => { if (e.dataTransfer.types.includes('application/x-scena') || e.dataTransfer.types.includes('application/x-cartella')) { e.preventDefault(); row.classList.add('sopra'); } });
+  row.addEventListener('dragleave', () => row.classList.remove('sopra'));
+  row.addEventListener('drop', e => { e.preventDefault(); row.classList.remove('sopra'); lasciaCadere(e, c.id); });
+  row.draggable = true;
+  row.addEventListener('dragstart', e => { e.dataTransfer.setData('application/x-cartella', c.id); e.dataTransfer.effectAllowed = 'move'; });
+  return row;
+}
+function lasciaCadere(e, dove) {
+  const idS = e.dataTransfer.getData('application/x-scena'), idC = e.dataTransfer.getData('application/x-cartella');
+  if (idS) { const sc = scenes.find(s => s.id === idS); if (sc) spostaScena(sc, dove); }
+  else if (idC) spostaCartella(cartella(idC), dove);
+}
+function spostaScena(sc, dove) {
+  if ((sc.cartella || null) === (dove || null)) return;
+  if (dove) sc.cartella = dove; else delete sc.cartella;
+  const c = cartella(dove); if (c) c.chiusa = false;
+  renderSceneUI(); scheduleBoardSave();
+}
+function spostaCartella(c, dove) {
+  if (!c || c.id === dove) return;
+  for (let x = cartella(dove); x; x = cartella(x.padre)) if (x.id === c.id) return;     // non dentro sé stessa
+  // tutta la cartella (con quelle dentro) deve restare entro i 3 livelli
+  const prof = id => 1 + Math.max(0, ...cartelle().filter(x => x.padre === id).map(x => prof(x.id)));
+  if ((dove ? livelloCartella(cartella(dove)) : 0) + prof(c.id) > MAX_LIVELLI_CARTELLE) return setStatus(tr('Al massimo 3 livelli di cartelle.'));
+  c.padre = dove || null; renderSceneUI(); scheduleBoardSave();
+}
+function nuovaCartella(padre = null) {
+  const n = prompt('Nome della nuova cartella', tr('Cartella') + ' ' + (cartelle().length + 1));
+  if (!n || !n.trim()) return;
+  cartelle().push({ id: uid(), nome: n.trim().slice(0, 40), padre, chiusa: false });
+  const p = cartella(padre); if (p) p.chiusa = false;
+  renderSceneUI(); scheduleBoardSave();
+}
+function eliminaCartella(c) {
+  if (!confirm(tr('Eliminare la cartella «{nome}»? Le scene restano: tornano fuori.', { nome: c.nome }))) return;
+  for (const sc of scenes) if (sc.cartella === c.id) { if (c.padre) sc.cartella = c.padre; else delete sc.cartella; }
+  for (const x of cartelle()) if (x.padre === c.id) x.padre = c.padre || null;
+  settings.cartelle = cartelle().filter(x => x !== c);
+  renderSceneUI(); scheduleBoardSave();
+}
+/** Dal pulsante 📁 (anche col dito): sceglie la cartella con un numero. */
+function scegliCartella(sc) {
+  const voci = [{ id: null, nome: tr('(fuori dalle cartelle)') }];
+  const giu = (padre, liv) => { for (const c of cartelle().filter(c => (c.padre || null) === padre)) { voci.push({ id: c.id, nome: '  '.repeat(liv) + c.nome }); giu(c.id, liv + 1); } };
+  giu(null, 0);
+  if (voci.length === 1) return nuovaCartella();
+  const r = prompt(tr('In quale cartella spostare «{nome}»? Scrivi il numero.', { nome: sc.name }) + '\n\n' + voci.map((v, i) => `${i}. ${v.nome}`).join('\n'), '');
+  if (r == null || r.trim() === '') return;
+  const v = voci[parseInt(r, 10)];
+  if (v) spostaScena(sc, v.id);
+}
+// lasciando una scena sulla zona vuota del menu, esce dalle cartelle
+$('sceneList').addEventListener('dragover', e => { if (e.dataTransfer.types.includes('application/x-scena') || e.dataTransfer.types.includes('application/x-cartella')) e.preventDefault(); });
+$('sceneList').addEventListener('drop', e => { if (e.target.closest('.sceneFolder')) return; e.preventDefault(); lasciaCadere(e, null); });
+$('sceneNew').insertAdjacentHTML('beforebegin', '<button id="sceneFolderNew" type="button">＋ Nuova cartella</button>');
+$('sceneFolderNew').addEventListener('click', () => nuovaCartella());
 
 // finestra "Nuova scena"
 const sceneDialog = $('sceneDialog'), sceneForm = $('sceneForm');
@@ -1707,13 +1813,15 @@ async function loadBoard() {
     for (const k of ['tools', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'park', 'music']) if (s[k] && typeof s[k] === 'object') settings[k] = { ...settings[k], ...s[k] };
     settings.sections = s.sections && typeof s.sections === 'object' ? { ...s.sections } : {};
     settings.toolOrder = Array.isArray(s.toolOrder) ? s.toolOrder.filter(x => typeof x === 'string').slice(0, 60) : null;
+    settings.cartelle = Array.isArray(s.cartelle) ? s.cartelle.filter(c => c && typeof c.id === 'string').slice(0, 200)
+      .map(c => ({ id: c.id, nome: String(c.nome || 'Cartella').slice(0, 40), padre: typeof c.padre === 'string' ? c.padre : null, chiusa: !!c.chiusa })) : [];
     paintBorder();
     const okRect = r => r && [r.x, r.y, r.w, r.h].every(Number.isFinite) && r.w > 0 && r.h > 0;
     const pick = r => ({ x: r.x, y: r.y, w: r.w, h: r.h });
     scenes = st.scenes.map(sc => ({
       id: sc.id || uid(), name: sc.name || 'Scena', type: sc.type === 'cinematic' ? 'cinematic' : 'map',
       bg: sc.bg || null, grid: { ...DEFAULT_GRID, ...sc.grid }, photos: sc.photos || [], view: sc.view || null, draw: sc.draw || null,
-      luce: sc.luce || undefined,
+      luce: sc.luce || undefined, cartella: typeof sc.cartella === 'string' ? sc.cartella : undefined,
       // salvataggi precedenti: il rettangolo coincide con la mappa (o è quello di default)
       board: okRect(sc.board) ? pick(sc.board) : okRect(sc.bg) ? pick(sc.bg) : { ...DEFAULT_RECT }
     }));

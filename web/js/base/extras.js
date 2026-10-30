@@ -800,12 +800,21 @@ function folderMenu(name) {
   return items;
 }
 function sceneRowMenu(row) {
+  if (row.dataset.cartella) {                      // una cartella: gli stessi pulsanti della riga
+    const btn = t => row.querySelector(`button[title="${t}"]`);
+    return [
+      { label: 'Rinomina la cartella', fn: () => btn('Rinomina').click() },
+      ...(btn('Nuova cartella dentro') ? [{ label: 'Nuova cartella dentro', fn: () => btn('Nuova cartella dentro').click() }] : []),
+      '-', { label: 'Elimina la cartella (le scene restano)', danger: true, fn: () => btn('Elimina la cartella').click() }
+    ];
+  }
   const sc = scenes.find(s => s.id === row.dataset.id); if (!sc) return null;
   const on = settings.publicScene === sc.id, byTitle = t => row.querySelector(`button[title="${t}"]`);
   return [
     { label: 'Vai a questa scena', fn: () => switchScene(sc.id) },
     { label: 'Rinomina', fn: () => byTitle('Rinomina') && byTitle('Rinomina').click() },
     { label: on ? 'I giocatori non vedano più questa scena' : '📌 Mostra ai giocatori', fn: () => setPublicScene(on ? null : sc.id) },
+    ...(typeof scegliCartella === 'function' && cartelleAttive() ? [{ label: '📁 Sposta in una cartella…', fn: () => scegliCartella(sc) }] : []),
     ...(scenes.length > 1 ? ['-', { label: 'Elimina', danger: true, fn: () => byTitle('Elimina') && byTitle('Elimina').click() }] : [])
   ];
 }

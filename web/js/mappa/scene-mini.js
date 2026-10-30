@@ -131,7 +131,7 @@
   const primaDopo = window.afterSceneUI;
   window.afterSceneUI = function () {
     const r = primaDopo && primaDopo.apply(this, arguments);
-    document.querySelectorAll('#sceneList .sceneRow').forEach(row => {
+    document.querySelectorAll('#sceneList .sceneRow:not(.sceneFolder)').forEach(row => {
       const pick = row.querySelector('.pick');
       if (!pick || pick.querySelector('.sceneMini')) return;
       const im = document.createElement('img');

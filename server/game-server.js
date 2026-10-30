@@ -341,6 +341,7 @@ const outUrl = o => (o && o.gid) ? { ...o, url: 'gs:' + o.gid, aid: undefined } 
 function sceneFor(c, sc) {
   const p = permsFor(c);
   const out = { ...sc };
+  if (recOf(c.token).role !== 'master') delete out.cartella;     // come il master ordina le scene resta suo
   out.bg = outUrl(sc.bg);
   out.photos = (sc.photos || []).filter(ph => {
     if ((ph.layer || 'tokens') === 'hidden' && !p.seeHiddenLayer) return false;
