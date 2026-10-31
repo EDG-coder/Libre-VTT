@@ -54,7 +54,7 @@
     // dichiarazioni, commenti e istruzioni non servono a disegnare (e le entità XML sono un rischio)
     testo = testo.replace(/^﻿/, '').replace(/<\?[\s\S]*?\?>/g, '').replace(/<!--[\s\S]*?-->/g, '').replace(/<!DOCTYPE[\s\S]*?(\[[\s\S]*?\])?\s*>/gi, '');
     const pezzi = /<!\[CDATA\[([\s\S]*?)\]\]>|<(\/?)([a-zA-Z][\w:.-]*)((?:\s+[^\s=\/>]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*(\/?)>|([^<]+)|(<)/g;
-    const out = [], pila = [];
+    const out = [], pila = [], veri = [];   // pila: nomi in minuscolo (per i confronti); veri: come scritti (XML distingue maiuscole)
     let via = 0, elementi = 0, radice = null, m;
     while ((m = pezzi.exec(testo))) {
       if (m[1] != null) { if (!via && pila[pila.length - 1] === 'style') out.push(esc(stilePulito(m[1]))); else if (!via) out.push(esc(m[1])); continue; }
@@ -65,15 +65,15 @@
         const i = Math.max(pila.lastIndexOf(n), pila.lastIndexOf('?' + n));
         if (i < 0) continue;
         while (pila.length > i) {
-          const t = pila.pop();
+          const t = pila.pop(), v = veri.pop();
           if (VIA.has(t)) via--;
-          else if (!via && BUONI.has(t)) out.push(`</${t}>`);
+          else if (!via && BUONI.has(t)) out.push(`</${v}>`);
         }
         continue;
       }
       if (++elementi > MAX_ELEMENTI) return { errore: 'SVG troppo complicato (più di ' + MAX_ELEMENTI + ' elementi)' };
-      if (via || VIA.has(n)) { if (!solo) { pila.push(n); if (VIA.has(n)) via++; } continue; }
-      if (!BUONI.has(n)) { if (!solo) pila.push('?' + n); continue; }      // sconosciuto: via il tag, resta il contenuto
+      if (via || VIA.has(n)) { if (!solo) { pila.push(n); veri.push(n); if (VIA.has(n)) via++; } continue; }
+      if (!BUONI.has(n)) { if (!solo) { pila.push('?' + n); veri.push(n); } continue; }      // sconosciuto: via il tag, resta il contenuto
       let at = attributi(m[4] || '');
       if (n === 'svg' && !radice) {
         radice = {};
@@ -91,9 +91,9 @@
         if (at.some(([k]) => /^xlink:/.test(k)) || /xlink:/.test(testo)) if (!radice['xmlns:xlink']) at.push(['xmlns:xlink', 'http://www.w3.org/1999/xlink']);
       }
       out.push('<' + nome.replace(/^svg:/, '') + at.map(([k, v]) => ` ${k}="${esc(v)}"`).join('') + (solo ? '/>' : '>'));
-      if (!solo) pila.push(n);
+      if (!solo) { pila.push(n); veri.push(nome.replace(/^svg:/, '')); }
     }
-    while (pila.length) { const t = pila.pop(); if (!t.startsWith('?') && !VIA.has(t) && !via) out.push(`</${t}>`); else if (VIA.has(t)) via--; }
+    while (pila.length) { const t = pila.pop(), v = veri.pop(); if (!t.startsWith('?') && !VIA.has(t) && !via) out.push(`</${v}>`); else if (VIA.has(t)) via--; }
     if (!radice) return { errore: 'Questo file non sembra un SVG' };
     return { svg: out.join(''), w: radice.w || 0, h: radice.h || 0 };
   }
