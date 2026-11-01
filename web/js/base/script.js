@@ -526,26 +526,31 @@ function stop() {
 viewport.addEventListener('pointerup', () => { rightPhoto = null; stop(); });
 viewport.addEventListener('pointercancel', stop);
 
-// ---------- Ping: tieni premuto e un cerchio cresce dal cursore (dimensioni reali in cm, non seguono lo zoom) ----------
-function startPing(x, y) {
-  const { color, size, speed, fade } = settings.ping;
-  const max = size * CM, rate = speed * CM;                     // px e px/s
+// ---------- Ping: tieni premuto e un cerchio cresce dal cursore ----------
+// Il ping sta sulla mappa: il centro e il raggio sono in coordinate del mondo, quindi resta nello stesso
+// punto se sposti la vista e cresce o rimpicciolisce con lo zoom. La dimensione in cm delle impostazioni
+// vale per lo zoom di chi lo fa; chi lo riceve ha raggio e velocità già in unità del mondo (o.r, o.v).
+const pingMondo = () => ({ r: settings.ping.size * CM / view.s, v: settings.ping.speed * CM / view.s });
+function startPing(x, y, o) {
+  const { color, fade } = settings.ping;
+  const wx = (x - view.x) / view.s, wy = (y - view.y) / view.s;
+  const def = pingMondo();
+  const max = +(o && o.r) > 0 ? +o.r : def.r, rate = +(o && o.v) > 0 ? +o.v : def.v;   // unità del mondo e unità/s
   const el = document.createElement('div');
   el.className = 'ping';
-  el.style.setProperty('--pc', color);
-  el.style.left = x + 'px'; el.style.top = y + 'px';
-  el.style.width = el.style.height = '0px';
+  el.style.setProperty('--pc', (o && o.color) || color);
   pingsEl.appendChild(el);
   const ping = { held: true };
-  livePing = ping;
+  if (!o || !o.altrui) livePing = ping;
   const t0 = performance.now();
   let tf = 0, r = 0;
   const frame = now => {
     if (!tf) {
       r = Math.min(max, (now - t0) / 1000 * rate);
-      el.style.width = el.style.height = 2 * r + 'px';
       if (r >= max || !ping.held) { tf = now; if (livePing === ping && r >= max) livePing = null; }   // crescita finita (o rilascio): inizia a sbiadire
     }
+    el.style.left = (wx * view.s + view.x) + 'px'; el.style.top = (wy * view.s + view.y) + 'px';
+    el.style.width = el.style.height = 2 * r * view.s + 'px';
     if (tf) {
       const k = fade > 0 ? (now - tf) / fade : 1;
       if (k >= 1) { el.remove(); return; }
@@ -553,7 +558,7 @@ function startPing(x, y) {
     }
     requestAnimationFrame(frame);
   };
-  requestAnimationFrame(frame);
+  frame(t0);
 }
 
 // ---------- Foto (segnalini) sulla mappa ----------
@@ -1239,6 +1244,51 @@ const sects = [...document.querySelectorAll('#tab-settings .sect')].map(sec => {
   apply();
   return apply;
 });
+// ---------- in cima alle impostazioni: cerca e indice delle sezioni ----------
+// Le sezioni sono tante: un campo per cercare (mostra solo quelle che contengono la parola, già aperte)
+// e un indice di pulsanti che apre la sezione scelta e ci porta lì. Restano in vista mentre si scorre.
+{
+  const pane = $('tab-settings');
+  const testa = document.createElement('div'); testa.id = 'impTesta';
+  testa.innerHTML = '<div class="impRiga"><input id="impCerca" type="search" placeholder="Cerca nelle impostazioni…" aria-label="Cerca nelle impostazioni" autocomplete="off"><button id="impChiudi" type="button" class="btn ghost" title="Chiudi tutte le sezioni">Chiudi tutte</button></div><select id="impIndice" aria-label="Vai a una sezione"></select><p class="note" id="impVuoto" hidden>Nessuna impostazione con questa parola.</p>';
+  pane.prepend(testa);
+  const tutte = () => [...pane.querySelectorAll(':scope > .sect')];
+  const visibile = sec => getComputedStyle(sec).display !== 'none' || sec.classList.contains('impNascosta');
+  const titolo = sec => (sec.querySelector('.sectTitle') || sec).textContent.trim();
+  const apri = (sec, si) => { if (sec.classList.contains('open') !== si) sec.querySelector('.sectHead').click(); };
+  function indice() {
+    const sel = $('impIndice'), vis = tutte().filter(visibile);
+    const prima = document.createElement('option'); prima.value = ''; prima.textContent = 'Vai a una sezione…';
+    sel.replaceChildren(prima, ...vis.map(sec => { const o = document.createElement('option'); o.value = sec.dataset.sect; o.textContent = titolo(sec); return o; }));
+  }
+  $('impIndice').addEventListener('change', e => {
+    const sec = tutte().find(x => x.dataset.sect === e.target.value); e.target.value = '';
+    if (!sec) return;
+    $('impCerca').value = ''; filtra();
+    tutte().forEach(x => { if (x !== sec) apri(x, false); });      // solo quella aperta: si trova subito
+    apri(sec, true);
+    requestAnimationFrame(() => pane.scrollTo({ top: sec.offsetTop - testa.offsetHeight - 4, behavior: 'auto' }));
+  });
+  $('impChiudi').addEventListener('click', () => tutte().forEach(sec => apri(sec, false)));
+  const norm = t => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  function filtra() {
+    const q = norm($('impCerca').value.trim());
+    let n = 0;
+    for (const sec of tutte()) {
+      const ok = !q || norm(sec.textContent).includes(q) || [...sec.querySelectorAll('option')].some(o => norm(o.textContent).includes(q));
+      sec.classList.toggle('impNascosta', !ok);
+      if (ok && q) apri(sec, true);
+      if (ok && visibile(sec)) n++;
+    }
+    $('impVuoto').hidden = !q || n > 0;
+  }
+  $('impCerca').addEventListener('input', filtra);
+  $('impCerca').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') { $('impCerca').value = ''; filtra(); } });
+  // l'indice si rifà quando si apre la scheda (le sezioni del master non si vedono ai giocatori)
+  document.querySelector('.tab[data-tab="settings"]').addEventListener('click', () => setTimeout(indice, 0));
+  indice();
+}
+
 
 // pulsanti a scelta singola
 function segmented(root, get, set) {
@@ -1428,6 +1478,41 @@ function pulsantiDanni(d, m, critico) {
   d.append(box);
 }
 
+// ---------- I messaggi dei danni: un riquadro a sé, ben distinto dai tiri normali ----------
+// «Ari · Danni Spada lunga · perforanti»: chi tira (piccolo), che cosa (grande), il tipo come etichetta,
+// una riga, il totale grande con i dadi piccoli accanto; con più tipi una riga per tipo.
+const RE_DANNO = /(^|·\s*)(danni|damage)\b/i;
+const eDanno = m => m && m.kind === 'roll' && Array.isArray(m.rolls) && !m.hidden && (Array.isArray(m.parti) && m.parti.length > 0 || RE_DANNO.test(String(m.label || '')));
+function msgDanno(d, m) {
+  d.classList.add('danno');
+  const pezzi = String(m.label || '').split(/\s+·\s+/).filter(Boolean);
+  const iDanni = pezzi.findIndex(x => RE_DANNO.test(x));
+  const chi = iDanni > 0 ? pezzi.slice(0, iDanni).join(' · ') : '';
+  const cosa = iDanni >= 0 ? pezzi[iDanni] : pezzi[0] || tr('Danni');
+  const tipo = iDanni >= 0 ? pezzi.slice(iDanni + 1).join(' · ') : pezzi.slice(1).join(' · ');
+  const el = (tag, cl, txt) => { const e = document.createElement(tag); if (cl) e.className = cl; if (txt != null) e.textContent = txt; return e; };
+  const testa = el('div', 'dTesta');
+  if (chi) testa.append(el('span', 'dChi', chi));
+  if (m.secret) { const s = el('span', 'sec', '🔒 segreto'); s.title = 'Lo vedete solo tu e il master'; testa.append(s); }
+  if (m.provvisorio) testa.append(el('span', 'provv', '⚠ non verificato'));
+  const titolo = el('div', 'dCosa');
+  titolo.append(el('span', 'dIc', /critic/i.test(cosa) ? '💥' : '🗡'), el('span', '', cosa));
+  if (tipo && !(Array.isArray(m.parti) && m.parti.length > 1)) titolo.append(el('span', 'dTipo', tipo));
+  const riga = el('div', 'dRis');
+  riga.append(el('b', 'dTot', String(m.total)));
+  const drop = new Set(m.drop || []), mod = m.mod || 0;
+  const dadi = m.rolls.map((v, i) => (i ? (v < 0 ? ' − ' : ' + ') : v < 0 ? '− ' : '') + Math.abs(v) + (drop.has(i) ? '✗' : '')).join('') + (mod ? (mod > 0 ? ' + ' : ' − ') + Math.abs(mod) : '');
+  if (m.rolls.length > 1 || mod) riga.append(el('span', 'dDadi', dadi));
+  const who = d.querySelector(':scope > .who');
+  if (who) { if (chi) who.remove(); else testa.prepend(who); }
+  d.append(testa, titolo, riga);
+  if (Array.isArray(m.parti) && m.parti.length > 1) {
+    const ul = el('div', 'dParti');
+    for (const p of m.parti) { const r = el('div', 'dParte'); r.append(el('b', '', String(p.total)), el('span', '', p.tipo || '')); ul.append(r); }
+    d.append(ul);
+  }
+  return d;
+}
 function msgEl(m) {
   const d = document.createElement('div');
   d.dataset.id = m.id;
@@ -1444,6 +1529,7 @@ function msgEl(m) {
       d.append(head, q);
       return d;
     }
+    if (eDanno(m) && !m.doppio) return msgDanno(d, m);
     head.textContent = '🎲 ' + m.label;
     d.append(head);
     // due tiri alla pari (dalla scheda in vantaggio o svantaggio): si vedono tutti e due, senza dire quale vale

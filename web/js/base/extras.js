@@ -392,7 +392,10 @@ rulerBox.id = 'rulerBox'; document.body.appendChild(rulerBox);
 const rulerGrip = rulerBox.querySelector('.tgrip');
 const rulerSvg = document.createElementNS(SVGNS, 'svg'); rulerSvg.id = 'rulerSvg'; document.body.appendChild(rulerSvg);
 let rulerOn = false, ruler = null, rulerFade = 0;
-const unitTxt = () => settings.unit === 'm' ? '1,5 m' : '5 ft';
+// quanto vale una casella: 5 ft, 1,5 m o 1 miglio (per le mappe di viaggio)
+const UNITA_CASELLA = { ft: { per: 5, u: 'ft' }, m: { per: 1.5, u: 'm' }, mi: { per: 1, u: 'mi' } };
+const unitaCasella = () => UNITA_CASELLA[settings.unit] || UNITA_CASELLA.ft;
+const unitTxt = () => { const c = unitaCasella(); return `${String(c.per).replace('.', ',')} ${c.u === 'mi' ? tr('miglio') : c.u}`; };
 const rulerTitle = () => { rulerGrip.title = `Righello: ${unitTxt()} per ogni casella della griglia`; };
 function setRuler(on) {
   rulerOn = on; rulerBox.classList.toggle('toolOn', on); viewport.classList.toggle('ruler-on', on);
@@ -411,7 +414,7 @@ const rp = e => { const x = (e.clientX - view.x) / view.s, y = (e.clientY - view
 // Il righello è un percorso: ruler.pts sono i punti fissati (il primo è la partenza, gli altri le
 // giunzioni) e ruler.b è la fine, che segue il puntatore. Il tasto destro (o «+») fissa la fine e
 // ne parte un altro segmento; Backspace toglie l'ultima giunzione, Esc cancella. Il totale è la somma.
-const misura = cells => `${+(cells * (settings.unit === 'm' ? 1.5 : 5)).toFixed(1)} ${settings.unit === 'm' ? 'm' : 'ft'}`;
+const misura = cells => { const c = unitaCasella(), n = +(cells * c.per).toFixed(c.u === 'mi' ? 2 : 1); return `${n} ${c.u === 'mi' ? (n === 1 ? tr('miglio') : tr('miglia')) : c.u}`; };
 function drawRuler() {
   const k = view.s, mondo = [...ruler.pts, ruler.b], pts = mondo.map(p => ({ x: p.x * k + view.x, y: p.y * k + view.y }));
   const tratti = [];
@@ -764,7 +767,7 @@ function toolMenu(el) {
   if (t.id === 'music' && typeof musicMenuExtra === 'function') items.push('-', ...musicMenuExtra());
   if (t.id === 'luce' && typeof fogMenuExtra === 'function') items.push('-', ...fogMenuExtra());
   if (t.id === 'pen') items.push({ label: 'Annulla l\'ultimo tratto', fn: () => $('penUndo').click() }, { label: 'Cancella i disegni del livello', danger: true, fn: () => $('penClear').click() });
-  if (t.id === 'ruler') items.push({ label: settings.rulerCenter ? 'Misura liberamente (non da centro a centro)' : 'Misura da centro a centro delle caselle', fn: () => { settings.rulerCenter = !settings.rulerCenter; syncExtraForm(); scheduleBoardSave(); } }, { label: settings.unit === 'm' ? 'Usa 5 ft per casella' : 'Usa 1,5 m per casella', fn: () => { settings.unit = settings.unit === 'm' ? 'ft' : 'm'; rulerTitle(); syncSheetForm(); scheduleBoardSave(); } });
+  if (t.id === 'ruler') items.push({ label: settings.rulerCenter ? 'Misura liberamente (non da centro a centro)' : 'Misura da centro a centro delle caselle', fn: () => { settings.rulerCenter = !settings.rulerCenter; syncExtraForm(); scheduleBoardSave(); } }, ...[['ft', 'Usa 5 ft per casella'], ['m', 'Usa 1,5 m per casella'], ['mi', 'Usa 1 miglio per casella']].filter(([u]) => u !== (settings.unit || 'ft')).map(([u, label]) => ({ label, fn: () => { settings.unit = u; rulerTitle(); syncSheetForm(); scheduleBoardSave(); } })));
   return items;
 }
 function mapMenu(e) {

@@ -934,7 +934,7 @@ function handleIntent(c, m) {
     // --- ping ---
     case 'ping': {
       if (!p.ping) return deny(c, m.op, 'non puoi fare ping');
-      broadcast({ t: 'ping', x: +m.x || 0, y: +m.y || 0, color: str(m.color, 24), by: c.name }, k => !k.leggera);   // corsia C: chi ha la linea debole non lo riceve
+      broadcast({ t: 'ping', x: +m.x || 0, y: +m.y || 0, r: Math.max(0, Math.min(1e6, +m.r || 0)), v: Math.max(0, Math.min(1e7, +m.v || 0)), color: str(m.color, 24), by: c.name }, k => !k.leggera);   // corsia C: chi ha la linea debole non lo riceve
       return;
     }
 

@@ -286,7 +286,7 @@ function netHandle(m) {
     case 'ping': {
       const x = m.x * view.s + view.x, y = m.y * view.s + view.y;
       netFromServer = true;
-      try { startPing(x, y); } finally { netFromServer = false; }
+      try { startPing(x, y, { r: m.r, v: m.v, color: m.color, altrui: true }); } finally { netFromServer = false; }
       return;
     }
     case 'notes':
@@ -768,12 +768,12 @@ function netTiroProvvisorio(expr, label) {
 }
 
 // Ping: lo vedono tutti.
-var startPing = (prev => function (x, y) {
+var startPing = (prev => function (x, y, o) {
   if (NET.on) {
     if (!can('ping')) { netSay('Non puoi fare ping.', 'warn'); return; }
-    if (!netFromServer) intent('ping', { x: (x - view.x) / view.s, y: (y - view.y) / view.s, color: settings.ping.color });
+    if (!netFromServer) intent('ping', { x: (x - view.x) / view.s, y: (y - view.y) / view.s, color: settings.ping.color, ...pingMondo() });
   }
-  return prev(x, y);
+  return prev(x, y, o);
 })(startPing);
 
 // Musica: la sceglie chi ne ha il permesso.
