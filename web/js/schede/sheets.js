@@ -527,10 +527,21 @@ function abIncantatore(s) {
 }
 // CD e attacco degli incantesimi: calcolati (8 + competenza + mod., competenza + mod.) se la casella è vuota
 const vuotoF = v => v === undefined || v === null || String(v).trim() === '';
-function cdIncantesimi(s) { const a = abIncantatore(s); return vuotoF(s.f.spcd) ? (a ? cdDa(s, a) : null) : iv(s.f.spcd); }
-function atkIncantesimi(s) { const a = abIncantatore(s); return vuotoF(s.f.spatk) ? (a ? atkDa(s, a) : null) : iv(s.f.spatk); }
+// i modificatori di «⚙ Avanzate» (avanzate.js): bonus e malus per bersaglio, accesi o spenti
+const avB = (s, k) => typeof avanzBonus === 'function' ? avanzBonus(s, k) : 0;
+function cdIncantesimi(s) { const a = abIncantatore(s); const v = vuotoF(s.f.spcd) ? (a ? cdDa(s, a) : null) : iv(s.f.spcd); return v == null ? v : v + avB(s, 'spcd'); }
+function atkIncantesimi(s) { const a = abIncantatore(s); const v = vuotoF(s.f.spatk) ? (a ? atkDa(s, a) : null) : iv(s.f.spatk); return v == null ? v : v + avB(s, 'spatk') + avB(s, 'atk'); }
 const abilName = a => ABIL.find(x => x[0] === a)[2];
 function calcValue(s, key) {
+  const [t, a] = key.split(':'), v = calcBase(s, key);
+  if (t === 'mod') return v + avB(s, 'mod') + avB(s, 'mod:' + a);
+  if (t === 'save') return v + avB(s, 'save') + avB(s, 'save:' + a);
+  if (t === 'skill') return v + avB(s, 'skill') + avB(s, 'skill:' + a);
+  if (t === 'init') return v + avB(s, 'init');
+  if (t === 'pp') return v + avB(s, 'skill') + avB(s, 'skill:perception') + avB(s, 'pp');
+  return v;
+}
+function calcBase(s, key) {
   const [t, a] = key.split(':');
   if (t === 'mod') return abMod(s, a);
   if (t === 'save') { const mod = abMod(s, a), competenza = profB(s), c = !!s.f['sp_' + a]; return regola('tiroSalvezza', { mod, competente: c ? 1 : 0, competenza }, () => mod + (c ? competenza : 0)); }
@@ -574,8 +585,10 @@ function conCaratteristiche(s, expr) {
 // il bonus per colpire: un numero, oppure «FOR+COMP» / «DES + COMP + 1» (sommati)
 function bonusAttacco(s, v) {
   const t = conCaratteristiche(s, v).replace(/\s+/g, '');
-  return /^[+-]?\d+(?:[+-]\d+)+$/.test(t) ? t.match(/[+-]?\d+/g).reduce((x, n) => x + parseInt(n, 10), 0) : iv(t);
+  return (/^[+-]?\d+(?:[+-]\d+)+$/.test(t) ? t.match(/[+-]?\d+/g).reduce((x, n) => x + parseInt(n, 10), 0) : iv(t)) + avB(s, 'atk');
 }
+// i danni con il bonus dei modificatori (es. Ira +2): «1d8+3» → «1d8+3+2»
+const conBonusDanni = (s, expr) => { const b = avB(s, 'dmg'); return b ? `${expr}${sgnE(b)}` : expr; };
 function doRoll(s, key) {
   const [t, a] = key.split(':');
   let expr, label;
@@ -586,10 +599,12 @@ function doRoll(s, key) {
     if (cd) { addChat({ kind: 'rule', title: `${s.name} · ${s.f['an' + a] || 'Attacco'}`, text: `Tiro salvezza CD ${cd[1]}` + (s.f['ad' + a] ? ` · ${s.f['ad' + a]}` : '') }); return; }
     expr = '1d20' + sgnE(bonusAttacco(s, s.f['ab' + a])); label = `${s.name} · ${s.f['an' + a] || 'Attacco'}`;
   }
-  else if (t === 'dmg') { expr = conCaratteristiche(s, s.f['ad' + a] || ''); label = `${s.name} · Danni ${s.f['an' + a] || ''}`.trim(); }
+  else if (t === 'dmg') { expr = conBonusDanni(s, conCaratteristiche(s, s.f['ad' + a] || '')); label = `${s.name} · Danni ${s.f['an' + a] || ''}`.trim(); }
   else {
     // vantaggio o svantaggio fisso sull'iniziativa (⚙ Avanzate): due d20 qualunque sia la barra della scheda
-    const d20 = t === 'init' && s.f.iniVant === 'adv' ? '2d20kh1' : t === 'init' && s.f.iniVant === 'dis' ? '2d20kl1' : '1d20';
+    // e quelli fissi per un'abilità, un tiro salvezza o una caratteristica (⚙ Avanzate › Modificatori)
+    const fisso = t === 'init' ? s.f.iniVant : typeof avanzVantaggio === 'function' ? avanzVantaggio(s, key) : '';
+    const d20 = fisso === 'adv' ? '2d20kh1' : fisso === 'dis' ? '2d20kl1' : '1d20';
     expr = d20 + sgnE(calcValue(s, key));
     const nm = t === 'mod' ? 'Prova di ' + abilName(a) : t === 'save' ? 'Tiro salvezza ' + abilName(a) : t === 'skill' ? SKILLS.find(x => x[0] === a)[1] : 'Iniziativa';
     label = `${s.name} · ${nm}`;
@@ -609,7 +624,7 @@ function tiraDanni(rif, critico, segreto) {
   const prima = diceMode.secret;
   if (segreto) diceMode.secret = true;
   const e = conCaratteristiche(s, expr);
-  try { if (!rollExpr(critico ? raddoppiaDadi(e) : e, label)) addChat({ kind: 'text', text: `${s.name}: tiro non valido («${expr}»)` }); }
+  try { if (!rollExpr(conBonusDanni(s, critico ? raddoppiaDadi(e) : e), label)) addChat({ kind: 'text', text: `${s.name}: tiro non valido («${expr}»)` }); }
   finally { diceMode.secret = prima; }
 }
 // Da che numero il d20 dell'attacco è un critico: «19-20» scritto nel nome o nel bonus di quell'attacco

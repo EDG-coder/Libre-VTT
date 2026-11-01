@@ -341,6 +341,26 @@ function salvaVisibilita(req, res) {
   });
 }
 
+// Il file di traduzione del compendio: { "<id della voce>": { nome, testo } }, scritto da chi conduce
+function salvaTraduzioni(req, res) {
+  corpoBin(req, res, 40 * 1024 * 1024, b => {
+    let j; try { j = JSON.parse(b.toString('utf8')); } catch { return send(res, 400, 'JSON non valido'); }
+    const voci = j && typeof j === 'object' ? (j.voci && typeof j.voci === 'object' ? j.voci : j) : null;
+    if (!voci || Array.isArray(voci)) return send(res, 400, 'Il file deve essere { "id della voce": { "nome": …, "testo": … } }');
+    const out = {};
+    for (const [id, t] of Object.entries(voci)) {
+      if (!t || typeof t !== 'object' || id.length > 200) continue;
+      const r = {};
+      if (typeof t.nome === 'string' && t.nome.trim()) r.nome = t.nome.trim().slice(0, 200);
+      if (typeof t.testo === 'string' && t.testo.trim()) r.testo = t.testo.slice(0, 200000);
+      if (Object.keys(r).length) out[id] = r;
+    }
+    fs.mkdirSync(COMP, { recursive: true });
+    fs.writeFileSync(path.join(COMP, 'traduzioni-it.json'), JSON.stringify({ formato: 'libre-vtt-traduzioni', lingua: 'it', voci: out }, null, 1));
+    json(res, 200, { ok: true, voci: Object.keys(out).length });
+  });
+}
+
 // ---------- Open5e: la sua API (v2) letta passando da qui ----------
 // Il tavolo chiede /api/open5e?percorso=creatures/&search=…: solo GET, solo api.open5e.com/v2 e solo
 // gli elenchi che servono al compendio. (Dal browser direttamente non sempre si può, e così si
@@ -437,6 +457,7 @@ function handle(req, res) {
     if (route === 'DELETE /api/compendio') return eliminaPacchetto(res, q);
     if (route === 'GET /api/compendio/esporta') return esportaPacchetto(res, q);
     if (route === 'PUT /api/compendio/visibilita') return salvaVisibilita(req, res);
+    if (route === 'PUT /api/compendio/traduzioni') return salvaTraduzioni(req, res);
     if (route === 'PUT /api/sistema') return salvaSistema(req, res, q);
     if (route === 'POST /api/sistema/personalizza') return personalizzaSistema(res);
     if (route === 'GET /api/sistema/esporta') return esportaSistema(res);

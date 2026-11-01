@@ -45,8 +45,8 @@
       if (sh.tpl !== 'simple' && sh.tpl !== 'generica') {
         const av = document.createElement('button');
         av.type = 'button'; av.className = 'btn ghost tiroAvanzate'; av.textContent = tr('⚙ Avanzate');
-        av.title = tr('Tuttofare, mezza competenza, intervallo critico, iniziativa');
-        av.addEventListener('click', () => avanzate(w, sh));
+        av.title = tr('Abilità, modificatori, movimento e sensi, difese, risorse, riquadri, incantesimi');
+        av.addEventListener('click', () => (window.avanzateScheda || avanzate)(w, sh));
         b.append(av);
       }
     }
