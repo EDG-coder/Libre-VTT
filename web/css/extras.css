@@ -940,3 +940,51 @@ html.ui-tel #turniBarra .tbTesta { font-size: 13px; padding: 6px 10px; gap: 8px;
 .avanzDlg h4 { margin: 6px 0; }
 .avanzAb { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 2px 10px; }
 .tiroBar .tiroAvanzate { padding: 4px 10px; min-height: 30px; }
+
+/* ======================= Messaggi dei danni (msgDanno in script.js) ======================= */
+.msg.roll.danno { display: block; align-self: stretch; max-width: none; padding: 8px 12px 10px; border-radius: 12px;
+  background: color-mix(in srgb, #ff5d5d 10%, var(--panel-3)); border: 1px solid rgba(255, 107, 107, .45); border-left: 4px solid #ff6b6b; }
+.msg.roll.danno .dTesta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.msg.roll.danno .dChi { font-weight: 700; color: var(--text); opacity: .85; }
+.msg.roll.danno .dCosa { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 2px; font-size: 15px; font-weight: 700; color: var(--text); }
+.msg.roll.danno .dIc { font-size: 14px; }
+.msg.roll.danno .dTipo { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; color: #ffb3b3; background: rgba(255, 107, 107, .16); border: 1px solid rgba(255, 107, 107, .45); }
+.msg.roll.danno .dRis { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255, 107, 107, .35); }
+.msg.roll.danno .dTot { font-size: 28px; line-height: 1; color: #ff8a8a; }
+.msg.roll.danno .dDadi { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.msg.roll.danno .dParti { margin-top: 6px; border-top: 1px solid rgba(255, 107, 107, .25); }
+.msg.roll.danno .dParte { display: flex; align-items: baseline; gap: 8px; padding: 4px 0; border-bottom: 1px dashed rgba(255, 255, 255, .12); font-size: 14px; }
+.msg.roll.danno .dParte:last-child { border-bottom: 0; }
+.msg.roll.danno .dParte b { min-width: 2.2em; font-size: 18px; color: var(--text); text-align: right; }
+.msg.roll.danno .dTesta .who { display: inline; margin: 0; font-size: 1em; }
+:root[data-theme="light"] .msg.roll.danno .dTipo { color: #b42323; }
+:root[data-theme="light"] .msg.roll.danno .dTot { color: #c62828; }
+
+/* ======================= Impostazioni più leggibili (3.7.5) ======================= */
+/* in cima: cerca e indice delle sezioni, sempre visibili mentre si scorre */
+#impTesta { position: sticky; top: -14px; z-index: 2; display: flex; flex-direction: column; gap: 6px; padding: 14px 0 8px; margin: -14px 0 2px; background: var(--panel); box-shadow: 0 6px 8px -6px rgba(0, 0, 0, .35); }
+#impTesta .impRiga { display: flex; gap: 6px; }
+.ui-tel #impTesta { top: -10px; padding-top: 10px; margin-top: -10px; }
+#impCerca { flex: 1; min-width: 0; box-sizing: border-box; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; font-size: 14px; }
+#impCerca:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+#impTesta #impChiudi { flex: none; padding: 6px 10px; font-size: 12.5px; }
+#impTesta #impIndice { flex: none; width: 100%; padding: 8px 10px; }
+#impVuoto { margin: 4px 2px; }
+.sect.impNascosta { display: none; }
+
+/* dentro le sezioni: stesse misure e colori per tutto */
+.sectContent { font-size: 14px; color: var(--text); line-height: 1.35; gap: 10px; }
+.sectContent .note { font-size: 12.5px; line-height: 1.45; color: var(--text-soft); }
+.sectContent .row { flex-wrap: wrap; gap: 6px 10px; }
+.sectContent .row > select, .sectContent .row > input:not([type=checkbox]):not([type=color]) { flex: 1 1 140px; }
+.sectContent .check { align-items: flex-start; gap: 10px; }
+.sectContent input[type=checkbox] { flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--accent); cursor: pointer; }
+.sectContent .row input[type=checkbox] { margin: 0; }
+.sectContent input[type=range] { accent-color: var(--accent); }
+.sectContent output { min-width: 2.2em; text-align: right; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.pane input[type=text], .pane input[type=search]:not(#compQ), .pane input[type=url] {
+  min-width: 0; padding: 6px 8px; border-radius: 8px; font: inherit; font-size: 14px;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--text); }
+.pane input[type=text]::placeholder { color: var(--muted); }
+.sectContent .btn.ghost { align-self: flex-start; }
+.suonoChat { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); }

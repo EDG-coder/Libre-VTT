@@ -1374,6 +1374,7 @@ function apriFinestra(url) {
   finestraProc = p;
   p.on('error', e => say('Non riesco ad avviare il browser della finestra: ' + e.message, 'warn'));
   p.on('exit', codice => {
+    if (p !== finestraProc) return;           // sostituita da una finestra nuova (vedi /api/mostra)
     // Uscito subito: il browser con quel profilo era già aperto (per esempio un LIBRE VTT di prima,
     // appena aggiornato) e gli ha passato la finestra. Spegnere qui lasciava la finestra vuota:
     // si resta accesi finché la pagina dà segni di vita, come col browser normale.
@@ -1414,6 +1415,16 @@ function sorvegliaSenzaFinestra() {
 const presenti = new Set();
 let finestraProc = null, senzaPagineDa = 0, ultimoGiro = Date.now();
 const ATTESA_CHIUSURA = +(process.env.MYVTT_CHIUSURA_MS || 10000);
+// Un browser con il profilo di LIBRE VTT rimasto acceso senza finestre (su macOS resta nel Dock):
+// se gli chiediamo una finestra --app ne apre una normale con una scheda nuova. Prima lo si chiude.
+function chiudiBrowserRimasto() {
+  if (WIN || MOBILE) return Promise.resolve(false);
+  return new Promise(ok => {
+    let q; try { q = spawn('pkill', ['-f', '--', '--user-data-dir=' + PROFILE], { stdio: 'ignore' }); } catch { return ok(false); }
+    q.on('error', () => ok(false));
+    q.on('exit', c => c === 0 ? setTimeout(() => ok(true), 1200) : ok(false));   // 0 = ne ha chiuso almeno uno
+  });
+}
 function chiudiBrowserNostro() {
   try { if (finestraProc && finestraProc.exitCode == null) finestraProc.kill(); } catch {}
   if (WIN) return;                            // su Windows il browser esce da solo con l'ultima finestra
@@ -1479,6 +1490,25 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/api/vivo') { ultimoSegno = Date.now(); res.writeHead(204, { 'Access-Control-Allow-Origin': '*' }); return res.end(); }
   if (u.pathname === '/api/stato') { ultimoSegno = Date.now(); }
   if (u.pathname === '/api/stato') { await check(); return invia(res, 200, JSON.stringify({ ...stato(), log: state.log.slice(-200) }), 'application/json'); }
+  // Un secondo avvio dell'app (doppio clic sull'icona) chiede a questo di mostrare la finestra. Vuole
+  // un'intestazione nostra: un sito aperto nel browser non può mandarla senza il permesso del browser.
+  if (u.pathname === '/api/mostra' && req.headers['x-libre-vtt'] === 'mostra') {
+    const aperte = listeners.size + presenti.size;
+    invia(res, 200, 'ok');
+    senzaPagineDa = 0;
+    const url = 'http://127.0.0.1:' + UI_PORT + '/';
+    if (aperte) {                                            // c'è già una finestra: la si richiama
+      const b = trovaBrowser();
+      try { if (b) spawn(b, ['--app=' + url, '--user-data-dir=' + PROFILE], { detached: true, stdio: 'ignore' }).on('error', () => {}).unref(); } catch {}
+      return;
+    }
+    // nessuna finestra (chiusa da poco): si chiude il browser rimasto e se ne apre una nuova vera
+    say('Riaperta l\'app: apro una finestra nuova.');
+    const vecchio = finestraProc; finestraProc = null;
+    try { if (vecchio && vecchio.exitCode == null) vecchio.kill(); } catch {}
+    chiudiBrowserRimasto().then(() => apriFinestra(url));
+    return;
+  }
   if (u.pathname === '/api/presente') {                     // il filo del tavolo (vedi sorvegliaChiusura)
     const o = req.headers.origin;
     if (!origineLocale(o)) return invia(res, 403, 'no');
@@ -1635,7 +1665,15 @@ function èMyVtt(port) {
 }
 function mostraFinestraEsistente(port) {
   // Già aperto (doppio clic due volte sull'app): non si accende una seconda copia, si mostra la finestra.
+  // Ci pensa l'altro avvio (sa se la sua finestra è ancora aperta); se è di una versione vecchia, come prima.
   console.log('LIBRE VTT è già aperto: mostro la sua finestra.');
+  const r = http.get({ host: '127.0.0.1', port, path: '/api/mostra', headers: { 'X-Libre-VTT': 'mostra' }, timeout: 2000 }, x => {
+    x.resume();
+    if (x.statusCode === 200) setTimeout(() => process.exit(0), 300); else mostraComePrima(port);
+  });
+  r.on('error', () => mostraComePrima(port)); r.on('timeout', () => { r.destroy(); });
+}
+function mostraComePrima(port) {
   const b = trovaBrowser(), url = `http://127.0.0.1:${port}/`;
   try {
     const p = b ? spawn(b, ['--app=' + url, '--user-data-dir=' + PROFILE], { detached: true, stdio: 'ignore' })
@@ -1674,6 +1712,7 @@ function segnalaPronto() {
     await check();
     if (MOBILE) return segnalaPronto();
     sorvegliaChiusura();
+    await chiudiBrowserRimasto();               // un browser di LIBRE VTT rimasto nel Dock da prima
     console.log('LIBRE VTT: finestra su http://127.0.0.1:' + UI_PORT);
     apriFinestra('http://127.0.0.1:' + UI_PORT + '/');
   });

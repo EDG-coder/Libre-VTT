@@ -101,7 +101,7 @@
     <button id="scImporta" type="button" class="btn ghost">${tr('🎵 Importa suonerie…')}</button>
     <input id="scFile" type="file" accept="audio/mpeg,audio/ogg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,audio/aac,.mp3,.ogg,.wav,.m4a" multiple hidden>
     <p class="note">${tr('Suona quando arriva un messaggio di un altro. Le suonerie importate restano in questo dispositivo.')}</p>`;
-  sect.append(box);
+  (sect.querySelector('.sectContent') || sect).append(box);   // dentro la sezione (che si apre e si chiude)
   const sel = $('scSel');
   async function riempi() {
     const mie = await elenco();
