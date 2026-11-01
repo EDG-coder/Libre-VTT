@@ -913,3 +913,30 @@ body:not(.net-on) .soloRete { display: none !important; }
 #rulerPlus { position: fixed; right: 18px; bottom: 110px; z-index: 30; width: 56px; height: 56px; border-radius: 50%;
   font: 700 30px/1 system-ui, sans-serif; color: inherit; display: none; touch-action: none; }
 #rulerPlus.on { display: block; }
+
+/* ======================= Barra dei turni in alto (turni.js) ======================= */
+/* fuori dal menu degli strumenti: si vede anche con il menu chiuso o nascosto (telefono) */
+#turniBarra { position: fixed; left: 50%; top: calc(10px + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 100003;
+  max-width: min(560px, calc(100vw - 32px)); display: flex; flex-direction: column; align-items: stretch;
+  border-radius: 14px; background: rgba(18, 21, 28, .9); color: #fff; border: 1px solid rgba(255, 210, 63, .55);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .45); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+#turniBarra[hidden] { display: none; }
+#turniBarra .tbTesta { display: flex; gap: 10px; align-items: baseline; justify-content: center; flex-wrap: wrap; min-height: 36px; padding: 7px 14px;
+  border: 0; background: none; color: inherit; font: inherit; font-size: 14px; cursor: pointer; text-align: center; }
+#turniBarra .tbRound { color: #ffd23f; font-weight: 700; }
+#turniBarra .tbOra { font-weight: 700; }
+#turniBarra .tbPoi { opacity: .75; }
+#turniBarra .tbTesta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+#turniBarra .tbTesta:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 14px; }
+#turniBarra .tbLista { margin: 0; padding: 4px 12px 10px 34px; max-height: 40vh; overflow-y: auto; font-size: 13px; border-top: 1px solid rgba(255, 255, 255, .12); }
+#turniBarra .tbLista[hidden] { display: none; }
+#turniBarra .tbLista li { padding: 3px 0; }
+#turniBarra .tbLista li.ora { color: #ffd23f; font-weight: 700; }
+html.ui-tel #turniBarra .tbTesta { font-size: 13px; padding: 6px 10px; gap: 8px; }
+
+/* ======================= ⚙ Avanzate della scheda (tiri-scheda.js) ======================= */
+.avanzDlg { max-width: min(560px, calc(100vw - 32px)); }
+.avanzDlg section { margin: 10px 0; }
+.avanzDlg h4 { margin: 6px 0; }
+.avanzAb { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 2px 10px; }
+.tiroBar .tiroAvanzate { padding: 4px 10px; min-height: 30px; }

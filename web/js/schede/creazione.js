@@ -40,9 +40,10 @@
   function nuovoStato(nome) {
     return { nome: nome || tr('Personaggio'), specie: '', sotto: '', classi: [{ id: '', livello: 1, sotto: '' }], bg: '', metodo: 'standard',
       assegna: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 }, punti: { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 }, tirati: [], aum: { schema: '21', a: '', b: '', c: '' },
-      abilita: new Set(), equip: 'pacchetto', monete: '', inc: new Set() };
+      spAum: [], spAb: [], spTal: '', abilita: new Set(), equip: 'pacchetto', monete: '', inc: new Set() };
   }
   const trova = (t, id) => voci(t).find(v => v.id === id);
+  const abSpecie = () => { const sp = trova('specie', st.specie); return sp && sp.abilitaScelta ? st.spAb.slice(0, sp.abilitaScelta).filter(Boolean) : []; };
   const classe0 = () => trova('classe', st.classi[0].id);
   const livTot = () => st.classi.reduce((a, c) => a + (c.id ? +c.livello || 0 : 0), 0) || 1;
   function base() {
@@ -60,6 +61,8 @@
       for (const x of (sp && sp.aumenti) || []) out[x.car] += x.bonus;
       const so = sp && (sp.sottospecie || []).find(s => s.id === st.sotto);
       for (const x of (so && so.aumenti) || []) out[x.car] += x.bonus;
+      const sc = sp && sp.aumentiScelta;                  // umano variante, mezzelfo: +1 a scelta
+      if (sc) for (const k of new Set(st.spAum.slice(0, sc.quante))) if (k && k in out) out[k] += sc.bonus || 1;
     }
     return out;
   }
@@ -92,6 +95,7 @@
       const sp = trova('specie', st.specie), sotto = (sp && sp.sottospecie) || [];
       return `<label>${esc(nomeSpecie())}<select data-k="specie">${opz(voci('specie'), st.specie, tr('— scegli —'))}</select></label>
         ${sotto.length ? `<label>${esc(tr('Variante'))}<select data-k="sotto"><option value="">—</option>${sotto.map(s => `<option value="${esc(s.id)}" ${s.id === st.sotto ? 'selected' : ''}>${esc(s.nome)}</option>`).join('')}</select></label>` : ''}
+        ${sp ? sceltaSpecie(sp) : ''}
         ${sp ? `<p class="note">${esc([sp.taglia, sp.velocita ? sp.velocita + ' ft' : '', (sp.aumenti || []).map(a => CAR.find(c => c[0] === a.car)[1] + ' +' + a.bonus).join(', '), (sp.lingue || []).join(', ')].filter(Boolean).join(' · '))}</p>` + anteprima(sp) : ''}`;
     }
     if (p === 'classe') {
@@ -135,7 +139,7 @@
     }
     if (p === 'competenze') {
       const cl = classe0(), bg = trova('background', st.bg);
-      const fisse = new Set((bg && bg.abilita) || []);
+      const fisse = new Set([...((bg && bg.abilita) || []), ...abSpecie()]);
       const sc = cl && (cl.sceltaAbilita || [])[0];
       const tra = sc && sc.tra && sc.tra.length ? sc.tra : Object.keys(NOMI_AB);
       const scelte = [...st.abilita].filter(k => !fisse.has(k)).length;
@@ -172,6 +176,26 @@
     }
     return '';
   }
+  // le scelte della specie: aumenti a scelta, abilità e talento (umano variante, mezzelfo)
+  function sceltaSpecie(sp) {
+    let h = '';
+    const a = !anno2024() && sp.aumentiScelta;
+    if (a) {
+      const ok = CAR.filter(([k]) => !(a.tranne || []).includes(k));
+      h += `<div class="creaRiga"><span>${esc(tr('+{b} a {n} caratteristiche diverse a scelta', { b: a.bonus || 1, n: a.quante }))}</span>` +
+        Array.from({ length: a.quante }, (_, i) => `<select data-k="spAum" data-i="${i}"><option value="">—</option>${ok.map(([k, , n]) => `<option value="${k}" ${st.spAum[i] === k ? 'selected' : ''} ${st.spAum.includes(k) && st.spAum[i] !== k ? 'disabled' : ''}>${esc(tr(n))}</option>`).join('')}</select>`).join('') + '</div>';
+    }
+    if (sp.abilitaScelta) {
+      h += `<div class="creaRiga"><span>${esc(tr('Abilità a scelta: {n}', { n: sp.abilitaScelta }))}</span>` +
+        Array.from({ length: sp.abilitaScelta }, (_, i) => `<select data-k="spAb" data-i="${i}"><option value="">—</option>${Object.entries(NOMI_AB).sort((x, y) => tr(x[1]).localeCompare(tr(y[1]))).map(([k, n]) => `<option value="${k}" ${st.spAb[i] === k ? 'selected' : ''}>${esc(tr(n))}</option>`).join('')}</select>`).join('') + '</div>';
+    }
+    if (sp.talentoScelta) {
+      const tal = voci('talento');
+      h += `<label>${esc(tr('Talento'))}<input data-k="spTal" list="creaTalenti" value="${esc(st.spTal)}" placeholder="${esc(tr('Scegli o scrivi il nome'))}"></label>
+        <datalist id="creaTalenti">${tal.map(t => `<option value="${esc(t.nome)}">`).join('')}</datalist>`;
+    }
+    return h;
+  }
   function incantatore() {
     for (const c of st.classi) {
       const cl = trova('classe', c.id); if (!cl || !cl.incantatore) continue;
@@ -191,7 +215,10 @@
     const av = dlg.querySelector('[data-a=avanti]'); if (av) av.onclick = () => { if (verifica(p)) { passo++; disegna(); } };
     const sa = dlg.querySelector('[data-a=salta]'); if (sa) sa.onclick = () => { passo++; disegna(); };
     const cr = dlg.querySelector('[data-a=crea]'); if (cr) cr.onclick = crea;
-    q('[data-k=specie]').forEach(e => e.onchange = () => { st.specie = e.value; st.sotto = ''; rid(); });
+    q('[data-k=specie]').forEach(e => e.onchange = () => { st.specie = e.value; st.sotto = ''; st.spAum = []; st.spAb = []; st.spTal = ''; rid(); });
+    q('[data-k=spAum]').forEach(e => e.onchange = () => { st.spAum[+e.dataset.i] = e.value; rid(); });
+    q('[data-k=spAb]').forEach(e => e.onchange = () => { st.spAb[+e.dataset.i] = e.value; });
+    q('[data-k=spTal]').forEach(e => e.oninput = () => { st.spTal = e.value.trim().slice(0, 80); });
     q('[data-k=sotto]').forEach(e => e.onchange = () => { st.sotto = e.value; rid(); });
     q('[data-k=classe]').forEach(e => e.onchange = () => { st.classi[+e.dataset.i].id = e.value; st.classi[+e.dataset.i].sotto = ''; rid(); });
     q('[data-k=livello]').forEach(e => e.onchange = () => { st.classi[+e.dataset.i].livello = Math.max(1, Math.min(20, +e.value || 1)); rid(); });
@@ -225,7 +252,7 @@
     const err = t => { dlg.querySelector('#creaErr').textContent = t; return false; };
     if (p === 'caratteristiche' && st.metodo === 'punti') { const sp = CAR.reduce((x, [k]) => x + COSTO[st.punti[k]], 0); if (sp > 27) return err(tr('Hai speso {n} punti: il massimo è 27.', { n: sp })); }
     if (p === 'competenze') {
-      const sc = classe0() && (classe0().sceltaAbilita || [])[0], fisse = new Set(((trova('background', st.bg) || {}).abilita) || []);
+      const sc = classe0() && (classe0().sceltaAbilita || [])[0], fisse = new Set([...(((trova('background', st.bg) || {}).abilita) || []), ...abSpecie()]);
       const n = [...st.abilita].filter(k => !fisse.has(k)).length;
       if (sc && n > sc.quante && !confirm(tr('Hai scelto {n} abilità, la classe ne dà {q}. Vai avanti lo stesso?', { n, q: sc.quante }))) return false;
     }
@@ -260,7 +287,7 @@
     if (pf) { f.hpmax = String(Math.max(1, pf)); f.hp = f.hpmax; }
     if (cls.length) { f.hd = cls.map(c => 'd' + c.cl.dadoVita).join(' + '); f.hdt = String(liv); }
     for (const k of (cls[0] && cls[0].cl.ts) || []) f['sp_' + k] = '1';
-    for (const k of new Set([...st.abilita, ...((bg && bg.abilita) || [])])) f['kp_' + k] = '1';
+    for (const k of new Set([...st.abilita, ...((bg && bg.abilita) || []), ...abSpecie()])) f['kp_' + k] = '1';
     if (cls.length) f.prof_text1 = (cls[0].cl.competenze || []).filter(t => !/^Saving Throw|^Skill/.test(t)).join(', ');
     // privilegi
     const priv = [];
@@ -273,7 +300,8 @@
     const razz = [...((sp && sp.tratti) || []), ...((so && so.tratti) || [])].map(t => `${t.nome}\n${t.testo || ''}`);
     if (bg && bg.privilegio) razz.push(`${bg.privilegio.nome}\n${bg.privilegio.testo || ''}`);
     if (razz.length) f.racial = razz.join('\n\n');
-    if (bg && bg.talento) f.feats = bg.talento;
+    const talenti = [bg && bg.talento, sp && sp.talentoScelta && st.spTal].filter(Boolean);
+    if (talenti.length) f.feats = talenti.join('\n');
     // equipaggiamento
     if (st.equip === 'monete') { if (st.monete) f.mo = String(+st.monete || 0); }
     else {

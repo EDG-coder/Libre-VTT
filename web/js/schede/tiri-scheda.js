@@ -42,6 +42,13 @@
       l.innerHTML = `${tr('Critico da')} <select data-f="critDa">${['', '19', '18', '17', '16', '15'].map(v => `<option value="${v}">${v || '20'}</option>`).join('')}</select>`;
       b.append(l);
       bindField(l.querySelector('select'), w._body, sh);
+      if (sh.tpl !== 'simple' && sh.tpl !== 'generica') {
+        const av = document.createElement('button');
+        av.type = 'button'; av.className = 'btn ghost tiroAvanzate'; av.textContent = tr('⚙ Avanzate');
+        av.title = tr('Tuttofare, mezza competenza, intervallo critico, iniziativa');
+        av.addEventListener('click', () => avanzate(w, sh));
+        b.append(av);
+      }
     }
     w._body.prepend(b);
     void m;
@@ -70,5 +77,36 @@
     try { return prima.apply(this, arguments); }
     finally { diceMode.adv = salvo.adv; diceMode.secret = salvo.secret; window.tiroDoppio = false; }
   };
-  window._tiriScheda = { modoDi, barra };
+  // ---------- ⚙ Avanzate: il primo pezzo del menu avanzato della scheda ----------
+  // Abilità (Tuttofare, mezza competenza per abilità), Attacchi (intervallo critico), Iniziativa (bonus,
+  // vantaggio fisso). Sono campi della scheda: si salvano con lei e valgono in tutti i calcoli.
+  function avanzate(w, sh) {
+    const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const d = document.createElement('dialog'); d.className = 'compDlg avanzDlg';
+    const abil = (typeof SKILLS !== 'undefined' ? SKILLS : []).slice().sort((a, b) => tr(a[1]).localeCompare(tr(b[1])));
+    d.innerHTML = `<h3>⚙ ${esc(tr('Avanzate'))} · <span data-noi18n>${esc(sh.name)}</span></h3>
+      <section><h4>${esc(tr('Abilità'))}</h4>
+        <label class="check"><input type="checkbox" data-f="tuttofare"> <b>${esc(tr('Tuttofare'))}</b></label>
+        <p class="note">${esc(tr('Metà del bonus di competenza (per difetto) a tutte le prove di abilità senza competenza e all\'iniziativa.'))}</p>
+        <p class="note">${esc(tr('Mezza competenza solo in alcune abilità:'))}</p>
+        <div class="avanzAb">${abil.map(([k, n]) => `<label class="check"><input type="checkbox" data-f="kh_${k}"> ${esc(tr(n))}</label>`).join('')}</div></section>
+      <section><h4>${esc(tr('Attacchi'))}</h4>
+        <label>${esc(tr('Critico da'))} <select data-f="critDa">${['', '19', '18', '17', '16', '15'].map(v => `<option value="${v}">${v ? v + '-20' : '20'}</option>`).join('')}</select></label>
+        <p class="note">${esc(tr('Da che numero il d20 di un attacco è un critico. Per una sola arma scrivi «19-20» nel suo nome o nel bonus.'))}</p></section>
+      <section><h4>${esc(tr('Iniziativa'))}</h4>
+        <div class="creaRiga"><label>${esc(tr('Bonus iniziativa'))} <input type="number" data-f="initb" style="width:70px"></label>
+        <label>${esc(tr('Sempre con'))} <select data-f="iniVant"><option value="">${esc(tr('Normale'))}</option><option value="adv">${esc(tr('Vantaggio'))}</option><option value="dis">${esc(tr('Svantaggio'))}</option></select></label></div></section>
+      <div class="dialogBtns"><span style="flex:1"></span><button type="button" class="btn" data-a="ok">${esc(tr('Fatto'))}</button></div>`;
+    document.body.appendChild(d);
+    d.querySelectorAll('[data-f]').forEach(el => bindField(el, w._body, sh));
+    d.querySelector('[data-a=ok]').onclick = () => d.close();
+    d.addEventListener('close', () => {
+      d.remove();
+      // gli stessi campi nella scheda (la casella «Critico da» della barra, «Bonus iniziativa»)
+      w._body.querySelectorAll('[data-f="critDa"], [data-f="initb"]').forEach(el => { el.value = sh.f[el.dataset.f] ?? ''; });
+      if (typeof recalc === 'function') recalc(w._body, sh);
+    });
+    d.showModal();
+  }
+  window._tiriScheda = { modoDi, barra, avanzate };
 })();

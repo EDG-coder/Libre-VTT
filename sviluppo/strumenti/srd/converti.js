@@ -148,6 +148,21 @@ function converti(ed, idSis, idPack, nomePack, fonte) {
       sottospecie: mie.map(s => ({ id: s.index, nome: nomeIt(s.name), en: s.name, aumenti: (s.ability_bonuses || []).map(b => ({ car: CAR[b.ability_score.index], bonus: b.bonus })), tratti: (s.racial_traits || s.traits || []).map(tratto), testo: dsc(s) || undefined }))
     } });
   }
+  // scelte che l'SRD scrive solo a parole: la creazione guidata le chiede
+  for (const sp of voci.specie || []) {
+    if (sp.en === 'Half-Elf') { sp.aumentiScelta = { quante: 2, bonus: 1, tranne: ['cha'] }; sp.abilitaScelta = 2; }
+  }
+  // l'umano variante non è nell'SRD (è del Manuale del Giocatore 2014): solo le regole, con un testo nostro
+  if (ed === '2014') metti('specie', { index: 'human-variant', corpo: {
+    fonte: 'LIBRE VTT', nome: 'Umano (variante)', en: 'Variant Human', taglia: 'Media', velocita: 30, aumenti: [], lingue: ['Comune'], competenze: [],
+    aumentiScelta: { quante: 2, bonus: 1 }, abilitaScelta: 1, talentoScelta: 1,
+    tratti: [
+      { nome: 'Aumento dei punteggi di caratteristica', en: 'Ability Score Increase', testo: 'Two different ability scores of your choice increase by 1.' },
+      { nome: 'Abilità', en: 'Skills', testo: 'You gain proficiency in one skill of your choice.' },
+      { nome: 'Talento', en: 'Feat', testo: 'You gain one feat of your choice.' }
+    ],
+    testo: 'Optional variant of the human (2014 rules, if the DM allows feats): instead of +1 to every ability score, +1 to two different scores of your choice, one skill and one feat. Size Medium, speed 30 ft, Common and one extra language of your choice.'
+  } });
   // background
   for (const b of L('Backgrounds')) {
     const comp = (b.starting_proficiencies || b.proficiencies || []).map(p => p.name);
@@ -178,12 +193,14 @@ function converti(ed, idSis, idPack, nomePack, fonte) {
       testo: scelte.join('\n') || undefined
     } });
   }
+  // il livello di un privilegio: un numero, o { level } (2014), o { index: 'ranger-3' } (2024)
+  const livelloPriv = l => typeof l === 'number' ? l : l && l.level ? l.level : l && /(\d+)$/.test(l.index || l.name || '') ? Number(/(\d+)$/.exec(l.index || l.name)[1]) : l;
   for (const s of sottoclassi) {
     const lv = livelli.filter(l => l.subclass && l.subclass.index === s.index).sort((a, b) => a.level - b.level);
     const suoi = priv.filter(f => f.subclass && f.subclass.index === s.index);
     metti('sottoclasse', { index: s.index, corpo: {
-      nome: nomeIt(s.name), en: s.name, classe: nomeIt(s.class.name), tipo: s.subclass_flavor ? nomeIt(s.subclass_flavor, 'privilegi') : undefined,
-      testo: dsc(s), privilegi: suoi.sort((a, b) => ((a.level && a.level.level) || a.level || 0) - ((b.level && b.level.level) || b.level || 0)).map(f => ({ livello: (f.level && f.level.level) || f.level, nome: nomeIt(f.name, 'privilegi'), en: f.name, testo: dsc(f) })),
+      nome: nomeIt(s.name), en: s.name, classe: nomeIt(s.class.name), famiglia: s.subclass_flavor ? nomeIt(s.subclass_flavor, 'privilegi') : undefined,   // il gruppo («Cammino primordiale»): non in «tipo», che dice l'elenco
+      testo: dsc(s), privilegi: suoi.sort((a, b) => (Number(livelloPriv(a.level)) || 0) - (Number(livelloPriv(b.level)) || 0)).map(f => ({ livello: livelloPriv(f.level), nome: nomeIt(f.name, 'privilegi'), en: f.name, testo: dsc(f) })),
       livelli: lv.length ? lv.map(l => ({ livello: l.level, privilegi: (l.features || []).map(f => nomeIt(f.name, 'privilegi')) })) : undefined
     } });
   }

@@ -1371,6 +1371,7 @@ function apriFinestra(url) {
   say(`Apro la finestra con ${b} ${args.join(' ')}`);
   const partita = Date.now();
   const p = spawn(b, args, { detached: false, stdio: 'ignore' });
+  finestraProc = p;
   p.on('error', e => say('Non riesco ad avviare il browser della finestra: ' + e.message, 'warn'));
   p.on('exit', codice => {
     // Uscito subito: il browser con quel profilo era già aperto (per esempio un LIBRE VTT di prima,
@@ -1395,13 +1396,43 @@ function sorvegliaSenzaFinestra() {
   if (sorvegliando) return;
   sorvegliando = true; ultimoSegno = Date.now();
   setInterval(() => {
-    if (listeners.size) ultimoSegno = Date.now();
+    if (listeners.size || presenti.size) ultimoSegno = Date.now();
     if (Date.now() - ultimoSegno > +(process.env.MYVTT_ATTESA_MS || 180000)) {
       console.log('Nessuna pagina di LIBRE VTT aperta da qualche minuto: spengo.');
       stopAll(); setTimeout(() => process.exit(0), 300);
     }
   }, 5000).unref();
 }
+
+// ---------- la finestra chiusa: si spegne tutto ----------
+// Ogni pagina di LIBRE VTT (il menu e il tavolo) tiene aperto un filo con noi: il menu con /api/eventi,
+// il tavolo con /api/presente. Quando la finestra si chiude il filo cade. Su macOS il pallino rosso chiude
+// la finestra ma il browser resta acceso nel Dock e non esce mai: aspettare la sua uscita non basta.
+// Se per 10 secondi nessuna pagina si ricollega (un ricaricamento o il passaggio menu → tavolo si
+// ricollegano subito), chiudiamo il browser con il NOSTRO profilo, spegniamo i server e usciamo.
+// Un filo è più sicuro di un avviso «mi sto chiudendo»: un altro sito non può spegnere l'app.
+const presenti = new Set();
+let finestraProc = null, senzaPagineDa = 0, ultimoGiro = Date.now();
+const ATTESA_CHIUSURA = +(process.env.MYVTT_CHIUSURA_MS || 10000);
+function chiudiBrowserNostro() {
+  try { if (finestraProc && finestraProc.exitCode == null) finestraProc.kill(); } catch {}
+  if (WIN) return;                            // su Windows il browser esce da solo con l'ultima finestra
+  // solo il browser con il profilo di LIBRE VTT: quello normale (altro profilo) non si tocca
+  try { spawn('pkill', ['-f', '--', '--user-data-dir=' + PROFILE], { stdio: 'ignore', detached: true }).on('error', () => {}).unref(); } catch {}
+}
+function sorvegliaChiusura() {
+  if (MOBILE) return;                         // dentro l'app per telefono la finestra è l'app stessa
+  setInterval(() => {
+    const ora = Date.now(), salto = ora - ultimoGiro > 5000; ultimoGiro = ora;
+    // dopo lo stop del computer (il timer si era fermato) i fili si ricollegano: si aspetta un giro in più
+    if (salto || !finestraVista || state.busy || listeners.size || presenti.size) { senzaPagineDa = 0; return; }
+    if (!senzaPagineDa) { senzaPagineDa = ora; return; }
+    if (ora - senzaPagineDa < ATTESA_CHIUSURA) return;
+    say('Nessuna finestra di LIBRE VTT aperta: chiudo il browser della finestra, spengo i server ed esco.');
+    chiudiBrowserNostro(); stopAll(); setTimeout(() => process.exit(0), 500);
+  }, 1000).unref();
+}
+const origineLocale = o => !o || /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(o);
 
 // ---------- il piccolo server della finestra ----------
 const invia = (res, code, body, type = 'text/plain; charset=utf-8') => {
@@ -1430,7 +1461,7 @@ const server = http.createServer(async (req, res) => {
     }
     const ck = /(?:^|;\s*)libre_k=([^;]*)/.exec(req.headers.cookie || '');
     let dato = ''; try { dato = ck ? decodeURIComponent(ck[1]) : ''; } catch {}
-    if (u.pathname !== '/api/vivo' && dato !== SEGRETO) return invia(res, 403, 'Questa finestra non è quella di LIBRE VTT.');
+    if (u.pathname !== '/api/vivo' && u.pathname !== '/api/presente' && dato !== SEGRETO) return invia(res, 403, 'Questa finestra non è quella di LIBRE VTT.');
   }
 
   if (u.pathname === '/' || u.pathname === '/index.html') {
@@ -1448,6 +1479,16 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/api/vivo') { ultimoSegno = Date.now(); res.writeHead(204, { 'Access-Control-Allow-Origin': '*' }); return res.end(); }
   if (u.pathname === '/api/stato') { ultimoSegno = Date.now(); }
   if (u.pathname === '/api/stato') { await check(); return invia(res, 200, JSON.stringify({ ...stato(), log: state.log.slice(-200) }), 'application/json'); }
+  if (u.pathname === '/api/presente') {                     // il filo del tavolo (vedi sorvegliaChiusura)
+    const o = req.headers.origin;
+    if (!origineLocale(o)) return invia(res, 403, 'no');
+    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', ...(o ? { 'Access-Control-Allow-Origin': o } : {}) });
+    res.write('retry: 2000\n\n');
+    presenti.add(res); finestraVista = true; ultimoSegno = Date.now();
+    const batti = setInterval(() => { try { res.write(': ci sei\n\n'); } catch {} }, 25000);
+    req.on('close', () => { clearInterval(batti); presenti.delete(res); });
+    return;
+  }
   if (u.pathname === '/api/eventi') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
     res.write(': ciao\n\n');
@@ -1632,6 +1673,7 @@ function segnalaPronto() {
   server.on('listening', async () => {
     await check();
     if (MOBILE) return segnalaPronto();
+    sorvegliaChiusura();
     console.log('LIBRE VTT: finestra su http://127.0.0.1:' + UI_PORT);
     apriFinestra('http://127.0.0.1:' + UI_PORT + '/');
   });

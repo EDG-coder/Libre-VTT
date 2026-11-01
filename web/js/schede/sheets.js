@@ -506,9 +506,16 @@ const profB = s => {
   return regola('competenza', { livello: iv(s.f.level), manuale: iv(s.f.profb), scritta: scritta ? 1 : 0 },
     () => scritta ? iv(s.f.profb) : 2 + Math.floor((Math.max(1, iv(s.f.level)) - 1) / 4));
 };
+// Tuttofare (Jack of All Trades) e «mezza competenza» per una sola abilità: metà del bonus di competenza,
+// per difetto, alle prove di abilità senza competenza (e, con Tuttofare, all'iniziativa). Stanno in
+// «⚙ Avanzate» nella barra della scheda (avanzate.js).
+const mezzaCompetenza = (s, k) => {
+  if (k && (s.f['kp_' + k] || s.f['ke_' + k])) return 0;
+  return (k ? s.f.tuttofare || s.f['kh_' + k] : s.f.tuttofare) ? Math.floor(profB(s) / 2) : 0;
+};
 const skillB = (s, k) => {
   const mod = abMod(s, SKILLS.find(x => x[0] === k)[2]), comp = profB(s), ke = !!s.f['ke_' + k], kp = !!s.f['kp_' + k];
-  return regola('abilita', { mod, competente: kp ? 1 : 0, maestria: ke ? 1 : 0, competenza: comp }, () => mod + (ke ? comp * 2 : kp ? comp : 0));
+  return regola('abilita', { mod, competente: kp ? 1 : 0, maestria: ke ? 1 : 0, competenza: comp }, () => mod + (ke ? comp * 2 : kp ? comp : 0)) + mezzaCompetenza(s, k);
 };
 const cdDa = (s, a) => { const competenza = profB(s), mod = abMod(s, a); return regola('cdIncantesimi', { competenza, mod }, () => 8 + competenza + mod); };
 const atkDa = (s, a) => { const competenza = profB(s), mod = abMod(s, a); return regola('attaccoIncantesimi', { competenza, mod }, () => competenza + mod); };
@@ -529,7 +536,7 @@ function calcValue(s, key) {
   if (t === 'save') { const mod = abMod(s, a), competenza = profB(s), c = !!s.f['sp_' + a]; return regola('tiroSalvezza', { mod, competente: c ? 1 : 0, competenza }, () => mod + (c ? competenza : 0)); }
   if (t === 'skill') return skillB(s, a);
   if (t === 'prof') return profB(s);
-  if (t === 'init') { const modDes = abMod(s, 'dex'), bonus = iv(s.f.initb); return regola('iniziativa', { modDes, bonus }, () => modDes + bonus); }
+  if (t === 'init') { const modDes = abMod(s, 'dex'), bonus = iv(s.f.initb); return regola('iniziativa', { modDes, bonus }, () => modDes + bonus) + mezzaCompetenza(s, null); }
   if (t === 'pp') { const percezione = skillB(s, 'perception'); return regola('percezionePassiva', { percezione }, () => 10 + percezione); }
   if (t === 'wsum') return +Object.keys(s.f).filter(k => /^iv\d+w$/.test(k)).reduce((a, k) => a + (parseFloat(String(s.f[k]).replace(',', '.')) || 0), 0).toFixed(2);
   if (t === 'wmax') return +regola('caricoMassimo', { forza: iv(s.f.str) }, () => iv(s.f.str) * 7.5).toFixed(1);
@@ -540,8 +547,8 @@ function calcValue(s, key) {
 function recalc(root, s) {
   root.querySelectorAll('[data-c]').forEach(o => { const v = calcValue(s, o.dataset.c); o.textContent = ['pp', 'wsum', 'wmax'].includes(o.dataset.c) ? v : sgn(v); });
   // la percezione passiva dice da dove viene il numero (per confrontarlo con altre schede)
-  const sag = abMod(s, 'wis'), comp = s.f.ke_perception ? profB(s) * 2 : s.f.kp_perception ? profB(s) : 0;
-  const perche = `10 + Saggezza (${sgn(sag)})` + (comp ? ` + ${s.f.ke_perception ? 'maestria' : 'competenza'} in Percezione (${sgn(comp)})` : ' — senza competenza in Percezione: spunta la casella di Percezione se il personaggio ce l\'ha');
+  const sag = abMod(s, 'wis'), comp = s.f.ke_perception ? profB(s) * 2 : s.f.kp_perception ? profB(s) : 0, mezza = mezzaCompetenza(s, 'perception');
+  const perche = `10 + Saggezza (${sgn(sag)})` + (comp ? ` + ${s.f.ke_perception ? 'maestria' : 'competenza'} in Percezione (${sgn(comp)})` : mezza ? ` + mezza competenza (${sgn(mezza)})` : ' — senza competenza in Percezione: spunta la casella di Percezione se il personaggio ce l\'ha');
   root.querySelectorAll('[data-c="pp"]').forEach(o => { o.title = perche; });
   // CD e attacco degli incantesimi: il valore calcolato si vede in grigio finché non ne scrivi uno tuo
   // CA senza armatura: 10 + Destrezza, in grigio finché non scrivi quella della tua armatura
@@ -552,6 +559,23 @@ function recalc(root, s) {
   root.querySelectorAll('[data-f="spcd"]').forEach(i => { i.placeholder = a ? String(cdDa(s, a)) : ''; i.title = a ? 'Calcolata: 8 + competenza + modificatore (scrivi un numero per cambiarla)' : 'Scrivi la caratteristica da incantatore per calcolarla'; });
   root.querySelectorAll('[data-f="spatk"]').forEach(i => { i.placeholder = a ? sgnE(atkDa(s, a)) : ''; i.title = a ? 'Calcolato: competenza + modificatore (scrivi un numero per cambiarlo)' : 'Scrivi la caratteristica da incantatore per calcolarlo'; });
 }
+// «1d8 + FOR perforanti»: FOR, DES, COS, INT, SAG, CAR (o STR, DEX, CON, WIS, CHA) diventano il
+// modificatore della scheda, COMP (o BC, PROF) il bonus di competenza. Solo in maiuscolo e dopo un segno
+// (o all'inizio), così le parole della descrizione («con la spada») restano come sono.
+const SIGLE_CAR = { FOR: 'str', DES: 'dex', COS: 'con', INT: 'int', SAG: 'wis', CAR: 'cha', STR: 'str', DEX: 'dex', CON: 'con', WIS: 'wis', CHA: 'cha' };
+function conCaratteristiche(s, expr) {
+  if (!s || !s.f) return expr;
+  return String(expr ?? '').replace(/(^\s*|[+\-−–]\s*)(FOR|DES|COS|INT|SAG|CAR|STR|DEX|CON|WIS|CHA|COMP|BC|PROF)(?![\wÀ-ÖØ-öø-ÿ])/g, (_, pre, k) => {
+    const v = SIGLE_CAR[k] ? abMod(s, SIGLE_CAR[k]) : profB(s);
+    const meno = /[-−–]/.test(pre), tot = meno ? -v : v;
+    return (/^\s*$/.test(pre) ? (tot < 0 ? '-' : '') : (tot < 0 ? '-' : '+')) + Math.abs(tot);
+  });
+}
+// il bonus per colpire: un numero, oppure «FOR+COMP» / «DES + COMP + 1» (sommati)
+function bonusAttacco(s, v) {
+  const t = conCaratteristiche(s, v).replace(/\s+/g, '');
+  return /^[+-]?\d+(?:[+-]\d+)+$/.test(t) ? t.match(/[+-]?\d+/g).reduce((x, n) => x + parseInt(n, 10), 0) : iv(t);
+}
 function doRoll(s, key) {
   const [t, a] = key.split(':');
   let expr, label;
@@ -560,11 +584,13 @@ function doRoll(s, key) {
     // un incantesimo a tiro salvezza («CD 13», «DC13»): non si tira per colpire, si dice la CD
     const cd = /^\s*(?:CD|DC|TS)\s*:?\s*(\d+)/i.exec(String(s.f['ab' + a] || ''));
     if (cd) { addChat({ kind: 'rule', title: `${s.name} · ${s.f['an' + a] || 'Attacco'}`, text: `Tiro salvezza CD ${cd[1]}` + (s.f['ad' + a] ? ` · ${s.f['ad' + a]}` : '') }); return; }
-    expr = '1d20' + sgnE(iv(s.f['ab' + a])); label = `${s.name} · ${s.f['an' + a] || 'Attacco'}`;
+    expr = '1d20' + sgnE(bonusAttacco(s, s.f['ab' + a])); label = `${s.name} · ${s.f['an' + a] || 'Attacco'}`;
   }
-  else if (t === 'dmg') { expr = s.f['ad' + a] || ''; label = `${s.name} · Danni ${s.f['an' + a] || ''}`.trim(); }
+  else if (t === 'dmg') { expr = conCaratteristiche(s, s.f['ad' + a] || ''); label = `${s.name} · Danni ${s.f['an' + a] || ''}`.trim(); }
   else {
-    expr = '1d20' + sgnE(calcValue(s, key));
+    // vantaggio o svantaggio fisso sull'iniziativa (⚙ Avanzate): due d20 qualunque sia la barra della scheda
+    const d20 = t === 'init' && s.f.iniVant === 'adv' ? '2d20kh1' : t === 'init' && s.f.iniVant === 'dis' ? '2d20kl1' : '1d20';
+    expr = d20 + sgnE(calcValue(s, key));
     const nm = t === 'mod' ? 'Prova di ' + abilName(a) : t === 'save' ? 'Tiro salvezza ' + abilName(a) : t === 'skill' ? SKILLS.find(x => x[0] === a)[1] : 'Iniziativa';
     label = `${s.name} · ${nm}`;
   }
@@ -582,7 +608,8 @@ function tiraDanni(rif, critico, segreto) {
   const label = `${s.name} · ${critico ? tr('Danni critici') : tr('Danni')} ${s.f['an' + rif.at] || ''}`.trim();
   const prima = diceMode.secret;
   if (segreto) diceMode.secret = true;
-  try { if (!rollExpr(critico ? raddoppiaDadi(expr) : expr, label)) addChat({ kind: 'text', text: `${s.name}: tiro non valido («${expr}»)` }); }
+  const e = conCaratteristiche(s, expr);
+  try { if (!rollExpr(critico ? raddoppiaDadi(e) : e, label)) addChat({ kind: 'text', text: `${s.name}: tiro non valido («${expr}»)` }); }
   finally { diceMode.secret = prima; }
 }
 // Da che numero il d20 dell'attacco è un critico: «19-20» scritto nel nome o nel bonus di quell'attacco
@@ -603,7 +630,7 @@ function chipsFor(ta, s) {
   for (const m of ta.value.matchAll(/\[\[\s*([^\]|]+?)\s*(?:\|\s*([^\]]+?)\s*)?\]\]/g)) {
     const b = document.createElement('button'), expr = m[1], name = m[2] || m[1];
     b.type = 'button'; b.className = 'chipRoll'; b.textContent = '🎲 ' + name; b.title = expr;
-    b.addEventListener('click', () => { if (!rollExpr(expr, `${s.name} · ${name}`)) addChat({ kind: 'text', text: `${s.name}: tiro non valido («${expr}»)` }); });
+    b.addEventListener('click', () => { if (!rollExpr(conCaratteristiche(s, expr), `${s.name} · ${name}`)) addChat({ kind: 'text', text: `${s.name}: tiro non valido («${expr}»)` }); });
     out.push(b);
   }
   box.replaceChildren(...out);

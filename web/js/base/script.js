@@ -139,7 +139,63 @@ function applyView() {
   const t = `translate(${view.x}px, ${view.y}px) scale(${view.s})`;
   for (const el of [stage, world]) { el.style.transform = t; el.style.setProperty('--inv', 1 / view.s); }
   placeGrid();
+  disegnaTela();
   inMovimento();
+}
+// ---------- Sui dispositivi touch la mappa si disegna su un canvas grande quanto lo schermo ----------
+// La mappa è un'immagine dentro un livello ingrandito con una trasformazione CSS: finito il gesto,
+// Chrome di Android ridisegna quel livello alla nuova scala a tessere, e a zoom alto le tessere superano
+// la memoria grafica (blocchi neri, poi schermo nero per un attimo). Qui l'immagine resta nascosta e un
+// canvas della misura dello schermo copia, a ogni movimento, solo la parte che si vede alla risoluzione
+// giusta: la memoria è quella di uno schermo, a qualsiasi zoom. Sul computer resta tutto com'è.
+// ?tela=0 nell'indirizzo lo spegne (in caso di problemi), ?tela=1 lo accende anche col mouse.
+const TELA = (() => {
+  const q = new URLSearchParams(location.search).get('tela');
+  if (q === '0' || typeof HTMLCanvasElement === 'undefined') return null;
+  if (q !== '1' && !matchMedia('(pointer: coarse)').matches) return null;
+  const c = document.createElement('canvas');
+  c.id = 'mappaTela'; c.setAttribute('aria-hidden', 'true');
+  stage.before(c);                                    // sotto tutto quello che sta nella scena (nebbia, luci, bordo)
+  return { c, ctx: c.getContext('2d'), raf: 0 };
+})();
+// gli SVG si lasciano all'immagine: il browser li ridisegna nitidi a ogni zoom (su canvas verrebbero sgranati)
+const sfondoSvg = () => /\.svg(?:[?#]|$)|^data:image\/svg/i.test(bgBox.dataset.url || '') || /^data:image\/svg|\.svg(?:[?#]|$)/i.test(map.currentSrc || map.src || '');
+function disegnaTela() {
+  if (!TELA) return;
+  const { c, ctx } = TELA, W = innerWidth, H = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
+  const usa = !bgBox.hidden && map.complete && map.naturalWidth > 0 && !sfondoSvg();
+  document.documentElement.classList.toggle('mappaSuTela', usa);
+  const cw = Math.round(W * dpr), ch = Math.round(H * dpr);
+  if (c.width !== cw || c.height !== ch) { c.width = cw; c.height = ch; c.style.width = W + 'px'; c.style.height = H + 'px'; }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, cw, ch);
+  if (!usa) return;
+  // anche il colore del rettangolo (il riempimento sta sotto l'immagine, quindi si disegna qui)
+  {
+    const b = boardRect(), fill = getComputedStyle(boardFill).backgroundColor;
+    if (fill && b.w > 0 && b.h > 0) { ctx.fillStyle = fill; ctx.fillRect((view.x + b.x * view.s) * dpr, (view.y + b.y * view.s) * dpr, b.w * view.s * dpr, b.h * view.s * dpr); }
+  }
+  const r = rectOf(bgBox);
+  if (!(r.w > 0 && r.h > 0)) return;
+  // la parte dell'immagine da mostrare: tutta mentre la si modifica, altrimenti solo dentro il rettangolo
+  let l = r.x, t = r.y, rr = r.x + r.w, bb = r.y + r.h;
+  if (bgBox.style.clipPath) { const b = boardRect(); l = Math.max(l, b.x); t = Math.max(t, b.y); rr = Math.min(rr, b.x + b.w); bb = Math.min(bb, b.y + b.h); }
+  // e solo quello che sta nello schermo
+  l = Math.max(l, -view.x / view.s); t = Math.max(t, -view.y / view.s);
+  rr = Math.min(rr, (W - view.x) / view.s); bb = Math.min(bb, (H - view.y) / view.s);
+  if (rr <= l || bb <= t) return;
+  const kx = map.naturalWidth / r.w, ky = map.naturalHeight / r.h;
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = view.s * Math.min(1 / kx, 1 / ky) > 1 ? 'medium' : 'high';
+  try {
+    ctx.drawImage(map, (l - r.x) * kx, (t - r.y) * ky, (rr - l) * kx, (bb - t) * ky,
+      (view.x + l * view.s) * dpr, (view.y + t * view.s) * dpr, (rr - l) * view.s * dpr, (bb - t) * view.s * dpr);
+  } catch {}
+}
+const ridisegnaTela = () => { if (TELA && !TELA.raf) TELA.raf = requestAnimationFrame(() => { TELA.raf = 0; disegnaTela(); }); };
+if (TELA) {
+  map.addEventListener('load', ridisegnaTela);
+  new MutationObserver(ridisegnaTela).observe(bgBox, { attributes: true, attributeFilter: ['style', 'hidden', 'data-url'] });
+  new MutationObserver(ridisegnaTela).observe(board, { attributes: true, attributeFilter: ['style'] });
 }
 // Durante un gesto (dita, rotellina) la vista si ridisegna una volta per fotogramma, e la mappa sta
 // su un livello a parte (will-change) che si sposta senza ridisegnarla. Finito il gesto si toglie:

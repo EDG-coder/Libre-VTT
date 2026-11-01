@@ -995,13 +995,20 @@ const chatPaneMenu = () => [
 ];
 
 // ======================= Guida iniziale (una volta per avvio del server) =======================
+// «Non mostrare più» ricorda la versione della guida nascosta: finché la guida non cambia non riappare;
+// quando un aggiornamento la cambia (GUIDA_VERSIONE più alta) riappare una volta. Resta sempre apribile
+// da Impostazioni › «Mostra la guida dei comandi».
+const GUIDA_VERSIONE = 1;
+const guidaNascosta = () => { try { return +localStorage.getItem('vtt-help-nascosta') || 0; } catch { return 0; } };
 async function maybeWelcome() {
+  if (guidaNascosta() >= GUIDA_VERSIONE) return;
   let ls = sessionStorage, stamp = '1';                          // senza server: una volta per sessione del browser
   try { const r = await fetch('api/boot'); if (r.ok) { stamp = String((await r.json()).boot); ls = localStorage; } } catch {}
   try { if (ls.getItem('vtt-help') === stamp) return; ls.setItem('vtt-help', stamp); } catch {}
   $('helpDialog').showModal();
 }
 $('helpOk').addEventListener('click', () => $('helpDialog').close());
+if ($('helpMai')) $('helpMai').addEventListener('click', () => { try { localStorage.setItem('vtt-help-nascosta', String(GUIDA_VERSIONE)); } catch {} $('helpDialog').close(); });
 $('helpOpen').addEventListener('click', () => $('helpDialog').showModal());
 
 // ======================= Dopo il caricamento dello stato =======================

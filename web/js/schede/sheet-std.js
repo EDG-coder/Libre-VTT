@@ -64,7 +64,7 @@ const SPELL_LINES = [8, 13, 13, 13, 9, 9, 9, 9, 7, 7];   // righe per livello, d
 const SK_AB = Object.fromEntries(SKILLS.map(x => [x[0], x[2]]));
 const stdSkill = (s, k) => {
   const mod = abMod(s, SK_AB[k]), comp = profB(s), ke = !!s.f['ke_' + k], kp = !!s.f['kp_' + k];
-  return regola('abilita', { mod, competente: kp ? 1 : 0, maestria: ke ? 1 : 0, competenza: comp }, () => mod + comp * (ke ? 2 : kp ? 1 : 0));
+  return regola('abilita', { mod, competente: kp ? 1 : 0, maestria: ke ? 1 : 0, competenza: comp }, () => mod + comp * (ke ? 2 : kp ? 1 : 0)) + mezzaCompetenza(s, k);
 };
 var calcValue = (prev => function (s, key) {
   const [t, a] = key.split(':');
@@ -477,7 +477,7 @@ function stdFire(s, k) {
   const body = String(s.f[bodyKey(k)] || '').trim();
   const all = (title + '\n' + body);
   const ms = [...all.matchAll(/\[\[\s*([^\]|]+?)\s*(?:\|\s*([^\]]+?)\s*)?\]\]/g)];
-  if (ms.length) { for (const m of ms) rollExpr(m[1], `${s.name} · ${m[2] || m[1]}`); return; }
+  if (ms.length) { for (const m of ms) rollExpr(typeof conCaratteristiche === 'function' ? conCaratteristiche(s, m[1]) : m[1], `${s.name} · ${m[2] || m[1]}`); return; }
   const bare = title.match(/(\d*d\d+(?:\s*[+-]\s*\d+)?)/i);
   if (bare && rollExpr(bare[1], `${s.name} · ${title.slice(0, 28)}`)) return;
   if (title || body) stdSend(s, k);

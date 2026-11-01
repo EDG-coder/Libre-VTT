@@ -261,6 +261,12 @@
         <p class="note">Nel testo delle schede (e in chat con /r) scrivi <b>[[1d20+5]]</b> o <b>[[2d6+3 | Spada]]</b> per un tiro rapido.</p>
       </div>
 
+      <div class="sect" data-sect="compendio">
+        <h4>Compendio</h4>
+        <label class="row">Lingua del compendio <select id="compLingua"><option value="">Come il gioco</option><option value="it">Italiano</option><option value="en">Inglese</option></select></label>
+        <p class="note">I nomi delle voci (e il testo, dove c'è la traduzione). La ricerca trova sempre la voce con tutti e due i nomi. Vale per questo dispositivo.</p>
+      </div>
+
       <div class="sect" data-sect="tools">
         <h4>Strumenti</h4>
         <label class="check"><input id="rulerCenter" type="checkbox"> Righello: misura da centro a centro delle caselle</label>
@@ -350,7 +356,7 @@
     <li>In cima a ogni scheda scegli <b>Pubblico/Privato</b> e <b>Svantaggio/Normale/Vantaggio</b>: con due d20 vedi tutti e due i risultati. «Nuova scheda» → <b>🧭 Crea passo passo</b> costruisce il personaggio; <b>⬆ Livello</b> lo fa salire.</li>
     <li>Per giocare a distanza basta aprire <b>LIBRE VTT</b> e scegliere «Conduco io» o «Mi unisco»: permessi, scena mostrata, schede e provvedimenti si regolano nel pannello su <b>localhost:4000</b>.</li>
   </ul>
-  <div class="dialogBtns"><button id="helpOk" type="button" class="btn">Ho capito</button></div>
+  <div class="dialogBtns"><button id="helpMai" type="button" class="btn ghost" title="Riapparirà solo quando la guida cambia. La trovi sempre in Impostazioni › Strumenti.">Non mostrare più</button><span style="flex:1"></span><button id="helpOk" type="button" class="btn">Ho capito</button></div>
 </dialog>
 <div id="ctx" hidden><button type="button">🗑 Elimina</button></div>
 <script src="js/base/script.js"></script>
@@ -370,6 +376,7 @@
 <script src="js/mappa/fog.js"></script>
 <script src="js/mappa/token-fx.js"></script>
 <script src="js/strumenti/turni.js"></script>
+<script src="js/strumenti/suono-chat.js"></script>
 <script src="js/base/undo.js"></script>
 <script src="js/strumenti/note.js"></script>
 <script src="js/mappa/scene-mini.js"></script>
