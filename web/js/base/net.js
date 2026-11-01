@@ -1020,6 +1020,9 @@ if ($('netHome')) {
     for (const a of home) a.hidden = false;
     // aperti dall'avviatore: gli si dice ogni tanto che la pagina c'è ancora
     setInterval(() => fetch('http://127.0.0.1:' + NET.uiPort + '/api/vivo').catch(() => {}), 20000);
+    // e un filo sempre aperto: quando la finestra si chiude cade, e l'avviatore spegne tutto (anche su
+    // macOS, dove il browser resta acceso nel Dock dopo aver chiuso la finestra)
+    try { if (typeof EventSource === 'function') new EventSource('http://127.0.0.1:' + NET.uiPort + '/api/presente'); } catch {}
   }).catch(() => {});
 }
 if ($('netNameIn')) {

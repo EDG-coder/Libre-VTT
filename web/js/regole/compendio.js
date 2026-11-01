@@ -33,14 +33,21 @@
   const visibilePack = p => (C.vis.pacchetti[p.id] || p.visibile || 'tutti') !== 'master';
   const visibileVoce = v => (C.vis.voci[chiave(v)] || (visibilePack(C.pacchetti.find(p => p.id === v._p) || {}) ? 'tutti' : 'master')) !== 'master';
 
+  // Il tipo di una voce è quello del file (o della sezione) da cui arriva: i pacchetti vecchi
+  // scrivevano nel tipo il gruppo delle sottoclassi («Cammino primordiale») e il compendio non le vedeva.
+  const tipoGiusto = (v, t) => {
+    if (!v || typeof v !== 'object' || !TIPI.some(x => x[0] === t) || v.tipo === t) return v;
+    if (v.tipo && !v.famiglia && t === 'sottoclasse') v.famiglia = v.tipo;
+    v.tipo = t; return v;
+  };
   const prendi = u => fetch(u, { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
   async function caricaPack(p, filtro) {
     const voci = [];
     if (p.hash) {                                     // arrivato dal master: un file solo con tutto dentro
       const j = await prendi(typeof netAssetUrl === 'function' ? netAssetUrl(p.hash) : 'asset/' + p.hash);
-      if (j && j.voci) for (const arr of Object.values(j.voci)) voci.push(...arr);
+      if (j && j.voci) for (const [t, arr] of Object.entries(j.voci)) if (Array.isArray(arr)) voci.push(...arr.map(v => tipoGiusto(v, t)));
     } else {
-      for (const t of p.tipi || []) { const arr = await prendi(p.url + 'voci/' + t + '.json'); if (Array.isArray(arr)) voci.push(...arr); }
+      for (const t of p.tipi || []) { const arr = await prendi(p.url + 'voci/' + t + '.json'); if (Array.isArray(arr)) voci.push(...arr.map(v => tipoGiusto(v, t))); }
     }
     for (const v of voci) v._p = p.id;
     return filtro ? voci.filter(filtro) : voci;
@@ -77,8 +84,10 @@
         const nasc = new Set(p.nascoste || []);
         tutte.push(...await caricaPack(p, nasc.size ? v => !nasc.has(v.id) : null));
       }
-      // in inglese si mostrano i nomi originali (quelli italiani restano per cercare)
-      if (window.LIBRE_I18N && LIBRE_I18N.lingua === 'en') for (const v of tutte) if (v.en && v.en !== v.nome) { v.it = v.nome; v.nome = v.en; }
+      // nella lingua del compendio: in inglese i nomi originali (quelli italiani restano per cercare),
+      // in italiano il testo tradotto dove c'è (testoIt)
+      const L = linguaCompendio();
+      for (const v of tutte) localizza(v, L);
       C.voci = tutte;
       C.pronto = true;
       stato('');
@@ -88,6 +97,39 @@
       C.caricando = null;
     })();
     return C.caricando;
+  }
+  // ---------- la lingua del compendio (per dispositivo): come il gioco, italiano o inglese ----------
+  const CH_LINGUA = 'libre-lingua-compendio';
+  function linguaCompendio() {
+    let x = ''; try { x = localStorage.getItem(CH_LINGUA) || ''; } catch {}
+    if (x === 'it' || x === 'en') return x;
+    return window.LIBRE_I18N && LIBRE_I18N.lingua === 'en' ? 'en' : 'it';
+  }
+  // nome ↔ en anche nei tratti, nei privilegi e nelle sottospecie; «it» tiene il nome italiano
+  const scambiaNome = o => { if (o && typeof o === 'object' && o.en && o.en !== o.nome && !('it' in o)) { o.it = o.nome; o.nome = o.en; } };
+  const rimettiNome = o => { if (o && typeof o === 'object' && 'it' in o) { o.nome = o.it; delete o.it; } };
+  const annidati = v => [...(v.tratti || []), ...(v.privilegi || []), ...(v.sottospecie || []), ...(v.sottospecie || []).flatMap(s => s.tratti || []), ...(v.livelli || []).flatMap(l => Array.isArray(l.privilegi) ? l.privilegi : [])];
+  function localizza(v, L) {
+    if (!v || typeof v !== 'object') return v;
+    if (L === 'en') { scambiaNome(v); for (const o of annidati(v)) scambiaNome(o); }
+    else if (v.testoIt && !('_testo' in v)) { v._testo = v.testo; v.testo = v.testoIt; }
+    return v;
+  }
+  /** La voce com'è nel pacchetto (senza i cambi di lingua): per salvarla o mandarla ai giocatori. */
+  function originale(v) {
+    const c = JSON.parse(JSON.stringify(v));
+    rimettiNome(c); for (const o of annidati(c)) rimettiNome(o);
+    if ('_testo' in c) { c.testo = c._testo; delete c._testo; }
+    delete c._p;
+    return c;
+  }
+  window.compendioOriginale = originale;
+  {
+    const sel = $('compLingua');
+    if (sel) {
+      try { sel.value = localStorage.getItem(CH_LINGUA) || ''; } catch {}
+      sel.addEventListener('change', () => { try { localStorage.setItem(CH_LINGUA, sel.value); } catch {} if (C.pronto) window.ricaricaCompendio(); });
+    }
   }
   window.ricaricaCompendio = () => { C.pronto = false; C.caricando = null; return carica(); };
   const stato = t => { const e = $('compStato'); if (e) { e.textContent = t || ''; e.hidden = !t; } };
@@ -107,7 +149,7 @@
       const testa = { id: p.id, nome: p.nome, base: !!p.base, licenza: p.licenza, fonte: p.fonte, tipi: p.tipi };
       if (p.base) { out.pacchetti.push({ ...testa, nascoste }); continue; }
       const voci = {};
-      for (const v of sue) if (visibileVoce(v)) { const c = { ...v }; delete c._p; (voci[v.tipo] = voci[v.tipo] || []).push(c); }
+      for (const v of sue) if (visibileVoce(v)) { const c = originale(v); (voci[v.tipo] = voci[v.tipo] || []).push(c); }
       const buf = new TextEncoder().encode(JSON.stringify({ pacchetto: testa, voci }));
       const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', buf))].map(b => b.toString(16).padStart(2, '0')).join('');
       if (typeof netPutAsset === 'function' && !(NET.assetKnown && NET.assetKnown.has(hash))) { if (await netPutAsset(hash, buf, 'application/json', p.nome + '.json')) NET.assetKnown && NET.assetKnown.add(hash); }
@@ -299,7 +341,7 @@
         }
         break;
       case 'sottoclasse':
-        h += `<p class="cvSott">${esc([v.classe, v.tipo].filter(Boolean).join(' · '))}</p>` + md(v.testo);
+        h += `<p class="cvSott">${esc([v.classe, v.famiglia].filter(Boolean).join(' · '))}</p>` + md(v.testo);
         for (const p of v.privilegi || []) h += `<details class="cvPriv" open><summary>${esc(p.nome)} <small>(${esc(tr('livello {n}', { n: p.livello }))})</small></summary>${md(p.testo)}</details>`;
         break;
       case 'specie':
@@ -560,7 +602,9 @@
   };
   function editor(v) {
     const nuova = !v;
-    v = v ? JSON.parse(JSON.stringify(v)) : { tipo: F.tipo || 'mostro', nome: '', testo: '' };
+    const pk = v && v._p;
+    v = v ? originale(v) : { tipo: F.tipo || 'mostro', nome: '', testo: '' };
+    if (pk) v._p = pk;
     const dlg = document.createElement('dialog'); dlg.className = 'compDlg compEd';
     const campi = () => (CAMPI[v.tipo] || []).map(([k, nome, t]) => `<label>${esc(tr(nome))}<input data-c="${k}" data-t="${t || ''}" value="${esc(Array.isArray(v[k]) ? v[k].join(', ') : v[k] ?? '')}"></label>`).join('');
     dlg.innerHTML = `<h3>${esc(nuova ? tr('Nuova voce') : tr('Modifica «{n}»', { n: v.nome }))}</h3>
@@ -569,6 +613,7 @@
       <label>${esc(tr('Nome originale (facoltativo)'))}<input data-c="en" value="${esc(v.en || '')}" maxlength="80"></label>
       <div class="compEdCampi">${campi()}</div></div>
       <label class="compEdTesto">${esc(tr('Testo (anche **grassetto**, elenchi con «- » e tiri come [[1d20+5 | Attacco]])'))}<textarea data-c="testo" rows="10">${esc(v.testo || '')}</textarea></label>
+      <label class="compEdTesto">${esc(tr('Testo in italiano (facoltativo: si vede con il compendio in italiano)'))}<textarea data-c="testoIt" rows="5">${esc(v.testoIt || '')}</textarea></label>
       <div class="dialogBtns"><span style="flex:1"></span><button type="button" class="btn ghost" data-x="no">${esc(tr('Annulla'))}</button><button type="button" class="btn" data-x="si">${esc(tr('Salva'))}</button></div>`;
     dlg.querySelector('select[data-c=tipo]').addEventListener('change', e => { v.tipo = e.target.value; dlg.querySelector('.compEdCampi').innerHTML = campi(); });
     dlg.querySelector('[data-x=no]').addEventListener('click', () => dlg.close());

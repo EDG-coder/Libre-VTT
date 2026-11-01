@@ -1,5 +1,6 @@
 // Ordine dei turni (iniziativa). Lo tiene chi conduce; i giocatori lo vedono e, quando tirano
-// «Iniziativa» dalla loro scheda, il risultato finisce da solo nella loro riga.
+// «Iniziativa» dalla loro scheda, il risultato finisce da solo nella loro riga (anche se tirano prima
+// che il master accenda i turni). Una barra in alto mostra a tutti di chi è il turno.
 //   settings.turni = { on, round, cur, desde, righe: [{ id, nome, ini, des, sheet, pid }] }
 // cur = indice (nell'ordine) di chi sta giocando; desde = da quando si raccolgono i tiri.
 (function () {
@@ -90,8 +91,38 @@
   box.id = 'turniBox';
   document.body.appendChild(box);
 
+  // ---------- la barra in alto: «Round 2 · Tocca a: Ari · Poi: Goblin» ----------
+  // Fuori dal menu degli strumenti: il pannello sta dentro un contenitore che, chiuso o nascosto (telefono
+  // con chat o schede aperte), lo porta fuori dallo schermo. La barra si vede a tutti finché i turni sono
+  // attivi; un tocco la apre con l'ordine completo.
+  const barra = document.createElement('div');
+  barra.id = 'turniBarra'; barra.hidden = true; barra.setAttribute('role', 'status');
+  barra.innerHTML = '<button type="button" class="tbTesta" aria-expanded="false"></button><ol class="tbLista" hidden></ol>';
+  document.body.appendChild(barra);
+  const tbTesta = barra.querySelector('.tbTesta'), tbLista = barra.querySelector('.tbLista');
+  tbTesta.addEventListener('click', () => { const ap = tbLista.hidden; tbLista.hidden = !ap; tbTesta.setAttribute('aria-expanded', ap); });
+  function disegnaBarra(st) {
+    const on = !!st.on && st.righe.length > 0;
+    barra.hidden = !on;
+    if (!on) return;
+    const ora = st.righe[st.cur] || st.righe[0], poi = st.righe.length > 1 ? st.righe[(st.cur + 1) % st.righe.length] : null;
+    tbTesta.replaceChildren();
+    const pezzo = (t, cl) => { const e = document.createElement('span'); e.textContent = t; if (cl) e.className = cl; e.setAttribute('data-noi18n', ''); tbTesta.append(e); };
+    pezzo(tr('Round {n}', { n: st.round || 1 }), 'tbRound');
+    pezzo(tr('Tocca a: {n}', { n: ora.nome }), 'tbOra');
+    if (poi) pezzo(tr('Poi: {n}', { n: poi.nome }), 'tbPoi');
+    tbLista.replaceChildren(...st.righe.map((r, i) => {
+      const li = document.createElement('li'); li.setAttribute('data-noi18n', '');
+      li.textContent = r.nome + (r.ini == null ? '' : ' · ' + r.ini);
+      if (i === st.cur) li.className = 'ora';
+      li.addEventListener('mouseenter', () => evidenzia(r)); li.addEventListener('mouseleave', () => evidenzia(null));
+      return li;
+    }));
+  }
+
   function disegna() {
     const st = stato(), master = conduco();
+    disegnaBarra(st);
     box.classList.toggle('daGiocatore', !master);
     $('turniRound').textContent = tr('Round {n}', { n: st.round || 1 });
     $('turniOn').checked = !!st.on;
@@ -130,7 +161,7 @@
 
   $('turniOn').addEventListener('input', e => {
     const st = stato(); st.on = e.target.checked;
-    if (st.on) { st.desde = Date.now(); if (!st.round) st.round = 1; if (st.round === 1 && !st.iniziato) st.cur = 0; }
+    if (st.on) { st.desde = Date.now(); if (!st.round) st.round = 1; if (st.round === 1 && !st.iniziato) st.cur = 0; mettiInAttesa(); }
     disegna(); scheduleBoardSave();
   });
   $('turniAvanti').addEventListener('click', () => avanti(1));
@@ -152,15 +183,37 @@
     try { iniziativaDaChat(m); } catch {}
     return r;
   };
+  // «Ari · Iniziativa», «Ari · Initiative» (gioco in inglese), anche con «(vantaggio)» o altro dopo
+  const RE_INI = /^(.*?)\s+·\s+(?:iniziativa|initiative)(?:\s*[(·:].*)?$/i;
+  // i tiri arrivati prima che il master accenda i turni: si tengono 15 minuti e si mettono in fila dopo
+  const ATTESA_MS = 15 * 60 * 1000;
+  let inAttesa = [];
+  function mettiInAttesa() {
+    const ora = Date.now(), tieni = inAttesa.filter(x => ora - x.t < ATTESA_MS);
+    inAttesa = [];
+    for (const x of tieni) segna(x.nome, x.tot);
+    if (tieni.length) ordina(stato());
+  }
   function iniziativaDaChat(m) {
     if (!m || m.kind !== 'roll' || m.hidden || !conduco()) return;
     const st = stato();
-    if (!st.on || !Number.isFinite(+m.total)) return;
-    const k = /^(.*) · Iniziativa$/.exec(String(m.label || ''));
+    if (!Number.isFinite(+m.total)) return;
+    const k = RE_INI.exec(String(m.label || '').trim());
     if (!k) return;
-    const chiave = m.id || (m.label + m.total);
+    const chiave = m.id || (m.label + m.total + (m.ts || ''));
     if (visti.has(chiave)) return; visti.add(chiave);
     const nome = k[1].trim();
+    if (!nome) return;
+    if (!st.on) {                                   // i turni non sono ancora accesi: lo teniamo da parte
+      inAttesa = inAttesa.filter(x => x.nome !== nome && Date.now() - x.t < ATTESA_MS);
+      inAttesa.push({ nome, tot: Math.round(+m.total), t: Date.now() });
+      return;
+    }
+    segna(nome, Math.round(+m.total));
+    salva();
+  }
+  function segna(nome, tot) {
+    const st = stato();
     const s = typeof sheets !== 'undefined' && sheets.find(x => x.name === nome);
     let r = st.righe.find(x => s && x.sheet === s.id) || st.righe.find(x => x.nome === nome);
     if (!r) {                                       // non c'era: lo si mette in fila
@@ -168,8 +221,7 @@
       r = { id: idRiga(), nome, ini: null, sheet: s ? s.id : undefined, pid: el ? el.dataset.pid : undefined };
       st.righe.push(r);
     }
-    r.ini = Math.round(+m.total);
-    salva();
+    r.ini = tot;
   }
 
   // ---------- menu del segnalino ----------
@@ -189,7 +241,8 @@
     T = t && Array.isArray(t.righe) ? t : nuovo();
     // quando il master avvia i turni, il pannello si apre da solo anche ai giocatori (solo lettura); se poi
     // lo chiudono, l'icona col puntino resta accesa e lo riaprono quando vogliono
-    if (eraAcceso !== true && T.on && !box.classList.contains('open')) { toggleOpen(box, true); }
+    // (sul telefono il menu degli strumenti può essere chiuso o nascosto: lì si vede la barra in alto)
+    if (eraAcceso !== true && T.on && !box.classList.contains('open') && !document.documentElement.classList.contains('ui-tel')) { toggleOpen(box, true); }
     eraAcceso = !!T.on;
     disegna();
   };

@@ -39,6 +39,9 @@ body.vistaMuove #world, body.vistaMuove #stage { will-change: transform; }
 #bgBox { position: absolute; user-select: none; }
 #bgBox[hidden] { display: none; }
 #map { display: block; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+/* touch: mappa e riempimento li disegna #mappaTela, sotto la scena (vedi disegnaTela in script.js); l'immagine resta per misure e maniglie */
+#mappaTela { position: absolute; left: 0; top: 0; pointer-events: none; }
+html.mappaSuTela #map, html.mappaSuTela #boardFill { visibility: hidden; }
 #grid { position: absolute; z-index: 1; display: none; pointer-events: none; }   /* posizione e misura: da script, dentro il rettangolo */
 #grid.on { display: block; }
 #world { z-index: 2; }
