@@ -79,6 +79,10 @@
         }
       }
       C.pacchetti = elenco;
+      // il file di traduzione della campagna (in partita lo manda il master)
+      C.traduzioni = {};
+      if (giocatore()) { const h = NET.world && NET.world.compendio && NET.world.compendio.traduzioni; if (h) { const j = await prendi(typeof netAssetUrl === 'function' ? netAssetUrl(h) : 'asset/' + h); C.traduzioni = (j && j.voci) || {}; } }
+      else { const j = await prendi('compendio/traduzioni-it.json'); C.traduzioni = (j && j.voci) || {}; }
       const tutte = [];
       for (const p of elenco) {
         const nasc = new Set(p.nascoste || []);
@@ -87,7 +91,7 @@
       // nella lingua del compendio: in inglese i nomi originali (quelli italiani restano per cercare),
       // in italiano il testo tradotto dove c'è (testoIt)
       const L = linguaCompendio();
-      for (const v of tutte) localizza(v, L);
+      for (const v of tutte) { traduci(v); localizza(v, L); }
       C.voci = tutte;
       C.pronto = true;
       stato('');
@@ -115,12 +119,23 @@
     else if (v.testoIt && !('_testo' in v)) { v._testo = v.testo; v.testo = v.testoIt; }
     return v;
   }
+  // Una voce tradotta dal file: il testo diventa testoIt (se la voce non ne ha già uno), il nome
+  // italiano prende il posto di quello originale, che resta in «en» (così la ricerca trova tutti e due).
+  function traduci(v) {
+    const t = C.traduzioni && (C.traduzioni[v.id] || C.traduzioni[v.tipo + ':' + v.id]);
+    if (!t) return;
+    v._trad = true;
+    if (t.testo && !v.testoIt) { v.testoIt = t.testo; v._testoTr = true; }
+    if (t.nome && t.nome !== v.nome) { v._nomeOrig = v.nome; if (!v.en) { v.en = v.nome; v._enTr = true; } v.nome = t.nome; }
+  }
   /** La voce com'è nel pacchetto (senza i cambi di lingua): per salvarla o mandarla ai giocatori. */
   function originale(v) {
     const c = JSON.parse(JSON.stringify(v));
     rimettiNome(c); for (const o of annidati(c)) rimettiNome(o);
     if ('_testo' in c) { c.testo = c._testo; delete c._testo; }
-    delete c._p;
+    if ('_nomeOrig' in c) { c.nome = c._nomeOrig; if (c._enTr) delete c.en; }
+    if (c._testoTr) delete c.testoIt;
+    for (const k of ['_p', '_trad', '_nomeOrig', '_enTr', '_testoTr']) delete c[k];
     return c;
   }
   window.compendioOriginale = originale;
@@ -139,9 +154,15 @@
   // con le sole voci visibili e lo mette nel deposito (come le immagini). Si rifà solo quando cambia.
   C.perRete = async function () {
     if (!C.pronto || !conduco()) return null;
-    const firma = JSON.stringify([C.pacchetti.map(p => p.id), C.vis]);
+    const firma = JSON.stringify([C.pacchetti.map(p => p.id), C.vis, Object.keys(C.traduzioni || {}).length, C._tradVer || 0]);
     if (C._rete && C._reteFirma === firma) return C._rete;
     const out = { pacchetti: [], giocatoriImportano: !!C.vis.giocatoriImportano };
+    if (C.traduzioni && Object.keys(C.traduzioni).length) {
+      const buf = new TextEncoder().encode(JSON.stringify({ voci: C.traduzioni }));
+      const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', buf))].map(b => b.toString(16).padStart(2, '0')).join('');
+      if (typeof netPutAsset === 'function' && !(NET.assetKnown && NET.assetKnown.has(hash))) { if (await netPutAsset(hash, buf, 'application/json', 'traduzioni-it.json')) NET.assetKnown && NET.assetKnown.add(hash); }
+      out.traduzioni = hash;
+    }
     for (const p of C.pacchetti) {
       if (!visibilePack(p) && !Object.entries(C.vis.voci).some(([k, v]) => k.startsWith(p.id + '|') && v === 'tutti')) continue;
       const sue = C.voci.filter(v => v._p === p.id);
@@ -373,6 +394,7 @@
     if (conduco()) b.push([visibileVoce(v) ? '🙈' : '👁', visibileVoce(v) ? 'Nascondi ai giocatori' : 'Mostra ai giocatori', () => nascondi(v)]);
     const p = C.pacchetti.find(x => x.id === v._p);
     if (p && !p.base && !p.hash && conduco()) { b.push(['✎', 'Modifica', () => editor(v)]); b.push(['🗑', 'Elimina', () => eliminaVoce(v)]); }
+    if (conduco() && !giocatore()) b.push(['📋', 'Copia come voce nuova (homebrew)', () => editor(v, true)]);
     return b;
   }
   const finestre = new Map();
@@ -600,31 +622,39 @@
     classe: [['dadoVita', 'Dado vita (es. 8)', 'n']], sottoclasse: [['classe', 'Classe']], specie: [['taglia', 'Taglia'], ['velocita', 'Velocità', 'n']],
     background: [], condizione: [], regola: []
   };
-  function editor(v) {
-    const nuova = !v;
-    const pk = v && v._p;
+  function editor(v, copia) {
+    const nuova = !v || copia;
+    const pk = v && !copia && v._p;
     v = v ? originale(v) : { tipo: F.tipo || 'mostro', nome: '', testo: '' };
+    if (copia) { delete v.id; v.nome = tr('{n} (copia)', { n: v.nome }); delete v.fonte; }
     if (pk) v._p = pk;
     const dlg = document.createElement('dialog'); dlg.className = 'compDlg compEd';
+    const guidato = typeof window.compendioModulo === 'function' ? window.compendioModulo(v) : null;
     const campi = () => (CAMPI[v.tipo] || []).map(([k, nome, t]) => `<label>${esc(tr(nome))}<input data-c="${k}" data-t="${t || ''}" value="${esc(Array.isArray(v[k]) ? v[k].join(', ') : v[k] ?? '')}"></label>`).join('');
-    dlg.innerHTML = `<h3>${esc(nuova ? tr('Nuova voce') : tr('Modifica «{n}»', { n: v.nome }))}</h3>
+    dlg.innerHTML = `<h3>${esc(!nuova ? tr('Modifica «{n}»', { n: v.nome }) : tr('Nuova voce: {t}', { t: nomeTipo(v.tipo) }))}</h3>
       <div class="compEdG"><label>${esc(tr('Tipo'))}<select data-c="tipo" ${nuova ? '' : 'disabled'}>${TIPI.map(([k, , s]) => `<option value="${k}" ${k === v.tipo ? 'selected' : ''}>${esc(tr(s))}</option>`).join('')}</select></label>
       <label>${esc(tr('Nome'))}<input data-c="nome" value="${esc(v.nome)}" maxlength="80" required></label>
       <label>${esc(tr('Nome originale (facoltativo)'))}<input data-c="en" value="${esc(v.en || '')}" maxlength="80"></label>
-      <div class="compEdCampi">${campi()}</div></div>
-      <label class="compEdTesto">${esc(tr('Testo (anche **grassetto**, elenchi con «- » e tiri come [[1d20+5 | Attacco]])'))}<textarea data-c="testo" rows="10">${esc(v.testo || '')}</textarea></label>
-      <label class="compEdTesto">${esc(tr('Testo in italiano (facoltativo: si vede con il compendio in italiano)'))}<textarea data-c="testoIt" rows="5">${esc(v.testoIt || '')}</textarea></label>
+      <div class="compEdCampi">${guidato ? '' : campi()}</div></div>
+      <label class="compEdTesto">${esc(tr('Testo (anche **grassetto**, elenchi con «- » e tiri come [[1d20+5 | Attacco]])'))}<textarea data-c="testo" rows="8">${esc(v.testo || '')}</textarea></label>
+      <label class="compEdTesto">${esc(tr('Testo in italiano (facoltativo: si vede con il compendio in italiano)'))}<textarea data-c="testoIt" rows="4">${esc(v.testoIt || '')}</textarea></label>
       <div class="dialogBtns"><span style="flex:1"></span><button type="button" class="btn ghost" data-x="no">${esc(tr('Annulla'))}</button><button type="button" class="btn" data-x="si">${esc(tr('Salva'))}</button></div>`;
-    dlg.querySelector('select[data-c=tipo]').addEventListener('change', e => { v.tipo = e.target.value; dlg.querySelector('.compEdCampi').innerHTML = campi(); });
+    if (guidato) dlg.querySelector('.compEdCampi').replaceWith(guidato.el);
+    dlg.querySelector('select[data-c=tipo]').addEventListener('change', e => {
+      v.tipo = e.target.value;
+      dlg.querySelector('h3').textContent = tr('Nuova voce: {t}', { t: nomeTipo(v.tipo) });
+      if (guidato) guidato.cambiaTipo(v.tipo); else dlg.querySelector('.compEdCampi').innerHTML = campi();
+    });
     dlg.querySelector('[data-x=no]').addEventListener('click', () => dlg.close());
     dlg.querySelector('[data-x=si]').addEventListener('click', async () => {
-      for (const i of dlg.querySelectorAll('[data-c]')) {
+      for (const i of dlg.querySelectorAll('.compEdG > label > [data-c], .compEdTesto > [data-c], .compEdCampi [data-c]')) {
         const k = i.dataset.c; if (k === 'tipo') continue;
         let x = i.value.trim();
         if (i.dataset.t === 'n') x = x === '' ? undefined : +x.replace(',', '.');
         else if (i.dataset.t === 'l') x = x ? x.split(',').map(t => t.trim()).filter(Boolean) : undefined;
         v[k] = x === '' ? undefined : x;
       }
+      if (guidato) guidato.leggi(v);
       if (!v.nome) { dlg.querySelector('[data-c=nome]').focus(); return; }
       v.fonte = v.fonte || tr('Homebrew');
       const pack = v._p || 'homebrew';
@@ -635,6 +665,7 @@
     dlg.addEventListener('close', () => dlg.remove());
     document.body.appendChild(dlg); dlg.showModal();
   }
+  window.compendioEditor = editor;
   async function salvaVoci(pack, voci, pacchetto) {
     const r = await fetch('api/compendio/pacchetto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pacchetto: { id: pack, ...pacchetto }, voci, unisci: pack }) }).catch(() => null);
     if (!r || !r.ok) { alert(tr('Non sono riuscito a salvarla.') + (r ? ' ' + await r.text() : '')); return false; }
@@ -679,13 +710,20 @@
           ${!giocatore() || p.mio ? `<button type="button" class="btn ghost" data-a="esp">📤 ${esc(tr('Esporta'))}</button>` : ''}
           ${!p.base && (!giocatore() || p.mio) ? `<button type="button" class="btn ghost" data-a="via">🗑</button>` : ''}</div></div>`;
       }).join('') || `<p class="note">${esc(tr('Nessun pacchetto.'))}</p>`}</div>
-      ${conduco() && !giocatore() ? `<label class="check"><input type="checkbox" id="compGioImp" ${C.vis.giocatoriImportano ? 'checked' : ''}> ${esc(tr('I giocatori possono importare pacchetti per sé'))}</label>` : ''}
+      ${!giocatore() && typeof window.apriImportaManuale === 'function' ? `<div class="row compManB"><button type="button" class="btn ghost" data-a="manuale">📖 ${esc(tr('Importa da un manuale che possiedi…'))}</button></div>` : ''}
+      ${conduco() && !giocatore() ? `<label class="check"><input type="checkbox" id="compGioImp" ${C.vis.giocatoriImportano ? 'checked' : ''}> ${esc(tr('I giocatori possono importare pacchetti per sé'))}</label>
+      <div class="compTrad"><b>🌐 ${esc(tr('Traduzione in italiano'))}</b> <small>${esc(tr('{n} voci tradotte dal file della campagna', { n: Object.keys(C.traduzioni || {}).length }))}</small>
+        <p class="note">${esc(tr('Scarica il file, scrivi «nome» e «testo» in italiano per le voci che vuoi (le altre lasciale vuote) e ricaricalo: il compendio lo usa da solo, anche per i giocatori.'))}</p>
+        <div class="row"><button type="button" class="btn ghost" data-a="tradGiu">⬇ ${esc(tr('Scarica il file da tradurre'))}</button><button type="button" class="btn ghost" data-a="tradSu">⬆ ${esc(tr('Carica le traduzioni…'))}</button></div></div>` : ''}
       <div class="dialogBtns"><span style="flex:1"></span><button type="button" class="btn" data-a="chiudi">${esc(tr('Chiudi'))}</button></div>`;
     };
     disegnaP();
     dlg.addEventListener('click', async e => {
       const b = e.target.closest('button[data-a]'); if (!b) return;
       if (b.dataset.a === 'chiudi') return dlg.close();
+      if (b.dataset.a === 'tradGiu') return scaricaTraduzioni();
+      if (b.dataset.a === 'manuale') { dlg.close(); return window.apriImportaManuale(); }
+      if (b.dataset.a === 'tradSu') { await caricaTraduzioni(); return disegnaP(); }
       const id = b.closest('.compP') && b.closest('.compP').dataset.id, p = C.pacchetti.find(x => x.id === id);
       if (b.dataset.a === 'vis') { C.vis.pacchetti[id] = visibilePack(p) ? 'master' : 'tutti'; await salvaVis(); disegnaP(); disegna(); }
       else if (b.dataset.a === 'esp') {
@@ -701,9 +739,40 @@
     document.body.appendChild(dlg); dlg.showModal();
   }
 
+  // ---------- il file di traduzione ----------
+  function scaricaTraduzioni() {
+    const voci = {};
+    for (const v of C.voci) {
+      if (voci[v.id]) continue;
+      const o = originale(v), t = (C.traduzioni || {})[v.id] || {};
+      voci[v.id] = { tipo: v.tipo, originale: o.en || o.nome, nome: t.nome || (o.en && o.nome !== o.en ? o.nome : ''), testo: t.testo || o.testoIt || '', testoOriginale: o.testo || '' };
+    }
+    const blob = new Blob([JSON.stringify({ formato: 'libre-vtt-traduzioni', lingua: 'it', istruzioni: tr('Per ogni voce scrivi «nome» e «testo» in italiano; lascia vuoto quello che non traduci. «originale» e «testoOriginale» servono solo da riferimento.'), voci }, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'traduzioni-it.json';
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  }
+  function caricaTraduzioni() {
+    return new Promise(ok => {
+      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+      inp.addEventListener('change', async () => {
+        const f = inp.files[0]; if (!f) return ok();
+        try {
+          const r = await fetch('api/compendio/traduzioni', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: await f.text() });
+          if (!r.ok) throw new Error(await r.text());
+          const j = await r.json(); C._tradVer = (C._tradVer || 0) + 1;
+          await ricaricaCompendio();
+          alert(tr('Traduzioni caricate: {n} voci.', { n: j.voci }));
+        } catch (e) { alert(tr('Non sono riuscito a caricarle: {e}', { e: e.message })); }
+        ok();
+      });
+      inp.click();
+    });
+  }
+
   // ---------- collegamenti ----------
   $('compQ').addEventListener('input', e => { F.q = e.target.value; disegna(); });
-  $('compTipo').addEventListener('change', e => { F.tipo = e.target.value; F.extra = { pack: F.extra.pack }; filtriExtra(); disegna(); });
+  const etichettaNuova = () => { $('compNuova').textContent = F.tipo ? tr('＋ Nuova: {t}', { t: nomeTipo(F.tipo) }) : tr('＋ Nuova voce'); };
+  $('compTipo').addEventListener('change', e => { F.tipo = e.target.value; F.extra = { pack: F.extra.pack }; filtriExtra(); disegna(); etichettaNuova(); });
   $('compNuova').addEventListener('click', () => editor(null));
   $('compImporta').addEventListener('click', importa);
   $('compPacchetti').addEventListener('click', pacchetti);

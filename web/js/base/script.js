@@ -1947,34 +1947,39 @@ function saveBoard(flush) {
 }
 addEventListener('pagehide', () => { if (boardTimer) { clearTimeout(boardTimer); saveBoard(true); } });
 
+// le impostazioni salvate (della campagna, o le predefinite per una campagna nuova)
+function applicaImpostazioni(s) {
+  if (['dark', 'light', 'system'].includes(s.theme)) settings.theme = s.theme;
+  if (typeof s.autoBg === 'boolean') settings.autoBg = s.autoBg;
+  if (RESOLUTIONS.some(r => r[0] === s.resToken)) settings.resToken = s.resToken;
+  if (RESOLUTIONS.some(r => r[0] === s.resBg)) settings.resBg = s.resBg;
+  settings.gridDefault = { ...DEFAULT_GRID, ...s.gridDefault };
+  settings.border = { ...DEFAULT_BORDER, ...s.border };
+  settings.ping = { ...DEFAULT_PING, ...s.ping };
+  if (!(settings.ping.fade >= 300)) Object.assign(settings.ping, DEFAULT_PING);      // vecchi valori: il ping spariva subito
+  for (const k of ['drawerOpen', 'publicScene', 'unit', 'sheetClose', 'rulerCenter', 'dockOpen']) if (s[k] !== undefined) settings[k] = s[k];
+  if (s.fogColor === 'auto' || /^#[0-9a-f]{6}$/i.test(s.fogColor || '')) settings.fogColor = s.fogColor;
+  if (s.fogVeil >= 0.05 && s.fogVeil <= 1) settings.fogVeil = +s.fogVeil;
+  if (typeof s.caratLibere === 'boolean') settings.caratLibere = s.caratLibere;
+  if (typeof s.spareggioDes === 'boolean') settings.spareggioDes = s.spareggioDes;
+  if (typeof s.dadiProvvisori === 'boolean') settings.dadiProvvisori = s.dadiProvvisori;
+  if (s.turni && Array.isArray(s.turni.righe)) settings.turni = s.turni;
+  if (Array.isArray(s.boxLabels)) settings.boxLabels = [0, 1, 2].map(i => String(s.boxLabels[i] || '').slice(0, 14));
+  if (+s.prefT > 0) settings.prefT = +s.prefT;
+  for (const k of ['tools', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'park', 'music']) if (s[k] && typeof s[k] === 'object') settings[k] = { ...settings[k], ...s[k] };
+  if (Array.isArray(s.modelliScheda)) settings.modelliScheda = s.modelliScheda.slice(0, 100);
+  settings.sections = s.sections && typeof s.sections === 'object' ? { ...s.sections } : {};
+  settings.toolOrder = Array.isArray(s.toolOrder) ? s.toolOrder.filter(x => typeof x === 'string').slice(0, 60) : null;
+  settings.cartelle = Array.isArray(s.cartelle) ? s.cartelle.filter(c => c && typeof c.id === 'string').slice(0, 200)
+    .map(c => ({ id: c.id, nome: String(c.nome || 'Cartella').slice(0, 40), padre: typeof c.padre === 'string' ? c.padre : null, chiusa: !!c.chiusa })) : [];
+  paintBorder();
+}
 async function loadBoard() {
   const st = await persist.load('board');
   let first;
   if (st && Array.isArray(st.scenes) && st.scenes.length) {
     const s = st.settings || {};
-    if (['dark', 'light', 'system'].includes(s.theme)) settings.theme = s.theme;
-    if (typeof s.autoBg === 'boolean') settings.autoBg = s.autoBg;
-    if (RESOLUTIONS.some(r => r[0] === s.resToken)) settings.resToken = s.resToken;
-    if (RESOLUTIONS.some(r => r[0] === s.resBg)) settings.resBg = s.resBg;
-    settings.gridDefault = { ...DEFAULT_GRID, ...s.gridDefault };
-    settings.border = { ...DEFAULT_BORDER, ...s.border };
-    settings.ping = { ...DEFAULT_PING, ...s.ping };
-    if (!(settings.ping.fade >= 300)) Object.assign(settings.ping, DEFAULT_PING);      // vecchi valori: il ping spariva subito
-    for (const k of ['drawerOpen', 'publicScene', 'unit', 'sheetClose', 'rulerCenter', 'dockOpen']) if (s[k] !== undefined) settings[k] = s[k];
-    if (s.fogColor === 'auto' || /^#[0-9a-f]{6}$/i.test(s.fogColor || '')) settings.fogColor = s.fogColor;
-    if (s.fogVeil >= 0.05 && s.fogVeil <= 1) settings.fogVeil = +s.fogVeil;
-    if (typeof s.caratLibere === 'boolean') settings.caratLibere = s.caratLibere;
-    if (typeof s.spareggioDes === 'boolean') settings.spareggioDes = s.spareggioDes;
-    if (typeof s.dadiProvvisori === 'boolean') settings.dadiProvvisori = s.dadiProvvisori;
-    if (s.turni && Array.isArray(s.turni.righe)) settings.turni = s.turni;
-    if (Array.isArray(s.boxLabels)) settings.boxLabels = [0, 1, 2].map(i => String(s.boxLabels[i] || '').slice(0, 14));
-    if (+s.prefT > 0) settings.prefT = +s.prefT;
-    for (const k of ['tools', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'park', 'music']) if (s[k] && typeof s[k] === 'object') settings[k] = { ...settings[k], ...s[k] };
-    settings.sections = s.sections && typeof s.sections === 'object' ? { ...s.sections } : {};
-    settings.toolOrder = Array.isArray(s.toolOrder) ? s.toolOrder.filter(x => typeof x === 'string').slice(0, 60) : null;
-    settings.cartelle = Array.isArray(s.cartelle) ? s.cartelle.filter(c => c && typeof c.id === 'string').slice(0, 200)
-      .map(c => ({ id: c.id, nome: String(c.nome || 'Cartella').slice(0, 40), padre: typeof c.padre === 'string' ? c.padre : null, chiusa: !!c.chiusa })) : [];
-    paintBorder();
+    applicaImpostazioni(s);
     const okRect = r => r && [r.x, r.y, r.w, r.h].every(Number.isFinite) && r.w > 0 && r.h > 0;
     const pick = r => ({ x: r.x, y: r.y, w: r.w, h: r.h });
     scenes = st.scenes.map(sc => ({
@@ -1986,6 +1991,8 @@ async function loadBoard() {
     }));
     first = scenes.find(s => s.id === st.active) || scenes[0];
   } else {
+    // una campagna nuova: le impostazioni predefinite salvate per le prossime campagne (se ci sono)
+    try { const r = await fetch('api/predefinite?campagna=1'); const j = r.ok ? await r.json() : null; if (j && j.settings) { applicaImpostazioni(j.settings); window.predefiniteUsate = true; } } catch {}
     first = newScene(tr('Scena') + ' 1', 'map');
     if (st) {                                  // salvataggio del formato precedente (una sola mappa)
       Object.assign(first.grid, DEFAULT_GRID, st.grid || {});
@@ -1999,7 +2006,7 @@ async function loadBoard() {
   applyTheme();
   await showScene(first);
   boardReady = true;
-  if (daHome) scheduleBoardSave();
+  if (daHome || window.predefiniteUsate) scheduleBoardSave();
   if (typeof turniDisegna === 'function') turniDisegna();
   if (typeof afterBoardLoad === 'function') afterBoardLoad();
 }

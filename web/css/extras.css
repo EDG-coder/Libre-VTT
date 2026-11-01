@@ -310,7 +310,7 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 #chatTabs button { flex: 1; padding: 7px 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-3); color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
 
 /* ======================= Segnalini: nome, barra dei PF, forma e bordo ======================= */
-.photo[data-name]::after {
+.photo[data-name][data-nomevis]::after {
   content: attr(data-name); position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: calc(3px * var(--inv, 1));
   padding: 0 calc(6px * var(--inv, 1)); max-width: 240%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none;
   font: 600 calc(12px * var(--inv, 1)) system-ui, sans-serif; color: #fff; background: rgba(0, 0, 0, .6); border-radius: calc(8px * var(--inv, 1));
@@ -320,7 +320,7 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
   border-radius: calc(3px * var(--inv, 1)); box-shadow: 0 0 0 calc(1px * var(--inv, 1)) rgba(0, 0, 0, .55);
   background: linear-gradient(to right, hsl(calc(var(--hpv, 100) * 1.2) 80% 45%) calc(var(--hpv, 100) * 1%), rgba(0, 0, 0, .65) 0);
 }
-.photo[data-hp][data-name]::after { margin-top: calc(9px * var(--inv, 1)); }
+.photo[data-hp][data-name][data-nomevis]::after { margin-top: calc(9px * var(--inv, 1)); }
 .photo[data-round] img { border-radius: 50%; }
 .photo[data-ring] img { box-shadow: 0 0 0 calc(3px * var(--inv, 1)) var(--ring, #fff); }
 
@@ -988,3 +988,110 @@ html.ui-tel #turniBarra .tbTesta { font-size: 13px; padding: 6px 10px; gap: 8px;
 .pane input[type=text]::placeholder { color: var(--muted); }
 .sectContent .btn.ghost { align-self: flex-start; }
 .suonoChat { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+
+/* ======================= Compendio: moduli guidati (＋ Nuova) ======================= */
+.cmModulo { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px 8px; margin-top: 6px; }
+.cmModulo label.cm small, .cmModulo .cmB > small { color: var(--text-soft, var(--muted)); font-size: 11px; line-height: 1.3; }
+.cmModulo label.cm > span { color: var(--text); font-weight: 600; font-size: 12.5px; }
+.cmModulo .cmW, .cmModulo .cmB { grid-column: 1 / -1; }
+.cmModulo .cmC { margin-top: 0; align-self: end; }
+.cmB { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px 10px; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.cmB legend { font-weight: 600; font-size: 12.5px; color: var(--text); padding: 0 4px; }
+.cmCar { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.cmCar label { align-items: center; text-align: center; }
+.cmCar input { width: 100%; text-align: center; box-sizing: border-box; }
+.cmCheck { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 2px 8px; }
+.cmCheck label.check { margin-top: 0; font-size: 12.5px; }
+.cmRiga2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cmQ { max-width: 140px; }
+.cmRighe { display: flex; flex-direction: column; gap: 8px; }
+.cmR { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+.cmR:not(:has(.cmL)) { grid-template-columns: 1fr auto; }
+.cmR .cmL { width: 62px; }
+.cmR .cmT { grid-column: 1 / -1; resize: vertical; }
+.cmPiu { align-self: flex-start; }
+@media (max-width: 520px) { .cmCar { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.compTrad { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.compTrad .row { flex-wrap: wrap; gap: 6px; }
+
+/* i segnalini degli altri, per un giocatore: non si selezionano (come il livello Mappa) */
+#world .photo.altrui { cursor: inherit; }
+#world .photo.altrui:hover { outline: none; box-shadow: none; }
+
+/* ======================= Scheda: pannello «Risorse e riquadri» ======================= */
+.avPanel { margin: 6px 10px 8px; border: 1px solid color-mix(in srgb, currentColor 22%, transparent); border-radius: 12px; background: color-mix(in srgb, currentColor 5%, transparent); color: inherit; font-size: 13px; }
+.avPanel > summary { list-style: none; display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; font-weight: 600; flex-wrap: wrap; }
+.avPanel > summary::-webkit-details-marker { display: none; }
+.avPanel > summary > span:first-child::before { content: "▸ "; opacity: .6; }
+.avPanel[open] > summary > span:first-child::before { content: "▾ "; }
+.avRiposi { margin-left: auto; display: flex; gap: 4px; flex-wrap: wrap; }
+.avRiposi .btn { padding: 3px 8px; font-size: 12px; }
+.avCorpo { padding: 0 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+.avInfo { font-size: 12.5px; opacity: .85; }
+.avGruppo h5 { margin: 4px 0; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; opacity: .75; display: flex; align-items: center; gap: 6px; }
+.avGruppo h5 b { opacity: 1; }
+.avCatT { background: none; border: 0; color: inherit; font: inherit; text-transform: inherit; letter-spacing: inherit; padding: 0; cursor: pointer; }
+.avRiq { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 8px; }
+.avRiq + .avRiq { border-top: 1px dashed color-mix(in srgb, currentColor 20%, transparent); }
+.avRiq.preso { opacity: .4; }
+.avRiq.sopra, .avCat.sopra { outline: 2px dashed var(--accent); outline-offset: 1px; }
+.avGrip { cursor: grab; opacity: .5; user-select: none; }
+.avNome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.avNum { min-width: 22px; text-align: center; font-size: 15px; }
+.avMax { opacity: .7; font-size: 12px; }
+.avPM { padding: 1px 8px; min-width: 26px; }
+.avIn { width: 70px; padding: 3px 6px; border-radius: 6px; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); background: transparent; color: inherit; font: inherit; }
+.avIn.avTxt { width: 140px; }
+.avIn[type=checkbox] { width: 18px; height: 18px; }
+.avPing { background: none; border: 0; cursor: pointer; font-size: 14px; padding: 2px; opacity: .7; }
+.avPing:hover { opacity: 1; }
+.avSlotRiga { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; padding: 2px 0; }
+.avLiv { width: 26px; font-weight: 600; }
+.avPip { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--accent); background: transparent; padding: 0; cursor: pointer; }
+.avPip.on { background: var(--accent); }
+.avLancia { margin-left: auto; padding: 2px 8px; font-size: 12px; }
+
+/* ======================= ⚙ Avanzate (tutte le sezioni) ======================= */
+.avanzTutto { width: min(720px, 96vw); }
+.avSez { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.avSez button { font: inherit; font-size: 12.5px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); cursor: pointer; }
+.avSez button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.avSezCorpo { display: flex; flex-direction: column; gap: 8px; }
+.avSezCorpo > label:not(.check) { flex-direction: row; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
+.avTab { border-collapse: collapse; width: 100%; font-size: 13px; }
+.avTab td, .avTab th { padding: 3px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+.avTab.avDif td:not(:first-child), .avTab.avDif th:not(:first-child) { text-align: center; }
+.avTab small { color: var(--muted); }
+.avVal { text-align: right; font-weight: 600; }
+.avLista { display: flex; flex-direction: column; gap: 6px; }
+.avRigaE { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-bottom: 6px; border-bottom: 1px dashed var(--line); }
+.avRigaE input:not([type=checkbox]), .avRigaE select { flex: 1 1 120px; min-width: 0; }
+.avRigaE .avCorto { flex: 0 0 64px; }
+.avRigaE textarea { flex: 1 1 100%; resize: vertical; }
+.avRigaE label.check { margin-top: 0; }
+.avGriglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.dApplica { display: flex; gap: 6px; margin-top: 8px; }
+.dApplica button { font: inherit; font-size: 12px; padding: 3px 9px; border-radius: 999px; border: 1px solid color-mix(in srgb, #ff5c5c 60%, transparent); background: transparent; color: inherit; cursor: pointer; }
+.dApplica button:hover { background: color-mix(in srgb, #ff5c5c 18%, transparent); }
+.avSezCorpo > button { align-self: flex-start; }
+.avRigaE > .btn { flex: 0 0 auto; padding: 4px 9px; }
+.livH { margin: 10px 0 4px; font-size: 13px; }
+.applicaLista { display: flex; flex-direction: column; gap: 2px; max-height: 180px; overflow-y: auto; }
+.avDanni { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.avDanni .avDannoN { width: 64px; }
+.avDanni .avDannoT { width: auto; }
+.avPF { font-size: 14px; margin-right: 4px; }
+
+.tiroBar .tiroNome { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap; }
+
+/* importare da un manuale */
+.compMan { width: min(860px, 96vw); }
+.compManB { margin: 10px 0 4px; }
+.compManFonte { gap: 8px; margin: 8px 0; flex-wrap: wrap; }
+.compMan textarea[data-k=testo] { width: 100%; box-sizing: border-box; }
+.compManLista { max-height: 46vh; overflow: auto; display: flex; flex-direction: column; gap: 4px; }
+.compManV { border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
+.compManV summary { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; cursor: pointer; }
+.compManV summary input[data-c=nome] { flex: 0 1 220px; min-width: 120px; }
+.compManV summary small { color: var(--muted); flex: 1 1 200px; }
+.compManV textarea { width: 100%; box-sizing: border-box; margin-top: 6px; }

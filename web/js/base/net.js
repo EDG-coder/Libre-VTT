@@ -849,24 +849,29 @@ function netCanMove(el) {
   const sh = p.sheet && sheets.find(s => s.id === p.sheet);
   return !!(sh && (sh.owner === NET.me.token || sh._access === 'rw'));
 }
-// Segnalini impilati: per un giocatore vale il primo, dall'alto, che può muovere; se nessuno è suo,
-// quello più in alto (e il messaggio qui sotto). Il master sceglie sempre quello in cima.
+// Per un giocatore i segnalini degli altri sono come quelli del livello Mappa: non si selezionano.
+// Un clic passa sotto, al primo segnalino suo (se c'è), altrimenti vale come un clic sulla mappa
+// (sposta la vista, ping). Il master sceglie sempre quello in cima.
+const netSelezionabile = p => (p.dataset.layer || 'tokens') === 'tokens' && netCanMove(p);
 fotoDelClic = function (e) {                                                   // eslint-disable-line no-global-assign
   const sopra = e.target.closest('.photo');
-  if (!sopra || !netAs() || isMaster() || netCanMove(sopra)) return sopra;
-  const sotto = document.elementsFromPoint(e.clientX, e.clientY)
+  if (!sopra || !netAs() || isMaster()) return sopra;
+  if (netCanMove(sopra)) return sopra;
+  return document.elementsFromPoint(e.clientX, e.clientY)
     .map(x => x.closest && x.closest('.photo')).filter(Boolean)
-    .find(p => (p.dataset.layer || 'tokens') === 'tokens' && netCanMove(p));
-  return sotto || sopra;
+    .find(netSelezionabile) || null;
 };
-viewport.addEventListener('pointerdown', e => {
-  if (e.button !== 0 || !netAs() || isMaster()) return;
-  const el = fotoDelClic(e);
-  if (el && !netCanMove(el)) {
-    e.stopImmediatePropagation(); e.preventDefault();
-    netSay('Questo segnalino non è tuo.', 'warn');
-  }
-}, true);
+// anche il riquadro di selezione prende solo i suoi
+if (typeof setSelection === 'function') {
+  const primaSel = setSelection;
+  setSelection = function (list) { return primaSel.call(this, netAs() && !isMaster() ? (list || []).filter(p => p && netCanMove(p)) : list); };   // eslint-disable-line no-global-assign
+}
+// e il puntatore non cambia sopra quelli degli altri
+function netSegnaAltrui() {
+  const gioc = netAs() && !isMaster();
+  for (const p of world.querySelectorAll('.photo')) p.classList.toggle('altrui', gioc && !netCanMove(p));
+}
+new MutationObserver(() => { clearTimeout(netSegnaAltrui.t); netSegnaAltrui.t = setTimeout(netSegnaAltrui, 120); }).observe(world, { childList: true, attributes: true, attributeFilter: ['data-owner', 'data-sheet'] });
 
 // ---------- Nome con cui ti presenti ----------
 document.body.insertAdjacentHTML('beforeend', `
@@ -1014,7 +1019,10 @@ function netSyncForm() {
 // Sta anche nel menu delle scene, dove si trova subito.
 if ($('netHome')) {
   const home = [$('netHome'), $('sceneHome')].filter(Boolean);
-  for (const a of home) { a.hidden = true; a.href = 'http://127.0.0.1:' + NET.uiPort + '/'; }
+  for (const a of home) {
+    a.hidden = true; a.href = 'http://127.0.0.1:' + NET.uiPort + '/';
+    a.addEventListener('click', () => { try { fetch('http://127.0.0.1:' + NET.uiPort + '/api/passaggio', { keepalive: true, mode: 'no-cors' }).catch(() => {}); } catch {} });   // non è una chiusura
+  }
   fetch('http://127.0.0.1:' + NET.uiPort + '/api/vivo').then(r => {
     if (!r.ok) return;
     for (const a of home) a.hidden = false;

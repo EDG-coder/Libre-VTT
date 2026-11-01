@@ -42,11 +42,18 @@
       l.innerHTML = `${tr('Critico da')} <select data-f="critDa">${['', '19', '18', '17', '16', '15'].map(v => `<option value="${v}">${v || '20'}</option>`).join('')}</select>`;
       b.append(l);
       bindField(l.querySelector('select'), w._body, sh);
+      // il nome sotto il segnalino si vede solo se lo si chiede qui
+      const nv = document.createElement('label');
+      nv.className = 'check tiroNome'; nv.title = tr('Mostra il nome del personaggio sotto i suoi segnalini sulla mappa');
+      nv.innerHTML = `<input type="checkbox" data-f="nomeSuToken"> ${tr('Nome sul segnalino')}`;
+      b.append(nv);
+      bindField(nv.querySelector('input'), w._body, sh);
+      nv.querySelector('input').addEventListener('change', () => setTimeout(() => { if (typeof updateTokenBars === 'function') updateTokenBars(); }, 0));
       if (sh.tpl !== 'simple' && sh.tpl !== 'generica') {
         const av = document.createElement('button');
         av.type = 'button'; av.className = 'btn ghost tiroAvanzate'; av.textContent = tr('⚙ Avanzate');
-        av.title = tr('Tuttofare, mezza competenza, intervallo critico, iniziativa');
-        av.addEventListener('click', () => avanzate(w, sh));
+        av.title = tr('Abilità, modificatori, movimento e sensi, difese, risorse, riquadri, incantesimi');
+        av.addEventListener('click', () => (window.avanzateScheda || avanzate)(w, sh));
         b.append(av);
       }
     }

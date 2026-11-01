@@ -487,6 +487,7 @@ function trovaDocumenti() {
   return home;
 }
 const CAMP_HOME = process.env.MYVTT_CAMPAGNE ? path.resolve(process.env.MYVTT_CAMPAGNE) : path.join(cartellaDocumenti(), 'LIBRE VTT', 'Campagne');
+const PREDEFINITE = path.join(USERDIR, 'predefinite.json');   // le impostazioni per le campagne nuove
 const CAMP_VECCHIE = MOBILE ? null : path.join(cartellaDocumenti(), 'MY VTT', 'Campagne');   // di quando si chiamava «MY VTT»
 
 let conf = { recenti: [] };
@@ -663,6 +664,8 @@ function nuovaCampagna(nomeGrezzo) {
   let dir = path.join(CAMP_HOME, nome), i = 2;
   while (fs.existsSync(dir)) dir = path.join(CAMP_HOME, `${nome} ${i++}`);
   preparaCartella(dir, nome);
+  // le impostazioni predefinite per le campagne nuove (salvate dal tavolo): le usa la prima apertura
+  try { if (fs.existsSync(PREDEFINITE)) fs.copyFileSync(PREDEFINITE, path.join(dir, 'data', 'predefinite.json')); } catch {}
   say(`Nuova campagna «${nome}» in ${dir}`, 'ok');
   return dir;
 }
@@ -899,7 +902,7 @@ async function avvia(mode, id, campagna) {
   salvaConf();
   state.porte = { web: WEB_PORT, game: GAME_PORT, link: LINK_PORT };
 
-  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP }, keep: true });
+  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP, MYVTT_PREDEFINITE: PREDEFINITE, MYVTT_CAMP_HOME: CAMP_HOME }, keep: true });
   if (!await aspettaPorta(WEB_PORT)) return fallisci('Il tavolo non si è acceso.');
 
   if (mode !== 'solo') {
@@ -1414,7 +1417,10 @@ function sorvegliaSenzaFinestra() {
 // Un filo è più sicuro di un avviso «mi sto chiudendo»: un altro sito non può spegnere l'app.
 const presenti = new Set();
 let finestraProc = null, senzaPagineDa = 0, ultimoGiro = Date.now();
-const ATTESA_CHIUSURA = +(process.env.MYVTT_CHIUSURA_MS || 10000);
+// 3 s bastano per un ricaricamento; il passaggio menu ↔ tavolo (che può metterci di più a caricare)
+// avvisa prima con /api/passaggio e ha 20 s.
+const ATTESA_CHIUSURA = +(process.env.MYVTT_CHIUSURA_MS || 3000);
+let passaggioFino = 0;
 // Un browser con il profilo di LIBRE VTT rimasto acceso senza finestre (su macOS resta nel Dock):
 // se gli chiediamo una finestra --app ne apre una normale con una scheda nuova. Prima lo si chiude.
 function chiudiBrowserRimasto() {
@@ -1434,14 +1440,14 @@ function chiudiBrowserNostro() {
 function sorvegliaChiusura() {
   if (MOBILE) return;                         // dentro l'app per telefono la finestra è l'app stessa
   setInterval(() => {
-    const ora = Date.now(), salto = ora - ultimoGiro > 5000; ultimoGiro = ora;
+    const ora = Date.now(), salto = ora - ultimoGiro > 3000; ultimoGiro = ora;
     // dopo lo stop del computer (il timer si era fermato) i fili si ricollegano: si aspetta un giro in più
-    if (salto || !finestraVista || state.busy || listeners.size || presenti.size) { senzaPagineDa = 0; return; }
+    if (salto || !finestraVista || state.busy || listeners.size || presenti.size || ora < passaggioFino) { senzaPagineDa = 0; return; }
     if (!senzaPagineDa) { senzaPagineDa = ora; return; }
     if (ora - senzaPagineDa < ATTESA_CHIUSURA) return;
     say('Nessuna finestra di LIBRE VTT aperta: chiudo il browser della finestra, spengo i server ed esco.');
     chiudiBrowserNostro(); stopAll(); setTimeout(() => process.exit(0), 500);
-  }, 1000).unref();
+  }, 500).unref();
 }
 const origineLocale = o => !o || /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):\d+$/.test(o);
 
@@ -1472,7 +1478,7 @@ const server = http.createServer(async (req, res) => {
     }
     const ck = /(?:^|;\s*)libre_k=([^;]*)/.exec(req.headers.cookie || '');
     let dato = ''; try { dato = ck ? decodeURIComponent(ck[1]) : ''; } catch {}
-    if (u.pathname !== '/api/vivo' && u.pathname !== '/api/presente' && dato !== SEGRETO) return invia(res, 403, 'Questa finestra non è quella di LIBRE VTT.');
+    if (u.pathname !== '/api/vivo' && u.pathname !== '/api/presente' && u.pathname !== '/api/passaggio' && dato !== SEGRETO) return invia(res, 403, 'Questa finestra non è quella di LIBRE VTT.');
   }
 
   if (u.pathname === '/' || u.pathname === '/index.html') {
@@ -1487,6 +1493,8 @@ const server = http.createServer(async (req, res) => {
     return fs.readFile(path.join(WEB, 'js', 'base', 'nativo.js'), (e, d) =>
       e ? invia(res, 404, 'no') : invia(res, 200, d, 'text/javascript; charset=utf-8'));
   }
+  // la pagina sta passando dal menu al tavolo (o al contrario): niente chiusura per 20 s
+  if (u.pathname === '/api/passaggio') { passaggioFino = Date.now() + 20000; senzaPagineDa = 0; res.writeHead(204, { 'Access-Control-Allow-Origin': '*' }); return res.end(); }
   if (u.pathname === '/api/vivo') { ultimoSegno = Date.now(); res.writeHead(204, { 'Access-Control-Allow-Origin': '*' }); return res.end(); }
   if (u.pathname === '/api/stato') { ultimoSegno = Date.now(); }
   if (u.pathname === '/api/stato') { await check(); return invia(res, 200, JSON.stringify({ ...stato(), log: state.log.slice(-200) }), 'application/json'); }
