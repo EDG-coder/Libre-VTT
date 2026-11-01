@@ -28,6 +28,9 @@
   const ABILITA = () => (typeof SKILLS !== 'undefined' ? SKILLS : []).slice().sort((a, b) => tr(a[1]).localeCompare(tr(b[1])));
   const DANNI = [['acido', 'Acido', /^(acid)/], ['contundente', 'Contundente', /^(contund|bludg)/], ['freddo', 'Freddo', /^(fredd|cold)/], ['fuoco', 'Fuoco', /^(fuoc|fire)/], ['forza', 'Forza', /^(forz|force)/], ['fulmine', 'Fulmine', /^(fulmin|lightn|elettr)/], ['necrotico', 'Necrotico', /^(necro)/], ['perforante', 'Perforante', /^(perfor|pierc)/], ['psichico', 'Psichico', /^(psich|psych)/], ['radioso', 'Radioso', /^(radi)/], ['tagliente', 'Tagliente', /^(taglien|slash)/], ['tuono', 'Tuono', /^(tuon|thund)/], ['veleno', 'Veleno', /^(velen|poison)/]];
   const CONDIZIONI = ['Accecato', 'Affascinato', 'Afferrato', 'Assordato', 'Avvelenato', 'Incapacitato', 'Indebolimento', 'Invisibile', 'Paralizzato', 'Pietrificato', 'Prono', 'Spaventato', 'Stordito', 'Svenuto', 'Trattenuto'];
+  // i nomi dei danni nella lingua del gioco (tr() su «Forza» darebbe la caratteristica, non il danno)
+  const DANNI_EN = { acido: 'Acid', contundente: 'Bludgeoning', freddo: 'Cold', fuoco: 'Fire', forza: 'Force', fulmine: 'Lightning', necrotico: 'Necrotic', perforante: 'Piercing', psichico: 'Psychic', radioso: 'Radiant', tagliente: 'Slashing', tuono: 'Thunder', veleno: 'Poison' };
+  const nomeDanno = k => { const d = DANNI.find(x => x[0] === k); return window.LIBRE_I18N && LIBRE_I18N.lingua === 'en' ? (DANNI_EN[k] || k) : (d ? d[1] : k); };
   const tipoDanno = t => { const n = String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); const d = DANNI.find(x => x[2].test(n)); return d ? d[0] : ''; };
   window.avanzTipoDanno = tipoDanno;
 
@@ -174,7 +177,7 @@
     const slot = []; for (let L = 1; L <= 9; L++) { const t = iv(s.f['sl' + L + 't']); if (t > 0) slot.push([L, t, Math.min(t, iv(s.f['sl' + L + 'u']))]); }
     const vel = [['speed', ''], ['vNuoto', '🏊'], ['vVolo', '🕊'], ['vScalata', '🧗'], ['vScavo', '⛏'], ['vLibrarsi', '🎈']].filter(([k]) => s.f[k]).map(([k, ic]) => (ic ? ic + ' ' : '🚶 ') + esc(s.f[k]));
     const sensi = [['scuroV', '🌒'], ['sCieca', '🦇'], ['sTremore', '〰'], ['sPura', '👁']].filter(([k]) => s.f[k]).map(([k, ic]) => ic + ' ' + esc(s.f[k]));
-    const difesa = [['res', '🛡'], ['imm', '⛔'], ['vul', '💔']].filter(([k]) => (dif[k] || []).length).map(([k, ic]) => `${ic} ${(dif[k] || []).map(x => esc(tr((DANNI.find(d => d[0] === x) || [, x])[1]))).join(', ')}`);
+    const difesa = [['res', '🛡'], ['imm', '⛔'], ['vul', '💔']].filter(([k]) => (dif[k] || []).length).map(([k, ic]) => `${ic} ${(dif[k] || []).map(x => esc(nomeDanno(x))).join(', ')}`);
     if ((dif.cond || []).length) difesa.push('🚫 ' + dif.cond.map(c => esc(tr(c))).join(', '));
     const mods = J(s, 'avMod', []).filter(m => m.on !== false && m.v);
     const caB = window.avanzBonus(s, 'ac');
@@ -191,7 +194,7 @@
     const cats = riq.cats.length ? riq.cats : (riq.items.length ? [{ id: '', nome: tr('Riquadri') }] : []);
     p.innerHTML = `<summary><span>⭐ ${esc(tr('Risorse e riquadri'))}</span><span class="avRiposi"><button type="button" class="btn ghost" data-a="breve" title="${esc(tr('Ricarica le risorse che tornano con un riposo breve'))}">☕ ${esc(tr('Riposo breve'))}</button><button type="button" class="btn ghost" data-a="lungo" title="${esc(tr('PF al massimo, metà dei dadi vita, caselle incantesimo e risorse'))}">🌙 ${esc(tr('Riposo lungo'))}</button><button type="button" class="btn ghost" data-a="avanz" title="${esc(tr('Modifica risorse, riquadri, modificatori, difese…'))}">⚙</button></span></summary>
       <div class="avCorpo">
-      <div class="avDanni"><span class="avPF">❤ <b>${iv(s.f.hp)}</b>/${iv(s.f.hpmax)}${iv(s.f.hpt) ? ` <small>+${iv(s.f.hpt)}</small>` : ''}</span><input type="number" min="0" class="avIn avDannoN" placeholder="${esc(tr('PF'))}" aria-label="${esc(tr('Quanti punti ferita'))}"><select class="avIn avDannoT" aria-label="${esc(tr('Tipo di danno'))}"><option value="">${esc(tr('tipo…'))}</option>${DANNI.map(([k, n]) => `<option value="${k}">${esc(tr(n))}</option>`).join('')}</select><button type="button" class="btn ghost" data-a="subisci">🩸 ${esc(tr('Danni subiti'))}</button><button type="button" class="btn ghost" data-a="cura">💚 ${esc(tr('Cura'))}</button></div>
+      <div class="avDanni"><span class="avPF">❤ <b>${iv(s.f.hp)}</b>/${iv(s.f.hpmax)}${iv(s.f.hpt) ? ` <small>+${iv(s.f.hpt)}</small>` : ''}</span><input type="number" min="0" class="avIn avDannoN" placeholder="${esc(tr('PF'))}" aria-label="${esc(tr('Quanti punti ferita'))}"><select class="avIn avDannoT" aria-label="${esc(tr('Tipo di danno'))}"><option value="">${esc(tr('tipo…'))}</option>${DANNI.map(([k]) => `<option value="${k}">${esc(nomeDanno(k))}</option>`).join('')}</select><button type="button" class="btn ghost" data-a="subisci">🩸 ${esc(tr('Danni subiti'))}</button><button type="button" class="btn ghost" data-a="cura">💚 ${esc(tr('Cura'))}</button></div>
       ${vel.length || sensi.length ? `<div class="avInfo">${vel.join(' · ')}${vel.length && sensi.length ? ' &nbsp;|&nbsp; ' : ''}${sensi.join(' · ')}</div>` : ''}
       ${difesa.length ? `<div class="avInfo">${difesa.join(' · ')}</div>` : ''}
       ${mods.length || caB ? `<div class="avInfo">✨ ${mods.map(m => `${esc(m.nota || NOMI_BERSAGLI()[m.a] || m.a)} ${/^[+-]/.test(String(m.v).trim()) ? '' : '+'}${esc(m.v)}`).join(' · ')}${caB ? ` · ${esc(tr('CA effettiva'))} ${iv(s.f.ac) + caB}` : ''}</div>` : ''}
@@ -295,7 +298,7 @@
       }
       if (cur === 'difese') {
         const dif = J(s, 'avDif', {});
-        const riga = ([k, n]) => `<tr><td>${esc(tr(n))}</td>${['res', 'imm', 'vul'].map(g => `<td><input type="checkbox" data-dif="${g}" data-t="${k}" ${(dif[g] || []).includes(k) ? 'checked' : ''} aria-label="${esc(tr(n))}"></td>`).join('')}</tr>`;
+        const riga = ([k]) => `<tr><td>${esc(nomeDanno(k))}</td>${['res', 'imm', 'vul'].map(g => `<td><input type="checkbox" data-dif="${g}" data-t="${k}" ${(dif[g] || []).includes(k) ? 'checked' : ''} aria-label="${esc(nomeDanno(k))}"></td>`).join('')}</tr>`;
         return `<p class="note">${esc(tr('«Danni subiti» nel pannello della scheda le usa da solo: resistenza dimezza, immunità annulla, vulnerabilità raddoppia.'))}</p>
           <table class="avTab avDif"><thead><tr><th></th><th>🛡 ${esc(tr('Resistenza'))}</th><th>⛔ ${esc(tr('Immunità'))}</th><th>💔 ${esc(tr('Vulnerabilità'))}</th></tr></thead><tbody>${DANNI.map(riga).join('')}</tbody></table>
           <h4>${esc(tr('Immunità alle condizioni'))}</h4><div class="cmCheck">${CONDIZIONI.map(c => `<label class="check"><input type="checkbox" data-cond="${esc(c)}" ${(dif.cond || []).includes(c) ? 'checked' : ''}> ${esc(tr(c))}</label>`).join('')}</div>`;
@@ -450,7 +453,7 @@
   // I segnalini non hanno PF propri: ognuno scrive nella sua scheda i danni che prende. Con il tipo,
   // resistenza dimezza, immunità annulla, vulnerabilità raddoppia; i PF temporanei si consumano prima.
   function subisci(s, quanti, tipo) {
-    const dif = J(s, 'avDif', {}), t = tipoDanno(tipo), nomeT = t ? tr((DANNI.find(d => d[0] === t) || [, t])[1]).toLowerCase() : '';
+    const dif = J(s, 'avDif', {}), t = tipoDanno(tipo), nomeT = t ? nomeDanno(t).toLowerCase() : '';
     let n = Math.max(0, Math.floor(+quanti || 0)); const note = [];
     if (!n) return;
     if (t && (dif.imm || []).includes(t)) { n = 0; note.push(tr('immune a {t}', { t: nomeT })); }

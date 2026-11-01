@@ -710,6 +710,7 @@
           ${!giocatore() || p.mio ? `<button type="button" class="btn ghost" data-a="esp">📤 ${esc(tr('Esporta'))}</button>` : ''}
           ${!p.base && (!giocatore() || p.mio) ? `<button type="button" class="btn ghost" data-a="via">🗑</button>` : ''}</div></div>`;
       }).join('') || `<p class="note">${esc(tr('Nessun pacchetto.'))}</p>`}</div>
+      ${!giocatore() && typeof window.apriImportaManuale === 'function' ? `<div class="row compManB"><button type="button" class="btn ghost" data-a="manuale">📖 ${esc(tr('Importa da un manuale che possiedi…'))}</button></div>` : ''}
       ${conduco() && !giocatore() ? `<label class="check"><input type="checkbox" id="compGioImp" ${C.vis.giocatoriImportano ? 'checked' : ''}> ${esc(tr('I giocatori possono importare pacchetti per sé'))}</label>
       <div class="compTrad"><b>🌐 ${esc(tr('Traduzione in italiano'))}</b> <small>${esc(tr('{n} voci tradotte dal file della campagna', { n: Object.keys(C.traduzioni || {}).length }))}</small>
         <p class="note">${esc(tr('Scarica il file, scrivi «nome» e «testo» in italiano per le voci che vuoi (le altre lasciale vuote) e ricaricalo: il compendio lo usa da solo, anche per i giocatori.'))}</p>
@@ -721,6 +722,7 @@
       const b = e.target.closest('button[data-a]'); if (!b) return;
       if (b.dataset.a === 'chiudi') return dlg.close();
       if (b.dataset.a === 'tradGiu') return scaricaTraduzioni();
+      if (b.dataset.a === 'manuale') { dlg.close(); return window.apriImportaManuale(); }
       if (b.dataset.a === 'tradSu') { await caricaTraduzioni(); return disegnaP(); }
       const id = b.closest('.compP') && b.closest('.compP').dataset.id, p = C.pacchetti.find(x => x.id === id);
       if (b.dataset.a === 'vis') { C.vis.pacchetti[id] = visibilePack(p) ? 'master' : 'tutti'; await salvaVis(); disegnaP(); disegna(); }

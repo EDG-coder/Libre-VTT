@@ -1083,3 +1083,15 @@ html.ui-tel #turniBarra .tbTesta { font-size: 13px; padding: 6px 10px; gap: 8px;
 .avPF { font-size: 14px; margin-right: 4px; }
 
 .tiroBar .tiroNome { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap; }
+
+/* importare da un manuale */
+.compMan { width: min(860px, 96vw); }
+.compManB { margin: 10px 0 4px; }
+.compManFonte { gap: 8px; margin: 8px 0; flex-wrap: wrap; }
+.compMan textarea[data-k=testo] { width: 100%; box-sizing: border-box; }
+.compManLista { max-height: 46vh; overflow: auto; display: flex; flex-direction: column; gap: 4px; }
+.compManV { border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
+.compManV summary { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; cursor: pointer; }
+.compManV summary input[data-c=nome] { flex: 0 1 220px; min-width: 120px; }
+.compManV summary small { color: var(--muted); flex: 1 1 200px; }
+.compManV textarea { width: 100%; box-sizing: border-box; margin-top: 6px; }
