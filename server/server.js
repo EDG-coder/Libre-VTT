@@ -341,6 +341,65 @@ function salvaVisibilita(req, res) {
   });
 }
 
+// ---------- Impostazioni a due livelli ----------
+// Le predefinite per le campagne nuove stanno nella cartella utente (MYVTT_PREDEFINITE, la passa
+// l'avviatore); una campagna appena creata ne riceve una copia in data/predefinite.json, che il tavolo
+// usa la prima volta. «Applica a:» copia le impostazioni del tavolo nelle altre campagne della
+// cartella delle campagne (MYVTT_CAMP_HOME): solo le impostazioni, mai scene, schede o chat.
+const PREDEF = process.env.MYVTT_PREDEFINITE ? path.resolve(process.env.MYVTT_PREDEFINITE) : null;
+const CAMP_HOME = process.env.MYVTT_CAMP_HOME ? path.resolve(process.env.MYVTT_CAMP_HOME) : null;
+const CHIAVI_COMUNI = ['theme', 'autoBg', 'resToken', 'resBg', 'gridDefault', 'border', 'ping', 'unit', 'sheetClose', 'rulerCenter', 'fogColor', 'fogVeil',
+  'caratLibere', 'spareggioDes', 'dadiProvvisori', 'boxLabels', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'modelliScheda'];
+const soloComuni = s => Object.fromEntries(CHIAVI_COMUNI.filter(k => s && s[k] !== undefined).map(k => [k, s[k]]));
+function leggiPredefinite(res, q) {
+  const f = q.get('campagna') ? path.join(DATA, 'predefinite.json') : PREDEF;
+  if (!f) return json(res, 200, { settings: null, disponibile: false });
+  try { const j = JSON.parse(fs.readFileSync(f, 'utf8')); return json(res, 200, { settings: j.settings || null, quando: j.quando || null, disponibile: true }); }
+  catch { return json(res, 200, { settings: null, disponibile: !!PREDEF }); }
+}
+function salvaPredefinite(req, res) {
+  if (!PREDEF) return send(res, 409, 'Le predefinite si salvano solo aprendo LIBRE VTT dall\'app');
+  corpoBin(req, res, 2 * 1024 * 1024, b => {
+    let j; try { j = JSON.parse(b.toString('utf8')); } catch { return send(res, 400, 'JSON non valido'); }
+    fs.mkdirSync(path.dirname(PREDEF), { recursive: true });
+    fs.writeFileSync(PREDEF, JSON.stringify({ quando: Date.now(), settings: soloComuni(j.settings || {}) }, null, 1));
+    json(res, 200, { ok: true });
+  });
+}
+function togliPredefinite(res) { if (PREDEF) { try { fs.unlinkSync(PREDEF); } catch {} } json(res, 200, { ok: true }); }
+function campagneVicine() {
+  if (!CAMP_HOME) return [];
+  let d = []; try { d = fs.readdirSync(CAMP_HOME, { withFileTypes: true }); } catch { return []; }
+  return d.filter(e => e.isDirectory() && !e.name.startsWith('.')).map(e => path.join(CAMP_HOME, e.name))
+    .filter(p => path.resolve(p) !== path.resolve(CAMP) && (fs.existsSync(path.join(p, 'campagna.json')) || fs.existsSync(path.join(p, 'data'))))
+    .map(p => { let nome = path.basename(p); try { nome = JSON.parse(fs.readFileSync(path.join(p, 'campagna.json'), 'utf8')).nome || nome; } catch {} return { id: path.basename(p), nome }; });
+}
+function applicaAltre(req, res) {
+  if (!CAMP_HOME) return send(res, 409, 'Non trovo la cartella delle campagne');
+  corpoBin(req, res, 2 * 1024 * 1024, b => {
+    let j; try { j = JSON.parse(b.toString('utf8')); } catch { return send(res, 400, 'JSON non valido'); }
+    const nuove = soloComuni(j.settings || {}), fatte = [];
+    for (const id of Array.isArray(j.campagne) ? j.campagne : []) {
+      const dir = path.join(CAMP_HOME, path.basename(String(id)));
+      if (!dir.startsWith(CAMP_HOME + path.sep) || path.resolve(dir) === path.resolve(CAMP) || !fs.existsSync(dir)) continue;
+      const dd = path.join(dir, 'data'); fs.mkdirSync(dd, { recursive: true });
+      let toccata = false;
+      {
+        const f = path.join(dd, 'board.json');
+        let st = null; try { st = JSON.parse(fs.readFileSync(f, 'utf8')); } catch {}
+        if (st && typeof st === 'object' && Array.isArray(st.scenes)) {
+          st.settings = { ...(st.settings || {}), ...nuove };
+          fs.writeFileSync(f, JSON.stringify(st)); toccata = true;
+        }
+      }
+      // mai aperta: le userà la prima volta
+      if (!toccata) fs.writeFileSync(path.join(dd, 'predefinite.json'), JSON.stringify({ quando: Date.now(), settings: nuove }, null, 1));
+      fatte.push(path.basename(dir));
+    }
+    json(res, 200, { ok: true, campagne: fatte });
+  });
+}
+
 // Il file di traduzione del compendio: { "<id della voce>": { nome, testo } }, scritto da chi conduce
 function salvaTraduzioni(req, res) {
   corpoBin(req, res, 40 * 1024 * 1024, b => {
@@ -458,6 +517,11 @@ function handle(req, res) {
     if (route === 'GET /api/compendio/esporta') return esportaPacchetto(res, q);
     if (route === 'PUT /api/compendio/visibilita') return salvaVisibilita(req, res);
     if (route === 'PUT /api/compendio/traduzioni') return salvaTraduzioni(req, res);
+    if (route === 'GET /api/predefinite') return leggiPredefinite(res, q);
+    if (route === 'PUT /api/predefinite') return salvaPredefinite(req, res);
+    if (route === 'DELETE /api/predefinite') return togliPredefinite(res);
+    if (route === 'GET /api/campagne-vicine') return json(res, 200, { campagne: campagneVicine(), disponibile: !!CAMP_HOME });
+    if (route === 'POST /api/applica-impostazioni') return applicaAltre(req, res);
     if (route === 'PUT /api/sistema') return salvaSistema(req, res, q);
     if (route === 'POST /api/sistema/personalizza') return personalizzaSistema(res);
     if (route === 'GET /api/sistema/esporta') return esportaSistema(res);

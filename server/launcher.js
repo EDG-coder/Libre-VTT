@@ -487,6 +487,7 @@ function trovaDocumenti() {
   return home;
 }
 const CAMP_HOME = process.env.MYVTT_CAMPAGNE ? path.resolve(process.env.MYVTT_CAMPAGNE) : path.join(cartellaDocumenti(), 'LIBRE VTT', 'Campagne');
+const PREDEFINITE = path.join(USERDIR, 'predefinite.json');   // le impostazioni per le campagne nuove
 const CAMP_VECCHIE = MOBILE ? null : path.join(cartellaDocumenti(), 'MY VTT', 'Campagne');   // di quando si chiamava «MY VTT»
 
 let conf = { recenti: [] };
@@ -663,6 +664,8 @@ function nuovaCampagna(nomeGrezzo) {
   let dir = path.join(CAMP_HOME, nome), i = 2;
   while (fs.existsSync(dir)) dir = path.join(CAMP_HOME, `${nome} ${i++}`);
   preparaCartella(dir, nome);
+  // le impostazioni predefinite per le campagne nuove (salvate dal tavolo): le usa la prima apertura
+  try { if (fs.existsSync(PREDEFINITE)) fs.copyFileSync(PREDEFINITE, path.join(dir, 'data', 'predefinite.json')); } catch {}
   say(`Nuova campagna «${nome}» in ${dir}`, 'ok');
   return dir;
 }
@@ -899,7 +902,7 @@ async function avvia(mode, id, campagna) {
   salvaConf();
   state.porte = { web: WEB_PORT, game: GAME_PORT, link: LINK_PORT };
 
-  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP }, keep: true });
+  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP, MYVTT_PREDEFINITE: PREDEFINITE, MYVTT_CAMP_HOME: CAMP_HOME }, keep: true });
   if (!await aspettaPorta(WEB_PORT)) return fallisci('Il tavolo non si è acceso.');
 
   if (mode !== 'solo') {

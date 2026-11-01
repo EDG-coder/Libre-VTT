@@ -310,7 +310,7 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 #chatTabs button { flex: 1; padding: 7px 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-3); color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
 
 /* ======================= Segnalini: nome, barra dei PF, forma e bordo ======================= */
-.photo[data-name]::after {
+.photo[data-name][data-nomevis]::after {
   content: attr(data-name); position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: calc(3px * var(--inv, 1));
   padding: 0 calc(6px * var(--inv, 1)); max-width: 240%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none;
   font: 600 calc(12px * var(--inv, 1)) system-ui, sans-serif; color: #fff; background: rgba(0, 0, 0, .6); border-radius: calc(8px * var(--inv, 1));
@@ -320,7 +320,7 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
   border-radius: calc(3px * var(--inv, 1)); box-shadow: 0 0 0 calc(1px * var(--inv, 1)) rgba(0, 0, 0, .55);
   background: linear-gradient(to right, hsl(calc(var(--hpv, 100) * 1.2) 80% 45%) calc(var(--hpv, 100) * 1%), rgba(0, 0, 0, .65) 0);
 }
-.photo[data-hp][data-name]::after { margin-top: calc(9px * var(--inv, 1)); }
+.photo[data-hp][data-name][data-nomevis]::after { margin-top: calc(9px * var(--inv, 1)); }
 .photo[data-round] img { border-radius: 50%; }
 .photo[data-ring] img { box-shadow: 0 0 0 calc(3px * var(--inv, 1)) var(--ring, #fff); }
 
@@ -1075,3 +1075,11 @@ html.ui-tel #turniBarra .tbTesta { font-size: 13px; padding: 6px 10px; gap: 8px;
 .dApplica button:hover { background: color-mix(in srgb, #ff5c5c 18%, transparent); }
 .avSezCorpo > button { align-self: flex-start; }
 .avRigaE > .btn { flex: 0 0 auto; padding: 4px 9px; }
+.livH { margin: 10px 0 4px; font-size: 13px; }
+.applicaLista { display: flex; flex-direction: column; gap: 2px; max-height: 180px; overflow-y: auto; }
+.avDanni { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.avDanni .avDannoN { width: 64px; }
+.avDanni .avDannoT { width: auto; }
+.avPF { font-size: 14px; margin-right: 4px; }
+
+.tiroBar .tiroNome { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap; }

@@ -1,5 +1,5 @@
 // Effetti sui segnalini (pallini colorati, X rossa) e le tre caselle che compaiono sopra il
-// segnalino selezionato. Li tocca solo chi conduce; i giocatori vedono pallini e X.
+// segnalino (dal clic destro del master: «✨ Effetti e caselle»). Li tocca solo chi conduce; i giocatori vedono pallini e X.
 //   dataset.fx      = "rosso,blu"   gli effetti accesi, nell'ordine in cui sono stati accesi
 //   dataset.crossed = "1"           la X rossa
 //   dataset.vals    = "12|3|"       le tre caselle (verde, rossa, blu); vuoto = niente
@@ -159,7 +159,7 @@
     if (!el.isConnected) { nascondi(); return; }
     const r = el.getBoundingClientRect(), h = d.offsetHeight, w = d.offsetWidth;
     let top = r.top - h - 10;
-    const nome = el.dataset.name ? 22 : 0;
+    const nome = el.dataset.name && el.dataset.nomevis ? 22 : 0;
     if (top < 56) top = r.bottom + 12 + nome + (el.dataset.hp ? 8 : 0);
     let left = r.left + r.width / 2 - w / 2;
     left = Math.max(8, Math.min(innerWidth - w - 8, left));
@@ -181,11 +181,17 @@
     hud.el = null;
     if (hud.raf) { cancelAnimationFrame(hud.raf); hud.raf = 0; }
   }
+  // Non si apre più selezionando il segnalino: solo chi conduce, dal clic destro («✨ Effetti e caselle»).
+  // Si chiude quando il segnalino non è più selezionato.
   function aggiorna() {
     const sel = typeof selection !== 'undefined' ? selection : [];
-    const el = sel.length === 1 ? sel[0] : null;
-    if (el && eSegnalino(el) && conduco()) mostra(el); else nascondi();
+    if (hud.el && !(sel.length === 1 && sel[0] === hud.el)) nascondi();
   }
+  window.tokenHudApri = function (el) {
+    if (!el || !eSegnalino(el) || !conduco()) return;
+    if (typeof select === 'function') select(el);
+    mostra(el);
+  };
   // la selezione cambia sempre da qui
   if (typeof setSelection === 'function') {
     const prima = setSelection;

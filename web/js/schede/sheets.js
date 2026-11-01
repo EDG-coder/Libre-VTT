@@ -314,6 +314,7 @@ function tokenMenu(el) {
       : { label: '📜 Apri una scheda…', items: pickSheet(x => { linkToken(el, x.id); openSheet(x.id); }) });
     items.push({ label: '🔗 Collega a una scheda', items: pickSheet(x => linkToken(el, x.id)) });
     items.push({ label: '✂ Ritaglia la sagoma…', fn: () => cropExistingToken(el) });
+    if (typeof tokenHudApri === 'function' && (typeof isMaster !== 'function' || isMaster()) && (el.dataset.layer || 'tokens') !== 'map') items.push({ label: '✨ Effetti e caselle', fn: () => tokenHudApri(el) });
     if (s) items.push({ label: 'Scollega dalla scheda', fn: () => { delete el.dataset.sheet; scheduleBoardSave(); } });
     items.push('-');
   } else if (el._shape.t === 'text') items.push({ label: '✎ Modifica il testo', fn: () => editText(el) }, '-');
@@ -769,6 +770,7 @@ function updateTokenBars() {
   world.querySelectorAll('.photo[data-sheet]').forEach(p => {
     const sh = sheets.find(x => x.id === p.dataset.sheet), mx = sh ? iv(sh.f.hpmax) : 0;
     if (sh && sh.name) p.dataset.name = sh.name;
+    if (sh && sh.f && sh.f.nomeSuToken) p.dataset.nomevis = '1'; else delete p.dataset.nomevis;   // il nome si vede solo col segno di spunta
     if (mx > 0) { p.dataset.hp = '1'; p.style.setProperty('--hpv', Math.max(0, Math.min(100, Math.round(iv(sh.f.hp) / mx * 100)))); }
     else { delete p.dataset.hp; p.style.removeProperty('--hpv'); }
   });

@@ -191,6 +191,7 @@
     const cats = riq.cats.length ? riq.cats : (riq.items.length ? [{ id: '', nome: tr('Riquadri') }] : []);
     p.innerHTML = `<summary><span>⭐ ${esc(tr('Risorse e riquadri'))}</span><span class="avRiposi"><button type="button" class="btn ghost" data-a="breve" title="${esc(tr('Ricarica le risorse che tornano con un riposo breve'))}">☕ ${esc(tr('Riposo breve'))}</button><button type="button" class="btn ghost" data-a="lungo" title="${esc(tr('PF al massimo, metà dei dadi vita, caselle incantesimo e risorse'))}">🌙 ${esc(tr('Riposo lungo'))}</button><button type="button" class="btn ghost" data-a="avanz" title="${esc(tr('Modifica risorse, riquadri, modificatori, difese…'))}">⚙</button></span></summary>
       <div class="avCorpo">
+      <div class="avDanni"><span class="avPF">❤ <b>${iv(s.f.hp)}</b>/${iv(s.f.hpmax)}${iv(s.f.hpt) ? ` <small>+${iv(s.f.hpt)}</small>` : ''}</span><input type="number" min="0" class="avIn avDannoN" placeholder="${esc(tr('PF'))}" aria-label="${esc(tr('Quanti punti ferita'))}"><select class="avIn avDannoT" aria-label="${esc(tr('Tipo di danno'))}"><option value="">${esc(tr('tipo…'))}</option>${DANNI.map(([k, n]) => `<option value="${k}">${esc(tr(n))}</option>`).join('')}</select><button type="button" class="btn ghost" data-a="subisci">🩸 ${esc(tr('Danni subiti'))}</button><button type="button" class="btn ghost" data-a="cura">💚 ${esc(tr('Cura'))}</button></div>
       ${vel.length || sensi.length ? `<div class="avInfo">${vel.join(' · ')}${vel.length && sensi.length ? ' &nbsp;|&nbsp; ' : ''}${sensi.join(' · ')}</div>` : ''}
       ${difesa.length ? `<div class="avInfo">${difesa.join(' · ')}</div>` : ''}
       ${mods.length || caB ? `<div class="avInfo">✨ ${mods.map(m => `${esc(m.nota || NOMI_BERSAGLI()[m.a] || m.a)} ${/^[+-]/.test(String(m.v).trim()) ? '' : '+'}${esc(m.v)}`).join(' · ')}${caB ? ` · ${esc(tr('CA effettiva'))} ${iv(s.f.ac) + caB}` : ''}</div>` : ''}
@@ -210,6 +211,11 @@
     if (b.dataset.a === 'breve') return riposo(s, false);
     if (b.dataset.a === 'lungo') return confirm(tr('Riposo lungo per {n}?', { n: s.name })) && riposo(s, true);
     if (b.dataset.a === 'avanz') return apriAvanzate(w, s, 'risorse');
+    if (b.dataset.a === 'subisci' || b.dataset.a === 'cura') {
+      const box = b.closest('.avDanni'), n = box.querySelector('.avDannoN').value, t = box.querySelector('.avDannoT').value;
+      if (!(+n > 0)) { box.querySelector('.avDannoN').focus(); return; }
+      return b.dataset.a === 'cura' ? cura(s, n) : subisci(s, n, t);
+    }
     if (b.dataset.lancia) return usaCasella(s, +b.dataset.lancia);
     if (b.dataset.pip) { const L = b.dataset.pip, t = iv(s.f['sl' + L + 't']), libere = t - Math.min(t, iv(s.f['sl' + L + 'u'])); s.f['sl' + L + 'u'] = String(t - (+b.dataset.i < libere ? +b.dataset.i : +b.dataset.i + 1)); cambiata(s); return; }
     if (b.dataset.ris) { const ris = J(s, 'avRis', []), r = ris.find(x => x.id === b.dataset.ris); if (!r) return; const mx = Math.round(formula(s, r.max) || +r.max || 0); r.cur = Math.max(0, Math.min(mx || Infinity, (+r.cur || 0) + +b.dataset.d)); salvaJ(s, 'avRis', ris); if (+b.dataset.d < 0) addChat({ kind: 'text', text: `${s.name}: ${r.nome} (${r.cur}/${mx})` }); return; }
@@ -290,7 +296,7 @@
       if (cur === 'difese') {
         const dif = J(s, 'avDif', {});
         const riga = ([k, n]) => `<tr><td>${esc(tr(n))}</td>${['res', 'imm', 'vul'].map(g => `<td><input type="checkbox" data-dif="${g}" data-t="${k}" ${(dif[g] || []).includes(k) ? 'checked' : ''} aria-label="${esc(tr(n))}"></td>`).join('')}</tr>`;
-        return `<p class="note">${esc(tr('«Applica i danni» nei messaggi dei danni le usa da solo: resistenza dimezza, immunità annulla, vulnerabilità raddoppia.'))}</p>
+        return `<p class="note">${esc(tr('«Danni subiti» nel pannello della scheda le usa da solo: resistenza dimezza, immunità annulla, vulnerabilità raddoppia.'))}</p>
           <table class="avTab avDif"><thead><tr><th></th><th>🛡 ${esc(tr('Resistenza'))}</th><th>⛔ ${esc(tr('Immunità'))}</th><th>💔 ${esc(tr('Vulnerabilità'))}</th></tr></thead><tbody>${DANNI.map(riga).join('')}</tbody></table>
           <h4>${esc(tr('Immunità alle condizioni'))}</h4><div class="cmCheck">${CONDIZIONI.map(c => `<label class="check"><input type="checkbox" data-cond="${esc(c)}" ${(dif.cond || []).includes(c) ? 'checked' : ''}> ${esc(tr(c))}</label>`).join('')}</div>`;
       }
@@ -440,47 +446,29 @@
   // una scheda cambiata da un altro (in partita): si ridisegna il pannello
   addEventListener('libre-scheda-aggiornata', e => { const s = e.detail && sheets.find(x => x.id === e.detail.id); const w = s && wins.get(s.id); if (w) disegnaPannello(w, s); });
 
-  // ---------- «Applica i danni» nei messaggi dei danni ----------
-  // Ai segnalini selezionati sulla mappa (con una scheda): resistenza dimezza, immunità annulla,
-  // vulnerabilità raddoppia, per tipo; i PF temporanei si consumano prima.
-  function applica(m, fattore) {
-    const bersagli = (typeof selection !== 'undefined' ? selection : []).map(p => p.dataset.sheet && sheets.find(x => x.id === p.dataset.sheet)).filter(Boolean);
-    if (!bersagli.length) { alert(tr('Seleziona sulla mappa i segnalini che subiscono i danni (con una scheda collegata).')); return; }
-    const parti = Array.isArray(m.parti) && m.parti.length ? m.parti.map(p => ({ tot: +p.total || 0, tipo: p.tipo })) : [{ tot: +m.total || 0, tipo: (String(m.label || '').split(/\s+·\s+/).slice(-1)[0] || '') }];
-    const righe = [];
-    for (const s of [...new Set(bersagli)]) {
-      const dif = J(s, 'avDif', {});
-      let tot = 0; const note = [];
-      for (const p of parti) {
-        const t = tipoDanno(p.tipo);
-        let n = Math.floor(p.tot * fattore);
-        if (t && (dif.imm || []).includes(t)) { n = 0; note.push(tr('immune a {t}', { t: tr((DANNI.find(d => d[0] === t) || [, t])[1]).toLowerCase() })); }
-        else if (t && (dif.res || []).includes(t)) { n = Math.floor(n / 2); note.push(tr('resiste a {t}', { t: tr((DANNI.find(d => d[0] === t) || [, t])[1]).toLowerCase() })); }
-        if (t && (dif.vul || []).includes(t)) { n *= 2; note.push(tr('vulnerabile a {t}', { t: tr((DANNI.find(d => d[0] === t) || [, t])[1]).toLowerCase() })); }
-        tot += n;
-      }
-      let resto = tot; const temp = iv(s.f.hpt);
-      if (temp > 0) { const via = Math.min(temp, resto); s.f.hpt = String(temp - via) === '0' ? '' : String(temp - via); resto -= via; }
-      const prima = iv(s.f.hp);
-      s.f.hp = String(Math.max(0, prima - resto));
-      cambiata(s);
-      righe.push(`${s.name}: −${tot}${note.length ? ' (' + note.join(', ') + ')' : ''} → ${s.f.hp}/${iv(s.f.hpmax)} PF`);
-    }
-    addChat({ kind: 'rule', title: tr('🩸 Danni applicati') + (fattore === 0.5 ? ' ' + tr('(metà)') : ''), text: righe.join('\n') });
+  // ---------- Danni subiti e cure, dalla propria scheda ----------
+  // I segnalini non hanno PF propri: ognuno scrive nella sua scheda i danni che prende. Con il tipo,
+  // resistenza dimezza, immunità annulla, vulnerabilità raddoppia; i PF temporanei si consumano prima.
+  function subisci(s, quanti, tipo) {
+    const dif = J(s, 'avDif', {}), t = tipoDanno(tipo), nomeT = t ? tr((DANNI.find(d => d[0] === t) || [, t])[1]).toLowerCase() : '';
+    let n = Math.max(0, Math.floor(+quanti || 0)); const note = [];
+    if (!n) return;
+    if (t && (dif.imm || []).includes(t)) { n = 0; note.push(tr('immune a {t}', { t: nomeT })); }
+    else if (t && (dif.res || []).includes(t)) { n = Math.floor(n / 2); note.push(tr('resiste a {t}', { t: nomeT })); }
+    if (t && (dif.vul || []).includes(t)) { n *= 2; note.push(tr('vulnerabile a {t}', { t: nomeT })); }
+    let resto = n; const temp = iv(s.f.hpt);
+    if (temp > 0) { const via = Math.min(temp, resto); s.f.hpt = temp - via ? String(temp - via) : ''; resto -= via; }
+    s.f.hp = String(Math.max(0, iv(s.f.hp) - resto));
+    cambiata(s);
+    addChat({ kind: 'rule', title: `🩸 ${s.name}`, text: tr('Subisce {n} danni{t}{note} → {pf}/{max} PF', { n, t: nomeT ? ' ' + tr('da {t}', { t: nomeT }) : '', note: note.length ? ' (' + note.join(', ') + ')' : '', pf: s.f.hp, max: iv(s.f.hpmax) }) });
   }
-  if (typeof msgDanno === 'function') {
-    const prima = msgDanno;
-    msgDanno = function (d, m) {                                 // eslint-disable-line no-global-assign
-      const r = prima.apply(this, arguments);
-      const inRete = typeof NET !== 'undefined' && NET.on;
-      if (!inRete || (typeof isMaster === 'function' && isMaster())) {
-        const box = document.createElement('div'); box.className = 'dApplica';
-        const b = (t, f, tit) => { const x = document.createElement('button'); x.type = 'button'; x.textContent = tr(t); x.title = tr(tit); x.addEventListener('click', () => applica(m, f)); return x; };
-        box.append(b('🩸 Applica', 1, 'Ai segnalini selezionati, con le loro resistenze e immunità'), b('½ Metà', 0.5, 'Metà dei danni (tiro salvezza riuscito)'));
-        (r || d).append(box);
-      }
-      return r;
-    };
+  function cura(s, quanti) {
+    const n = Math.max(0, Math.floor(+quanti || 0)); if (!n) return;
+    const mx = iv(s.f.hpmax), prima = iv(s.f.hp);
+    s.f.hp = String(mx ? Math.min(mx, prima + n) : prima + n);
+    cambiata(s);
+    addChat({ kind: 'rule', title: `💚 ${s.name}`, text: tr('Recupera {n} PF → {pf}/{max} PF', { n: iv(s.f.hp) - prima, pf: s.f.hp, max: mx }) });
   }
-  window._avanzate = { formula, riposo, applica, J };
+  window.avanzSubisci = subisci;
+  window._avanzate = { formula, riposo, subisci, cura, J };
 })();
