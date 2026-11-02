@@ -1,7 +1,8 @@
-## Novità della 3.7.7
+## Novità della 3.7.8
 
-**Compendio: importare i manuali**
-- **Nuovo lettore dei manuali** (Compendio › Pacchetti › «Importa da un manuale che possiedi»): legge anche i PDF scansionati e passati in OCR. Rimette insieme i titoli spaziati («A c id S p l a s h» → «Acid Splash») e le parole spezzate («W hen», «o f», «6 th-level», «can ’t»), e sistema le pagine a due colonne anche quando i margini cambiano da pagina a pagina.
-- **Riconosce tutto il manuale da solo:** incantesimi (con le classi), mostri con azioni, oggetti magici, talenti e suppliche, specie con tratti e sottospecie, classi con i privilegi nei 20 livelli, sottoclassi, background con il loro privilegio, condizioni. Sul Manuale del Giocatore 2014 trova circa 530 voci. Restano da controllare a mano alcune specie e classi impaginate in modo particolare.
-- **Traduci in italiano all'import:** quando importi un manuale in inglese, o un pacchetto (.librepack, .json di LIBRE VTT o di 5etools, CSV), una casella traduce in italiano nomi e testi con il traduttore del browser, sul tuo computer. Il testo originale resta (lo vedi con il compendio in inglese). Il traduttore c'è in Chrome ed Edge recenti, non in Brave, Safari o Firefox: lì la casella è spenta e lo spiega.
-- **Dal terminale:** `sviluppo/strumenti/manuale-a-json/manuale-a-json.mjs` fa la stessa conversione (PDF o testo → JSON da importare).
+**Compendio: un lettore per tutti i manuali**
+- **Mostri da qualunque manuale:** il lettore riconosce i blocchi dei mostri dallo schema che hanno tutti i manuali di 5e (Classe Armatura, Punti Ferita, caratteristiche, Sfida, azioni), non più solo dalla riga del tipo. Sul Monster Manual 2014 scansionato trova 422 mostri (prima 265) e nessun mostro si «mangia» più quelli dopo.
+- **Nomi anche quando l'OCR li perde:** se il nome non si legge, lo ritrova dai dadi dei Punti Ferita e dalla Sfida (per i mostri dell'SRD) o dal testo delle azioni («The nalfeshnee…»). I nomi in maiuscolo sporchi («GrANT APE», «DusTMEPHIT») tornano a posto.
+- **Numeri letti male corretti:** «Armor Class 1 5», «Sd6», «lld8», «+ 11 to hit», titolo «ACTIONS» perso, caratteristiche nell'ordine sbagliato.
+- **Controllo automatico:** ogni voce viene controllata (i PF devono tornare con i dadi, CA, sfida e PE, caratteristiche, bonus per colpire; per gli incantesimi tempo, gittata, componenti e durata). Quelle che non tornano sono segnate con ⚠ e il motivo, e con «Mostra solo le voci da controllare» le vedi solo loro.
+- **IA locale facoltativa:** se sul computer c'è Ollama con un modello scaricato, «🤖 Correggi con l'IA locale» le fa riguardare le voci segnate. Tutto resta sul computer, e si tengono solo i numeri e i nomi che si trovano davvero nel testo del manuale, poi la voce viene ricontrollata.
