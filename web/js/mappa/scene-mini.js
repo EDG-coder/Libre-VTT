@@ -22,7 +22,8 @@
     if (!immagini.has(url)) immagini.set(url, new Promise(ok => {
       const im = new Image();
       if (/^https?:/.test(url) && !url.startsWith(location.origin)) im.crossOrigin = 'anonymous';
-      im.onload = () => ok(im); im.onerror = () => ok(null);
+      im.onload = () => ok(im);
+      im.onerror = () => { immagini.delete(url); ok(null); };   // non si ricorda il fallimento: la volta dopo ci riprova
       im.src = url;
     }));
     return immagini.get(url);
@@ -32,7 +33,12 @@
     (sc.photos || []).filter(p => (p.layer || 'tokens') !== 'hidden').map(p => [p.url, p.shape ? 1 : 0, p.l, p.t, p.w, p.h, p.round, p.layer]),
     sc.fog && [sc.fog.on, sc.fog.cells, sc.fog.x, sc.fog.y], sc.grid && sc.grid.show, sc.type]);
 
-  async function disegna(sc) {
+  // Disegna la scena; «velo» è quanto copre la nebbia (1 = piena, come la vedono i giocatori).
+  // Torna { blob, completa }: completa è falso se un'immagine non c'era ancora o non si è caricata
+  // (per esempio lo sfondo mentre la campagna si sta ancora aprendo): quella miniatura si mostra ma
+  // non si salva, e si riprova poco dopo, così non resta una miniatura nera.
+  async function disegna(sc, velo = 1) {
+    let completa = true;
     const c = document.createElement('canvas'); c.width = W; c.height = H;
     const g = c.getContext('2d');
     const css = getComputedStyle(document.documentElement);
@@ -42,7 +48,11 @@
     const r = sc.board && sc.board.w > 0 ? sc.board : sc.bg && sc.bg.w > 0 ? sc.bg : { x: 0, y: 0, w: 1600, h: 1000 };
     const k = Math.min(W / r.w, H / r.h) * 0.98, ox = (W - r.w * k) / 2 - r.x * k, oy = (H - r.h * k) / 2 - r.y * k;
     const rett = (x, y, w, h) => [ox + x * k, oy + y * k, w * k, h * k];
-    if (sc.bg) { const im = await carica(resolveUrl(sc.bg)); if (im) try { g.drawImage(im, ...rett(sc.bg.x, sc.bg.y, sc.bg.w, sc.bg.h)); } catch {} }
+    if (sc.bg) {
+      const im = await carica(resolveUrl(sc.bg));
+      if (im) try { g.drawImage(im, ...rett(sc.bg.x, sc.bg.y, sc.bg.w, sc.bg.h)); } catch { completa = false; }
+      else completa = false;
+    }
     else { g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(...rett(r.x, r.y, r.w, r.h)); }
     // prima la mappa, poi i segnalini (il livello nascosto non si vede)
     const ordinati = (sc.photos || []).filter(p => !p.shape && (p.layer || 'tokens') !== 'hidden').sort((a, b) => ((a.layer === 'map') - (b.layer === 'map')) * -1 || (a.z || 0) - (b.z || 0));
@@ -51,38 +61,82 @@
       const [x, y, w, h] = rett(p.l, p.t, p.w, p.h);
       g.save();
       if (p.round) { g.beginPath(); g.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2); g.clip(); }
-      if (im) try { g.drawImage(im, x, y, w, h); } catch {}
-      else { g.fillStyle = '#d9534f'; g.fillRect(x, y, w, h); }
+      if (im) try { g.drawImage(im, x, y, w, h); } catch { completa = false; }
+      else { completa = false; g.fillStyle = '#d9534f'; g.fillRect(x, y, w, h); }
       g.restore();
     }
-    // la nebbia: piena, come la vedono i giocatori
+    // la nebbia: piena per i giocatori; per il master velata come la vede sul tavolo, altrimenti una
+    // scena ancora tutta da scoprire avrebbe la miniatura tutta nera
     const f = sc.fog;
     if (f && f.on && f.cells) {
+      g.globalAlpha = velo;
       g.fillStyle = typeof fogColore === 'function' ? fogColore() : '#000';
       for (let y = 0; y < f.rows; y++) for (let x = 0; x < f.cols; x++)
         if (f.cells[y * f.cols + x] !== '1') g.fillRect(...rett(f.x + x * f.cell, f.y + y * f.cell, f.cell + 0.5 / k, f.cell + 0.5 / k));
+      g.globalAlpha = 1;
     }
     try {
-      return await new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(), 'image/webp', 0.82));
+      // Safari non sa fare webp e dà un png: va bene lo stesso, il server li accetta tutti e due
+      const blob = await new Promise((ok, no) => c.toBlob(b => b ? ok(b) : no(), 'image/webp', 0.82));
+      return { blob, completa };
     } catch {                                    // un'immagine di un altro sito «sporca» il canvas: niente miniatura
       return null;
     }
   }
+  const veloMaster = () => {
+    const v = typeof fogVelo === 'function' ? fogVelo() : 0.5;
+    return Math.min(0.75, Math.max(0.3, v));    // abbastanza da vedere dov'è la nebbia, non tanto da coprire la mappa
+  };
+
+  // Una miniatura salvata da una versione di prima può essere rimasta nera (sfondo non ancora
+  // caricato, nebbia piena): se è tutta di un colore e la scena ha qualcosa da mostrare, va rifatta.
+  const haContenuto = sc => !!(sc.bg && sc.bg.url) || (sc.photos || []).some(p => !p.shape && (p.layer || 'tokens') !== 'hidden');
+  function tuttaUnColore(url) {
+    return new Promise(ok => {
+      const im = new Image();
+      im.onload = () => {
+        try {
+          const c = document.createElement('canvas'); c.width = 24; c.height = 16;
+          const g = c.getContext('2d', { willReadFrequently: true });
+          g.drawImage(im, 0, 0, 24, 16);
+          const d = g.getImageData(0, 0, 24, 16).data;
+          let min = [255, 255, 255], max = [0, 0, 0];
+          for (let i = 0; i < d.length; i += 4) for (let j = 0; j < 3; j++) { min[j] = Math.min(min[j], d[i + j]); max[j] = Math.max(max[j], d[i + j]); }
+          ok(max.every((v, j) => v - min[j] < 12));
+        } catch { ok(false); }
+      };
+      im.onerror = () => ok(true);               // un file rovinato: meglio rifarla
+      im.src = url;
+    });
+  }
 
   // ---------- salvataggio ----------
   const inLinea = () => typeof online !== 'undefined' && online;
+  const tentativi = new Map();                   // id scena → quante volte è venuta incompleta di fila
+  const riprova = new Map();                     // id scena → timer del prossimo tentativo
+  const nere = new Set();                        // scene la cui miniatura salvata è venuta nera
   async function aggiorna(sc, forza) {
     if (!sc || !conduco()) return;
     const fi = firma(sc);
     if (!forza && firme.get(sc.id) === fi && mini.has(sc.id)) return;
     firme.set(sc.id, fi);
-    const b = await disegna(sc);
-    if (!b) return;
+    clearTimeout(riprova.get(sc.id)); riprova.delete(sc.id);
+    const r = await disegna(sc, veloMaster());
+    if (!r) return;
+    const { blob: b, completa } = r;
+    if (!completa) {
+      // non si salva e non si ricorda la firma: al prossimo giro (o fra poco) si rifà
+      firme.delete(sc.id);
+      const n = (tentativi.get(sc.id) || 0) + 1; tentativi.set(sc.id, n);
+      if (n <= 4) riprova.set(sc.id, setTimeout(() => { if (scenes.includes(sc)) aggiorna(sc, true); }, 2000 * 3 ** (n - 1)));
+      if (mini.has(sc.id) && !nere.has(sc.id)) return;   // meglio quella che c'era che una a metà
+    } else { tentativi.delete(sc.id); nere.delete(sc.id); }
     const vecchia = mini.get(sc.id);
     mini.delete(sc.id);
     if (vecchia && vecchia.startsWith('blob:') && ![...mini.values()].includes(vecchia)) URL.revokeObjectURL(vecchia);   // una copia può usare la stessa
     mini.set(sc.id, URL.createObjectURL(b));
-    if (inLinea()) fetch('api/miniatura?id=' + encodeURIComponent(sc.id), { method: 'PUT', headers: { 'Content-Type': 'image/webp' }, body: b }).catch(() => {});
+    if (!completa) { ridisegnaMiniature(); return; }
+    if (inLinea()) fetch('api/miniatura?id=' + encodeURIComponent(sc.id), { method: 'PUT', headers: { 'Content-Type': b.type || 'image/webp' }, body: b }).catch(() => {});
     else {
       const fr = new FileReader();
       fr.onload = () => { try { localStorage.setItem('uffa-mini-' + sc.id, fr.result); } catch {} };
@@ -90,17 +144,25 @@
     }
     ridisegnaMiniature();
   }
+  const letta = new Set();                       // scene già cercate in questa sessione
   async function leggi(sc) {
-    if (mini.has(sc.id) || !conduco()) return;
+    if (mini.has(sc.id) || letta.has(sc.id) || !conduco()) return;
+    letta.add(sc.id);
+    let u = null;
     if (inLinea()) {
       try {
         const r = await fetch('api/miniatura?id=' + encodeURIComponent(sc.id));
-        if (r.ok) { mini.set(sc.id, URL.createObjectURL(await r.blob())); firme.set(sc.id, firma(sc)); ridisegnaMiniature(); return; }
+        if (r.ok) u = URL.createObjectURL(await r.blob());
       } catch {}
     } else {
-      let d = null; try { d = localStorage.getItem('uffa-mini-' + sc.id); } catch {}
-      if (d) { mini.set(sc.id, d); firme.set(sc.id, firma(sc)); ridisegnaMiniature(); return; }
+      try { u = localStorage.getItem('uffa-mini-' + sc.id); } catch {}
     }
+    if (u && !mini.has(sc.id)) {
+      mini.set(sc.id, u); firme.set(sc.id, firma(sc)); ridisegnaMiniature();
+      if (haContenuto(sc) && await tuttaUnColore(u)) { nere.add(sc.id); aggiorna(sc, true); }   // salvata nera: si rifà
+      return;
+    }
+    if (u && u.startsWith('blob:')) URL.revokeObjectURL(u);
     aggiorna(sc);                                 // non c'era: la si disegna dai dati
   }
   window.miniaturaScena = id => mini.get(id) || null;
@@ -114,7 +176,8 @@
       if (conduco() || typeof NET === 'undefined' || !NET.on || !NET.ws || !cur) return;
       try {
         captureScene();
-        const b = await disegna(cur); if (!b) return;
+        const r = await disegna(cur); if (!r) return;
+        const b = r.blob;
         const data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); });
         NET.ws.send(JSON.stringify({ t: 'miniatura', data, scena: cur.name }));
       } catch {}
@@ -301,7 +364,8 @@
   window.renderSceneUI = function () {
     const r = primaRender.apply(this, arguments);
     for (const id of [...mini.keys()]) if (!scenes.some(s => s.id === id)) {
-      mini.delete(id); firme.delete(id);
+      mini.delete(id); firme.delete(id); letta.delete(id); tentativi.delete(id); nere.delete(id);
+      clearTimeout(riprova.get(id)); riprova.delete(id);
       if (inLinea()) fetch('api/miniatura?id=' + encodeURIComponent(id), { method: 'DELETE' }).catch(() => {});
       else try { localStorage.removeItem('uffa-mini-' + id); } catch {}
     }
