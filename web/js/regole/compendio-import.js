@@ -266,8 +266,8 @@
     for (const a of Object.values(voci)) n += a.length;
     if (!n) throw new Error(tr('Nel file non ho trovato voci.'));
     if (!confirm(tr('Importo {n} voci come pacchetto «{p}»?', { n, p: pacchetto.nome }))) return;
-    await compendioSalvaPacchetto(pacchetto, voci);
-    alert(tr('Pacchetto «{p}» importato: {n} voci.', { p: pacchetto.nome, n }));
+    const id = await compendioSalvaPacchetto(pacchetto, voci);
+    return { id, nome: pacchetto.nome, n };
   };
   window._compImportTest = { daCinque, daCsv, daOpen5e, tag };
 })();
