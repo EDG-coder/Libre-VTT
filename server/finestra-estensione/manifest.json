@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "LIBRE VTT - finestre",
+  "version": "1.0",
+  "description": "Manda le pagine aperte per sbaglio nella finestra di LIBRE VTT al browser di tutti i giorni.",
+  "background": { "service_worker": "sfondo.js" },
+  "permissions": ["tabs"],
+  "host_permissions": ["http://127.0.0.1/*"]
+}

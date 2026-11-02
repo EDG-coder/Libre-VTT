@@ -1350,6 +1350,65 @@ function trovaBrowser() {
   ];
   return prove.find(p => p && fs.existsSync(p)) || null;
 }
+// ---------- il browser della finestra non è il browser di tutti i giorni ----------
+// La finestra usa un browser con un profilo suo. Se è lo stesso browser che si usa per navigare
+// (per esempio Brave), su Mac le due copie hanno la stessa icona: una pagina nuova (⌘N, il Dock, un
+// link da un'altra app) poteva finire nella copia di LIBRE VTT, con il profilo vuoto, e ⌘Q lì chiudeva
+// anche il tavolo. Due rimedi: una piccola estensione nel nostro profilo manda quelle pagine al browser
+// vero (vedi /api/fuori), e su Mac ⌘Q va tenuto premuto, come l'opzione «Avvisa prima di uscire».
+const ESTENSIONE = path.join(USERDIR, 'finestra-estensione');
+function preparaEstensione() {
+  try {
+    const src = path.join(__dirname, 'finestra-estensione');
+    fs.mkdirSync(ESTENSIONE, { recursive: true });
+    fs.copyFileSync(path.join(src, 'manifest.json'), path.join(ESTENSIONE, 'manifest.json'));
+    const js = fs.readFileSync(path.join(src, 'sfondo.js'), 'utf8').replace('__PORTA__', String(+UI_PORT));
+    fs.writeFileSync(path.join(ESTENSIONE, 'sfondo.js'), js);
+    return ['--load-extension=' + ESTENSIONE, '--disable-features=DisableLoadExtensionCommandLineSwitch'];
+  } catch (e) { say('Non riesco a preparare l\'estensione della finestra: ' + e.message, 'warn'); return []; }
+}
+function avvisaPrimaDiUscire() {
+  if (!MAC) return;
+  const f = path.join(PROFILE, 'Local State');
+  try {
+    let st = {};
+    if (fs.existsSync(f)) st = JSON.parse(fs.readFileSync(f, 'utf8'));
+    if (!st || typeof st !== 'object') return;
+    st.browser = st.browser && typeof st.browser === 'object' ? st.browser : {};
+    if (st.browser.confirm_to_quit === true) return;
+    st.browser.confirm_to_quit = true;
+    fs.mkdirSync(PROFILE, { recursive: true });
+    fs.writeFileSync(f, JSON.stringify(st));
+  } catch {}                                  // file illeggibile: lo lascio com'è, il browser lo sistema da sé
+}
+// Il browser predefinito del Mac (quello che apre i link), letto dalle impostazioni di LaunchServices.
+function browserPredefinitoMac() {
+  try {
+    const f = path.join(os.homedir(), 'Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure.plist');
+    const j = JSON.parse(require('child_process').execFileSync('plutil', ['-convert', 'json', '-o', '-', f], { encoding: 'utf8', timeout: 3000 }));
+    const h = (j.LSHandlers || []).find(x => x.LSHandlerURLScheme === 'https') || (j.LSHandlers || []).find(x => x.LSHandlerURLScheme === 'http');
+    return h && h.LSHandlerRoleAll ? String(h.LSHandlerRoleAll).toLowerCase() : null;
+  } catch { return null; }
+}
+const idBrowserMac = b => { const r = BROWSER_MAC.find(([nome]) => path.basename(b) === nome); return r ? r[1].toLowerCase() : null; };
+// Apre una pagina (o, senza indirizzo, una finestra nuova) nel browser di tutti i giorni.
+function apriFuori(url) {
+  const b = trovaBrowser();
+  const lancia = (cmd, args) => { try { const q = spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true }); q.on('error', () => {}); q.unref(); } catch {} };
+  if (MAC) {
+    const pred = browserPredefinitoMac(), nostro = b && idBrowserMac(b);
+    // Se il predefinito è un altro browser ci pensa macOS. Se è lo stesso della finestra, «open» potrebbe
+    // ridarla alla nostra copia: si avvia il programma senza il nostro profilo, così va al profilo vero
+    // (se quel browser è già aperto gli passa la pagina e si chiude da solo).
+    if (pred && pred !== nostro) return lancia('open', url ? [url] : ['-b', pred]);
+    if (b) return lancia(b, url ? [url] : []);
+    if (url) lancia('open', [url]);
+    return;
+  }
+  if (url) return WIN ? lancia('cmd', ['/c', 'start', '', url]) : lancia('xdg-open', [url]);
+  if (b) lancia(b, []);
+}
+
 function apriFinestra(url) {
   const b = trovaBrowser();
   if (!b) {                                   // niente Chrome: si apre il browser normale
@@ -1369,8 +1428,10 @@ function apriFinestra(url) {
     '--user-data-dir=' + PROFILE,
     '--no-first-run', '--no-default-browser-check',
     '--window-size=1440,900',
-    ...argScala()
+    ...argScala(),
+    ...preparaEstensione()
   ];
+  avvisaPrimaDiUscire();
   say(`Apro la finestra con ${b} ${args.join(' ')}`);
   const partita = Date.now();
   const p = spawn(b, args, { detached: false, stdio: 'ignore' });
@@ -1515,6 +1576,22 @@ const server = http.createServer(async (req, res) => {
     const vecchio = finestraProc; finestraProc = null;
     try { if (vecchio && vecchio.exitCode == null) vecchio.kill(); } catch {}
     chiudiBrowserRimasto().then(() => apriFinestra(url));
+    return;
+  }
+  // Una pagina aperta per sbaglio nel browser della finestra (lo dice la nostra estensione, vedi
+  // preparaEstensione): la si apre nel browser di tutti i giorni. Vuole la nostra intestazione, che un
+  // sito non può mandare, e accetta solo indirizzi web.
+  if (u.pathname === '/api/fuori' && req.method === 'POST' && req.headers['x-libre-vtt'] === 'fuori') {
+    let corpo = '';
+    req.on('data', d => { corpo += d; if (corpo.length > 8192) req.destroy(); });
+    req.on('end', () => {
+      let url = '';
+      try { url = String(JSON.parse(corpo || '{}').url || ''); } catch { return invia(res, 400, 'no'); }
+      if (url && !/^https?:\/\/[^\s]+$/i.test(url)) return invia(res, 400, 'no');
+      say(url ? `Pagina aperta nella finestra di LIBRE VTT: la mando al browser di tutti i giorni (${url}).` : 'Finestra nuova del browser chiesta a LIBRE VTT: la apro nel browser di tutti i giorni.');
+      apriFuori(url);
+      invia(res, 200, 'ok');
+    });
     return;
   }
   if (u.pathname === '/api/presente') {                     // il filo del tavolo (vedi sorvegliaChiusura)
