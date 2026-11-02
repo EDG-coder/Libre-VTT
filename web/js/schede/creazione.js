@@ -375,7 +375,7 @@
   async function saliDiLivello(s) {
     if (typeof COMPENDIO !== 'undefined' && !COMPENDIO.pronto) await ricaricaCompendio();
     const mie = classiDiScheda(s);
-    const d = document.createElement('dialog'); d.className = 'compDlg creaDlg';
+    const d = document.createElement('dialog'); d.className = 'compDlg creaDlg temaScheda';
     document.body.appendChild(d); d.addEventListener('close', () => d.remove());
     const scelta = { i: mie.findIndex(c => c.cl) >= 0 ? mie.findIndex(c => c.cl) : -1, nuova: '', pf: null, aum: { a: '', b: '' } };
     const disegnaL = () => {

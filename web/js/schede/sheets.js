@@ -119,6 +119,9 @@ function applySheetStyle() {
   const accent = /^#[0-9a-f]{6}$/i.test(st.accent) ? st.accent : p.accent;
   r.setProperty('--sh-bg', p.bg); r.setProperty('--sh-fg', p.fg); r.setProperty('--sh-line', p.line); r.setProperty('--sh-soft', p.soft);
   r.setProperty('--sh-accent', accent); r.setProperty('--sh-on', onColor(accent));
+  const scura = onColor(p.bg) === '#ffffff';
+  r.setProperty('--sh-scheme', scura ? 'dark' : 'light');   // campi, tendine e barre di scorrimento del colore della scheda
+  r.setProperty('--sh-field', scura ? 'rgba(0, 0, 0, .25)' : 'rgba(255, 255, 255, .35)');   // il fondo dei campi: più chiaro sulla carta, più scuro sugli stili scuri
   r.setProperty('--sh-font', SH_FONTS[st.font] || SH_FONTS[p.font]);
   r.setProperty('--sh-scale', (st.scale || 100) / 100);
 }

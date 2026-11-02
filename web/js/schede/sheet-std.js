@@ -511,7 +511,7 @@ function stdMarkLines(root, s) {
 
 // ---------- La tendina dell'incantesimo ----------
 document.body.insertAdjacentHTML('beforeend', `
-<div id="spellPop" hidden>
+<div id="spellPop" class="temaScheda" hidden>
   <header><input id="spellTitle" type="text" maxlength="80" placeholder="Nome dell'incantesimo" autocomplete="off">
     <button type="button" id="spellClose" aria-label="Chiudi">✕</button></header>
   <textarea id="spellBody" placeholder="Scrivi qui l'effetto: scuola, tempo di lancio, gittata, durata…&#10;Metti [[8d6 | Danni]] per avere il tiro pronto."></textarea>
