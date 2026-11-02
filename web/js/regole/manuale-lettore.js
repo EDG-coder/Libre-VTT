@@ -324,6 +324,79 @@
   const tipoDi = t => { for (const [tipo, re, f] of TIPOLINEA) { const m = re.exec(t); if (m) return { tipo, ...f(m) }; } return null; };
   const nomeBuono = r => r && r.t && r.t.length <= 60 && !/[.;,]$/.test(r.t) && /^[A-ZÀ-Ý0-9]/.test(r.t) && !/^(Casting Time|Range|Components|Duration|Prerequisite)/i.test(r.t);
 
+  // ---------- 3b. i blocchi dei mostri, da qualunque manuale ----------
+  // Lo schema è sempre lo stesso: [nome] · «Large dragon, chaotic evil» · Armor Class · Hit Points · Speed ·
+  // le sei caratteristiche · … · Challenge · tratti · ACTIONS … Si parte dalla riga della Classe Armatura (la più
+  // sicura anche nelle scansioni), si cerca sopra la riga del tipo (accettando gli errori dell'OCR: «11uge»,
+  // «La~ge», «neutr.al», «ohaotic») e il nome; il blocco finisce al mostro dopo o al primo titolo dopo «Challenge».
+  const RIGA_CA_RE = /^\W{0,3}(?:Arm ?o ?r [CG]lass|Classe Armatura|AC|CA)\s+\d/i;
+  const RIGA_CA = { test: t => RIGA_CA_RE.test(String(t).replace(/(\w)[.,'’~]+(?=\w)/g, '$1')) };
+  const SUFF_TAGLIA = [['argantuan', 'gargantuan'], ['edium', 'medium'], ['mall', 'small'], ['arge', 'large'], ['iny', 'tiny'], ['uge', 'huge']];
+  const ALLINEAMENTO = /(lawful|chaotic|aotic|awful|neutral|neutr|unaligned|any\b|evil|good|typically)/i;
+  function tipoMostroOcr(t) {
+    const info = tipoDi(t); if (info && info.tipo === 'mostro') return info;
+    const c = String(t).replace(/(\w)[.~'"`’,]+(?=\w)/g, '$1').replace(/[^A-Za-z(), \-]/g, ' ').replace(/\s+/g, ' ').trim();
+    const m = /^(\S*?)(argantuan|edium|mall|arge|iny|uge)\b(?: or \w+)? ([A-Za-z ]{3,30}?)\s*(?:\(([^)]*)\))?\s*,+\s*(.{3,40})$/i.exec(c);
+    if (!m || m[1].length > 3 || !ALLINEAMENTO.test(m[5])) return null;
+    const taglia = SUFF_TAGLIA.find(([k]) => k === m[2].toLowerCase())[1];
+    const tc = m[3].toLowerCase().replace(/\s+/g, ' ').trim();
+    const chiave = Object.keys(TIPI).find(k => tc.replace(/ /g, '').includes(k) || (tc.length >= 4 && k.endsWith(tc.slice(-4))));
+    if (!chiave && !/swarm/.test(tc)) return null;
+    return { tipo: 'mostro', taglia: TAGLIE[taglia], tipoCreatura: TIPI[chiave] || cap(tc), sottotipo: m[4], allineamento: m[5].replace(/^ohaotic/i, 'chaotic').trim(), lingua: 'en' };
+  }
+  const SEZIONE_MOSTRO = t => SEZIONI_M.some(([, re]) => re.test(String(t).trim().replace(/[^A-Za-z ]/g, '').trim()));
+  // un titolo: riga corta, quasi tutta maiuscola (nelle scansioni i nomi dei mostri sono in maiuscoletto)
+  const maiuscola = t => { const l = String(t).replace(/[^A-Za-zÀ-ÿ]/g, ''); if (l.length < 3 || t.length > 42 || /[.,;:]$/.test(t.trim())) return false; return l.replace(/[^A-ZÀ-Ý]/g, '').length / l.length >= 0.75; };
+  const nomeMostroBuono = t => { t = String(t || '').trim(); const l = t.replace(/[^A-Za-z]/g, ''); if (/,/.test(t) && ALLINEAMENTO.test(t)) return false; if (/^\W*(tiny|small|medium|large|huge|gargantuan)\b/i.test(t) && /(beast|unalig|humanoid|monstrosity|undead|dragon|fiend|aberration|construct|elemental|fey|giant|ooze|plant|celestial)/i.test(t) && t.split(/\s+/).length > 2) return false; if (/^(of|a|an|the|is|and|in|to|for|but|or)\b/i.test(t) || t.split(/\s+/).length > 5 || /(regional effects|lair actions|a monster's lair|variant)/i.test(t)) return false; return l.length >= 3 && t.length <= 40 && l.length / t.replace(/\s/g, '').length > 0.8 && !/[.,;:]$/.test(t) && !/^(Armor|Hit Points|Speed|STR|DEX|CON|INT|WIS|CHA|Challenge|Senses|Languages|Skills|Saving|Damage|Condition)\b/i.test(t) && !SEZIONE_MOSTRO(t) && /^[A-ZÀ-Ý]/.test(t) && !/^VARIANT/i.test(t); };
+  // un nome letto male dall'OCR («GrANT APE», «DusTMEPHIT», «Perytqn», «Yug0loths»): si rimette a posto con i nomi
+  // dell'SRD (fino a 2 lettere diverse) e con il dizionario, parola per parola
+  const distanza = (a, b) => { if (Math.abs(a.length - b.length) > 2) return 9; const d = Array.from({ length: a.length + 1 }, (_, i) => [i]); for (let j = 1; j <= b.length; j++) d[0][j] = j; for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[a.length][b.length]; };
+  function nomeOcr(t) {
+    t = String(t).trim().replace(/\s+/g, ' ');
+    const origOcr = t.split(' ');
+    const l = t.replace(/[^A-Za-z]/g, '');
+    if (l.length && l.replace(/[^A-Z]/g, '').length / l.length >= 0.55) t = t.toUpperCase().replace(/(?<=[A-Z])0|0(?=[A-Z])/g, 'O').replace(/(?<=[A-Z])1(?=[A-Z])/g, 'I');
+    const k = t.toLowerCase().replace(/[^a-z ()\-]/g, '').replace(/\s+/g, ' ').trim();
+    if (/^ore\b/.test(k) && NOMI_SRD.has(k.replace(/^ore/, 'orc'))) return k.replace(/^ore/, 'orc');
+    if (NOMI_SRD.has(k)) return k;
+    if (k.length >= 5) { let best = null, bd = 3; for (const n of NOMI_SRD) { if (Math.abs(n.length - k.length) > 2) continue; const d = distanza(k, n); if (d < bd) { bd = d; best = n; } } if (best && bd <= (k.length >= 8 ? 2 : 1)) return best; }
+    // parola per parola, solo dove l'OCR ha lasciato tracce (maiuscole e minuscole mescolate, cifre, simboli)
+    const sporca = o => /[a-z][A-Z]|[A-Z][a-z]+[A-Z]|[0-9|~]/.test(o) || (/^[A-Z][a-z]/.test(o) && /[A-Z]/.test(o.slice(2)));
+    return k.split(' ').map((w, i) => {
+      if (!w || DIZ.has(w) || w.length < 3 || /[()\-]/.test(w) || !sporca(origOcr[i] || '')) return w;
+      const pezzi = dividi(w); if (pezzi && pezzi.length <= 3 && pezzi.every(x => x.length >= 3)) return pezzi.join(' ');
+      let best = w, bf = 0; for (const c of DIZ) { if (Math.abs(c.length - w.length) > 1 || c[0] !== w[0] && c.slice(-2) !== w.slice(-2)) continue; if (distanza(w, c) === 1) { const f = (FREQ && FREQ[c]) || 1; if (f > bf) { bf = f; best = c; } } }
+      return best;
+    }).join(' ');
+  }
+  const titoloNome = t => /^[^a-z]+$/.test(t) ? t.toLowerCase().replace(/(^|[\s(\-])([a-z])/g, (_, a, b) => a + b.toUpperCase()).replace(/\b(Of|The|And|In)\b/g, w => w.toLowerCase()).replace(/^./, c => c.toUpperCase()) : t;
+  function inziMostri(R) {
+    const out = [];
+    for (let i = 0; i < R.length; i++) {
+      if (!RIGA_CA.test(R[i].t)) continue;
+      // la Classe Armatura di un mostro ha i Punti Ferita subito dopo
+      if (!R.slice(i + 1, i + 4).some(r => /(?:Hit Points|Punti Ferita|\bHP|\bPF)\s+\d/i.test(r.t)) && !/(?:Hit Points|\bHP|\bPF)\s+\d/i.test(R[i].t)) continue;
+      let k = -1, info = null;
+      for (let j = i - 1; j >= Math.max(0, i - 3); j--) { const x = tipoMostroOcr(R[j].t); if (x) { k = j; info = x; break; } }
+      const top = k >= 0 ? k : i;
+      let nome = '', iNome = top;
+      for (let j = top - 1; j >= Math.max(0, top - 2); j--) { if (nomeMostroBuono(R[j].t)) { nome = R[j].t.trim(); iNome = j; break; } if (/\w{3}/.test(R[j].t) && !/^\W*$/.test(R[j].t) && R[j].t.length > 6) break; }
+      let titolo = '';                                   // il titolo della sezione, poco sopra (es. «CARRION CRAWLER» prima del racconto)
+      for (let j = top - 1; j >= Math.max(0, top - 80); j--) if (maiuscola(R[j].t) && nomeMostroBuono(R[j].t)) { titolo = R[j].t.trim(); break; }
+      out.push({ i: iNome, corpo: (k >= 0 ? k : i - 1) + 1, tipo: 'mostro', info: info || { tipo: 'mostro', lingua: 'en' }, nome, titolo, mostroCa: i });
+    }
+    return out;
+  }
+  // l'impronta di un mostro dell'SRD (dadi dei PF + sfida): dà il nome anche quando l'OCR l'ha perso
+  let IMPRONTE = {}, NOMI_SRD = new Set();
+  const impronta = v => v.dadiPf && v.gs ? String(v.dadiPf).replace(/\s+/g, '').toLowerCase() + '|' + v.gs : '';
+  function nomeDalTesto(v) {
+    const conta = {};
+    for (const o of [...(v.tratti || []), ...(v.azioni || []), ...(v.leggendarie || [])]) for (const m of String(o.testo || '').matchAll(/\b[Tt]he ([a-z][a-z\-]{2,20}(?: [a-z][a-z\-]{2,20})?)(?:'s|’s)?\s+(?:has|can|makes|uses|magically|is|attacks|regains|takes|casts|targets|exhales|emits|deals|teleports|becomes|gains|knows|must|loses|moves|swallows|fires|breathes)\b/g)) conta[m[1]] = (conta[m[1]] || 0) + 1;
+    const best = Object.entries(conta).sort((a, b) => b[1] - a[1])[0];
+    return best && best[1] >= 2 && !/^(target|targeted creature|creature|attack|monster|dragon's|first|second|same)$/.test(best[0]) ? best[0] : '';
+  }
+
   // ---------- 4. i campi di ogni tipo (dal VTT, con le correzioni) ----------
   function campo(testo, nomi) {
     const re = new RegExp(`(?:^|\\n|\\s)(?:${nomi})\\s*:?\\s+([^\\n]+?)(?=\\s+(?:Casting Time|Range|Components|Duration|Tempo di [Ll]ancio|Gittata|Componenti|Durata)\\s*:|\\n|$)`, 'i');
@@ -364,8 +437,8 @@
     const m = /^([A-ZÀ-Ý][^.]{0,60}?(?:\([^)]*\))?)\.\s+([\s\S]+)$/.exec(p.trim());
     if (!m) return null;
     const o = { nome: m[1].trim(), testo: m[2].trim() };
-    const c = /(?:Attack|Attacco)[^:]*:\s*([+\-−]\d+)|Tiro per colpire[^:]*:\s*([+\-−]\d+)/i.exec(o.testo);
-    if (c) o.colpire = +String(c[1] || c[2]).replace('−', '-');
+    const c = /(?:Attack|Attacco)[^:]*:\s*([+\-−])\s*(\d+)|Tiro per colpire[^:]*:\s*([+\-−])\s*(\d+)/i.exec(o.testo);
+    if (c) o.colpire = +((c[1] || c[3]).replace('−', '-') + (c[2] || c[4]));
     const dd = [...o.testo.matchAll(/\d+\s*\((\d+d\d+(?:\s*[+\-−]\s*\d+)?)\)\s+(?:(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder) damage|danni\s+(?:da\s+)?(\w+))/gi)];
     if (dd.length) o.danni = dd.map(x => ({ dadi: x[1].replace(/\s+/g, '').replace('−', '-'), tipo: DANNI[(x[2] || '').toLowerCase()] || DANNI_IT[(x[3] || '').toLowerCase()] || '' }));
     else { const d1 = /Hit:\s*(\d+)\s+(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder) damage/i.exec(o.testo); if (d1) o.danni = [{ dadi: d1[1], tipo: DANNI[d1[2].toLowerCase()] }]; }
@@ -373,17 +446,42 @@
     if (u) o.uso = u[1];
     return o;
   }
+  function nominaMostro(v, x) {
+    let cand0 = (IMPRONTE[impronta(v)] || []).filter(c => c[1] === v.ca);
+    if (v.car) cand0 = cand0.filter(c => !c[2] || c[2] === ['str', 'dex', 'con', 'int', 'wis', 'cha'].map(k => v.car[k]).join(' '));
+    const srd = cand0.length === 1 ? cand0[0][0] : '', dalTesto = nomeDalTesto(v), cand = x.nome;
+    const noto = n => n && NOMI_SRD.has(n.toLowerCase());
+    let nome = cand || srd || dalTesto || x.titolo || '';
+    if (!nome) { nome = 'Mostro senza nome'; (v._dubbi ||= []).push('nome non trovato'); }
+    if (nome && nome !== cand && nome !== srd) (v._dubbi ||= []).push(nome === dalTesto ? 'nome preso dal testo: controllalo' : 'nome preso dal titolo della sezione: controllalo');
+    if (nome && nome !== srd && !/^Mostro senza nome$/.test(nome)) nome = nomeOcr(nome);
+    v.nome = titoloNome(nome.replace(/^the /i, '')).replace(/(^|[\s(\-])([a-z])/g, (_, a, b) => a + b.toUpperCase()).replace(/ (Of|The|And|In) /g, w => w.toLowerCase());
+    delete v._testoTutto;
+  }
+  // gli errori tipici dell'OCR nei numeri dei blocchi: «Armor Class 1 5», «ld6», «ldlO», «S ft.», «(+1 )»
+  const cifre = x => x.replace(/[lIi|]/g, '1').replace(/[O]/g, '0').replace(/S/g, '5');
+  // i dadi letti male dall'OCR: «Sd6» «lld8» «l3d12» «lOdlO» «5a6» «7d10+i1»
+  const dadiOcr = t => String(t).replace(/(^|[\s(])([0-9lIiSO|]{1,3})\s?[da]\s?([0-9lIiSO|]{1,3})(?=\s*[+\-−)]|\s*$|\s)/g, (m, a, n, f) => /\d/.test(n + f) || /^[lIS]/.test(n) ? a + cifre(n) + 'd' + cifre(f) : m)
+    .replace(/(\d+d\d+\s*[+\-−]\s*)([0-9lIiSO]{1,3})(?=\))/g, (m, a, b) => a + cifre(b));
+  const numeriOcr = t => dadiOcr(String(t))
+    .replace(/^(\W{0,3}(?:Armor Class|Hit Points|Classe Armatura|Punti Ferita)\s+)([12])\s(\d)\b/i, '$1$2$3')
+    .replace(/\b[lI]\s?d\s?(\d)/g, '1d$1').replace(/(\d)d([lI])([0O])\b/g, '$1d1$3').replace(/(\d)d1O\b/g, '$1d10').replace(/(\d)d2O\b/g, '$1d20')
+    .replace(/\(\s*([+\-−–])\s*(\d+)\s*\)/g, '($1$2)').replace(/\b(reach|range|Speed)\s+S\s?ft/gi, '$1 5 ft').replace(/\bHit:\s*S\s\(/g, 'Hit: 5 (')
+    .replace(/\{/g, '(').replace(/(\d)ft\b/g, '$1 ft');
   function mostro(v, righe) {
+    righe = righe.map(r => ({ ...r, t: numeriOcr(r.t) }));
     const testo = righe.map(r => r.t).join('\n');
+    v._testoTutto = testo;
     const prendi = re => re.exec(testo);
     let m;
-    if ((m = prendi(/(?:Armor Class|Classe Armatura|\bAC|\bCA)\s+(\d+)(?:\s*\(([^)]*)\))?/i))) { v.ca = +m[1]; if (m[2]) v.caNota = m[2]; }
+    if ((m = prendi(/(?:Arm ?o ?r [CG]lass|Classe Armatura|\bAC|\bCA)\s+(\d+)(?:\s*\(([^)]*)\))?/i))) { v.ca = +m[1]; if (m[2]) v.caNota = m[2]; }
     if ((m = prendi(/(?:Hit Points|Punti Ferita|\bHP|\bPF)\s+(\d+)(?:\s*\(([^)]*)\))?/i))) { v.pf = +m[1]; if (m[2]) v.dadiPf = m[2].replace(/\s+/g, ''); }
     if ((m = prendi(/(?:Speed|Velocità)\s+([^\n]+)/i))) v.velocita = m[1].replace(/\s+(Initiative|Iniziativa)\b.*$/i, '').trim();
     if ((m = prendi(/(?:Initiative|Iniziativa)\s+([+\-−]\d+)/i))) v.iniziativa = +m[1].replace('−', '-');
     const sei = [...testo.matchAll(/(\d{1,2})\s*\(\s*[+\-−–]\s*\d+\s*\)/g)].slice(0, 6);
     const ord = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
     if (sei.length === 6) v.car = Object.fromEntries(sei.map((x, i) => [ord[i], +x[1]]));
+    else if ((() => { const c = {}; for (const k of ord) { const x = new RegExp(`(?:^|\\n)${k.toUpperCase()}\\s*\\n\\s*(\\d{1,2})\\s*[,(]`).exec(testo); if (x) c[k] = +x[1]; } if (Object.keys(c).length === 6) { v.car = c; return true; } })()) ;
     else {
       const car = {}, ts = {};
       const nomi = { str: 'Str|For', dex: 'Dex|Des', con: 'Con|Cos', int: 'Int', wis: 'Wis|Sag', cha: 'Cha|Car' };
@@ -403,12 +501,12 @@
     v.lingue = linea(/(?:Languages|Linguaggi|Lingue)\s+([^\n]+)/i);
     if ((m = prendi(/(?:Challenge|\bCR|Sfida|\bGS)\s+(\d+(?:\/\d)?)\s*\(([^)]*)\)/i))) {
       v.gs = m[1];
-      const px = /([\d.,]+)\s*(?:XP|PE)|(?:XP|PE)\s*([\d.,]+)/i.exec(m[2]); if (px) v.px = +(px[1] || px[2]).replace(/[.,]/g, '');
+      const px = /(\d[\d., ]*)\s*(?:XP|PE)|(?:XP|PE)\s*(\d[\d., ]*)/i.exec(m[2]); if (px) v.px = +(px[1] || px[2]).replace(/[., ]/g, '');
       const pb = /(?:PB|BC)\s*\+?(\d+)/i.exec(m[2]); if (pb) v.competenza = +pb[1];
     }
     if (v.gs && !v.competenza) { const g = v.gs.includes("/") ? 0 : +v.gs; v.competenza = g < 5 ? 2 : g < 9 ? 3 : g < 13 ? 4 : g < 17 ? 5 : g < 21 ? 6 : g < 25 ? 7 : g < 29 ? 8 : 9; }
     let sez = 'tratti'; const blocchi = { tratti: [] };
-    let inizio = righe.findIndex(r => /^(?:Challenge|CR|Sfida|GS)\s/i.test(r.t));
+    let inizio = righe.findIndex(r => /^(?:Languages.*?|Linguaggi.*?)?(?:Challenge|CR|Sfida|GS)\s*\d/i.test(r.t));
     if (inizio < 0) inizio = righe.findIndex(r => /^(?:Languages|Linguaggi)\s/i.test(r.t));
     let par = '';
     const chiudi = () => { if (par.trim()) (blocchi[sez] ||= []).push(par.trim()); par = ''; };
@@ -416,10 +514,17 @@
       const s = SEZIONI_M.find(([, re]) => re.test(r.t));
       if (s) { chiudi(); sez = s[0]; continue; }
       if (/^(?:Proficiency Bonus|Bonus di competenza)\b/i.test(r.t)) continue;
+      // le righe del blocco che l'OCR mette in mezzo alle azioni (colonne lette nell'ordine sbagliato)
+      if (/^(?:STR|DEX|CON|INT|WIS|CHA|FOR|DES|COS|SAG|CAR)$/i.test(r.t.trim()) || /^\d{1,2}\s*[,(]\s*[+\-−–]?\s*\d+\s*\)?$/.test(r.t.trim()) || /^(?:Saving Throws|Skills|Damage (?:Vulnerabilities|Resistances|Immunities)|Condition Immunities|Senses|Languages|Challenge)\b/i.test(r.t)) continue;
       if (/^[A-ZÀ-Ý][^.]{0,60}?(?:\([^)]*\))?\.\s/.test(r.t) && (!par || /[.!?)]$/.test(par.trim()))) { chiudi(); par = r.t; }
       else par = par ? (/[a-zà-ÿ]-$/.test(par) ? par.slice(0, -1) + r.t : par + ' ' + r.t) : r.t;
     }
     chiudi();
+    // l'OCR a volte perde il titolo «ACTIONS»: le azioni cominciano dal primo Multiattack o attacco
+    if (!blocchi.azioni && blocchi.tratti.length) {
+      const a = blocchi.tratti.findIndex(p => /^(Multiattack|Multiattacco)\b/i.test(p) || /(Weapon|Spell) Attack\s*:|Attacco (con arma|con incantesimo)/i.test(p));
+      if (a >= 0) blocchi.azioni = blocchi.tratti.splice(a);
+    }
     for (const [k, lista] of Object.entries(blocchi)) {
       if (k.startsWith('_')) { v.testo = [v.testo, lista.join('\n\n')].filter(Boolean).join('\n\n'); continue; }
       const voci = lista.map(voceAzione).filter(Boolean);
@@ -546,11 +651,12 @@
     if (!modo || ['incantesimo', 'mostro', 'oggetto', 'talento'].includes(modo)) {
       for (let i = 1; i < R.length; i++) {
         const info = tipoDi(R[i].t);
-        if (!info || (modo && info.tipo !== modo)) continue;
+        if (!info || (modo && info.tipo !== modo) || info.tipo === 'mostro') continue;
         if (!nomeBuono(R[i - 1])) continue;
         inizi.push({ i: i - 1, corpo: i + 1, tipo: info.tipo, info, nome: R[i - 1].t });
       }
     }
+    if (!modo || modo === 'mostro') inizi.push(...inziMostri(R));
     if (!modo || modo === 'talento') {
       // talenti senza prerequisito: un titolo seguito da «…gain the following benefits», vicino ad altri talenti
       // con prerequisito (così «Rage» del barbaro, che ha la stessa frase, resta fuori)
@@ -597,6 +703,7 @@
       for (const y of inizi.slice(k + 1)) if (y.i > x.i && (!x.blocco || y.tipo === x.tipo || !['talento', 'condizione'].includes(y.tipo) || x.tipo !== 'classe')) { fine = y.i; break; }
       for (let j = x.corpo; j < fine; j++) {
         if (capitolo(R[j])) { fine = j; break; }
+        if (x.tipo === 'mostro' && j > x.corpo && R.slice(x.corpo, j).some(r => /^\W{0,2}(?:Challenge|Sfida|CR|GS)\s+\d/i.test(r.t)) && ((maiuscola(R[j].t) && nomeMostroBuono(R[j].t) && !/^(ACTIONS|REACTIONS|LEGENDARY|LAIR|BONUS)/i.test(R[j].t.replace(/[^A-Za-z ]/g, "").trim())) || RIGA_CA.test(R[j].t) || tipoMostroOcr(R[j].t))) { fine = j; break; }
         if (!x.blocco && x.tipo !== 'mostro' && R[j].spaziata && j > x.corpo && !SEZIONI_M.some(([, re]) => re.test(R[j].t))) { fine = j; break; }
         if (x.tipo === 'specie' && R[j].titolo && !R.slice(j + 1, j + 8).some(r => /^Ability Score Increase\./i.test(r.t)) && !/^[A-Z][^.]{0,40}\.\s/.test(R[j].t)) { fine = j; break; }
         if (x.tipo === 'classe' && k + 1 < inizi.length) {
@@ -617,7 +724,7 @@
       if (x.tipo === 'background') { voci.push(background(x.nome, corpo)); continue; }
       const v = { tipo: x.tipo, nome: x.nome, ...(x.info || {}) };
       if (v.tipo === 'incantesimo') incantesimo(v, corpo);
-      else if (v.tipo === 'mostro') mostro(v, corpo);
+      else if (v.tipo === 'mostro') { if (x.mostroCa === undefined && !corpo.some(r => RIGA_CA.test(r.t))) continue; mostro(v, corpo); nominaMostro(v, x); v._grezzo = R.slice(x.i, fine).map(r => r.t).join('\n'); }
       else if (v.tipo === 'oggetto') oggetto(v, unisci(corpo));
       else if (v.tipo === 'talento') talento(v, unisci(x.corpo > x.i + 1 ? corpo : corpo));
       else v.testo = unisci(corpo).trim();
@@ -644,12 +751,41 @@
     return out;
   }
 
+  // ---------- 6b. il controllo dei numeri ----------
+  // Ogni voce che non torna riceve «_dubbi» (cosa controllare): l'anteprima la segna, e l'IA locale (se c'è) può
+  // provare a correggerla. Nessuna correzione è automatica: un numero inventato è peggio di un numero segnato.
+  const PX_GS = { '0': 10, '1/8': 25, '1/4': 50, '1/2': 100, 1: 200, 2: 450, 3: 700, 4: 1100, 5: 1800, 6: 2300, 7: 2900, 8: 3900, 9: 5000, 10: 5900, 11: 7200, 12: 8400, 13: 10000, 14: 11500, 15: 13000, 16: 15000, 17: 18000, 18: 20000, 19: 22000, 20: 25000, 21: 33000, 22: 41000, 23: 50000, 24: 62000, 25: 75000, 26: 90000, 27: 105000, 28: 120000, 29: 135000, 30: 155000 };
+  function mediaDadi(d) { const m = /^(\d+)d(\d+)(?:([+\-−])(\d+))?$/.exec(String(d || '').replace(/\s+/g, '')); if (!m) return null; return Math.floor(+m[1] * (+m[2] + 1) / 2) + (m[3] ? (m[3] === '+' ? 1 : -1) * +m[4] : 0); }
+  function controlla(v) {
+    const d = [];
+    if (v.tipo === 'mostro') {
+      if (!v.ca || v.ca < 5 || v.ca > 25) d.push('Classe Armatura ' + (v.ca ?? 'mancante'));
+      if (!v.pf) d.push('Punti Ferita mancanti');
+      else if (v.dadiPf) { const m = mediaDadi(v.dadiPf); if (m === null) d.push('dadi dei PF illeggibili: ' + v.dadiPf); else if (Math.abs(m - v.pf) > 1) d.push(`PF ${v.pf} non tornano con ${v.dadiPf} (media ${m})`); }
+      if (!v.car) d.push('caratteristiche mancanti');
+      else if (Object.values(v.car).some(x => !(x >= 1 && x <= 30))) d.push('caratteristiche fuori scala');
+      if (!v.gs) d.push('grado di sfida mancante');
+      else if (v.px && PX_GS[v.gs] && PX_GS[v.gs] !== v.px && !(+v.gs >= 20)) d.push(`sfida ${v.gs} con ${v.px} PE`);
+      if (!(v.azioni || []).length && !(v.tratti || []).length) d.push('nessuna azione letta');
+      if ((v.azioni || []).length + (v.tratti || []).length > 16) d.push('troppe azioni: forse ha preso anche il mostro dopo');
+      for (const a of v.azioni || []) if (/(Weapon|Spell) Attack\s*:/i.test(a.testo) && a.colpire === undefined) { d.push(`«${a.nome}»: bonus per colpire illeggibile`); break; }
+    } else if (v.tipo === 'incantesimo') {
+      if (!(v.livello >= 0 && v.livello <= 9)) d.push('livello');
+      if (!v.scuola) d.push('scuola');
+      for (const [k, n] of [['tempo', 'tempo di lancio'], ['gittata', 'gittata'], ['componenti', 'componenti'], ['durata', 'durata']]) if (!v[k]) d.push(n + ' mancante');
+      if (!v.testo || v.testo.length < 20) d.push('testo mancante');
+    } else if (!v.testo && !v.livelli && !v.tratti && !v.privilegi) d.push('testo mancante');
+    if (d.length) v._dubbi = [...new Set([...(v._dubbi || []), ...d])];
+    return v;
+  }
+
   // ---------- 7. tutto insieme ----------
   // opz: { srd (dizionario srd-nomi.js), modo, lingua, nome (del pacchetto) }
   function leggi(righe, opz = {}) {
     const srd = opz.srd || {};
     const nomiNoti = [...Object.keys(srd.nomi || {}), ...(srd.extra || [])];
     PAROLE = srd.parole ? srd.parole.split(' ') : [];
+    IMPRONTE = srd.impronte || {}; NOMI_SRD = new Set(Object.keys((srd.perTipo && srd.perTipo.mostro) || {}));
     DIZ = new Set([...PAROLE, ...(opz.parole ? String(opz.parole).split(' ') : [])].filter(w => w.length >= 2));
     const pulite = pulisci(righe, nomiNoti);
     const voci = trovaVoci(pulite, opz.modo || '', { condizioni: Object.keys((srd.perTipo && srd.perTipo.condizione) || {}) });
@@ -660,6 +796,7 @@
         if (c) v.classi = [...c];
       }
     }
+    for (const v of voci) controlla(v);
     return { voci, righe: pulite };
   }
   // nomi in italiano dove l'SRD li ha, poi il pacchetto per il VTT
@@ -670,7 +807,7 @@
     for (const v0 of voci) {
       if (v0._no) continue;
       const v = JSON.parse(JSON.stringify(v0));
-      delete v.lingua; delete v._no;
+      delete v.lingua; delete v._no; delete v._dubbi; delete v._grezzo; delete v._ia;
       if (lingua === 'en') {
         v.en = v.nome; const n = it(v.tipo, v.nome); if (n) v.nome = n;
         for (const k of ['tratti', 'azioni', 'azioniBonus', 'reazioni', 'leggendarie']) for (const o of v[k] || []) { const n2 = srd.tratti && srd.tratti[o.nome.toLowerCase()]; if (n2) { o.en = o.nome; o.nome = n2; } }
@@ -689,5 +826,5 @@
       voci: per
     };
   }
-  return { righeDaPdf, righeDaTesto, pulisci, trovaVoci, leggi, pacchetto, _spaziata: spaziata };
+  return { righeDaPdf, righeDaTesto, pulisci, trovaVoci, leggi, pacchetto, controlla, mediaDadi, _spaziata: spaziata };
 });
