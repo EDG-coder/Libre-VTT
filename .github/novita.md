@@ -15,3 +15,10 @@
 - **Niente miniature a metà:** se lo sfondo o un segnalino non è ancora caricato (per esempio mentre la campagna si sta aprendo), la miniatura non viene salvata così e si riprova poco dopo.
 - **La nebbia non copre più tutto:** nelle miniature del master la nebbia è velata come la vedi sul tavolo, quindi una scena ancora tutta da scoprire mostra la mappa invece di un rettangolo nero. Ai giocatori, nel riquadro di «Mi unisco», resta piena.
 - **Safari:** le miniature fatte da Safari (che non sa salvare in webp) ora si salvano anche loro.
+
+**Schede: lo stile vale per tutto**
+- **Niente più colori del VTT dentro la scheda:** con uno stile scelto (Pergamena, Scuro, Chiaro, Notte), pulsanti, campi, tendine, caselle, note e barre di scorrimento della scheda usano solo quello stile, anche nelle finestrelle che si aprono dalla scheda (⚙ Avanzate, impostazioni dei tiri, ⬆ Sali di livello). Vale anche per le voci del compendio e la chat aperte in finestra.
+
+**Mac: la finestra di LIBRE VTT non si confonde più con il browser**
+- **Le pagine nuove vanno al browser vero:** se dalla finestra di LIBRE VTT si apre una scheda o una finestra nuova (⌘N, ⌘T, un link, l'icona nel Dock), si apre nel browser di tutti i giorni con i tuoi segnalibri e accessi, non in una copia vuota.
+- **⌘Q va tenuto premuto:** nella finestra di LIBRE VTT un ⌘Q dato per sbaglio non spegne più il tavolo.
