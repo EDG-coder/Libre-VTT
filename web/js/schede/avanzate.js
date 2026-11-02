@@ -267,7 +267,7 @@
   });
   const SEZIONI = [['abilita', 'Abilità'], ['modificatori', 'Modificatori'], ['movimento', 'Movimento e sensi'], ['difese', 'Difese'], ['risorse', 'Risorse'], ['riquadri', 'Riquadri'], ['incantesimi', 'Incantesimi'], ['modelli', 'Modelli'], ['attacchi', 'Attacchi e iniziativa']];
   function apriAvanzate(w, s, sez) {
-    const d = document.createElement('dialog'); d.className = 'compDlg avanzDlg avanzTutto';
+    const d = document.createElement('dialog'); d.className = 'compDlg avanzDlg avanzTutto temaScheda';
     let cur = sez || 'abilita';
     const opzBers = sel => Object.entries(NOMI_BERSAGLI()).map(([k, n]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${esc(n)}</option>`).join('');
     const corpo = () => {
