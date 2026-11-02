@@ -2287,15 +2287,10 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "italiano": "Italian",
 "inglese": "English",
 
-// ---------- 3.7.8: controllo delle voci e IA locale ----------
+// ---------- 3.7.8: controllo delle voci ----------
+"{n} voci da controllare: sono segnate con ⚠ e il motivo. Correggile qui sotto prima di salvare, o dopo nel compendio.": "{n} entries to check: they are marked with \u26a0 and the reason. Fix them below before saving, or later in the compendium.",
 "Mostra solo le voci da controllare": "Show only the entries to check",
-"Correggi con l'IA locale": "Fix with the local AI",
 "Da controllare:": "To check:",
-"{n} voci da controllare. Se sul computer hai Ollama (ollama.com) con un modello scaricato, l'IA locale può provare a correggerle; altrimenti le correggi tu qui sotto.": "{n} entries to check. If this computer has Ollama (ollama.com) with a model downloaded, the local AI can try to fix them; otherwise fix them yourself below.",
-"{n} voci da controllare. L'IA locale (Ollama) può provare a correggerle: tengo solo i numeri e i nomi che si trovano davvero nel testo del manuale.": "{n} entries to check. The local AI (Ollama) can try to fix them: I only keep numbers and names that really appear in the book's text.",
-"L'IA locale controlla {n} di {t}…": "The local AI is checking {n} of {t}…",
-"L'IA locale ha sistemato {n} voci su {t}. Le altre restano segnate da controllare.": "The local AI fixed {n} of {t} entries. The others stay marked to check.",
-"L'IA locale non risponde: {e}": "The local AI isn't responding: {e}",
 });
 
 // ---------- 3.7.8: cartelle delle schede ----------

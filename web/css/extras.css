@@ -165,6 +165,26 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
   border-radius: 12px; border: 2px solid var(--sh-accent); background: var(--sh-bg); color: var(--sh-fg);
   font-family: var(--sh-font); font-size: calc(14px * var(--sh-scale)); box-shadow: 0 16px 50px rgba(0, 0, 0, .55);
 }
+/* Dentro una scheda (e nelle finestrelle che si aprono da una scheda) vale solo lo stile delle schede:
+   i colori generali del programma diventano quelli della scheda, così pulsanti, campi, tendine, note e
+   barre di scorrimento non tornano mai al tema chiaro/scuro del VTT. */
+.sheetWin, .temaScheda {
+  --bg: var(--sh-bg); --panel: var(--sh-bg); --panel-2: color-mix(in srgb, var(--sh-soft) 60%, var(--sh-bg)); --panel-3: var(--sh-soft);
+  --line: var(--sh-line); --text: var(--sh-fg); --text-soft: color-mix(in srgb, var(--sh-fg) 85%, var(--sh-bg));
+  --muted: color-mix(in srgb, var(--sh-fg) 65%, var(--sh-bg)); --accent: var(--sh-accent); --aura: var(--sh-accent);
+  --msg: color-mix(in srgb, var(--sh-accent) 18%, var(--sh-bg)); --roll-bg: color-mix(in srgb, var(--sh-accent) 12%, var(--sh-bg)); --roll-text: var(--sh-accent);
+  --hint-bg: color-mix(in srgb, var(--sh-bg) 88%, transparent); --hint-text: color-mix(in srgb, var(--sh-fg) 75%, var(--sh-bg));
+  color-scheme: var(--sh-scheme, light); scrollbar-color: color-mix(in srgb, var(--sh-fg) 35%, var(--sh-bg)) transparent;
+}
+.temaScheda { background: var(--sh-bg); color: var(--sh-fg); font-family: var(--sh-font); border-color: var(--sh-line); }
+:where(.temaScheda) :is(h3, h4) { color: var(--sh-accent); }
+:where(.sheetWin, .temaScheda) .btn { background: var(--sh-accent); color: var(--sh-on, #fff); border: 1px solid var(--sh-accent); font-family: inherit; }
+:where(.sheetWin, .temaScheda) .btn:hover { background: color-mix(in srgb, var(--sh-accent) 82%, var(--sh-fg)); }
+:where(.sheetWin, .temaScheda) .btn.ghost { background: transparent; color: var(--sh-fg); border: 1px solid var(--sh-line); }
+:where(.sheetWin, .temaScheda) .btn.ghost:hover { background: color-mix(in srgb, var(--sh-accent) 15%, transparent); border-color: var(--sh-accent); }
+:where(.sheetWin, .temaScheda) :is(select, option) { background-color: var(--sh-bg); color: var(--sh-fg); }
+:where(.sheetWin, .temaScheda) input:is([type=checkbox], [type=radio], [type=range]) { accent-color: var(--sh-accent); }
+:where(.sheetWin, .temaScheda) .note { color: color-mix(in srgb, var(--sh-fg) 65%, var(--sh-bg)); }
 .sheetWin.min { resize: none; height: auto !important; min-height: 0; }
 .sheetWin.min .sbody { display: none; }
 .sheetWin .stitle {
@@ -189,14 +209,14 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 .sheetWin .full { grid-column: 1 / -1; }
 .sheetWin input[type=text], .sheetWin input[type=number], .sheetWin textarea {
   width: 100%; box-sizing: border-box; padding: 4px 6px; border: 0; border-bottom: 1px solid var(--sh-line); border-radius: 4px 4px 0 0;
-  background: rgba(255, 255, 255, .35); color: inherit; font: inherit;
+  background: var(--sh-field, rgba(255, 255, 255, .35)); color: inherit; font: inherit;
 }
 .sheetWin input:focus, .sheetWin textarea:focus { outline: 2px solid color-mix(in srgb, var(--sh-accent) 55%, transparent); }
 .sheetWin textarea { min-height: 84px; resize: vertical; }
 .sheetWin .lab { display: flex; flex-direction: column; gap: 2px; font-size: .78em; color: color-mix(in srgb, var(--sh-fg) 70%, transparent); }
 .sheetWin .hdr { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
 .sheetWin .abil { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }   /* finestra stretta: le caratteristiche vanno a capo */
-.sheetWin .ab { text-align: center; border: 1px solid var(--sh-line); border-radius: 10px; padding: 4px; min-width: 0; background: rgba(255, 255, 255, .3); }
+.sheetWin .ab { text-align: center; border: 1px solid var(--sh-line); border-radius: 10px; padding: 4px; min-width: 0; background: var(--sh-field, rgba(255, 255, 255, .3)); }
 .sheetWin .ab b { display: block; font-size: .72em; letter-spacing: .05em; }
 .sheetWin .ab input { text-align: center; font-size: 1.15em; font-weight: 700; }
 .sheetWin .rl2 { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
@@ -289,7 +309,7 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 .chatWin .sbody { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
 .chatWin .clog { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .chatWin .msg { background: color-mix(in srgb, var(--sh-accent) 22%, var(--sh-bg)); color: var(--sh-fg); }
-.chatWin textarea { width: 100%; box-sizing: border-box; resize: none; padding: 6px 8px; border: 1px solid var(--sh-line); border-radius: 8px; background: rgba(255, 255, 255, .35); color: inherit; font: inherit; }
+.chatWin textarea { width: 100%; box-sizing: border-box; resize: none; padding: 6px 8px; border: 1px solid var(--sh-line); border-radius: 8px; background: var(--sh-field, rgba(255, 255, 255, .35)); color: inherit; font: inherit; }
 
 /* ======================= Finestre: sbarra con pallino a sinistra o X a destra ======================= */
 .sheetWin .sname { padding: 3px 4px; font-weight: 700; font-size: 1.05em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; background: none; }
@@ -1055,7 +1075,7 @@ html.ui-tel #turniBarra .tbTesta { font-size: 13px; padding: 6px 10px; gap: 8px;
 .avanzTutto { width: min(720px, 96vw); }
 .avSez { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
 .avSez button { font: inherit; font-size: 12.5px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); cursor: pointer; }
-.avSez button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.avSez button.on { background: var(--accent); border-color: var(--accent); color: var(--sh-on, #fff); }
 .avSezCorpo { display: flex; flex-direction: column; gap: 8px; }
 .avSezCorpo > label:not(.check) { flex-direction: row; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
 .avTab { border-collapse: collapse; width: 100%; font-size: 13px; }

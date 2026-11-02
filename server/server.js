@@ -441,12 +441,15 @@ function open5e(res, q) {
   r.on('error', e => { if (!res.headersSent) send(res, 502, 'Open5e non risponde (' + e.message + '): sei collegato a internet?'); });
 }
 
-// Miniature delle scene: data/miniature/<id scena>.webp (le fa il browser quando lasci una scena)
+// Miniature delle scene: data/miniature/<id scena>.webp (le fa il browser quando lasci una scena).
+// Safari non sa fare webp e manda un png: si tiene nello stesso file e si serve col tipo giusto.
+const tipoMini = b => b.length >= 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP' ? 'image/webp'
+  : b.length >= 8 && b.readUInt32BE(0) === 0x89504e47 && b.readUInt32BE(4) === 0x0d0a1a0a ? 'image/png' : null;
 const MINI = path.join(DATA, 'miniature');
 const miniFile = q => { const id = String(q.get('id') || ''); return /^[\w-]{1,80}$/.test(id) ? path.join(MINI, id + '.webp') : null; };
 function getMini(res, q) {
   const f = miniFile(q); if (!f) return send(res, 400, 'Scena non valida');
-  fs.readFile(f, (e, d) => e ? send(res, 404, 'Non c\'è') : (res.writeHead(200, { 'Content-Type': 'image/webp', 'Cache-Control': 'no-cache' }), res.end(d)));
+  fs.readFile(f, (e, d) => e ? send(res, 404, 'Non c\'è') : (res.writeHead(200, { 'Content-Type': tipoMini(d) || 'image/webp', 'Cache-Control': 'no-cache' }), res.end(d)));
 }
 function saveMini(req, res, q) {
   const f = miniFile(q); if (!f) return send(res, 400, 'Scena non valida');
@@ -455,7 +458,7 @@ function saveMini(req, res, q) {
   req.on('end', () => {
     if (tooBig) return;
     const b = Buffer.concat(chunks);
-    if (b.length < 12 || b.toString('ascii', 0, 4) !== 'RIFF' || b.toString('ascii', 8, 12) !== 'WEBP') return send(res, 400, 'Non è un\'immagine webp');
+    if (!tipoMini(b)) return send(res, 400, 'Non è un\'immagine webp o png');
     try { fs.mkdirSync(MINI, { recursive: true }); fs.writeFileSync(f + '.tmp', b); fs.renameSync(f + '.tmp', f); json(res, 200, { ok: true }); }
     catch { send(res, 500, 'Non riesco a salvarla'); }
   });

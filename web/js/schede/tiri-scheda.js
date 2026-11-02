@@ -89,7 +89,7 @@
   // vantaggio fisso). Sono campi della scheda: si salvano con lei e valgono in tutti i calcoli.
   function avanzate(w, sh) {
     const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    const d = document.createElement('dialog'); d.className = 'compDlg avanzDlg';
+    const d = document.createElement('dialog'); d.className = 'compDlg avanzDlg temaScheda';
     const abil = (typeof SKILLS !== 'undefined' ? SKILLS : []).slice().sort((a, b) => tr(a[1]).localeCompare(tr(b[1])));
     d.innerHTML = `<h3>⚙ ${esc(tr('Avanzate'))} · <span data-noi18n>${esc(sh.name)}</span></h3>
       <section><h4>${esc(tr('Abilità'))}</h4>
