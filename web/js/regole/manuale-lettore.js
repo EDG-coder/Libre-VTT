@@ -329,7 +329,7 @@
   // le sei caratteristiche · … · Challenge · tratti · ACTIONS … Si parte dalla riga della Classe Armatura (la più
   // sicura anche nelle scansioni), si cerca sopra la riga del tipo (accettando gli errori dell'OCR: «11uge»,
   // «La~ge», «neutr.al», «ohaotic») e il nome; il blocco finisce al mostro dopo o al primo titolo dopo «Challenge».
-  const RIGA_CA_RE = /^\W{0,3}(?:Armor Class|Classe Armatura|AC|CA)\s+\d/i;
+  const RIGA_CA_RE = /^\W{0,3}(?:Arm ?o ?r [CG]lass|Classe Armatura|AC|CA)\s+\d/i;
   const RIGA_CA = { test: t => RIGA_CA_RE.test(String(t).replace(/(\w)[.,'’~]+(?=\w)/g, '$1')) };
   const SUFF_TAGLIA = [['argantuan', 'gargantuan'], ['edium', 'medium'], ['mall', 'small'], ['arge', 'large'], ['iny', 'tiny'], ['uge', 'huge']];
   const ALLINEAMENTO = /(lawful|chaotic|aotic|awful|neutral|neutr|unaligned|any\b|evil|good|typically)/i;
@@ -474,7 +474,7 @@
     v._testoTutto = testo;
     const prendi = re => re.exec(testo);
     let m;
-    if ((m = prendi(/(?:Armor Class|Classe Armatura|\bAC|\bCA)\s+(\d+)(?:\s*\(([^)]*)\))?/i))) { v.ca = +m[1]; if (m[2]) v.caNota = m[2]; }
+    if ((m = prendi(/(?:Arm ?o ?r [CG]lass|Classe Armatura|\bAC|\bCA)\s+(\d+)(?:\s*\(([^)]*)\))?/i))) { v.ca = +m[1]; if (m[2]) v.caNota = m[2]; }
     if ((m = prendi(/(?:Hit Points|Punti Ferita|\bHP|\bPF)\s+(\d+)(?:\s*\(([^)]*)\))?/i))) { v.pf = +m[1]; if (m[2]) v.dadiPf = m[2].replace(/\s+/g, ''); }
     if ((m = prendi(/(?:Speed|Velocità)\s+([^\n]+)/i))) v.velocita = m[1].replace(/\s+(Initiative|Iniziativa)\b.*$/i, '').trim();
     if ((m = prendi(/(?:Initiative|Iniziativa)\s+([+\-−]\d+)/i))) v.iniziativa = +m[1].replace('−', '-');
