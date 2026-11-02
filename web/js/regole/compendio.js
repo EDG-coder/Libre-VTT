@@ -684,21 +684,56 @@
   }
 
   // ---------- pacchetti: importa, esporta, visibilità ----------
+  // Prima di scegliere il file, una piccola finestra con l'opzione «traduci in italiano» (traduttore del browser)
   function importa() {
-    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.librepack,.zip,.json,.csv';
-    inp.addEventListener('change', async () => {
-      const f = inp.files[0]; if (!f) return;
-      try {
-        if (/\.(librepack|zip)$/i.test(f.name)) {
-          const r = await fetch('api/compendio/importa', { method: 'POST', headers: { 'Content-Type': 'application/zip' }, body: f });
-          if (!r.ok) throw new Error(await r.text());
-          const j = await r.json(); await ricaricaCompendio();
-          alert(tr('Pacchetto «{n}» importato.', { n: j.nome }));
-        } else if (typeof window.importaFileCompendio === 'function') await window.importaFileCompendio(f);   // 5etools / CSV (compendio-import.js)
-        else throw new Error(tr('Formato non riconosciuto.'));
-      } catch (e) { alert(tr('Non sono riuscito a importarlo: {e}', { e: e.message })); }
+    const dlg = document.createElement('dialog'); dlg.className = 'compDlg compImp';
+    dlg.innerHTML = `<h3>${esc(tr('Importa un pacchetto'))}</h3>
+      <p class="note">${esc(tr('Un pacchetto di LIBRE VTT (.librepack o .json), l\'homebrew di 5etools (.json) o un CSV.'))}</p>
+      <label class="check"><input type="checkbox" data-k="trad" disabled> ${esc(tr('Traduci in italiano le voci in inglese'))}</label>
+      <p class="note" data-k="tradNota">${esc(tr('Controllo se il browser ha un traduttore…'))}</p>
+      <p class="note" data-k="stato"></p>
+      <div class="dialogBtns"><span style="flex:1"></span><button type="button" class="btn ghost" data-a="chiudi">${esc(tr('Chiudi'))}</button><button type="button" class="btn" data-a="file">📂 ${esc(tr('Scegli il file…'))}</button></div>`;
+    document.body.appendChild(dlg); dlg.showModal();
+    dlg.addEventListener('close', () => dlg.remove());
+    const $d = k => dlg.querySelector(`[data-k="${k}"]`), stato = t => { $d('stato').textContent = t || ''; };
+    (typeof window.compendioTraduttoreDisponibile === 'function' ? window.compendioTraduttoreDisponibile() : Promise.resolve(false)).then(ok => {
+      $d('trad').disabled = !ok; $d('trad').checked = ok && linguaCompendio() === 'it';
+      $d('tradNota').textContent = ok ? tr('Il testo lo traduce il traduttore del browser, sul tuo computer: ci vuole qualche minuto per un manuale intero. Controlla le voci importanti.')
+        : tr('Questo browser non ha un traduttore (c\'è in Chrome e in Edge recenti, non in Brave, Safari o Firefox): il testo resta nella sua lingua. Puoi tradurlo dopo con «Scarica il file da tradurre», o aprire il VTT in Chrome e importarlo di nuovo.');
     });
-    inp.click();
+    dlg.addEventListener('click', e => {
+      const b = e.target.closest('button[data-a]'); if (!b) return;
+      if (b.dataset.a === 'chiudi') return dlg.close();
+      const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.librepack,.zip,.json,.csv';
+      inp.addEventListener('change', async () => {
+        const f = inp.files[0]; if (!f) return;
+        const btn = dlg.querySelectorAll('button'); btn.forEach(x => { x.disabled = true; });
+        try {
+          let fatto = null;
+          stato(tr('Importo…'));
+          if (/\.(librepack|zip)$/i.test(f.name)) {
+            const r = await fetch('api/compendio/importa', { method: 'POST', headers: { 'Content-Type': 'application/zip' }, body: f });
+            if (!r.ok) throw new Error(await r.text());
+            fatto = await r.json();
+          } else if (typeof window.importaFileCompendio === 'function') fatto = await window.importaFileCompendio(f);   // 5etools / CSV (compendio-import.js)
+          else throw new Error(tr('Formato non riconosciuto.'));
+          if (!fatto) { stato(''); return; }                       // annullato
+          let msg = fatto.n != null ? tr('Pacchetto «{p}» importato: {n} voci.', { p: fatto.nome, n: fatto.n }) : tr('Pacchetto «{n}» importato.', { n: fatto.nome });
+          if ($d('trad').checked && fatto.id && typeof window.compendioTraduciPacchetto === 'function') {
+            try {
+              const n = await window.compendioTraduciPacchetto(fatto.id, (i, t) => stato(tr('Traduco in italiano: {n} di {t}…', { n: i, t })));
+              msg += ' ' + (n ? tr('{n} voci tradotte in italiano.', { n }) : tr('Non c\'era niente da tradurre: le voci erano già in italiano.'));
+            } catch (err) { msg += ' ' + tr('La traduzione non è riuscita: {e}', { e: err.message }); }
+          }
+          await ricaricaCompendio();
+          stato('');
+          alert(msg);
+          dlg.close();
+        } catch (err) { stato(''); alert(tr('Non sono riuscito a importarlo: {e}', { e: err.message })); }
+        finally { btn.forEach(x => { x.disabled = false; }); }
+      });
+      inp.click();
+    });
   }
   function pacchetti() {
     const dlg = document.createElement('dialog'); dlg.className = 'compDlg compPack';
