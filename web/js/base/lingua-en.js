@@ -2287,3 +2287,18 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "italiano": "Italian",
 "inglese": "English",
 });
+
+// ---------- 3.7.8: cartelle delle schede ----------
+Object.assign(window.LIBRE_LINGUE.en, {
+"📁 ＋ Cartella": "📁 ＋ Folder",
+"Nuova cartella: raggruppa le schede": "New folder: groups sheets together",
+"Apri la cartella": "Open the folder",
+"Chiudi la cartella": "Close the folder",
+"Al massimo {n} livelli di cartelle.": "At most {n} levels of folders.",
+"Eliminare la cartella «{nome}»? Le schede restano: tornano fuori.": "Delete the folder «{nome}»? The sheets stay: they move out of it.",
+"📁 Sposta in una cartella": "📁 Move to a folder",
+"📁 Sposta in": "📁 Move to",
+"＋ Nuova cartella…": "＋ New folder…",
+"＋ Nuova scheda qui…": "＋ New sheet here…",
+"✎ Rinomina": "✎ Rename",
+});

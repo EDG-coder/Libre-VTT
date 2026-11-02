@@ -1095,3 +1095,16 @@ html.ui-tel #turniBarra .tbTesta { font-size: 13px; padding: 6px 10px; gap: 8px;
 .compManV summary input[data-c=nome] { flex: 0 1 220px; min-width: 120px; }
 .compManV summary small { color: var(--muted); flex: 1 1 200px; }
 .compManV textarea { width: 100%; box-sizing: border-box; margin-top: 6px; }
+
+/* ======================= Cartelle delle schede ======================= */
+.sheetFolder { display: flex; align-items: center; gap: 2px; border-radius: 10px; border: 1px dashed var(--line); background: none; }
+.sheetFolder > button { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; border-radius: 8px; }
+.sheetFolder > button.pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 7px 10px; text-align: left; }
+.sheetFolder > button.pick .fr { color: var(--muted); white-space: nowrap; }
+.sheetFolder > button.pick .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sheetFolder > button.pick small { color: var(--muted); font-size: 11px; }
+.sheetFolder > button.mini { flex: none; padding: 4px 7px; color: var(--muted); opacity: 0; }
+.sheetFolder:hover > button.mini, .sheetFolder:focus-within > button.mini, .ui-touch .sheetFolder > button.mini { opacity: 1; }
+.sheetFolder > button:hover { background: var(--panel-3); color: var(--text, inherit); }
+.sheetFolder.sopra { outline: 2px dashed #ff6fa8; outline-offset: -2px; background: color-mix(in srgb, #ff6fa8 10%, transparent); }
+#sheetDialog #sheetFolderIn { width: 100%; }

@@ -200,7 +200,9 @@ $('sheetNew').addEventListener('click', () => {
 $('sheetForm').addEventListener('submit', e => {
   e.preventDefault();
   const s = newSheet($('sheetNameIn').value.trim().slice(0, 40) || tr('Personaggio'), $('sheetForm').elements.tpl.value);
-  sheets.push(s); renderSheetList(); scheduleSheets();
+  sheets.push(s);
+  if (typeof cartellaNuovaScheda === 'function') cartellaNuovaScheda(s);
+  renderSheetList(); scheduleSheets();
   if (typeof onSheetCreated === 'function') onSheetCreated(s);
   $('sheetDialog').close(); openSheet(s.id);
 });
@@ -216,21 +218,23 @@ const schedeNascoste = {
 };
 function renderSheetList() {
   const list = $('sheetList');
-  if (!sheets.length) { list.innerHTML = '<div class="empty">Nessuna scheda. Creane una con «Nuova scheda».</div>'; return; }
+  if (!sheets.length && !(typeof cartelleSchede === 'function' && cartelleSchede().cartelle.length)) { list.innerHTML = '<div class="empty">Nessuna scheda. Creane una con «Nuova scheda».</div>'; return; }
   const nascoste = schedeNascoste.leggi(), viste = sheets.filter(s => !nascoste.has(s.id)), quante = sheets.length - viste.length;
   const mostra = document.createElement('button');
   mostra.type = 'button'; mostra.className = 'btn ghost mostraNascoste'; mostra.textContent = tr('👁 Mostra le schede nascoste ({n})', { n: quante });
   mostra.addEventListener('click', () => { schedeNascoste.scrivi(new Set()); renderSheetList(); });
-  list.replaceChildren(...viste.map(s => {
+  const riga = s => {
     const d = document.createElement('div'), im = new Image(), nm = document.createElement('span'), sm = document.createElement('small');
     d.className = 'sheetItem'; d.dataset.id = s.id; d.draggable = true; d.title = document.documentElement.classList.contains('ui-touch') ? 'Tocca per aprire, tieni premuto per le altre opzioni' : 'Doppio clic per aprire, trascina sulla mappa per il segnalino';
     im.className = 'sicon'; im.src = iconOf(s); im.alt = ''; im.draggable = false;
     nm.className = 'nm'; nm.textContent = s.name; sm.textContent = { standard: 'Standard', dnd5e: 'Open D&D 5e', simple: 'Open semplice' }[s.tpl] || '';
     d.append(im, nm, sm);
     d.addEventListener('dblclick', () => openSheet(s.id));
-    d.addEventListener('dragstart', e => { e.dataTransfer.setData('application/x-sheet', s.id); e.dataTransfer.effectAllowed = 'copy'; });
+    // copia = segnalino sulla mappa; sposta = in una cartella dell'elenco
+    d.addEventListener('dragstart', e => { e.dataTransfer.setData('application/x-sheet', s.id); e.dataTransfer.effectAllowed = 'copyMove'; });
     return d;
-  }), ...(quante ? [mostra] : []));
+  };
+  list.replaceChildren(...(typeof alberoSchede === 'function' ? alberoSchede(viste, riga) : viste.map(riga)), ...(quante ? [mostra] : []));
 }
 function nascondiScheda(id) {
   const n = schedeNascoste.leggi(); n.add(id); schedeNascoste.scrivi(n);
@@ -244,13 +248,15 @@ function deleteSheet(id) {
   sheets = sheets.filter(x => x.id !== id);
   world.querySelectorAll('.photo').forEach(p => { if (p.dataset.sheet === id) delete p.dataset.sheet; });
   if (typeof onSheetDeleted === 'function') onSheetDeleted(id);
+  if (typeof cartellaSchedaTolta === 'function') cartellaSchedaTolta(id);
   renderSheetList(); scheduleSheets(); scheduleBoardSave();
 }
 function duplicateSheet(id) {
   const s = sheets.find(x => x.id === id); if (!s) return;
   const c = JSON.parse(JSON.stringify(s)); c.id = uid(); c.name = (s.name + ' (copia)').slice(0, 40);
   delete c.owner; delete c._access;
-  sheets.push(c); renderSheetList(); scheduleSheets();
+  sheets.push(c);
+  if (typeof cartellaSchedaCopiata === 'function') cartellaSchedaCopiata(id, c.id); renderSheetList(); scheduleSheets();
   if (typeof onSheetCreated === 'function') onSheetCreated(c);
 }
 // In partita un giocatore cancella solo le schede sue; quelle degli altri le può nascondere dalla sua lista.
@@ -260,6 +266,7 @@ const sheetItemMenu = id => {
     { label: '📜 Apri', fn: () => openSheet(id) },
     { label: '🖼 Cambia icona…', fn: () => (typeof scegliIconaScheda === 'function' ? scegliIconaScheda(s) : pickAsset(a => setSheetIcon(s, a))) },
     { label: 'Duplica', fn: () => duplicateSheet(id) },
+    ...(typeof menuCartellaPerScheda === 'function' ? menuCartellaPerScheda(id) : []),
     '-', mia ? { label: 'Elimina', danger: true, fn: () => deleteSheet(id) } : { label: '🙈 Nascondi dalla mia lista', fn: () => nascondiScheda(id) }
   ];
 };
