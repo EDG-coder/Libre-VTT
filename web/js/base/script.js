@@ -1972,6 +1972,8 @@ function applicaImpostazioni(s) {
   settings.toolOrder = Array.isArray(s.toolOrder) ? s.toolOrder.filter(x => typeof x === 'string').slice(0, 60) : null;
   settings.cartelle = Array.isArray(s.cartelle) ? s.cartelle.filter(c => c && typeof c.id === 'string').slice(0, 200)
     .map(c => ({ id: c.id, nome: String(c.nome || 'Cartella').slice(0, 40), padre: typeof c.padre === 'string' ? c.padre : null, chiusa: !!c.chiusa })) : [];
+  // le cartelle delle schede: le controlla cartelle-schede.js quando servono
+  settings.cartelleSchede = s.cartelleSchede && typeof s.cartelleSchede === 'object' ? s.cartelleSchede : null;
   paintBorder();
 }
 async function loadBoard() {

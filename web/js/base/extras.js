@@ -829,6 +829,7 @@ function contextItems(t, e) {
   let el;
   if ((el = t.closest('.tool'))) return toolMenu(el);
   if ((el = t.closest('.sheetWin'))) return t.closest('.stitle') ? sheetWinMenu(el) : [{ label: 'Riduci a barra', fn: () => el.classList.add('min') }, { label: 'Chiudi la scheda', fn: () => closeWin(el) }];
+  if ((el = t.closest('.sheetFolder'))) return menuCartellaScheda(el.dataset.cartella);
   if ((el = t.closest('.sheetItem'))) return sheetItemMenu(el.dataset.id);
   if ((el = t.closest('.photo'))) { if (!selection.includes(el)) select(el); return tokenMenu(el); }
   if ((el = t.closest('.msg'))) return msgMenu(el);
