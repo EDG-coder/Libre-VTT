@@ -35,3 +35,9 @@ const dest = opz.o || nome.replace(/[^\w.-]+/g, '_') + '.json';
 fs.writeFileSync(dest, JSON.stringify(out, null, 1));
 const conta = Object.entries(out.voci).map(([k, v]) => `${v.length} ${k}`).join(', ');
 console.error(`Fatto: ${dest} — ${conta || 'nessuna voce'}. In LIBRE VTT: Compendio → Pacchetti → Importa.`);
+const dubbie = voci.filter(v => v._dubbi);
+if (dubbie.length) {
+  console.error(`${dubbie.length} voci da controllare (nel VTT sono segnate con ⚠):`);
+  for (const v of dubbie.slice(0, 40)) console.error(`  ${v.tipo} «${v.nome}»: ${v._dubbi.join(' · ')}`);
+  if (dubbie.length > 40) console.error(`  … e altre ${dubbie.length - 40}`);
+}

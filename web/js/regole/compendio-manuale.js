@@ -100,6 +100,45 @@
   // per le prove: dal testo alle voci, come fa la finestra
   window.compendioManualeLeggi = async (txt, modo) => { const P = await lettore(); return P.leggi(P.righeDaTesto(txt), { srd: window.SRD_NOMI, parole: window.PAROLE_INGLESI, modo }).voci; };
 
+  // ---------- 3b. l'IA locale (Ollama), facoltativa ----------
+  // Gira sul computer del master: niente esce dal computer. Riceve il testo grezzo di un blocco che non ha passato
+  // il controllo e restituisce i campi in JSON. Di quello che dice si tiene solo ciò che si trova davvero nel testo
+  // (un numero o un nome inventato non entra), poi si rifà il controllo.
+  const OLLAMA = 'http://localhost:11434';
+  window.compendioIaModelli = async function () {
+    try {
+      const r = await Promise.race([fetch(OLLAMA + '/api/tags'), new Promise((_, no) => setTimeout(() => no(new Error('tempo')), 1500))]);
+      if (!r.ok) return [];
+      return ((await r.json()).models || []).map(m => m.name).filter(n => !/embed/i.test(n));
+    } catch { return []; }
+  };
+  const nelTesto = (grezzo, x) => { const g = String(grezzo).replace(/\s+/g, ' ').toLowerCase(); return g.includes(String(x).toLowerCase()); };
+  window.compendioIaCorreggi = async function (v, modello, P) {
+    const campi = v.tipo === 'mostro'
+      ? '{"nome": string, "ca": number, "pf": number, "dadiPf": "NdM+K", "gs": "string like 1/2 or 5", "car": {"str":n,"dex":n,"con":n,"int":n,"wis":n,"cha":n}}'
+      : '{"nome": string, "livello": number, "tempo": string, "gittata": string, "componenti": string, "durata": string}';
+    const prompt = `This is a D&D 5e ${v.tipo === 'mostro' ? 'monster stat block' : 'entry'} extracted by OCR from a scanned book, so some letters and digits are misread (S for 5, l for 1, O for 0) and the columns may be out of order.\nProblems found: ${v._dubbi.join('; ')}.\nReturn ONLY a JSON object with these fields, copied from the text (fix only obvious OCR mistakes, never invent values; use null when a value is not in the text):\n${campi}\n\nTEXT:\n${String(v._grezzo).slice(0, 4000)}`;
+    const r = await fetch(OLLAMA + '/api/generate', { method: 'POST', body: JSON.stringify({ model: modello, prompt, format: 'json', stream: false, options: { temperature: 0 } }) });
+    if (!r.ok) throw new Error('Ollama ' + r.status);
+    let o; try { o = JSON.parse((await r.json()).response); } catch { return false; }
+    const g = v._grezzo, ocr = s => String(s).replace(/5/g, '[5S]').replace(/1/g, '[1lI]').replace(/0/g, '[0O]');
+    const cifraNelTesto = n => n !== null && n !== undefined && new RegExp('(^|\\D)' + ocr(n).replace(/\+/g, '\\s*\\+\\s*') + '(\\D|$)').test(g.replace(/(\d) (\d)/g, '$1$2'));
+    const prima = JSON.stringify(v);
+    if (o.nome && typeof o.nome === 'string' && (nelTesto(g, o.nome) || (window.SRD_NOMI && SRD_NOMI.nomi[o.nome])) && v._dubbi.some(d => /nome/.test(d))) { v.nome = o.nome.replace(/^./, c => c.toUpperCase()); v._dubbi = v._dubbi.filter(d => !/nome/.test(d)); }
+    for (const k of ['ca', 'pf', 'livello']) if (Number.isFinite(+o[k]) && o[k] !== null && cifraNelTesto(+o[k])) v[k] = +o[k];
+    if (o.gs && cifraNelTesto(String(o.gs).replace('/', '\\/'))) v.gs = String(o.gs);
+    if (o.dadiPf && /^\d+d\d+([+\-]\d+)?$/.test(String(o.dadiPf).replace(/\s+/g, '')) && cifraNelTesto(String(o.dadiPf).replace(/\s+/g, '').replace(/([+\-])/, ' $1 ').replace(/ /g, '').replace('d', 'd'))) v.dadiPf = String(o.dadiPf).replace(/\s+/g, '');
+    if (o.car && typeof o.car === 'object') { const c = {}; for (const k of ['str', 'dex', 'con', 'int', 'wis', 'cha']) if (Number.isFinite(+o.car[k]) && cifraNelTesto(+o.car[k])) c[k] = +o.car[k]; if (Object.keys(c).length === 6) v.car = c; }
+    for (const k of ['tempo', 'gittata', 'componenti', 'durata']) if (typeof o[k] === 'string' && o[k] && nelTesto(g, o[k].slice(0, 12))) v[k] = o[k];
+    const nomeDubbio = (v._dubbi || []).filter(d => /nome/.test(d));
+    delete v._dubbi; P.controlla(v);
+    if (nomeDubbio.length) v._dubbi = [...nomeDubbio, ...(v._dubbi || [])];
+    if (!v._dubbi || !v._dubbi.length) delete v._dubbi;
+    const cambiata = JSON.stringify(v) !== prima;
+    if (cambiata) v._ia = true;
+    return cambiata && !v._dubbi;
+  };
+
   // ---------- 4. la finestra ----------
   const TIPI_V = [['', 'Riconosci da solo (tutto il manuale)'], ['incantesimo', 'Incantesimi'], ['mostro', 'Mostri'], ['oggetto', 'Oggetti magici'], ['talento', 'Talenti'], ['condizione', 'Condizioni'], ['specie', 'Specie'], ['background', 'Background'], ['classe', 'Classi e sottoclassi'], ['regola', 'Regole (divide ai titoli)']];
   const NOMI_T = { incantesimo: 'Incantesimo', mostro: 'Mostro', oggetto: 'Oggetto', talento: 'Talento', condizione: 'Condizione', specie: 'Specie', background: 'Background', classe: 'Classe', sottoclasse: 'Sottoclasse', regola: 'Regola' };
@@ -129,6 +168,8 @@
       <textarea data-k="testo" rows="8" hidden placeholder="${esc(tr('Incolla qui il testo copiato dal manuale, poi premi «Leggi il testo».'))}"></textarea>
       <div class="row" data-k="leggiRiga" hidden><button type="button" class="btn" data-a="leggi">${esc(tr('Leggi il testo'))}</button></div>
       <p class="note" data-k="stato"></p>
+      <div class="row compManStrum" data-k="strum" hidden><label class="check"><input type="checkbox" data-k="soloDubbi"> ${esc(tr('Mostra solo le voci da controllare'))}</label><span style="flex:1"></span><select data-k="iaModello" hidden></select><button type="button" class="btn ghost" data-a="ia" hidden>🤖 ${esc(tr('Correggi con l\'IA locale'))}</button></div>
+      <p class="note" data-k="iaNota" hidden></p>
       <div class="compManLista" data-k="lista"></div>
       <div class="dialogBtns"><button type="button" class="btn ghost" data-a="tutti" hidden>${esc(tr('Seleziona tutti'))}</button><span style="flex:1"></span><button type="button" class="btn ghost" data-a="chiudi">${esc(tr('Chiudi'))}</button><button type="button" class="btn" data-a="salva" hidden>${esc(tr('Salva nel compendio'))}</button></div>`;
     document.body.appendChild(dlg); dlg.showModal();
@@ -150,7 +191,8 @@
     function mostra() {
       $d('lista').innerHTML = voci.length ? voci.map((v, i) => `<details class="compManV" data-i="${i}"><summary><input type="checkbox" data-c="ok" ${v._no ? '' : 'checked'}>
           <select data-c="tipo">${Object.entries(NOMI_T).map(([k, n]) => `<option value="${k}" ${k === v.tipo ? 'selected' : ''}>${esc(tr(n))}</option>`).join('')}</select>
-          <input data-c="nome" value="${esc(v.nome)}"> <small>${esc(riassunto(v))}</small></summary>
+          <input data-c="nome" value="${esc(v.nome)}"> ${v._dubbi ? `<span class="compManDubbio" title="${esc(v._dubbi.join(' · '))}">⚠</span>` : ''}${v._ia ? '<span title="IA">🤖</span>' : ''} <small>${esc(riassunto(v))}</small></summary>
+          ${v._dubbi ? `<p class="note compManDubbi">⚠ ${esc(tr('Da controllare:'))} ${esc(v._dubbi.join(' · '))}</p>` : ''}
           <textarea data-c="testo" rows="6">${esc(v.testo || '')}</textarea>
           ${v.tipo === 'mostro' ? `<p class="note">${esc(tr('Azioni lette:'))} ${esc([...(v.tratti || []), ...(v.azioni || []), ...(v.azioniBonus || []), ...(v.reazioni || []), ...(v.leggendarie || [])].map(a => a.nome).join(' · ') || '—')}</p>` : ''}
           ${v.tipo === 'specie' || v.tipo === 'sottoclasse' ? `<p class="note">${esc([...(v.tratti || []), ...(v.privilegi || [])].map(a => a.nome).join(' · ') || '—')}</p>` : ''}
@@ -158,12 +200,29 @@
         : `<p class="note">${esc(tr('Non ho trovato voci. Prova a scegliere il tipo a mano (per esempio «Condizioni»), o un intervallo di pagine più preciso.'))}</p>`;
       dlg.querySelector('[data-a=salva]').hidden = !voci.length;
       dlg.querySelector('[data-a=tutti]').hidden = !voci.length;
+      const dubbi = voci.filter(v => v._dubbi).length;
+      $d('strum').hidden = !dubbi;
+      filtra();
+      if (dubbi) iaPronta();
+    }
+    function filtra() { const solo = $d('soloDubbi').checked; dlg.querySelectorAll('.compManV').forEach(el => { el.hidden = solo && !voci[+el.dataset.i]._dubbi; }); }
+    // l'IA locale (Ollama sul computer del master): solo per le voci che non passano il controllo
+    let iaModelli = null;
+    async function iaPronta() {
+      if (iaModelli === null) iaModelli = await window.compendioIaModelli();
+      const n = voci.filter(v => v._dubbi && v._grezzo).length;
+      $d('iaNota').hidden = false;
+      if (!iaModelli.length) { $d('iaNota').textContent = tr('{n} voci da controllare. Se sul computer hai Ollama (ollama.com) con un modello scaricato, l\'IA locale può provare a correggerle; altrimenti le correggi tu qui sotto.', { n: voci.filter(v => v._dubbi).length }); return; }
+      $d('iaModello').innerHTML = iaModelli.map(m => `<option>${esc(m)}</option>`).join(''); $d('iaModello').hidden = false;
+      dlg.querySelector('[data-a=ia]').hidden = !n;
+      $d('iaNota').textContent = tr('{n} voci da controllare. L\'IA locale (Ollama) può provare a correggerle: tengo solo i numeri e i nomi che si trovano davvero nel testo del manuale.', { n: voci.filter(v => v._dubbi).length });
     }
     dlg.addEventListener('input', e => {
       const box = e.target.closest('.compManV'); if (!box) return;
       const v = voci[+box.dataset.i], c = e.target.dataset.c;
       if (c === 'ok') v._no = !e.target.checked; else if (c && c !== 'tipo') v[c] = e.target.value;
     });
+    $d('soloDubbi').addEventListener('change', filtra);
     dlg.addEventListener('change', e => { const box = e.target.closest('.compManV'); if (box && e.target.dataset.c === 'tipo') voci[+box.dataset.i].tipo = e.target.value; });
     async function leggi(righe) {
       stato(tr('Ripulisco il testo e cerco le voci…'));
@@ -180,6 +239,18 @@
       const b = e.target.closest('[data-a]'); if (!b) return;
       const a = b.dataset.a;
       if (a === 'chiudi') return dlg.close();
+      if (a === 'ia') {
+        const P = await lettore(), dubbie = voci.filter(v => v._dubbi && v._grezzo);
+        b.disabled = true; let ok = 0;
+        try {
+          for (let k = 0; k < dubbie.length; k++) {
+            stato(tr('L\'IA locale controlla {n} di {t}…', { n: k + 1, t: dubbie.length }));
+            if (await window.compendioIaCorreggi(dubbie[k], $d('iaModello').value, P)) ok++;
+          }
+          stato(tr('L\'IA locale ha sistemato {n} voci su {t}. Le altre restano segnate da controllare.', { n: ok, t: dubbie.length }));
+        } catch (err) { stato(tr('L\'IA locale non risponde: {e}', { e: err.message })); }
+        b.disabled = false; mostra(); return;
+      }
       if (a === 'tutti') { voci.forEach(v => { v._no = false; }); dlg.querySelectorAll('[data-c=ok]').forEach(x => { x.checked = true; }); return; }
       if (a === 'incolla') { $d('testo').hidden = false; $d('leggiRiga').hidden = false; $d('testo').focus(); return; }
       if (a === 'leggi') {
