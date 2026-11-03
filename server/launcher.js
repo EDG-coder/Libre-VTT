@@ -78,9 +78,11 @@ const LINK_CANDIDATES = [
   ...(VECCHIA ? [path.join(VECCHIA, 'pacchetti', 'uffa-link', 'target', 'release', 'uffa-link' + EXE), path.join(VECCHIA, 'uffa-link', 'target', 'release', 'uffa-link' + EXE)] : [])
 ];
 const linkBin = () => LINK_CANDIDATES.find(p => fs.existsSync(p)) || null;
-const ARCH = process.arch === 'arm64' ? 'arm64' : 'x64';
-const PIATTAFORMA = WIN ? 'windows-x64' : MAC ? 'macos-universal' : `linux-${ARCH}`;   // Windows ARM usa quello x64
-const LINK_ASSET = `uffa-link-${PIATTAFORMA}${EXE}`;                                       // il nome nelle uscite su GitHub
+const ARCH = process.arch === 'arm64' ? 'arm64' : process.arch === 'riscv64' ? 'riscv64' : 'x64';
+const PIATTAFORMA = WIN ? `windows-${ARCH === 'arm64' ? 'arm64' : 'x64'}` : MAC ? 'macos-universal' : `linux-${ARCH}`;
+// i nomi nelle uscite su GitHub, il primo è quello giusto; Windows ARM, se la release non ha ancora il
+// suo (quelle prima della 3.7.9), usa quello x64, che Windows 11 fa girare emulato
+const LINK_ASSETS = [`uffa-link-${PIATTAFORMA}${EXE}`, ...(WIN && ARCH === 'arm64' ? [`uffa-link-windows-x64${EXE}`] : [])];
 // il profilo della finestra (lingua della pagina, permessi, cache) sta con le preferenze: la cartella temporanea macOS la svuota
 const PROFILE = path.join(USERDIR, 'finestra');
 
@@ -1009,7 +1011,11 @@ async function scaricaPronto() {
   if (!base) return false;
   say(`Cerco il collegamento già pronto per questo computer (${PIATTAFORMA})…`);
   state.busy = 'Cerco il collegamento già pronto…'; push();
-  const atteso = primaImpronta(await scaricaTesto(`${base}/${LINK_ASSET}.sha256`));
+  let LINK_ASSET = null, atteso = null;
+  for (const nome of LINK_ASSETS) {
+    atteso = primaImpronta(await scaricaTesto(`${base}/${nome}.sha256`));
+    if (atteso) { LINK_ASSET = nome; break; }
+  }
   if (!atteso) { say('Non c\'è una versione già pronta per questo computer: la costruisco io.', 'warn'); return false; }
   fs.mkdirSync(path.dirname(LINK_SCARICATO), { recursive: true });
   const tmp = LINK_SCARICATO + '.part';
@@ -1205,7 +1211,9 @@ async function installaAggiornamento() {
 }
 
 // --- 3. costruito qui, con strumenti privati ---
-const ARCH_CPU = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
+// il processore come lo chiamano Rust e Zig (RISC-V: «riscv64gc» per Rust, «riscv64» per Zig)
+const ARCH_CPU = process.arch === 'arm64' ? 'aarch64' : process.arch === 'riscv64' ? 'riscv64gc' : 'x86_64';
+const ZIG_CPU = ARCH_CPU === 'riscv64gc' ? 'riscv64' : ARCH_CPU;
 async function rustPrivato() {
   if (cargoPath()) return cargoPath();
   // il programma di installazione di Rust (su Windows sempre quello x64: gira anche sui PC ARM)
@@ -1234,7 +1242,7 @@ async function zigPrivato() {
   if (trova()) return trova();
   say('Scarico Zig, che fa da compilatore C (al posto di Visual Studio o build-essential)…');
   let idx = null; try { idx = JSON.parse(await scaricaTesto(process.env.MYVTT_ZIG_INDEX || 'https://ziglang.org/download/index.json') || 'null'); } catch {}
-  const chiave = `${ARCH_CPU}-${WIN ? 'windows' : MAC ? 'macos' : 'linux'}`;
+  const chiave = `${WIN ? 'x86_64' : ZIG_CPU}-${WIN ? 'windows' : MAC ? 'macos' : 'linux'}`;   // su Windows tutto gira come x64 (anche sui PC ARM)
   const ver = idx && (idx[ZIG_PREFERITO] && idx[ZIG_PREFERITO][chiave] ? ZIG_PREFERITO : Object.keys(idx).find(k => /^\d+\.\d+\.\d+$/.test(k) && idx[k][chiave]));
   const voce = ver && idx[ver][chiave];
   if (!voce || !voce.tarball) ferma('Non riesco a trovare Zig per questo computer: controlla la connessione e riprova.');
@@ -1255,7 +1263,8 @@ function wrapperZig(zig) {
   const W = path.join(TOOLS, 'wrap');
   fs.mkdirSync(W, { recursive: true });
   const js = path.join(__dirname, 'zigwrap.js');
-  const target = WIN ? 'x86_64-windows-gnu' : `${ARCH_CPU}-linux-gnu.2.17`;
+  // glibc 2.17 per girare anche su distribuzioni vecchie; RISC-V c'è solo dalla 2.27
+  const target = WIN ? 'x86_64-windows-gnu' : ZIG_CPU === 'riscv64' ? 'riscv64-linux-gnu.2.27' : `${ZIG_CPU}-linux-gnu.2.17`;
   const fai = (nome, modo) => {
     if (WIN) {
       const f = path.join(W, nome + '.cmd');

@@ -12,8 +12,10 @@ Così come sono, scaricano Node.js da nodejs.org durante l'installazione (e lo c
 Per installatori che non scaricano niente si possono mettere dentro Node e il collegamento
 a distanza già compilato (è quello che fa GitHub Actions, vedi .github/workflows/rilascio.yml):
 
-    --node-linux-x64 <cartella o .tar.gz>   --node-linux-arm64 <...>   --node-win-x64 <cartella o .zip>
-    --link-linux-x64 <file>   --link-linux-arm64 <file>   --link-win-x64 <file.exe>
+    --node-linux-x64 <cartella o .tar.gz>   --node-linux-arm64 <...>   --node-linux-riscv64 <...>
+    --node-win-x64 <cartella o .zip>   --node-win-arm64 <...>
+    --link-linux-x64 <file>   --link-linux-arm64 <file>   --link-linux-riscv64 <file>
+    --link-win-x64 <file.exe>   --link-win-arm64 <file.exe>
     --repo utente/progetto    (scritto in rilascio.json: l'app saprà dove scaricare il collegamento)
     --stage-windows <cartella>   prepara anche i file per setup.exe (pacchetti/installer/windows/myvtt.iss)
 """
@@ -90,7 +92,7 @@ def crea_linux(uscita, opz):
         if rj:
             info = tarfile.TarInfo('app/rilascio.json'); info.size = len(rj); info.mode = 0o644
             tar.addfile(info, io.BytesIO(rj))
-        for arch in ('x64', 'arm64'):
+        for arch in ('x64', 'arm64', 'riscv64'):
             if opz.get('node-linux-' + arch):
                 aggiungi_cartella_node(tar, opz['node-linux-' + arch], 'node-linux-' + arch)
             if opz.get('link-linux-' + arch):
@@ -117,21 +119,21 @@ def crea_windows(uscita, opz):
         rj = rilascio_json(opz.get('repo'))
         if rj:
             z.writestr('app/rilascio.json', rj)
-        if opz.get('node-win-x64'):
-            sorg = opz['node-win-x64']
-            if os.path.isdir(sorg):
+        for arch in ('x64', 'arm64'):              # installa.ps1 prende quello del processore (ARM: il suo, se c'è)
+            sorg = opz.get('node-win-' + arch)
+            if sorg and os.path.isdir(sorg):
                 for radice, _, files in os.walk(sorg):
                     for n in files:
                         p = os.path.join(radice, n)
-                        z.write(p, 'node-win-x64/' + os.path.relpath(p, sorg).replace(os.sep, '/'))
-            else:
+                        z.write(p, 'node-win-%s/' % arch + os.path.relpath(p, sorg).replace(os.sep, '/'))
+            elif sorg:
                 with zipfile.ZipFile(sorg) as zn:
                     for info in zn.infolist():
                         parti = info.filename.split('/', 1)
                         if len(parti) == 2 and parti[1] and not info.is_dir():
-                            z.writestr('node-win-x64/' + parti[1], zn.read(info))
-        if opz.get('link-win-x64'):
-            z.write(opz['link-win-x64'], 'bin/uffa-link-windows-x64.exe')
+                            z.writestr('node-win-%s/' % arch + parti[1], zn.read(info))
+            if opz.get('link-win-' + arch):
+                z.write(opz['link-win-' + arch], 'bin/uffa-link-windows-%s.exe' % arch)
     dati = base64.b64encode(buf.getvalue()).decode('ascii')
     righe = '\r\n'.join(dati[i:i + 120] for i in range(0, len(dati), 120))
     with open(os.path.join(QUI, 'windows', 'installa.cmd'), 'r', encoding='utf-8') as f:
@@ -163,23 +165,25 @@ def prepara_windows(dest, opz):
     if rj:
         with open(os.path.join(dest, 'app', 'rilascio.json'), 'wb') as f:
             f.write(rj)
-    node = opz.get('node-win-x64')
-    if node:
-        nd = os.path.join(dest, 'runtime', 'node')
-        if os.path.isdir(node):
-            shutil.copytree(node, nd)
-        else:
-            with zipfile.ZipFile(node) as zn:
-                for info in zn.infolist():
-                    parti = info.filename.split('/', 1)
-                    if len(parti) == 2 and parti[1] and not info.is_dir():
-                        p = os.path.join(nd, *parti[1].split('/'))
-                        os.makedirs(os.path.dirname(p), exist_ok=True)
-                        with open(p, 'wb') as f:
-                            f.write(zn.read(info))
-    if opz.get('link-win-x64'):
-        os.makedirs(os.path.join(dest, 'utente', 'bin'))
-        shutil.copyfile(opz['link-win-x64'], os.path.join(dest, 'utente', 'bin', 'uffa-link.exe'))
+    # un Node e un collegamento per processore: setup.exe installa quelli giusti (vedi Check: in myvtt.iss)
+    for arch in ('x64', 'arm64'):
+        node = opz.get('node-win-' + arch)
+        if node:
+            nd = os.path.join(dest, 'runtime-' + arch, 'node')
+            if os.path.isdir(node):
+                shutil.copytree(node, nd)
+            else:
+                with zipfile.ZipFile(node) as zn:
+                    for info in zn.infolist():
+                        parti = info.filename.split('/', 1)
+                        if len(parti) == 2 and parti[1] and not info.is_dir():
+                            p = os.path.join(nd, *parti[1].split('/'))
+                            os.makedirs(os.path.dirname(p), exist_ok=True)
+                            with open(p, 'wb') as f:
+                                f.write(zn.read(info))
+        if opz.get('link-win-' + arch):
+            os.makedirs(os.path.join(dest, 'bin-' + arch), exist_ok=True)
+            shutil.copyfile(opz['link-win-' + arch], os.path.join(dest, 'bin-' + arch, 'uffa-link.exe'))
     shutil.copyfile(os.path.join(QUI, 'windows', 'avvia.ps1'), os.path.join(dest, 'avvia.ps1'))
 
 

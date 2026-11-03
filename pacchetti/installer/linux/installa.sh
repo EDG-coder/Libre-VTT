@@ -94,7 +94,10 @@ node_ok() { [ -x "$1" ] && v="$("$1" -v 2>/dev/null)" && [ "$(echo "${v#v}" | cu
 case "$(uname -m)" in
   x86_64|amd64) ARCH=x64 ;;
   aarch64|arm64) ARCH=arm64 ;;
-  *) errore "Questo computer ($(uname -m)) non è tra quelli su cui gira LIBRE VTT (serve un PC a 64 bit Intel/AMD o ARM)." ;;
+  riscv64) ARCH=riscv64
+           # nodejs.org non fa Node per RISC-V: lo fanno le «unofficial builds» dello stesso progetto
+           [ -n "$MYVTT_NODE_DIST" ] || DIST="https://unofficial-builds.nodejs.org/download/release/latest-v22.x" ;;
+  *) errore "Questo computer ($(uname -m)) non è tra quelli su cui gira LIBRE VTT (serve un PC a 64 bit Intel/AMD, ARM o RISC-V)." ;;
 esac
 RIGA=$(awk '/^__ARCHIVIO_QUI_SOTTO__$/ { print NR + 1; exit }' "$SELF")
 [ -n "$RIGA" ] || errore "Questo file di installazione è incompleto: scaricalo di nuovo."

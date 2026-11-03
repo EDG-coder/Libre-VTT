@@ -153,8 +153,8 @@ Anche i pezzi dietro le quinte (server, collegamento) si riaccendono da soli se 
    tue).
 2. Su GitHub: *Releases › Draft a new release*, scrivi un tag che comincia con «v» (es. `v3.0`) e
    premi *Publish*.
-3. *Actions* fa il resto (circa 15 minuti): compila il collegamento a distanza per Windows, Linux
-   (x64 e ARM) e Mac, e mette nella release `LIBRE-VTT-Setup.exe`, `Installa-LIBRE-VTT-Linux.sh`,
+3. *Actions* fa il resto (circa 15 minuti): compila il collegamento a distanza per Windows (x64 e
+   ARM), Linux (x64, ARM e RISC-V) e Mac, e mette nella release `LIBRE-VTT-Setup.exe`, `Installa-LIBRE-VTT-Linux.sh`,
    `Installa-LIBRE-VTT-Windows.cmd` e `LIBRE-VTT.dmg`, ognuno con dentro Node e il collegamento.
    Da lì in poi le app scaricano il collegamento da questa release.
 

@@ -1,7 +1,7 @@
 # Costruisce tutto quello che serve per distribuire LIBRE VTT e lo pubblica come «release».
 #
-#   - il collegamento a distanza (uffa-link) già compilato per Windows, Linux (x64 e ARM,
-#     statico: gira su qualsiasi distribuzione) e Mac (Apple Silicon + Intel in un file solo);
+#   - il collegamento a distanza (uffa-link) già compilato per Windows (x64 e ARM), Linux (x64, ARM e
+#     RISC-V, statico: gira su qualsiasi distribuzione) e Mac (Apple Silicon + Intel in un file solo);
 #     l'app lo scarica da qui (rilascio.json), invece di doverlo compilare sul computer di chi gioca
 #   - LIBRE-VTT-Setup.exe (Windows), Installa-LIBRE-VTT-Linux.sh, Installa-LIBRE-VTT-Windows.cmd e
 #     LIBRE-VTT.dmg: con dentro anche Node e il collegamento, quindi non scaricano niente.
@@ -35,8 +35,10 @@ jobs:
       matrix:
         include:
           - { nome: windows-x64, os: windows-latest, target: x86_64-pc-windows-msvc, file: uffa-link.exe, asset: uffa-link-windows-x64.exe, zig: false }
+          - { nome: windows-arm64, os: windows-latest, target: aarch64-pc-windows-msvc, file: uffa-link.exe, asset: uffa-link-windows-arm64.exe, zig: false }
           - { nome: linux-x64, os: ubuntu-latest, target: x86_64-unknown-linux-musl, file: uffa-link, asset: uffa-link-linux-x64, zig: true }
           - { nome: linux-arm64, os: ubuntu-latest, target: aarch64-unknown-linux-musl, file: uffa-link, asset: uffa-link-linux-arm64, zig: true }
+          - { nome: linux-riscv64, os: ubuntu-latest, target: riscv64gc-unknown-linux-musl, file: uffa-link, asset: uffa-link-linux-riscv64, zig: true }
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Rust
@@ -107,21 +109,25 @@ jobs:
           merge-multiple: true
       - name: Node per Linux e Windows (controllato)
         run: |
-          D=https://nodejs.org/dist/latest-v22.x
-          curl -fsSL "$D/SHASUMS256.txt" -o SHASUMS256.txt
-          for f in linux-x64.tar.gz linux-arm64.tar.gz win-x64.zip; do
-            n=$(grep -oE "node-v[0-9]+\.[0-9]+\.[0-9]+-$f" SHASUMS256.txt | head -1)
-            curl -fsSL "$D/$n" -o "$n"
+          prendi() {   # $1 = sito, $2 = file (es. linux-x64.tar.gz)
+            curl -fsSL "$1/SHASUMS256.txt" -o SHASUMS256.txt
+            n=$(grep -oE "node-v[0-9]+\.[0-9]+\.[0-9]+-$2" SHASUMS256.txt | head -1)
+            [ -n "$n" ] || { echo "::error::Node $2 non trovato su $1"; exit 1; }
+            curl -fsSL "$1/$n" -o "$n"
             grep "  $n\$" SHASUMS256.txt | sha256sum -c -
-            k=$(echo "${f%%.*}" | tr 'a-z-' 'A-Z_')      # linux-x64 → LINUX_X64
+            k=$(echo "${2%%.*}" | tr 'a-z-' 'A-Z_')      # linux-x64 → LINUX_X64
             echo "NODE_$k=$n" >> "$GITHUB_ENV"
-          done
+          }
+          for f in linux-x64.tar.gz linux-arm64.tar.gz win-x64.zip win-arm64.zip; do prendi https://nodejs.org/dist/latest-v22.x "$f"; done
+          # per RISC-V Node lo fa il progetto Node stesso, ma tra le «unofficial builds»
+          prendi https://unofficial-builds.nodejs.org/download/release/latest-v22.x linux-riscv64.tar.gz
       - name: Crea gli installatori
         run: |
           python3 pacchetti/installer/crea-installer.py out \
-            --node-linux-x64 "$NODE_LINUX_X64" --node-linux-arm64 "$NODE_LINUX_ARM64" --node-win-x64 "$NODE_WIN_X64" \
-            --link-linux-x64 link/uffa-link-linux-x64 --link-linux-arm64 link/uffa-link-linux-arm64 \
-            --link-win-x64 link/uffa-link-windows-x64.exe \
+            --node-linux-x64 "$NODE_LINUX_X64" --node-linux-arm64 "$NODE_LINUX_ARM64" --node-linux-riscv64 "$NODE_LINUX_RISCV64" \
+            --node-win-x64 "$NODE_WIN_X64" --node-win-arm64 "$NODE_WIN_ARM64" \
+            --link-linux-x64 link/uffa-link-linux-x64 --link-linux-arm64 link/uffa-link-linux-arm64 --link-linux-riscv64 link/uffa-link-linux-riscv64 \
+            --link-win-x64 link/uffa-link-windows-x64.exe --link-win-arm64 link/uffa-link-windows-arm64.exe \
             --repo "${{ github.repository }}" --stage-windows pacchetti/installer/windows/stage
           mv "out/Installa LIBRE VTT.cmd" out/Installa-LIBRE-VTT-Windows.cmd
           ls -la out
