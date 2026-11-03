@@ -168,7 +168,7 @@ jobs:
     name: App
     uses: ./.github/workflows/app.yml
     with:
-      versione: ${{ inputs.versione || github.ref_name }}
+      versione: ${{ inputs.versione || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || '' }}
     secrets: inherit
 
   controlla:
