@@ -16,6 +16,7 @@ const MAX_BYTES = 30 * 1024 * 1024;
 const IMG = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.svg']);
 const TYPE_EXT = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp', 'image/avif': '.avif', 'image/bmp': '.bmp', 'image/svg+xml': '.svg' };
 const SVG = require('../condiviso/svg-pulito.js');
+const { intestazioniPagina } = require('./csp.js');
 const ASSET_MIME = new Set([...Object.keys(TYPE_EXT), 'application/json']);
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -33,7 +34,9 @@ fs.mkdirSync(DATA, { recursive: true });
 // un SVG aperto da solo non deve poter eseguire niente (anche se è già stato ripulito)
 const CSP_SVG = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox";
 const send = (res, code, body, type = 'text/plain; charset=utf-8') => {
-  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...(type === 'image/svg+xml' ? { 'Content-Security-Policy': CSP_SVG } : {}) });
+  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+    ...(type === 'image/svg+xml' ? { 'Content-Security-Policy': CSP_SVG } : {}),
+    ...(type.startsWith('text/html') ? intestazioniPagina(body, { youtube: true }) : {}) });
   res.end(body);
 };
 const json = (res, code, obj) => send(res, code, JSON.stringify(obj), MIME['.json']);

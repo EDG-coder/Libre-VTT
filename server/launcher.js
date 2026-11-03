@@ -10,6 +10,7 @@ const http = require('http'), https = require('https'), fs = require('fs'), os =
 const path = require('path'), crypto = require('crypto'), { spawn, execFile } = require('child_process');
 const { EventEmitter } = require('events'), { PassThrough } = require('stream');
 const { creaZip, estraiZip } = require('./zip');
+const { intestazioniPagina } = require('./csp');
 
 const ROOT = path.join(__dirname, '..');                      // la cartella del programma
 const WEB = path.join(ROOT, 'web');                           // le pagine
@@ -1514,7 +1515,8 @@ const origineLocale = o => !o || /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):\d+
 
 // ---------- il piccolo server della finestra ----------
 const invia = (res, code, body, type = 'text/plain; charset=utf-8') => {
-  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' });
+  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+    ...(type.startsWith('text/html') ? intestazioniPagina(body) : {}) });
   res.end(body);
 };
 // Contro il «DNS rebinding»: un sito aperto nel browser potrebbe far puntare il suo nome a

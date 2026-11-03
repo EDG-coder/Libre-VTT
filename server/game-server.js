@@ -43,6 +43,7 @@ const saveAssetIndex = () => { try { fs.writeFileSync(path.join(DATA, 'assets.js
 const assetFile = h => assetIndex[h] ? path.join(ASSETS, h + assetIndex[h].ext) : null;
 const haveAsset = h => { const f = assetFile(h); return !!(f && fs.existsSync(f)); };
 const SVG = require('../condiviso/svg-pulito.js');
+const { intestazioniPagina } = require('./csp.js');
 // I soli tipi che il deposito accetta: immagini e (per il compendio del master) JSON. Qualsiasi altro
 // (text/html, application/javascript...) servito da 127.0.0.1 girerebbe con i permessi del tavolo.
 const mimeAmmesso = m => { const t = String(m || '').toLowerCase().split(';')[0].trim(); return MIME_EXT[t] ? t : null; };
@@ -1800,7 +1801,8 @@ function readBody(req, res, fn) {
   });
 }
 const sendHttp = (res, code, body, type = 'text/plain; charset=utf-8') => {
-  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' });
+  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+    ...(type.startsWith('text/html') ? intestazioniPagina(body) : {}) });
   res.end(body);
 };
 // Contro il «DNS rebinding»: un sito aperto nel browser potrebbe far puntare il suo nome a
