@@ -67,6 +67,9 @@ final class Ponte {
         try {
             JSONObject m = new JSONObject(json);
             id = m.optInt("id", -1);
+            // il ponte risponde solo alle nostre pagine (127.0.0.1), mai a una pagina di fuori
+            String qui = web.getUrl();
+            if (qui == null || !MainActivity.locale(Uri.parse(qui))) { Log.w(Motore.TAG, "Ponte chiamato da fuori: " + qui); rispondi(id, null); return; }
             String cmd = m.optString("cmd");
             switch (cmd) {
                 case "importa":
@@ -486,7 +489,8 @@ final class Ponte {
      */
     private void scaricaApk(final int id, final String indirizzo, String nome, final long attesi) {
         final String pulito = nome == null ? "" : nome.replaceAll("[^A-Za-z0-9._-]", "_");
-        if (!indirizzo.startsWith("https://") || !pulito.endsWith(".apk")) { rispondi(id, errore("Indirizzo dell'aggiornamento non valido.")); return; }
+        // solo gli APK delle release su GitHub (il resto non è un aggiornamento nostro)
+        if (!indirizzo.matches("^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/releases/download/[^\\s]+$") || !pulito.endsWith(".apk")) { rispondi(id, errore("Indirizzo dell'aggiornamento non valido.")); return; }
         new Thread(new Runnable() {
             @Override public void run() {
                 File cartella = new File(Motore.utente, "aggiornamenti");
