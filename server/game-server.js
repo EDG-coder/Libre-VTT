@@ -899,6 +899,7 @@ function handleIntent(c, m) {
       if (!p.revealFog) return deny(c, m.op, 'solo chi conduce può toccare la nebbia');
       const id = str(m.scene, 60);
       if (!findScene(id)) return deny(c, m.op, 'scena sconosciuta');
+      if (m.fog && JSON.stringify(m.fog).length > 4 * 1024 * 1024) return deny(c, m.op, 'nebbia troppo grande');
       world.fog[id] = m.fog || null;
       scheduleSave(); schedulePush();
       return;
@@ -1100,6 +1101,9 @@ function handleIntent(c, m) {
       }
       const chunk = Buffer.from(String(m.data || ''), 'base64');
       job.got += chunk.length;
+      // in tutto, un giocatore carica al massimo 300 MB per collegamento: il disco del master non è infinito
+      c.caricati = (c.caricati || 0) + chunk.length;
+      if (c.role !== 'master' && c.caricati > 300 * 1024 * 1024) { box.delete(id); return deny(c, m.op, 'hai caricato troppe immagini per questa sessione'); }
       if (job.got > MAX_ASSET) { box.delete(id); return deny(c, m.op, 'immagine troppo grande (max 12 MB)'); }
       job.parts.push(chunk);
       if (!m.last) return;
@@ -1253,12 +1257,35 @@ function detach(c) {
   sendPlayers();
 }
 
+/** Un secchio di gettoni: `max` al massimo, `alSecondo` che tornano ogni secondo. false = vuoto. */
+function consuma(c, quale, max, alSecondo) {
+  const b = ((c.secchi ||= {})[quale] ||= { n: max, t: Date.now() });
+  const ora = Date.now();
+  b.n = Math.min(max, b.n + (ora - b.t) / 1000 * alSecondo); b.t = ora;
+  if (b.n < 1) return false;
+  b.n -= 1;
+  return true;
+}
+function troppeRichieste(c, op) {
+  if (Date.now() - (c.avvisatoFretta || 0) < 10000) return;      // un avviso ogni 10 secondi basta
+  c.avvisatoFretta = Date.now();
+  deny(c, op, 'troppe richieste tutte insieme: rallenta un momento');
+  logAction(c, op, false, 'troppe richieste');
+}
+
 function onMessage(c, raw) {
   let m;
   try { m = JSON.parse(raw); } catch { return; }
   if (!m || typeof m !== 'object') return;
 
-  if (m.t === 'peer') { c.peer = str(m.id, 80); c.percorso = percorsoDi(c.peer); return; }   // riga scritta da uffa-link
+  // riga scritta da uffa-link: la prima di ogni collegamento dal tubo, una volta sola. Dopo, o da un
+  // browser, è qualcuno che vuole farsi passare per un altro: la si ignora.
+  if (m.t === 'peer') {
+    if (c.kind === 'link' && !c.giaParlato && /^[a-z0-9]{8,80}$/i.test(String(m.id || ''))) { c.peer = String(m.id); c.percorso = percorsoDi(c.peer); }
+    c.giaParlato = true;
+    return;
+  }
+  c.giaParlato = true;
   // «Com'è la campagna?» dal riquadro di «Mi unisco» di un giocatore (prima di salutare, poi se ne va).
   // Si risponde solo a chi è del tavolo: agli altri non si dice niente.
   if (m.t === 'stato' && !c.token && c.kind === 'link') { c.send(statoPerRiquadro(m)); setTimeout(() => c.close(), 200); return; }
@@ -1337,6 +1364,7 @@ function onMessage(c, raw) {
 
   // Le richieste di file arrivano dal ponte del giocatore, non da una persona: non aspettano il saluto.
   if (m.t === 'intent' && (m.op === 'asset.get' || m.op === 'asset.have')) {
+    if (c.kind === 'link' && !consuma(c, 'file', 400, 40)) return;   // un ponte che chiede file a raffica aspetta
     try { handleIntent(c, m); } catch (e) { console.error('intento', m.op, e.message); }
     return;
   }
@@ -1359,6 +1387,11 @@ function onMessage(c, raw) {
   if (m.t === 'intent') {
     // Con il suo numero (q) l'intento si fa una volta sola: il browser lo rimanda finché non ha la conferma
     // («ok»), quindi dopo una caduta (o arrivato da due strade) può arrivare di nuovo.
+    // Un giocatore non può sommergere il tavolo: un secchio di gettoni per collegamento (i pezzi delle
+    // immagini hanno già i loro limiti), più stretto per chat e dadi. Quello scartato non riceve «ok»:
+    // il browser lo rimanda più tardi da solo.
+    if (c.role !== 'master' && m.op !== 'asset.put' && !consuma(c, 'tutto', 600, 60)) return troppeRichieste(c, m.op);
+    if (c.role !== 'master' && ['chat', 'rule', 'roll', 'roll.prov', 'ping'].includes(m.op) && !consuma(c, 'parole', 20, 4)) return troppeRichieste(c, m.op);
     const q = typeof m.q === 'string' && m.q.length <= 40 ? m.q : null;
     if (q && giaFatto(c.token, q)) { sendA(c, { t: 'ok', q }); return; }
     const rec = recOf(c.token);
@@ -1534,7 +1567,7 @@ function startLinkServer() {
     attach(c);
     sock.on('data', d => {
       buf += d.toString('utf8');
-      if (buf.length > 4 * 1024 * 1024) { sock.destroy(); return; }
+      if (buf.length > 2 * 1024 * 1024) { sock.destroy(); return; }   // una riga di un giocatore non arriva a tanto
       let i;
       while ((i = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, i); buf = buf.slice(i + 1);
@@ -1986,7 +2019,7 @@ function httpHandler(req, res) {
   }
   if (url.pathname === '/api/kick' && req.method === 'POST') {
     let body = '';
-    req.on('data', d => { body += d; });
+    req.on('data', d => { body += d; if (body.length > 20000) req.destroy(); });
     req.on('end', () => {
       let m; try { m = JSON.parse(body); } catch { return sendHttp(res, 400, 'dati non validi'); }
       for (const c of [...clients]) if (c.token === m.token) { c.send({ t: 'bye', reason: 'allontanato dal master' }); c.close(); }
