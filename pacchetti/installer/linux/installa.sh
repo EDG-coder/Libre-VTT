@@ -94,7 +94,11 @@ node_ok() { [ -x "$1" ] && v="$("$1" -v 2>/dev/null)" && [ "$(echo "${v#v}" | cu
 case "$(uname -m)" in
   x86_64|amd64) ARCH=x64 ;;
   aarch64|arm64) ARCH=arm64 ;;
-  *) errore "Questo computer ($(uname -m)) non è tra quelli su cui gira LIBRE VTT (serve un PC a 64 bit Intel/AMD o ARM)." ;;
+  riscv64) ARCH=riscv64
+           # nodejs.org non fa Node per RISC-V: lo fanno le «unofficial builds» dello stesso progetto
+           # (lì non c'è «latest-v22.x»: la versione si cerca nell'elenco, più sotto, solo se serve)
+           [ -n "$MYVTT_NODE_DIST" ] || DIST_RISCV=1 ;;
+  *) errore "Questo computer ($(uname -m)) non è tra quelli su cui gira LIBRE VTT (serve un PC a 64 bit Intel/AMD, ARM o RISC-V)." ;;
 esac
 RIGA=$(awk '/^__ARCHIVIO_QUI_SOTTO__$/ { print NR + 1; exit }' "$SELF")
 [ -n "$RIGA" ] || errore "Questo file di installazione è incompleto: scaricalo di nuovo."
@@ -143,6 +147,13 @@ elif node_ok "$DEST/runtime/node/bin/node"; then
   passo 25 "Node.js c'è già (quello di LIBRE VTT): lo tengo."
 else
   passo 15 "Scarico Node.js da nodejs.org…"
+  if [ -n "$DIST_RISCV" ]; then
+    U="https://unofficial-builds.nodejs.org/download/release"
+    scarica "$U/index.json" "$TMP/index.json" || errore "Non riesco a raggiungere nodejs.org. Controlla la connessione a internet e riprova."
+    V="$(tr '}' '\n' < "$TMP/index.json" | grep '"version":"v22\.' | grep '"linux-riscv64"' | head -1 | sed -E 's/.*"version":"(v[0-9.]+)".*/\1/')"
+    [ -n "$V" ] || errore "Sul sito di Node non trovo la versione per questo computer."
+    DIST="$U/$V"
+  fi
   scarica "$DIST/SHASUMS256.txt" "$TMP/SHASUMS256.txt" || errore "Non riesco a raggiungere nodejs.org. Controlla la connessione a internet e riprova."
   F="$(grep -oE "node-v[0-9]+\.[0-9]+\.[0-9]+-linux-$ARCH\.tar\.gz" "$TMP/SHASUMS256.txt" | head -1)"
   [ -n "$F" ] || errore "Sul sito di Node non trovo la versione per questo computer."

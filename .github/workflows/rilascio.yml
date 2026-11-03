@@ -1,7 +1,7 @@
 # Costruisce tutto quello che serve per distribuire LIBRE VTT e lo pubblica come «release».
 #
-#   - il collegamento a distanza (uffa-link) già compilato per Windows, Linux (x64 e ARM,
-#     statico: gira su qualsiasi distribuzione) e Mac (Apple Silicon + Intel in un file solo);
+#   - il collegamento a distanza (uffa-link) già compilato per Windows (x64 e ARM), Linux (x64, ARM e
+#     RISC-V, statico: gira su qualsiasi distribuzione) e Mac (Apple Silicon + Intel in un file solo);
 #     l'app lo scarica da qui (rilascio.json), invece di doverlo compilare sul computer di chi gioca
 #   - LIBRE-VTT-Setup.exe (Windows), Installa-LIBRE-VTT-Linux.sh, Installa-LIBRE-VTT-Windows.cmd e
 #     LIBRE-VTT.dmg: con dentro anche Node e il collegamento, quindi non scaricano niente.
@@ -35,14 +35,16 @@ jobs:
       matrix:
         include:
           - { nome: windows-x64, os: windows-latest, target: x86_64-pc-windows-msvc, file: uffa-link.exe, asset: uffa-link-windows-x64.exe, zig: false }
+          - { nome: windows-arm64, os: windows-latest, target: aarch64-pc-windows-msvc, file: uffa-link.exe, asset: uffa-link-windows-arm64.exe, zig: false }
           - { nome: linux-x64, os: ubuntu-latest, target: x86_64-unknown-linux-musl, file: uffa-link, asset: uffa-link-linux-x64, zig: true }
           - { nome: linux-arm64, os: ubuntu-latest, target: aarch64-unknown-linux-musl, file: uffa-link, asset: uffa-link-linux-arm64, zig: true }
+          - { nome: linux-riscv64, os: ubuntu-latest, target: riscv64gc-unknown-linux-musl, file: uffa-link, asset: uffa-link-linux-riscv64, zig: true }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Rust
         shell: bash
         run: rustup update stable && rustup default stable && rustup target add ${{ matrix.target }}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         if: matrix.zig
         with:
           python-version: '3.12'
@@ -58,7 +60,7 @@ jobs:
           mkdir -p ../../out
           cp "target/${{ matrix.target }}/release/${{ matrix.file }}" "../../out/${{ matrix.asset }}"
           cd ../../out && sha256sum "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256" && cat "${{ matrix.asset }}.sha256"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: link-${{ matrix.nome }}
           path: out/*
@@ -67,7 +69,7 @@ jobs:
     name: Mac (collegamento universale e .dmg)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Compila per Apple Silicon e Intel
         working-directory: pacchetti/uffa-link
         run: |
@@ -85,11 +87,11 @@ jobs:
           MYVTT_REPO: ${{ github.repository }}
           MYVTT_LINK: ${{ github.workspace }}/out/uffa-link-macos-universal
         run: bash pacchetti/mac/crea-dmg.sh "$PWD/dmg/LIBRE-VTT.dmg"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: link-macos-universal
           path: out/*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dmg
           path: dmg/LIBRE-VTT.dmg
@@ -99,37 +101,45 @@ jobs:
     needs: collegamento
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: link-*
           path: link
           merge-multiple: true
       - name: Node per Linux e Windows (controllato)
         run: |
-          D=https://nodejs.org/dist/latest-v22.x
-          curl -fsSL "$D/SHASUMS256.txt" -o SHASUMS256.txt
-          for f in linux-x64.tar.gz linux-arm64.tar.gz win-x64.zip; do
-            n=$(grep -oE "node-v[0-9]+\.[0-9]+\.[0-9]+-$f" SHASUMS256.txt | head -1)
-            curl -fsSL "$D/$n" -o "$n"
+          prendi() {   # $1 = sito, $2 = file (es. linux-x64.tar.gz)
+            curl -fsSL "$1/SHASUMS256.txt" -o SHASUMS256.txt
+            n=$(grep -oE "node-v[0-9]+\.[0-9]+\.[0-9]+-$2" SHASUMS256.txt | head -1)
+            [ -n "$n" ] || { echo "::error::Node $2 non trovato su $1"; exit 1; }
+            curl -fsSL "$1/$n" -o "$n"
             grep "  $n\$" SHASUMS256.txt | sha256sum -c -
-            k=$(echo "${f%%.*}" | tr 'a-z-' 'A-Z_')      # linux-x64 → LINUX_X64
+            k=$(echo "${2%%.*}" | tr 'a-z-' 'A-Z_')      # linux-x64 → LINUX_X64
             echo "NODE_$k=$n" >> "$GITHUB_ENV"
-          done
+          }
+          for f in linux-x64.tar.gz linux-arm64.tar.gz win-x64.zip win-arm64.zip; do prendi https://nodejs.org/dist/latest-v22.x "$f"; done
+          # per RISC-V Node lo fa il progetto Node stesso, ma tra le «unofficial builds»
+          # (lì non c'è «latest-v22.x»: si cerca nell'elenco l'ultima 22 che ha il file per RISC-V)
+          U=https://unofficial-builds.nodejs.org/download/release
+          V=$(curl -fsSL "$U/index.json" | tr "}" "\n" | grep '"version":"v22\.' | grep '"linux-riscv64"' | head -1 | sed -E 's/.*"version":"(v[0-9.]+)".*/\1/')
+          [ -n "$V" ] || { echo "::error::Node 22 per RISC-V non trovato su $U"; exit 1; }
+          prendi "$U/$V" linux-riscv64.tar.gz
       - name: Crea gli installatori
         run: |
           python3 pacchetti/installer/crea-installer.py out \
-            --node-linux-x64 "$NODE_LINUX_X64" --node-linux-arm64 "$NODE_LINUX_ARM64" --node-win-x64 "$NODE_WIN_X64" \
-            --link-linux-x64 link/uffa-link-linux-x64 --link-linux-arm64 link/uffa-link-linux-arm64 \
-            --link-win-x64 link/uffa-link-windows-x64.exe \
+            --node-linux-x64 "$NODE_LINUX_X64" --node-linux-arm64 "$NODE_LINUX_ARM64" --node-linux-riscv64 "$NODE_LINUX_RISCV64" \
+            --node-win-x64 "$NODE_WIN_X64" --node-win-arm64 "$NODE_WIN_ARM64" \
+            --link-linux-x64 link/uffa-link-linux-x64 --link-linux-arm64 link/uffa-link-linux-arm64 --link-linux-riscv64 link/uffa-link-linux-riscv64 \
+            --link-win-x64 link/uffa-link-windows-x64.exe --link-win-arm64 link/uffa-link-windows-arm64.exe \
             --repo "${{ github.repository }}" --stage-windows pacchetti/installer/windows/stage
           mv "out/Installa LIBRE VTT.cmd" out/Installa-LIBRE-VTT-Windows.cmd
           ls -la out
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: installatori
           path: out/*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: stage-windows
           path: pacchetti/installer/windows/stage
@@ -139,8 +149,8 @@ jobs:
     needs: installatori
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: stage-windows
           path: pacchetti/installer/windows/stage
@@ -153,7 +163,7 @@ jobs:
           if ($v -notmatch '^\d') { $v = '0.0.0' }
           & $iscc "/DVersione=$v" pacchetti\installer\windows\myvtt.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: setup-exe
           path: installatori/LIBRE-VTT-Setup.exe
@@ -162,14 +172,14 @@ jobs:
     name: App
     uses: ./.github/workflows/app.yml
     with:
-      versione: ${{ inputs.versione || github.ref_name }}
+      versione: ${{ inputs.versione || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || '' }}
     secrets: inherit
 
   controlla:
     name: Versione in package.json
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: La versione da pubblicare è quella scritta nel programma?
         env:
           TAG: ${{ inputs.versione || github.ref_name }}
@@ -187,8 +197,8 @@ jobs:
     needs: [controlla, collegamento, mac, installatori, setup-exe, app]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: tutto
       - name: Carica i file nella release
@@ -200,6 +210,8 @@ jobs:
           # le note: prima le novità di questa versione (le mostra anche l'avviso di aggiornamento dell'app), poi quale file scaricare
           { [ -f .github/novita.md ] && cat .github/novita.md && echo; cat .github/note-rilascio.md; } > note.md
           cp tutto/link-*/* tutto/installatori/* tutto/setup-exe/* tutto/dmg/* tutto/app-android/* tutto/app-ios/* file/
+          # le impronte di tutti i file: l'app controlla quella dell'aggiornamento prima di aprirlo
+          (cd file && sha256sum $(ls | grep -v '\.sha256$') > SHA256SUMS.txt && cat SHA256SUMS.txt)
           ls -la file
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" file/* --clobber --repo "$GITHUB_REPOSITORY"

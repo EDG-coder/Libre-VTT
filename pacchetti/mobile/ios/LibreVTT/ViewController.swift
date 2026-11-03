@@ -283,6 +283,9 @@ final class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate
     // MARK: - il ponte con la pagina (nativo.js)
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        // solo la pagina principale di LIBRE VTT (127.0.0.1), mai un riquadro come quello di YouTube
+        guard message.frameInfo.isMainFrame, message.frameInfo.securityOrigin.protocol == "http",
+              ["127.0.0.1", "localhost"].contains(message.frameInfo.securityOrigin.host) else { return }
         guard let s = message.body as? String, let d = s.data(using: .utf8),
               let m = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] else { return }
         let id = (m["id"] as? NSNumber)?.intValue ?? -1

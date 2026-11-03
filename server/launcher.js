@@ -10,6 +10,7 @@ const http = require('http'), https = require('https'), fs = require('fs'), os =
 const path = require('path'), crypto = require('crypto'), { spawn, execFile } = require('child_process');
 const { EventEmitter } = require('events'), { PassThrough } = require('stream');
 const { creaZip, estraiZip } = require('./zip');
+const { intestazioniPagina } = require('./csp');
 
 const ROOT = path.join(__dirname, '..');                      // la cartella del programma
 const WEB = path.join(ROOT, 'web');                           // le pagine
@@ -77,9 +78,11 @@ const LINK_CANDIDATES = [
   ...(VECCHIA ? [path.join(VECCHIA, 'pacchetti', 'uffa-link', 'target', 'release', 'uffa-link' + EXE), path.join(VECCHIA, 'uffa-link', 'target', 'release', 'uffa-link' + EXE)] : [])
 ];
 const linkBin = () => LINK_CANDIDATES.find(p => fs.existsSync(p)) || null;
-const ARCH = process.arch === 'arm64' ? 'arm64' : 'x64';
-const PIATTAFORMA = WIN ? 'windows-x64' : MAC ? 'macos-universal' : `linux-${ARCH}`;   // Windows ARM usa quello x64
-const LINK_ASSET = `uffa-link-${PIATTAFORMA}${EXE}`;                                       // il nome nelle uscite su GitHub
+const ARCH = process.arch === 'arm64' ? 'arm64' : process.arch === 'riscv64' ? 'riscv64' : 'x64';
+const PIATTAFORMA = WIN ? `windows-${ARCH === 'arm64' ? 'arm64' : 'x64'}` : MAC ? 'macos-universal' : `linux-${ARCH}`;
+// i nomi nelle uscite su GitHub, il primo è quello giusto; Windows ARM, se la release non ha ancora il
+// suo (quelle prima della 3.7.9), usa quello x64, che Windows 11 fa girare emulato
+const LINK_ASSETS = [`uffa-link-${PIATTAFORMA}${EXE}`, ...(WIN && ARCH === 'arm64' ? [`uffa-link-windows-x64${EXE}`] : [])];
 // il profilo della finestra (lingua della pagina, permessi, cache) sta con le preferenze: la cartella temporanea macOS la svuota
 const PROFILE = path.join(USERDIR, 'finestra');
 
@@ -265,6 +268,9 @@ function lancia(cmd, args, opts) {
 // opts.keep: se si ferma da solo mentre si gioca, lo si riaccende (con un po' d'attesa che
 // cresce se continua a cadere). Si spegne davvero solo con «ferma» o chiudendo la finestra.
 let gen = 0;                                                   // cambia a ogni avvio/spegnimento
+// Le righe «@@LIBRE …» del server di gioco valgono solo con questa parola segreta: un nome o un
+// messaggio arrivato dalla rete e scritto nel registro non può fingersi una sua richiesta.
+const CANALE_REGOLE = crypto.randomBytes(16).toString('hex');
 const restarts = {};
 function run(key, cmd, args, opts = {}) {
   const myGen = gen, born = Date.now();
@@ -272,8 +278,9 @@ function run(key, cmd, args, opts = {}) {
   state.procs[key] = p;
   const pipe = (s, kind) => s.on('data', d => String(d).split(/\r?\n/).forEach(l => {
     if (!l.trim()) return;
-    const cmd = key === 'regole' && /^@@LIBRE ([\w-]+) (.*)$/.exec(l);    // una richiesta del server di gioco (vedi avviatore())
-    if (cmd) { try { dalServerDiGioco(cmd[1], JSON.parse(cmd[2] || '{}')); } catch (e) { say('Richiesta del server di gioco non valida: ' + e.message, 'warn'); } return; }
+    const cmd = key === 'regole' && kind === '' && /^@@LIBRE ([a-f0-9]{32}) ([\w-]+) (.*)$/.exec(l);    // una richiesta del server di gioco (vedi avviatore())
+    if (cmd && cmd[1] !== CANALE_REGOLE) return;                // una riga che si finge sua: la si ignora
+    if (cmd) { try { dalServerDiGioco(cmd[2], JSON.parse(cmd[3] || '{}')); } catch (e) { say('Richiesta del server di gioco non valida: ' + e.message, 'warn'); } return; }
     const m = l.match(/^\s{6}([a-z0-9]{40,})\s*$/i);          // l'ID stampato da uffa-link
     // nel registro della finestra: niente istruzioni da terminale, e l'ID accorciato (quello intero è nel riquadro «Codice»)
     const daTerminale = /Ctrl\+C|uffa-link\/target|Ora avvia anche|uffa-link (host|join)\b|Il VTT si collega a ws:/.test(l);
@@ -324,7 +331,8 @@ function invitoCampagna(dir, nuova) {
   const f = path.join(dir, 'data', 'invito.chiave');
   let chiave = null;
   if (!nuova) try { const t = fs.readFileSync(f, 'utf8').trim(); if (/^[a-f0-9]{64}$/.test(t)) chiave = t; } catch {}
-  if (!chiave) { chiave = crypto.randomBytes(32).toString('hex'); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, chiave); }
+  if (!chiave) { chiave = crypto.randomBytes(32).toString('hex'); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, chiave, { mode: 0o600 }); }
+  try { fs.chmodSync(f, 0o600); } catch {}                // la chiave la legge solo chi usa questo account
   const codice = idDaChiave(chiave);
   try {
     const mf = path.join(dir, 'campagna.json'), meta = leggiJson(mf);
@@ -343,12 +351,12 @@ async function cambiaCodice() {
     say('Codice nuovo: lo mando ai giocatori collegati e riapro la sessione.', 'ok');
     try {
       await new Promise((res, rej) => {
-        const r = http.request({ host: '127.0.0.1', port: state.porte.game, path: '/api/invito', method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 4000 }, x => { x.resume(); x.on('end', res); });
+        const r = http.request({ host: '127.0.0.1', port: state.porte.game, path: '/api/invito', method: 'POST', headers: { 'Content-Type': 'application/json', ...(SEGRETO ? { Cookie: 'libre_k=' + encodeURIComponent(SEGRETO) } : {}) }, timeout: 4000 }, x => { x.resume(); x.on('end', res); });
         r.on('error', rej); r.on('timeout', () => r.destroy(new Error('tempo scaduto'))); r.end(JSON.stringify({ codice: inv.codice }));
       });
     } catch (e) { say('Non sono riuscito ad avvisare i giocatori collegati: ' + e.message, 'warn'); }
     await attesa(2500);                                   // il tempo di far arrivare il messaggio
-    fs.writeFileSync(LINK_CHIAVE_FILE, inv.chiave);
+    fs.writeFileSync(LINK_CHIAVE_FILE, inv.chiave, { mode: 0o600 }); try { fs.chmodSync(LINK_CHIAVE_FILE, 0o600); } catch {}
     const p = state.procs.sessione;
     if (p) { try { p.kill(); } catch {} }                 // si riaccende da solo, con la chiave nuova
     return { codice: inv.codice };
@@ -902,14 +910,14 @@ async function avvia(mode, id, campagna) {
   salvaConf();
   state.porte = { web: WEB_PORT, game: GAME_PORT, link: LINK_PORT };
 
-  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP, MYVTT_PREDEFINITE: PREDEFINITE, MYVTT_CAMP_HOME: CAMP_HOME }, keep: true });
+  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP, MYVTT_PREDEFINITE: PREDEFINITE, MYVTT_CAMP_HOME: CAMP_HOME, LIBRE_SEGRETO: SEGRETO }, keep: true });
   if (!await aspettaPorta(WEB_PORT)) return fallisci('Il tavolo non si è acceso.');
 
   if (mode !== 'solo') {
     const extra = {};
     if (mode === 'host') {
       // la chiave della campagna: con lei il codice resta lo stesso a ogni apertura
-      try { const inv = invitoCampagna(CAMP); fs.writeFileSync(LINK_CHIAVE_FILE, inv.chiave); } catch (e) { say('Il codice d\'invito non si potrà tenere fisso: ' + e.message, 'warn'); }
+      try { const inv = invitoCampagna(CAMP); fs.writeFileSync(LINK_CHIAVE_FILE, inv.chiave, { mode: 0o600 }); try { fs.chmodSync(LINK_CHIAVE_FILE, 0o600); } catch {} } catch (e) { say('Il codice d\'invito non si potrà tenere fisso: ' + e.message, 'warn'); }
       extra.CAMPAGNA_NOME = state.campagna ? state.campagna.nome : '';
     } else {
       try { fs.unlinkSync(LINK_CHIAVE_FILE); } catch {}
@@ -919,7 +927,7 @@ async function avvia(mode, id, campagna) {
       if (state.joinCodice) ricordaUnita(state.joinCodice, {});
     }
     run('regole', NODE, [path.join('server', 'game-server.js'), mode === 'host' ? 'host' : 'join'],
-      { env: { PORT: String(GAME_PORT), LINK_PORT: String(LINK_PORT), DATA_DIR: path.join(CAMP, 'data'), LINK_ID_FILE, ...extra }, keep: true });
+      { env: { PORT: String(GAME_PORT), LINK_PORT: String(LINK_PORT), DATA_DIR: path.join(CAMP, 'data'), LINK_ID_FILE, LIBRE_CANALE: CANALE_REGOLE, LIBRE_SEGRETO: SEGRETO, ...extra }, keep: true });
     if (!await aspettaPorta(GAME_PORT)) return fallisci('Il server di gioco non si è acceso.');
 
     if (MOBILE ? !LINK_CTRL : !linkBin()) return fallisci(MOBILE ? 'Il collegamento a distanza dell\'app non è partito: chiudi l\'app e riaprila.' : 'Manca il collegamento a distanza: premi «Prepara» e riprova.');
@@ -954,7 +962,11 @@ function scarica(url, dest, etichetta) {
     const fine = v => { if (!finito) { finito = true; resolve(v); } };
     const req = (url.startsWith('http:') ? http : https).get(url, { headers: { 'User-Agent': 'LIBRE-VTT' } }, r => {
       if (r.statusCode >= 300 && r.statusCode < 400 && r.headers.location) {
-        r.resume(); return fine(scarica(new URL(r.headers.location, url).href, dest, etichetta));
+        r.resume();
+        const dopo = new URL(r.headers.location, url);
+        // da https non si scende mai a http (lì chiunque sulla rete potrebbe cambiare il file)
+        if (url.startsWith('https:') && dopo.protocol !== 'https:') { ultimoErroreRete = 'rimando non sicuro verso ' + dopo.protocol; return fine(false); }
+        return fine(scarica(dopo.href, dest, etichetta));
       }
       if (r.statusCode !== 200) { ultimoErroreRete = `HTTP ${r.statusCode} da ${new URL(url).host}`; r.resume(); return fine(false); }
       const tot = +r.headers['content-length'] || 0;
@@ -999,7 +1011,11 @@ async function scaricaPronto() {
   if (!base) return false;
   say(`Cerco il collegamento già pronto per questo computer (${PIATTAFORMA})…`);
   state.busy = 'Cerco il collegamento già pronto…'; push();
-  const atteso = primaImpronta(await scaricaTesto(`${base}/${LINK_ASSET}.sha256`));
+  let LINK_ASSET = null, atteso = null;
+  for (const nome of LINK_ASSETS) {
+    atteso = primaImpronta(await scaricaTesto(`${base}/${nome}.sha256`));
+    if (atteso) { LINK_ASSET = nome; break; }
+  }
   if (!atteso) { say('Non c\'è una versione già pronta per questo computer: la costruisco io.', 'warn'); return false; }
   fs.mkdirSync(path.dirname(LINK_SCARICATO), { recursive: true });
   const tmp = LINK_SCARICATO + '.part';
@@ -1037,7 +1053,9 @@ function fileAggiornamento(assets) {
     : WIN ? ['LIBRE-VTT-Setup.exe', 'Installa-LIBRE-VTT-Windows.cmd'] : MAC ? ['LIBRE-VTT.dmg'] : ['Installa-LIBRE-VTT-Linux.sh'];
   for (const n of nomi) {
     const a = assets.find(x => x && x.name === n);
-    if (a && a.browser_download_url) return { nome: a.name, url: a.browser_download_url, byte: a.size || 0 };
+    // SHA256SUMS.txt: le impronte di tutti i file della release (dalla 3.7.9): il file scaricato deve tornare
+    const somme = assets.find(x => x && x.name === 'SHA256SUMS.txt');
+    if (a && a.browser_download_url) return { nome: a.name, url: a.browser_download_url, byte: a.size || 0, somme: somme ? somme.browser_download_url : null };
   }
   return null;
 }
@@ -1160,6 +1178,16 @@ async function installaAggiornamento() {
       try { fs.unlinkSync(tmp); } catch {}
       return { errore: 'Lo scaricamento non è andato a buon fine: riprova.' };
     }
+    if (a.file.somme) {
+      const testo = await scaricaTesto(a.file.somme);
+      const riga = String(testo || '').split(/\r?\n/).find(r => r.trim().endsWith(' ' + a.file.nome) || r.trim().endsWith('*' + a.file.nome));
+      const atteso = primaImpronta(riga);
+      if (!atteso || atteso !== await sha256File(tmp)) {
+        try { fs.unlinkSync(tmp); } catch {}
+        say('Il file dell\'aggiornamento non corrisponde all\'impronta pubblicata: non lo apro.', 'bad');
+        return { errore: 'Il file scaricato non corrisponde a quello pubblicato: riprova più tardi.' };
+      }
+    }
     try { fs.unlinkSync(dest); } catch {}
     fs.renameSync(tmp, dest);
     say(`Scaricato: ${dest}`, 'ok');
@@ -1183,7 +1211,9 @@ async function installaAggiornamento() {
 }
 
 // --- 3. costruito qui, con strumenti privati ---
-const ARCH_CPU = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
+// il processore come lo chiamano Rust e Zig (RISC-V: «riscv64gc» per Rust, «riscv64» per Zig)
+const ARCH_CPU = process.arch === 'arm64' ? 'aarch64' : process.arch === 'riscv64' ? 'riscv64gc' : 'x86_64';
+const ZIG_CPU = ARCH_CPU === 'riscv64gc' ? 'riscv64' : ARCH_CPU;
 async function rustPrivato() {
   if (cargoPath()) return cargoPath();
   // il programma di installazione di Rust (su Windows sempre quello x64: gira anche sui PC ARM)
@@ -1212,7 +1242,7 @@ async function zigPrivato() {
   if (trova()) return trova();
   say('Scarico Zig, che fa da compilatore C (al posto di Visual Studio o build-essential)…');
   let idx = null; try { idx = JSON.parse(await scaricaTesto(process.env.MYVTT_ZIG_INDEX || 'https://ziglang.org/download/index.json') || 'null'); } catch {}
-  const chiave = `${ARCH_CPU}-${WIN ? 'windows' : MAC ? 'macos' : 'linux'}`;
+  const chiave = `${WIN ? 'x86_64' : ZIG_CPU}-${WIN ? 'windows' : MAC ? 'macos' : 'linux'}`;   // su Windows tutto gira come x64 (anche sui PC ARM)
   const ver = idx && (idx[ZIG_PREFERITO] && idx[ZIG_PREFERITO][chiave] ? ZIG_PREFERITO : Object.keys(idx).find(k => /^\d+\.\d+\.\d+$/.test(k) && idx[k][chiave]));
   const voce = ver && idx[ver][chiave];
   if (!voce || !voce.tarball) ferma('Non riesco a trovare Zig per questo computer: controlla la connessione e riprova.');
@@ -1233,7 +1263,8 @@ function wrapperZig(zig) {
   const W = path.join(TOOLS, 'wrap');
   fs.mkdirSync(W, { recursive: true });
   const js = path.join(__dirname, 'zigwrap.js');
-  const target = WIN ? 'x86_64-windows-gnu' : `${ARCH_CPU}-linux-gnu.2.17`;
+  // glibc 2.17 per girare anche su distribuzioni vecchie; RISC-V c'è solo dalla 2.27
+  const target = WIN ? 'x86_64-windows-gnu' : ZIG_CPU === 'riscv64' ? 'riscv64-linux-gnu.2.27' : `${ZIG_CPU}-linux-gnu.2.17`;
   const fai = (nome, modo) => {
     if (WIN) {
       const f = path.join(W, nome + '.cmd');
@@ -1405,7 +1436,8 @@ function apriFuori(url) {
     if (url) lancia('open', [url]);
     return;
   }
-  if (url) return WIN ? lancia('cmd', ['/c', 'start', '', url]) : lancia('xdg-open', [url]);
+  // su Windows niente «cmd /c start»: per cmd «&», «|» e «^» dentro l'indirizzo sono comandi
+  if (url) return WIN ? lancia('rundll32', ['url.dll,FileProtocolHandler', url]) : lancia('xdg-open', [url]);
   if (b) lancia(b, []);
 }
 
@@ -1514,7 +1546,8 @@ const origineLocale = o => !o || /^http:\/\/(127\.0\.0\.1|localhost|\[::1\]):\d+
 
 // ---------- il piccolo server della finestra ----------
 const invia = (res, code, body, type = 'text/plain; charset=utf-8') => {
-  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' });
+  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+    ...(type.startsWith('text/html') ? intestazioniPagina(body) : {}) });
   res.end(body);
 };
 // Contro il «DNS rebinding»: un sito aperto nel browser potrebbe far puntare il suo nome a
@@ -1587,7 +1620,8 @@ const server = http.createServer(async (req, res) => {
     req.on('end', () => {
       let url = '';
       try { url = String(JSON.parse(corpo || '{}').url || ''); } catch { return invia(res, 400, 'no'); }
-      if (url && !/^https?:\/\/[^\s]+$/i.test(url)) return invia(res, 400, 'no');
+      // solo indirizzi web normali, senza caratteri che una riga di comando potrebbe leggere a modo suo
+      if (url && (url.length > 4000 || !/^https?:\/\/[^\s"'<>^|&`\\]+$/i.test(url.replace(/&(?=[\w%.~-]+=)/g, '')))) return invia(res, 400, 'no');
       say(url ? `Pagina aperta nella finestra di LIBRE VTT: la mando al browser di tutti i giorni (${url}).` : 'Finestra nuova del browser chiesta a LIBRE VTT: la apro nel browser di tutti i giorni.');
       apriFuori(url);
       invia(res, 200, 'ok');

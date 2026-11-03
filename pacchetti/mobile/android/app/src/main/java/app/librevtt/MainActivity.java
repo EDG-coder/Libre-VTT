@@ -288,7 +288,9 @@ public final class MainActivity extends Activity {
         public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest req) {
             Uri u = req.getUrl();
             if (locale(u) || "about".equals(u.getScheme()) || "data".equals(u.getScheme()) || "blob".equals(u.getScheme())) return false;
-            apriFuori(u.toString());
+            // un'altra app si apre solo dopo un tocco vero: una pagina non può lanciarla da sola
+            if (req.hasGesture()) apriFuori(u.toString());
+            else Log.w(Motore.TAG, "Indirizzo esterno senza tocco, ignorato: " + u);
             return true;
         }
 
@@ -338,6 +340,7 @@ public final class MainActivity extends Activity {
         /** La pagina apre una finestra nuova (per esempio il pannello della sessione). */
         @Override @SuppressLint("SetJavaScriptEnabled")
         public boolean onCreateWindow(WebView v, boolean dialogo, boolean gesto, Message risposta) {
+            if (!gesto) { Log.w(Motore.TAG, "Finestra nuova senza tocco, ignorata"); return false; }   // niente finestre aperte da sole
             final Dialog d = new Dialog(MainActivity.this, android.R.style.Theme_Material_NoActionBar_Fullscreen);
             final WebView figlia = new WebView(MainActivity.this);
             figlia.getSettings().setJavaScriptEnabled(true);
@@ -347,7 +350,9 @@ public final class MainActivity extends Activity {
                 @Override
                 public boolean shouldOverrideUrlLoading(WebView w, WebResourceRequest req) {
                     if (locale(req.getUrl())) return false;
-                    apriFuori(req.getUrl().toString());
+                    // la finestra è appena stata aperta da un tocco: il primo indirizzo vale come quel tocco
+                    boolean primo = w.getUrl() == null || w.getUrl().isEmpty() || "about:blank".equals(w.getUrl());
+                    if (req.hasGesture() || primo) apriFuori(req.getUrl().toString());
                     if (w.getUrl() == null || w.getUrl().isEmpty() || "about:blank".equals(w.getUrl())) d.dismiss();
                     return true;
                 }

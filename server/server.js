@@ -16,6 +16,8 @@ const MAX_BYTES = 30 * 1024 * 1024;
 const IMG = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.svg']);
 const TYPE_EXT = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp', 'image/avif': '.avif', 'image/bmp': '.bmp', 'image/svg+xml': '.svg' };
 const SVG = require('../condiviso/svg-pulito.js');
+const { intestazioniPagina, segretoOk } = require('./csp.js');
+const ASSET_MIME = new Set([...Object.keys(TYPE_EXT), 'application/json']);
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
@@ -30,9 +32,11 @@ fs.mkdirSync(ASSETS, { recursive: true });
 fs.mkdirSync(DATA, { recursive: true });
 
 // un SVG aperto da solo non deve poter eseguire niente (anche se è già stato ripulito)
-const CSP_SVG = "default-src 'none'; style-src 'unsafe-inline'; img-src data:";
+const CSP_SVG = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox";
 const send = (res, code, body, type = 'text/plain; charset=utf-8') => {
-  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', ...(type === 'image/svg+xml' ? { 'Content-Security-Policy': CSP_SVG } : {}) });
+  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+    ...(type === 'image/svg+xml' ? { 'Content-Security-Policy': CSP_SVG } : {}),
+    ...(type.startsWith('text/html') ? intestazioniPagina(body, { youtube: true }) : {}) });
   res.end(body);
 };
 const json = (res, code, obj) => send(res, code, JSON.stringify(obj), MIME['.json']);
@@ -496,10 +500,12 @@ function hostLocale(req, porta) {
 }
 function handle(req, res) {
   if (!hostLocale(req, PORT)) return send(res, 403, 'Host non permesso');
+  if (!segretoOk(req)) return send(res, 403, 'Questa finestra non è quella di LIBRE VTT.');
   const url = new URL(req.url, 'http://localhost'), q = url.searchParams, p = url.pathname;
   if (p.startsWith('/api/')) {
     const origin = req.headers.origin;
-    if (req.method !== 'GET' && origin && !/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) return send(res, 403, 'Origine non consentita');
+    // le richieste che cambiano qualcosa vengono solo dalle nostre pagine, servite da questa stessa porta
+    if (req.method !== 'GET' && origin && !new RegExp('^http://(localhost|127\\.0\\.0\\.1|\\[::1\\]):' + PORT + '$').test(origin)) return send(res, 403, 'Origine non consentita');
     const route = `${req.method} ${p}`;
     if (route === 'GET /api/assets') return json(res, 200, listAll());
     if (route === 'POST /api/assets') return saveUpload(req, res, q);
@@ -545,7 +551,12 @@ function handle(req, res) {
     const info = idx[dep[1]];
     if (!info) return send(res, 404, 'Non trovato');
     return fs.readFile(path.join(DATA, 'assets', dep[1] + (info.ext || '')), (err, d) => err ? send(res, 404, 'Non trovato')
-      : (res.writeHead(200, { 'Content-Type': info.mime || 'application/octet-stream', 'Cache-Control': 'public, max-age=31536000, immutable' }), res.end(d)));
+      : (res.writeHead(200, {
+        // solo i tipi di immagine (e il JSON del compendio): qualsiasi altro tipo si dà come byte qualsiasi
+        'Content-Type': ASSET_MIME.has(String(info.mime || '').toLowerCase()) ? String(info.mime).toLowerCase() : 'application/octet-stream',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': CSP_SVG
+      }), res.end(d)));
   }
   // i pacchetti del compendio della campagna
   if (rel.startsWith('/compendio/')) {
@@ -567,6 +578,9 @@ function handle(req, res) {
   const file = path.join(base, rel === '/' ? 'index.html' : dalProgramma ? rel.slice(dalProgramma[0].length) : rel);
   const type = MIME[path.extname(file).toLowerCase()];
   if (!file.startsWith(base + path.sep) || !type) return send(res, 404, 'Non trovato');
+  // dalla cartella delle immagini della campagna escono solo immagini (una campagna arrivata da fuori
+  // potrebbe avere dentro una pagina .html o uno script)
+  if (base === CAMP && !IMG.has(path.extname(file).toLowerCase())) return send(res, 404, 'Non trovato');
   fs.readFile(file, (err, data) => err ? send(res, 404, 'Non trovato') : send(res, 200, data, type));
 }
 

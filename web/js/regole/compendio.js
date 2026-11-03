@@ -307,7 +307,10 @@
   const mod = n => Math.floor((n - 10) / 2), sg = n => (n >= 0 ? '+' : '−') + Math.abs(n);
   const CARN = { str: 'FOR', dex: 'DES', con: 'COS', int: 'INT', wis: 'SAG', cha: 'CAR' };
   const tira = (expr, nome) => `<button type="button" class="chipRoll" data-tiro="${esc(expr)}" data-nome="${esc(nome)}" title="${esc(expr)}">🎲 ${esc(nome)}</button>`;
-  const riga = (et, val) => val === undefined || val === null || val === '' ? '' : `<div class="cvR"><span>${esc(tr(et))}</span><b>${typeof val === 'string' && val.startsWith('<') ? val : esc(val)}</b></div>`;
+  // HTML già pronto (fatto da noi, con i valori già «escaped») solo se arriva come { html }: un testo del
+  // pacchetto che comincia con «<» resta testo, anche se viene da un .librepack scaricato da internet
+  const gia = html => ({ html });
+  const riga = (et, val) => val === undefined || val === null || val === '' ? '' : `<div class="cvR"><span>${esc(tr(et))}</span><b>${val && typeof val === 'object' && typeof val.html === 'string' ? val.html : esc(val)}</b></div>`;
 
   function corpoVoce(v) {
     let h = `<div class="cvTesta"><small>${esc(nomeTipo(v.tipo))}${v.en && v.en !== v.nome ? ' · ' + esc(v.en) : ''} · ${esc(v.fonte || '')}</small></div>`;
@@ -322,8 +325,8 @@
       case 'mostro': {
         h += `<p class="cvSott">${esc([v.taglia, v.tipoCreatura, v.sottotipo ? `(${v.sottotipo})` : ''].filter(Boolean).join(' '))}${v.allineamento ? ', ' + esc(v.allineamento) : ''}</p>`;
         h += '<div class="cvGriglia">' + riga('Classe armatura', `${v.ca ?? ''}${v.caNota ? ` (${v.caNota})` : ''}`) +
-          riga('Punti ferita', v.dadiPf ? `<span>${esc(v.pf)} ${tira(v.dadiPf, tr('PF'))}</span>` : v.pf) + riga('Velocità', v.velocita) + riga('Grado di sfida', `${v.gs}${v.px != null ? ` (${v.px} ${tr('PE')})` : ''}`) + '</div>';
-        if (v.car) h += '<div class="cvCar">' + Object.entries(v.car).map(([k, n]) => `<button type="button" class="cvCarB" data-tiro="1d20${mod(n) >= 0 ? '+' : ''}${mod(n)}" data-nome="${esc(tr('Prova di {c}', { c: CARN[k] }))}"><small>${CARN[k]}</small><b>${n}</b><span>${sg(mod(n))}</span></button>`).join('') + '</div>';
+          riga('Punti ferita', v.dadiPf ? gia(`<span>${esc(v.pf)} ${tira(v.dadiPf, tr('PF'))}</span>`) : v.pf) + riga('Velocità', v.velocita) + riga('Grado di sfida', `${v.gs}${v.px != null ? ` (${v.px} ${tr('PE')})` : ''}`) + '</div>';
+        if (v.car) h += '<div class="cvCar">' + Object.entries(v.car).map(([k, n]) => `<button type="button" class="cvCarB" data-tiro="1d20${mod(+n) >= 0 ? '+' : ''}${mod(+n) || 0}" data-nome="${esc(tr('Prova di {c}', { c: CARN[k] }))}"><small>${esc(CARN[k] || k)}</small><b>${esc(n)}</b><span>${esc(sg(mod(+n)))}</span></button>`).join('') + '</div>';
         h += '<div class="cvGriglia">' +
           riga('Tiri salvezza', v.ts ? Object.entries(v.ts).map(([k, n]) => `${CARN[k]} ${sg(n)}`).join(', ') : '') +
           riga('Abilità', v.abilita ? Object.entries(v.abilita).map(([k, n]) => `${k} ${sg(n)}`).join(', ') : '') +
@@ -343,7 +346,7 @@
       case 'oggetto':
         h += `<p class="cvSott">${esc([v.categoria, v.sottocategoria, v.rarita, v.sintonia ? tr('richiede sintonia') : ''].filter(Boolean).join(' · '))}</p>`;
         h += '<div class="cvGriglia">' + riga('Costo', v.costo) + riga('Peso', v.peso != null ? lbKg(v.peso) : '') +
-          riga('Danni', v.danno ? `<span>${tira(v.danno, v.nome)} ${esc(v.tipoDanno || '')}${v.dueMani ? ` · ${esc(tr('a due mani'))} ${esc(v.dueMani)}` : ''}</span>` : '') +
+          riga('Danni', v.danno ? gia(`<span>${tira(v.danno, v.nome)} ${esc(v.tipoDanno || '')}${v.dueMani ? ` · ${esc(tr('a due mani'))} ${esc(v.dueMani)}` : ''}</span>`) : '') +
           riga('Proprietà', (v.proprieta || []).join(', ')) + riga('Maestria', v.maestria) + riga('Gittata', v.gittata || v.lancio) + riga('Portata', v.portata) +
           riga('Classe armatura', v.ca != null ? `${v.ca}${v.caDes === 'sì' ? ' + DES' : v.caDes && v.caDes.startsWith('max') ? ` + DES (${v.caDes})` : ''}` : '') +
           riga('Forza minima', v.forzaMin) + riga('Furtività', v.svantaggioFurtivita ? tr('svantaggio') : '') + riga('Contenuto', v.contenuto) + '</div>';

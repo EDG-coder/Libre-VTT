@@ -219,7 +219,8 @@ function Installa {
       if (Test-Path $rn) { Remove-Item $rn -Recurse -Force }
       Move-Item $nuovoNode $rn
     }
-    $link = Join-Path $pac 'bin\uffa-link-windows-x64.exe'
+    $link = Join-Path $pac ('bin\uffa-link-windows-' + $script:Arch + '.exe')
+    if (-not (Test-Path $link)) { $link = Join-Path $pac 'bin\uffa-link-windows-x64.exe' }   # ARM senza il suo: va anche quello x64
     if (Test-Path $link) {
       Passo 68 'Il collegamento a distanza e'' gia'' pronto dentro l''installazione.'
       Copy-Item $link (Join-Path $script:Dest 'utente\bin\uffa-link.exe') -Force

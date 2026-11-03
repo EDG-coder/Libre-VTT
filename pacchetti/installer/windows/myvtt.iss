@@ -22,8 +22,9 @@ UsePreviousAppDir=no
 DisableProgramGroupPage=yes
 DisableReadyPage=yes
 PrivilegesRequired=lowest
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
+; PC Intel/AMD a 64 bit e PC ARM (Windows 11): su ARM Node e il collegamento sono quelli nativi
+ArchitecturesAllowed=x64compatible or arm64
+ArchitecturesInstallIn64BitMode=x64compatible or arm64
 OutputDir=..\..\..\installatori
 OutputBaseFilename=LIBRE-VTT-Setup
 SetupIconFile=..\..\..\web\icona.ico
@@ -42,8 +43,10 @@ Name: "desktop"; Description: "Metti un'icona sul desktop"
 
 [Files]
 Source: "stage\app\*"; DestDir: "{app}\app"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "stage\runtime\*"; DestDir: "{app}\runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "stage\utente\bin\uffa-link.exe"; DestDir: "{app}\utente\bin"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "stage\runtime-x64\*"; DestDir: "{app}\runtime"; Check: not IsArm64; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "stage\runtime-arm64\*"; DestDir: "{app}\runtime"; Check: IsArm64; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+Source: "stage\bin-x64\uffa-link.exe"; DestDir: "{app}\utente\bin"; Check: not IsArm64; Flags: ignoreversion skipifsourcedoesntexist
+Source: "stage\bin-arm64\uffa-link.exe"; DestDir: "{app}\utente\bin"; Check: IsArm64; Flags: ignoreversion skipifsourcedoesntexist
 Source: "stage\avvia.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
@@ -63,6 +66,8 @@ Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; \
 [InstallDelete]
 ; il programma della versione di prima: si rimette tutto da capo (le campagne non stanno qui)
 Type: filesandordirs; Name: "{app}\app"
+; e il suo Node (su un PC ARM che aveva quello x64 arriva quello nativo, senza file dell'altro mescolati)
+Type: filesandordirs; Name: "{app}\runtime\node"
 ; i collegamenti di quando si chiamava «MY VTT»
 Type: files; Name: "{userprograms}\MY VTT.lnk"
 Type: files; Name: "{userdesktop}\MY VTT.lnk"

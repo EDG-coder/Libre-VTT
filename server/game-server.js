@@ -43,7 +43,20 @@ const saveAssetIndex = () => { try { fs.writeFileSync(path.join(DATA, 'assets.js
 const assetFile = h => assetIndex[h] ? path.join(ASSETS, h + assetIndex[h].ext) : null;
 const haveAsset = h => { const f = assetFile(h); return !!(f && fs.existsSync(f)); };
 const SVG = require('../condiviso/svg-pulito.js');
+const { intestazioniPagina, segretoOk } = require('./csp.js');
+// I soli tipi che il deposito accetta: immagini e (per il compendio del master) JSON. Qualsiasi altro
+// (text/html, application/javascript...) servito da 127.0.0.1 girerebbe con i permessi del tavolo.
+const mimeAmmesso = m => { const t = String(m || '').toLowerCase().split(';')[0].trim(); return MIME_EXT[t] ? t : null; };
+// le intestazioni di ogni file del deposito: il browser non deve indovinare il tipo, e niente dentro
+// può eseguire codice o aprire altre pagine (sandbox), neanche aperto da solo in una scheda
+const ASSET_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox",
+  'Cross-Origin-Resource-Policy': 'cross-origin'
+};
 function storeAsset(buf, mime, name) {
+  mime = mimeAmmesso(mime);
+  if (!mime) { console.error('asset: tipo di file non ammesso'); return null; }
   if (mime === 'image/svg+xml') {            // un SVG (anche di un giocatore) si tiene solo ripulito
     const p = SVG.pulisci(buf.toString('utf8'));
     if (p.errore) { console.error('asset svg:', p.errore); return null; }
@@ -53,7 +66,7 @@ function storeAsset(buf, mime, name) {
   const ext = MIME_EXT[mime] || '.bin';
   if (!haveAsset(hash)) {
     try { fs.writeFileSync(path.join(ASSETS, hash + ext), buf); } catch (e) { console.error('asset', e.message); return null; }
-    assetIndex[hash] = { ext, mime: mime || 'application/octet-stream', name: String(name || '').slice(0, 80), bytes: buf.length, t: Date.now() };
+    assetIndex[hash] = { ext, mime, name: String(name || '').slice(0, 80), bytes: buf.length, t: Date.now() };
     saveAssetIndex();
   }
   return hash;
@@ -230,7 +243,10 @@ function broadcast(msg, filter) {
 }
 function sendPlayers() {
   const list = playerList();
-  broadcast({ t: 'players', list });
+  // ai giocatori non serve sapere da quale dispositivo arrivano gli altri, che cosa stanno guardando o
+  // che cosa hanno chiesto per ultimo: quello resta al master e al pannello
+  const ridotta = list.map(({ peer, percorso, viewScene, viewRect, lastOp, lastAt, ops, client, ...resto }) => resto);
+  for (const c of clients) c.send({ t: 'players', list: c.role === 'master' ? list : ridotta });
   panelPush({ t: 'players', list });
 }
 
@@ -642,6 +658,40 @@ function deny(c, op, why) {
 }
 const str = (v, n = 200) => String(v == null ? '' : v).slice(0, n);
 
+// ---------- Quello che un giocatore può scrivere su segnalini e schede ----------
+// Le immagini vengono solo dal deposito della sessione («gs:<hash>»), dalla cartella della campagna
+// («assets/...») o sono dentro il messaggio (data:image). Un indirizzo di un altro sito farebbe
+// sapere a quel sito l'indirizzo di rete di tutti quelli che guardano la mappa.
+const IMG_DATA = /^data:image\/(png|jpeg|webp|gif|avif|bmp|svg\+xml);base64,[a-z0-9+/=]+$/i;
+function urlImmagine(u) {
+  if (typeof u !== 'string' || !u) return null;
+  if (/^gs:[a-f0-9]{64}$/.test(u)) return u;
+  const loc = /^https?:\/\/(?:127\.0\.0\.1|localhost):\d+\/asset\/([a-f0-9]{64})$/.exec(u);   // indirizzo calcolato salvato per sbaglio
+  if (loc) return 'gs:' + loc[1];
+  if (IMG_DATA.test(u)) return u;
+  if (/^assets\/[^:?#\\\u0000-\u001f]+$/.test(u) && !u.split('/').some(x => x === '..' || x === '.')) return u.slice(0, 400);
+  return null;
+}
+/** L'icona di una scheda: { url, gid?, aid? } con un indirizzo permesso, oppure null. */
+function iconaPulita(x) {
+  if (!x || typeof x !== 'object') return null;
+  const url = urlImmagine(x.url);
+  if (!url) return null;
+  const o = { url };
+  if (isHash(x.gid)) o.gid = x.gid;
+  if (Number.isInteger(x.aid) && x.aid >= 0) o.aid = x.aid;
+  return o;
+}
+const COLORE = /^(#[0-9a-f]{3,8}|[a-z]{3,20}|rgba?\(\s*[\d.]+%?\s*,\s*[\d.]+%?\s*,\s*[\d.]+%?\s*(,\s*[\d.]+%?\s*)?\))$/i;
+/** I campi della scheda: un oggetto semplice, non troppo grande. */
+const MAX_CAMPI_SCHEDA = 400000;
+function campiScheda(f) {
+  if (!f || typeof f !== 'object' || Array.isArray(f)) return null;
+  let t; try { t = JSON.stringify(f); } catch { return null; }
+  if (!t || t.length > MAX_CAMPI_SCHEDA) return null;
+  return JSON.parse(t);                    // una copia pulita: niente prototipi o valori strani
+}
+
 /** chi possiede questo segnalino: il proprietario della scheda collegata */
 function tokenOwner(sc, ph) {
   if (ph.owner) return ph.owner;
@@ -777,17 +827,31 @@ function handleIntent(c, m) {
       if (!p.createTokens) return deny(c, m.op, 'non puoi creare segnalini');
       const sc = findScene(m.scene) || findScene(world.active);
       if (!sc) return deny(c, m.op, 'scena sconosciuta');
-      const tk = m.token || {};
-      if (typeof tk.url === 'string' && tk.url.length > 320000) return deny(c, m.op, 'immagine del segnalino troppo pesante');
+      const dato = m.token && typeof m.token === 'object' ? m.token : {};
+      if (typeof dato.url === 'string' && dato.url.length > 320000) return deny(c, m.op, 'immagine del segnalino troppo pesante');
+      // solo i campi che un segnalino ha davvero, e controllati uno per uno
+      const n = v => Number.isFinite(+v) ? Math.max(-1e7, Math.min(1e7, +v)) : 0;
+      const tk = { l: n(dato.l), t: n(dato.t), w: Math.max(1, n(dato.w) || 1), h: Math.max(1, n(dato.h) || 1) };
+      if (dato.url != null) {
+        const u = urlImmagine(dato.url);
+        if (!u) return deny(c, m.op, 'immagine del segnalino non permessa');
+        tk.url = u;
+      }
+      if (isHash(dato.gid)) tk.gid = dato.gid;
+      if (dato.sheet != null) tk.sheet = str(dato.sheet, 60);
+      if (dato.name != null) tk.name = str(dato.name, 80);
+      if (dato.round) tk.round = '1';
+      if (typeof dato.ring === 'string' && COLORE.test(dato.ring.trim())) tk.ring = dato.ring.trim();
+      if (Number.isFinite(+dato.z)) tk.z = Math.round(+dato.z);
+      tk.layer = c.role === 'master' && ['map', 'hidden', 'tokens'].includes(dato.layer) ? dato.layer : 'tokens';
       // un giocatore può mettere in campo solo un personaggio suo
       if (c.role !== 'master') {
         if (tk.url && tk.url.startsWith('data:') && !p.uploadTokenImage) return deny(c, m.op, 'non puoi usare foto tue');
         const sh = tk.sheet && (world.sheets || []).find(s => s.id === tk.sheet);
         if (!sh || sheetVisible(c, sh) !== 'rw') return deny(c, m.op, 'puoi mettere in campo solo i tuoi personaggi');
-        tk.layer = 'tokens';
       }
       tk.id = newId('tk');
-      tk.owner = c.role === 'master' ? (tk.owner || null) : c.token;
+      tk.owner = c.role === 'master' ? (typeof dato.owner === 'string' && roster[dato.owner] ? dato.owner : null) : c.token;
       if (typeof tk.url === 'string' && tk.url.startsWith('data:')) {
         const mm = tk.url.match(/^data:([\w/+.-]+);base64,(.*)$/);
         if (mm) {
@@ -838,6 +902,7 @@ function handleIntent(c, m) {
       if (!p.revealFog) return deny(c, m.op, 'solo chi conduce può toccare la nebbia');
       const id = str(m.scene, 60);
       if (!findScene(id)) return deny(c, m.op, 'scena sconosciuta');
+      if (m.fog && JSON.stringify(m.fog).length > 4 * 1024 * 1024) return deny(c, m.op, 'nebbia troppo grande');
       world.fog[id] = m.fog || null;
       scheduleSave(); schedulePush();
       return;
@@ -940,10 +1005,15 @@ function handleIntent(c, m) {
 
     // --- schede ---
     case 'sheet.add': {
-      const s = m.sheet || {};
-      s.id = str(s.id, 60) || ('sh' + Date.now().toString(36));
+      const d = m.sheet && typeof m.sheet === 'object' ? m.sheet : {};
+      // solo i campi di una scheda: id, nome, modello, icona, valori
+      const s = { id: str(d.id, 60) || ('sh' + Date.now().toString(36)), name: str(d.name, 60) };
+      if (d.tpl != null) s.tpl = str(d.tpl, 60);
+      s.icon = iconaPulita(d.icon);
+      s.f = campiScheda(d.f || {});
+      if (!s.f) return deny(c, m.op, 'scheda troppo grande o non valida');
       if ((world.sheets || []).some(x => x.id === s.id)) return;
-      s.owner = c.role === 'master' ? (s.owner || null) : c.token;
+      s.owner = c.role === 'master' ? (typeof d.owner === 'string' && roster[d.owner] ? d.owner : null) : c.token;
       world.sheets = (world.sheets || []).concat(s);
       changed();
       return;
@@ -953,11 +1023,17 @@ function handleIntent(c, m) {
       if (!s) return deny(c, m.op, 'scheda sconosciuta');
       if (sheetVisible(c, s) !== 'rw') return deny(c, m.op, 'questa scheda non è tua');
       if (typeof m.name === 'string') s.name = str(m.name, 60);
-      if (m.f && typeof m.f === 'object') s.f = m.f;
+      if (m.f !== undefined) {
+        const f = campiScheda(m.f);
+        if (!f) return deny(c, m.op, 'scheda troppo grande o non valida');
+        s.f = f;
+      }
       if (m.icon !== undefined) {
-        s.icon = m.icon;
+        // un'immagine da fuori (o un blob: di quel browser) non si tiene: si salva il resto della scheda
+        const ic = m.icon === null ? null : iconaPulita(m.icon);
+        if (m.icon === null || ic) s.icon = ic;
         // un giocatore che cambia la sua icona cambia anche i suoi segnalini collegati a quella scheda
-        const u = m.icon && String(m.icon.url || '');
+        const u = s.icon && String(s.icon.url || '');
         if (c.role !== 'master' && /^gs:[a-f0-9]{64}$/.test(u)) {
           for (const sc of world.scenes || []) for (const ph of sc.photos || []) {
             if (ph.sheet === s.id && !ph.shape && isTheirs(c, sc, ph)) { ph.url = u; ph.gid = u.slice(3); delete ph.aid; }
@@ -1020,11 +1096,17 @@ function handleIntent(c, m) {
       let job = box.get(id);
       if (!job) {
         if (box.size > 4) return deny(c, m.op, 'troppi caricamenti insieme');
-        job = { parts: [], got: 0, mime: str(m.mime, 60), name: str(m.name, 80) };
+        const mime = mimeAmmesso(m.mime);
+        if (!mime) return deny(c, m.op, 'tipo di file non ammesso');
+        if (mime === 'application/json' && c.role !== 'master') return deny(c, m.op, 'solo il master carica dati');
+        job = { parts: [], got: 0, mime, name: str(m.name, 80) };
         box.set(id, job);
       }
       const chunk = Buffer.from(String(m.data || ''), 'base64');
       job.got += chunk.length;
+      // in tutto, un giocatore carica al massimo 300 MB per collegamento: il disco del master non è infinito
+      c.caricati = (c.caricati || 0) + chunk.length;
+      if (c.role !== 'master' && c.caricati > 300 * 1024 * 1024) { box.delete(id); return deny(c, m.op, 'hai caricato troppe immagini per questa sessione'); }
       if (job.got > MAX_ASSET) { box.delete(id); return deny(c, m.op, 'immagine troppo grande (max 12 MB)'); }
       job.parts.push(chunk);
       if (!m.last) return;
@@ -1178,12 +1260,35 @@ function detach(c) {
   sendPlayers();
 }
 
+/** Un secchio di gettoni: `max` al massimo, `alSecondo` che tornano ogni secondo. false = vuoto. */
+function consuma(c, quale, max, alSecondo) {
+  const b = ((c.secchi ||= {})[quale] ||= { n: max, t: Date.now() });
+  const ora = Date.now();
+  b.n = Math.min(max, b.n + (ora - b.t) / 1000 * alSecondo); b.t = ora;
+  if (b.n < 1) return false;
+  b.n -= 1;
+  return true;
+}
+function troppeRichieste(c, op) {
+  if (Date.now() - (c.avvisatoFretta || 0) < 10000) return;      // un avviso ogni 10 secondi basta
+  c.avvisatoFretta = Date.now();
+  deny(c, op, 'troppe richieste tutte insieme: rallenta un momento');
+  logAction(c, op, false, 'troppe richieste');
+}
+
 function onMessage(c, raw) {
   let m;
   try { m = JSON.parse(raw); } catch { return; }
   if (!m || typeof m !== 'object') return;
 
-  if (m.t === 'peer') { c.peer = str(m.id, 80); c.percorso = percorsoDi(c.peer); return; }   // riga scritta da uffa-link
+  // riga scritta da uffa-link: la prima di ogni collegamento dal tubo, una volta sola. Dopo, o da un
+  // browser, è qualcuno che vuole farsi passare per un altro: la si ignora.
+  if (m.t === 'peer') {
+    if (c.kind === 'link' && !c.giaParlato && /^[a-z0-9]{8,80}$/i.test(String(m.id || ''))) { c.peer = String(m.id); c.percorso = percorsoDi(c.peer); }
+    c.giaParlato = true;
+    return;
+  }
+  c.giaParlato = true;
   // «Com'è la campagna?» dal riquadro di «Mi unisco» di un giocatore (prima di salutare, poi se ne va).
   // Si risponde solo a chi è del tavolo: agli altri non si dice niente.
   if (m.t === 'stato' && !c.token && c.kind === 'link') { c.send(statoPerRiquadro(m)); setTimeout(() => c.close(), 200); return; }
@@ -1262,6 +1367,7 @@ function onMessage(c, raw) {
 
   // Le richieste di file arrivano dal ponte del giocatore, non da una persona: non aspettano il saluto.
   if (m.t === 'intent' && (m.op === 'asset.get' || m.op === 'asset.have')) {
+    if (c.kind === 'link' && !consuma(c, 'file', 400, 40)) return;   // un ponte che chiede file a raffica aspetta
     try { handleIntent(c, m); } catch (e) { console.error('intento', m.op, e.message); }
     return;
   }
@@ -1284,6 +1390,11 @@ function onMessage(c, raw) {
   if (m.t === 'intent') {
     // Con il suo numero (q) l'intento si fa una volta sola: il browser lo rimanda finché non ha la conferma
     // («ok»), quindi dopo una caduta (o arrivato da due strade) può arrivare di nuovo.
+    // Un giocatore non può sommergere il tavolo: un secchio di gettoni per collegamento (i pezzi delle
+    // immagini hanno già i loro limiti), più stretto per chat e dadi. Quello scartato non riceve «ok»:
+    // il browser lo rimanda più tardi da solo.
+    if (c.role !== 'master' && m.op !== 'asset.put' && !consuma(c, 'tutto', 600, 60)) return troppeRichieste(c, m.op);
+    if (c.role !== 'master' && ['chat', 'rule', 'roll', 'roll.prov', 'ping'].includes(m.op) && !consuma(c, 'parole', 20, 4)) return troppeRichieste(c, m.op);
     const q = typeof m.q === 'string' && m.q.length <= 40 ? m.q : null;
     if (q && giaFatto(c.token, q)) { sendA(c, { t: 'ok', q }); return; }
     const rec = recOf(c.token);
@@ -1418,7 +1529,7 @@ function onUpgrade(req, sock, head) {
   const local = /^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(sock.remoteAddress || '');
   const org = req.headers.origin || '';
   const okOrigin = !org || /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(org);
-  if (!key || url.pathname !== '/ws' || !local || !okOrigin) { sock.destroy(); return; }
+  if (!key || url.pathname !== '/ws' || !local || !okOrigin || !segretoOk(req)) { sock.destroy(); return; }
 
   sock.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n' +
     'Sec-WebSocket-Accept: ' + wsAccept(key) + '\r\n\r\n');
@@ -1459,7 +1570,7 @@ function startLinkServer() {
     attach(c);
     sock.on('data', d => {
       buf += d.toString('utf8');
-      if (buf.length > 4 * 1024 * 1024) { sock.destroy(); return; }
+      if (buf.length > 2 * 1024 * 1024) { sock.destroy(); return; }   // una riga di un giocatore non arriva a tanto
       let i;
       while ((i = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, i); buf = buf.slice(i + 1);
@@ -1478,6 +1589,7 @@ let bridge = null, bridgeBuf = '', bridgeQueue = [], bridgeQueueBytes = 0;
 // nuova e non sa chi sia. Glielo ripresentiamo noi, così il giocatore rientra da solo,
 // con lo stesso gettone (quindi stesso nome, stessi permessi, stesse schede).
 let lastHello = null;
+let invitoInAttesa = null;            // il codice nuovo mandato dall'host, finché chi gioca non lo accetta
 let hostUp = false, lastFromHost = 0, bridgeTries = 0, bridgeTimer = 0;
 const linkState = up => {
   if (hostUp === up) return;
@@ -1570,7 +1682,8 @@ function versoBrowser(msg, giaInOrdine) {
     lastHello.token = msg.you.token; if (msg.you.firma) lastHello.firma = msg.you.firma;
     avviatore('identita', { token: msg.you.token, firma: msg.you.firma || null, campagna: msg.you.campagna || null, nome: msg.you.name || null });
   }
-  if (msg.t === 'invito' && /^[a-f0-9]{64}$/.test(String(msg.codice || ''))) avviatore('nuovo-codice', { codice: msg.codice });
+  // il codice nuovo si tiene da parte: si passa lì solo quando chi gioca lo conferma (invito.accetta)
+  if (msg.t === 'invito' && /^[a-f0-9]{64}$/.test(String(msg.codice || ''))) invitoInAttesa = msg.codice;
   if (msg.t === 'bye') lastHello = null;                // allontanato: non lo si ripresenta da soli
   // dove è arrivato il browser (versione del mondo, ultimo messaggio di chat): se il tubo si riapre
   // lo ripresentiamo da lì, e l'host gli manda solo quello che si è perso
@@ -1667,6 +1780,7 @@ function bridgeSveglia() {
 // dall'host attraverso il tubo e la scrive nella cartella, così la volta dopo è già pronta.
 const waiting = new Map();               // hash -> { parts, bytes, mime, name, res:[], timer }
 
+let byteDallHost = 0;                  // (giocatore) quanto ha già salvato di quello mandato dall'host
 function wantAsset(hash) {
   let w = waiting.get(hash);
   if (w) return w.promise;
@@ -1699,6 +1813,8 @@ function bridgeAsset(msg) {
   const buf = Buffer.concat(w.parts);
   const got = crypto.createHash('sha256').update(buf).digest('hex');
   if (got !== msg.hash) { console.error('file arrivato rovinato:', msg.hash.slice(0, 8)); w.done(null); return; }
+  // un host che manda immagini su immagini non riempie il disco di chi gioca: 3 GB per sessione al massimo
+  if ((byteDallHost += buf.length) > 3 * 1024 * 1024 * 1024) { console.error('troppe immagini dall\'host: non le salvo più'); w.done(null); return; }
   storeAsset(buf, w.mime, w.name);
   console.log(`↓ ricevuta immagine ${(w.name || msg.hash.slice(0, 8))} (${Math.round(buf.length / 1024)} kB)`);
   w.done(buf);
@@ -1726,7 +1842,8 @@ function readBody(req, res, fn) {
   });
 }
 const sendHttp = (res, code, body, type = 'text/plain; charset=utf-8') => {
-  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' });
+  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+    ...(type.startsWith('text/html') ? intestazioniPagina(body) : {}) });
   res.end(body);
 };
 // Contro il «DNS rebinding»: un sito aperto nel browser potrebbe far puntare il suo nome a
@@ -1743,6 +1860,8 @@ function httpHandler(req, res) {
   const url = new URL(req.url, 'http://localhost');
   const local = /^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(req.socket.remoteAddress || '');
   if (!local) return sendHttp(res, 403, 'Il pannello si apre solo da questo computer.');
+  // le immagini del deposito si chiedono anche senza cookie (fetch da un'altra porta); tutto il resto no
+  if (!url.pathname.startsWith('/asset/') && req.method !== 'OPTIONS' && !segretoOk(req)) return sendHttp(res, 403, 'Questa finestra non è quella di LIBRE VTT.');
 
   // Il VTT sta su un'altra porta di questo stesso computer: gli lasciamo chiamare le api.
   const origin = req.headers.origin || '';
@@ -1751,6 +1870,13 @@ function httpHandler(req, res) {
     res.setHeader('Access-Control-Allow-Headers', 'content-type');
   }
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
+  // Le richieste che cambiano qualcosa (inviti, moderazione, permessi...) arrivano solo dalle nostre
+  // pagine: un altro sito aperto nel browser non deve poterle mandare. Il browser mette sempre Origin
+  // sui POST, e un JSON vero (Content-Type application/json) da un altro sito vuole il suo permesso.
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    if (origin && !/^http:\/\/(localhost|127\.0\.0\.1|\[::1\]):\d+$/.test(origin)) return sendHttp(res, 403, 'Origine non consentita');
+    if (!/^application\/json(\s*;|$)/i.test(req.headers['content-type'] || '')) return sendHttp(res, 415, 'Serve application/json');
+  }
 
   if (url.pathname === '/' || url.pathname === '/index.html') {
     return fs.readFile(path.join(WEB, 'panel.html'), (e, d) =>
@@ -1768,10 +1894,10 @@ function httpHandler(req, res) {
       fs.readFile(assetFile(hash), (e, d) => {
         if (e) return sendHttp(res, 404, 'Immagine non trovata');
         res.writeHead(200, {
-          'Content-Type': (assetIndex[hash] && assetIndex[hash].mime) || 'application/octet-stream',
+          // un tipo registrato prima di questo controllo e non ammesso si dà come byte qualsiasi
+          'Content-Type': mimeAmmesso(assetIndex[hash] && assetIndex[hash].mime) || 'application/octet-stream',
           'Cache-Control': 'public, max-age=31536000, immutable',
-          // un SVG aperto da solo non deve poter eseguire niente
-          'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src data:"
+          ...ASSET_HEADERS
         });
         res.end(d);
       });
@@ -1886,7 +2012,7 @@ function httpHandler(req, res) {
   // chiede di mandare il codice nuovo ai giocatori collegati (/api/invito) e riapre la sessione.
   if (url.pathname === '/api/invito/cambia' && req.method === 'POST') {
     if (MODE !== 'host') return sendHttp(res, 409, 'questo è un giocatore, non l\'host');
-    console.log('@@LIBRE cambia-codice');
+    avviatore('cambia-codice');
     logAction({ name: 'MASTER', token: '' }, 'codice', true, 'nuovo codice d\'invito');
     return sendHttp(res, 202, '{"ok":true}', 'application/json');
   }
@@ -1901,7 +2027,7 @@ function httpHandler(req, res) {
   }
   if (url.pathname === '/api/kick' && req.method === 'POST') {
     let body = '';
-    req.on('data', d => { body += d; });
+    req.on('data', d => { body += d; if (body.length > 20000) req.destroy(); });
     req.on('end', () => {
       let m; try { m = JSON.parse(body); } catch { return sendHttp(res, 400, 'dati non validi'); }
       for (const c of [...clients]) if (c.token === m.token) { c.send({ t: 'bye', reason: 'allontanato dal master' }); c.close(); }
@@ -1915,7 +2041,10 @@ function httpHandler(req, res) {
 }
 
 /** Una riga per l'avviatore, che legge quello che scriviamo (vedi launcher.js, «@@LIBRE»). */
-function avviatore(cosa, dati) { console.log('@@LIBRE ' + cosa + ' ' + JSON.stringify(dati || {})); }
+// La riga porta la parola segreta che l'avviatore ci ha dato (LIBRE_CANALE): senza, la ignora.
+const CANALE = /^[a-f0-9]{32}$/.test(process.env.LIBRE_CANALE || '') ? process.env.LIBRE_CANALE : '0'.repeat(32);
+delete process.env.LIBRE_CANALE;
+function avviatore(cosa, dati) { process.stdout.write('@@LIBRE ' + CANALE + ' ' + cosa + ' ' + JSON.stringify(dati || {}) + '\n'); }
 // L'identità salvata dall'avviatore per questa campagna (nel file di configurazione del programma):
 // se il browser ha perso la sua (dati cancellati, un altro browser), si presenta con questa.
 let identitaSalvata = null;
@@ -1937,6 +2066,10 @@ if (MODE === 'join') {
     let m; try { m = JSON.parse(raw); } catch { return; }
     if (m.t === 'eco') { c.send({ t: 'eco' }); bridgeSveglia(); return; }   // il browser c'è; e il tubo?
     if (m.t === 'miniatura') return salvaMiniatura(m);         // resta qui: all'host non serve
+    if (m.t === 'invito.accetta') {                            // chi gioca ha detto sì al codice nuovo del master
+      if (invitoInAttesa && m.codice === invitoInAttesa) { avviatore('nuovo-codice', { codice: invitoInAttesa }); invitoInAttesa = null; }
+      return;
+    }
     // Vale l'identità salvata per questa campagna: il browser ne tiene una sola per tutte (e può
     // averla persa: dati cancellati, un altro browser)
     if (m.t === 'hello' && !m.canale && identitaSalvata) m = { ...m, token: identitaSalvata.token, firma: identitaSalvata.firma || undefined };

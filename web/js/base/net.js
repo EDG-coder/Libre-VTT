@@ -256,9 +256,13 @@ function netHandle(m) {
       if (m.needName) askName('Scegli il nome con cui ti vedranno gli altri.');
       return;
     }
-    case 'invito':                               // (giocatore) il master ha cambiato il codice: il programma si ricollega da solo
-      netSay(tr('Il master ha cambiato il codice della campagna: lo salvo e mi ricollego da solo.'), 'live');
+    case 'invito': {                             // (giocatore) il master ha cambiato il codice: si passa al nuovo solo se lo dici tu
+      const codice = String(m.codice || '');
+      if (!/^[a-f0-9]{64}$/.test(codice)) return;
+      netSay(tr('Il master ha cambiato il codice della campagna. Passo al codice nuovo e mi ricollego?'), 'live',
+        { label: tr('Sì, passa al nuovo'), fn: () => { netSend({ t: 'invito.accetta', codice }); netSay(tr('Codice nuovo salvato: mi ricollego…'), 'retry'); } });
       return;
+    }
     case 'link':                                 // (giocatore) com'è il tubo verso l'host
       if (m.up) return;                          // quando torna su arriva il «welcome»: lì si avvisa
       if (!NET.everOn || NET.manual || NET.stopped) return;

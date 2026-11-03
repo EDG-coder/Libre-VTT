@@ -200,7 +200,7 @@
     if (nelLivello && l) {
       for (const w of l.muri) {
         if (w.porta) continue;
-        h += `<line x1="${w.x1}" y1="${w.y1}" x2="${w.x2}" y2="${w.y2}" class="lMuro" stroke-width="${px(4)}"/>`;
+        h += `<line x1="${+w.x1 || 0}" y1="${+w.y1 || 0}" x2="${+w.x2 || 0}" y2="${+w.y2 || 0}" class="lMuro" stroke-width="${px(4)}"/>`;
       }
       for (const w of l.muri) for (const [x, y] of [[w.x1, w.y1], [w.x2, w.y2]]) h += `<circle cx="${x}" cy="${y}" r="${px(4)}" class="lPunto"/>`;
       for (const x of l.luci) {
@@ -218,9 +218,9 @@
     }
     // le porte: si vedono (e si aprono) anche fuori dal livello
     for (const w of porte) {
-      h += `<line x1="${w.x1}" y1="${w.y1}" x2="${w.x2}" y2="${w.y2}" class="lPortaL ${w.aperta ? 'aperta' : ''}" stroke-width="${px(5)}"${w.aperta ? ` stroke-dasharray="${px(6)} ${px(6)}"` : ''}/>`;
+      h += `<line x1="${+w.x1 || 0}" y1="${+w.y1 || 0}" x2="${+w.x2 || 0}" y2="${+w.y2 || 0}" class="lPortaL ${w.aperta ? 'aperta' : ''}" stroke-width="${px(5)}"${w.aperta ? ` stroke-dasharray="${px(6)} ${px(6)}"` : ''}/>`;
       const mx = (w.x1 + w.x2) / 2, my = (w.y1 + w.y2) / 2;
-      h += `<g class="lPorta" data-id="${w.id}" transform="translate(${mx} ${my}) scale(${px(1)})"><title>${tr(w.aperta ? 'Porta aperta: tocca per chiuderla' : 'Porta chiusa: tocca per aprirla')}</title>
+      h += `<g class="lPorta" data-id="${String(w.id || '').replace(/[^\w-]/g, '')}" transform="translate(${+mx || 0} ${+my || 0}) scale(${px(1)})"><title>${tr(w.aperta ? 'Porta aperta: tocca per chiuderla' : 'Porta chiusa: tocca per aprirla')}</title>
         <circle r="13" class="${w.aperta ? 'aperta' : ''}"/><text y="5" text-anchor="middle">${w.aperta ? '◫' : '▮'}</text></g>`;
     }
     segni.innerHTML = h;
