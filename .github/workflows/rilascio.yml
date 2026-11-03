@@ -120,7 +120,11 @@ jobs:
           }
           for f in linux-x64.tar.gz linux-arm64.tar.gz win-x64.zip win-arm64.zip; do prendi https://nodejs.org/dist/latest-v22.x "$f"; done
           # per RISC-V Node lo fa il progetto Node stesso, ma tra le «unofficial builds»
-          prendi https://unofficial-builds.nodejs.org/download/release/latest-v22.x linux-riscv64.tar.gz
+          # (lì non c'è «latest-v22.x»: si cerca nell'elenco l'ultima 22 che ha il file per RISC-V)
+          U=https://unofficial-builds.nodejs.org/download/release
+          V=$(curl -fsSL "$U/index.json" | tr "}" "\n" | grep '"version":"v22\.' | grep '"linux-riscv64"' | head -1 | sed -E 's/.*"version":"(v[0-9.]+)".*/\1/')
+          [ -n "$V" ] || { echo "::error::Node 22 per RISC-V non trovato su $U"; exit 1; }
+          prendi "$U/$V" linux-riscv64.tar.gz
       - name: Crea gli installatori
         run: |
           python3 pacchetti/installer/crea-installer.py out \
