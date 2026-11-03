@@ -1,0 +1,22 @@
+/* ---------- Plugins: buttons, notices and the badge of the plugins applied (web/js/plugins/loader.js) ---------- */
+#pluginDock {
+  position: fixed; left: 50%; transform: translateX(-50%); top: max(8px, env(safe-area-inset-top)); z-index: 60;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; max-width: min(420px, calc(100vw - 180px));
+}
+#pluginDock > * { pointer-events: auto; }
+#pluginDock .plgBtns { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+#pluginDock .plgBtns:empty, #pluginDock .plgNotes:empty { display: none; }
+#pluginDock .plgBtn {
+  min-height: 36px; min-width: 36px; padding: 4px 10px; border-radius: 10px; font: inherit; font-size: .9rem; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel); color: var(--text);
+}
+#pluginDock .plgBtn:hover, #pluginDock .plgBtn:focus-visible { border-color: var(--accent); }
+#pluginDock .plgFull {
+  font-size: .72rem; font-weight: 700; letter-spacing: .02em; padding: 3px 8px; border-radius: 999px;
+  background: #b3261e; color: #fff; cursor: help;
+}
+#pluginDock .plgNotes { display: flex; flex-direction: column; gap: 4px; }
+#pluginDock .plgNote {
+  padding: 8px 12px; border-radius: 10px; font-size: .85rem; line-height: 1.35;
+  background: var(--panel); color: var(--text); border: 1px solid var(--line); box-shadow: 0 4px 16px rgb(0 0 0 / .25);
+}

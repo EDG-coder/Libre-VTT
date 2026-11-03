@@ -211,6 +211,42 @@
   dialog.pref .nota { color: var(--muted); font-size: .8rem; margin: 6px 0 0; line-height: 1.4; }
   dialog.pref .piede { display: flex; justify-content: flex-end; margin-top: 16px; }
   #sceltaLingua .lingue { flex-direction: column; gap: 8px; }
+  /* ---------- plugin ---------- */
+  #impPlugin { width: 100%; justify-content: space-between; display: flex; align-items: center; gap: 10px; }
+  dialog.pref.plg { width: min(620px, calc(100vw - 24px)); }
+  .plgLista { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+  .plgVuota { color: var(--muted); font-size: .9rem; padding: 14px; border: 1px dashed var(--line); border-radius: 12px; text-align: center; }
+  .plgRiga { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); }
+  .plgRiga.attivo { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
+  .plgRiga.pieno { border-color: #b3261e; }
+  .plgRiga input[type=checkbox] { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
+  .plgRiga .nome { font-weight: 600; }
+  .plgRiga .ver { color: var(--muted); font-size: .8rem; margin-left: 6px; font-weight: 400; }
+  .plgRiga .desc { color: var(--text-soft, var(--muted)); font-size: .85rem; margin: 3px 0 0; line-height: 1.35; }
+  .plgRiga .chip { display: inline-block; font-size: .7rem; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); margin: 5px 4px 0 0; }
+  .plgRiga .chip.rosso { background: #b3261e; border-color: #b3261e; color: #fff; font-weight: 700; }
+  .plgRiga .stato { font-size: .8rem; margin: 5px 0 0; color: #e5a50a; }
+  .plgRiga .stato.err { color: #ef6b62; }
+  .plgRiga .stato.ok { color: #57c785; }
+  .plgRiga .az { display: flex; gap: 4px; }
+  .plgRiga .az button { min-width: 34px; min-height: 34px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: inherit; cursor: pointer; font: inherit; }
+  .plgRiga .az button:disabled { opacity: .35; cursor: default; }
+  .plgPiede { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; margin-top: 12px; }
+  .plgPiede .gruppo { display: flex; flex-wrap: wrap; gap: 8px; }
+  .plgCrea { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  .plgCrea select { min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; font: inherit; padding: 0 8px; }
+  /* gli avvisi per l'accesso completo: volutamente seri */
+  dialog.avvisoPlg { width: min(480px, calc(100vw - 24px)); border: 2px solid #b3261e; border-radius: 16px; background: var(--panel); color: var(--text); padding: 20px; }
+  dialog.avvisoPlg::backdrop { background: rgb(40 0 0 / .65); backdrop-filter: blur(3px); }
+  .avvisoPlg .icona { width: 56px; height: 56px; border-radius: 14px; background: #b3261e; color: #fff; display: grid; place-items: center; font-size: 2rem; margin-bottom: 12px; }
+  .avvisoPlg h2 { margin: 0 0 8px; font-size: 1.15rem; }
+  .avvisoPlg p, .avvisoPlg li { font-size: .9rem; line-height: 1.45; }
+  .avvisoPlg ul { padding-left: 20px; margin: 8px 0; }
+  .avvisoPlg .chi { color: var(--muted); font-size: .82rem; }
+  .avvisoPlg input[type=text] { width: 100%; box-sizing: border-box; min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; font: inherit; padding: 0 12px; margin-top: 6px; }
+  .avvisoPlg .bottoni { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .avvisoPlg button.rischio { background: transparent; border: 1px solid #b3261e; color: #ef6b62; }
+  .avvisoPlg button.rischio:disabled { opacity: .4; }
   #sceltaLingua .lingue button { min-height: 52px; font-size: 1.05rem; }
 </style>
 <script src="/nativo.js"></script>
@@ -241,7 +277,62 @@
   <label class="spunta"><input type="checkbox" id="impCarat"> <span>Caratteristiche senza limite (normalmente vanno da 1 a 30)</span></label>
   <label class="spunta"><input type="checkbox" id="impSpareggio"> <span>Spareggio dell'iniziativa con la Destrezza</span></label>
   <p class="nota">Valgono per le campagne che apri da qui; ogni campagna le ricorda e puoi cambiarle anche dal tavolo.</p>
+  <h3>Plugin</h3>
+  <button class="b" type="button" id="impPlugin"><span>🧩 Gestisci i plugin</span><span id="impPluginConta" class="nota" data-noi18n></span></button>
+  <p class="nota">Temi, regole e funzioni nuove fatti dalla community. Si applicano al tavolo subito, senza riavviare.</p>
   <div class="piede"><button class="b go" type="button" id="impChiudi">Fatto</button></div>
+</dialog>
+
+<dialog class="pref plg" id="plugin" aria-labelledby="plgTit">
+  <h2 id="plgTit">Plugin</h2>
+  <p class="nota">Spunta un plugin per applicarlo: il tavolo lo prende entro pochi secondi, anche se è già aperto. Togliendo la spunta resta caricato, pronto da riapplicare. Più in basso nell'elenco vuol dire applicato dopo: in caso di conflitto vince lui.</p>
+  <div class="plgLista" id="plgLista"></div>
+  <div class="plgCrea">
+    <span class="nota">Nuovo plugin dal modello:</span>
+    <select id="plgModello" aria-label="Modello del plugin"></select>
+    <button class="b" type="button" id="plgCrea">＋ Crea</button>
+  </div>
+  <p class="nota" id="plgCartella" data-noi18n></p>
+  <div class="plgPiede">
+    <div class="gruppo">
+      <button class="b" type="button" id="plgApri">📂 Apri la cartella</button>
+      <button class="b" type="button" id="plgZip">Installa da .zip…</button>
+      <button class="b" type="button" id="plgNessuno">Togli tutti</button>
+      <input type="file" id="plgZipFile" accept=".zip,application/zip" hidden>
+    </div>
+    <button class="b go" type="button" id="plgChiudi">Fatto</button>
+  </div>
+</dialog>
+
+<dialog class="avvisoPlg" id="plgAvviso1" aria-labelledby="plgA1Tit">
+  <div class="icona" aria-hidden="true">⚠</div>
+  <h2 id="plgA1Tit">Questo plugin può controllare LIBRE VTT e il tuo computer</h2>
+  <p><b id="plgA1Nome" data-noi18n></b> <span class="chi" id="plgA1Chi" data-noi18n></span></p>
+  <p>Chiede l'accesso completo: non gira nella sandbox e ha gli stessi poteri di LIBRE VTT. Potrebbe:</p>
+  <ul>
+    <li>leggere e cambiare le tue campagne, le schede e la chat;</li>
+    <li>usare la tua identità di gioco nelle partite in cui entri;</li>
+    <li>mandare dati su internet senza chiedertelo;</li>
+    <li>rompere il tavolo o farlo comportare in modo strano.</li>
+  </ul>
+  <p>Applicalo solo se sai chi l'ha fatto e ti fidi. LIBRE VTT non lo ha controllato.</p>
+  <div class="bottoni">
+    <button class="b rischio" type="button" id="plgA1Continua">Continua…</button>
+    <button class="b go" type="button" id="plgA1Annulla" autofocus>Annulla</button>
+  </div>
+</dialog>
+
+<dialog class="avvisoPlg" id="plgAvviso2" aria-labelledby="plgA2Tit">
+  <div class="icona" aria-hidden="true">⚠</div>
+  <h2 id="plgA2Tit">Consenti comunque l'accesso completo?</h2>
+  <p>Per confermare, scrivi il nome del plugin: <b id="plgA2Nome" data-noi18n></b></p>
+  <input type="text" id="plgA2Testo" autocomplete="off" spellcheck="false" aria-label="Nome del plugin">
+  <p class="nota">Il consenso vale solo per questi file. Se il plugin cambia (una versione nuova o anche un solo file), te lo richiederemo. Puoi toglierlo quando vuoi da qui.</p>
+  <p class="stato err" id="plgA2Errore" hidden></p>
+  <div class="bottoni">
+    <button class="b rischio" type="button" id="plgA2Consenti" disabled>Consenti comunque</button>
+    <button class="b go" type="button" id="plgA2Annulla">Annulla</button>
+  </div>
 </dialog>
 
 <div class="wrap">
@@ -885,6 +976,141 @@ $('impTema').onclick = e => { const b = e.target.closest('button'); if (b) { PRE
 $('impCarat').onchange = () => mandaPref({ caratLibere: $('impCarat').checked });
 $('impSpareggio').onchange = () => mandaPref({ spareggioDes: $('impSpareggio').checked });
 addEventListener('lingua', () => carica());     // i testi composti qui si rifanno nella lingua nuova
+
+// ---------- plugin (⚙ › Plugin) ----------
+// Vedi server/plugins.js: la cartella è Documenti › LIBRE VTT › Plugins; qui si sceglie cosa applicare.
+let PLG = { plugins: [], examples: [], dir: '' };
+const plgTr = (s, v) => (window.tr || (x => x))(s, v);
+const plgNome = p => typeof p.name === 'string' ? p.name : (p.name && (p.name[I18N.lingua] || p.name.en || p.name.it || Object.values(p.name)[0])) || p.id;
+const plgDesc = p => typeof p.description === 'string' ? p.description : (p.description && (p.description[I18N.lingua] || p.description.en || p.description.it || Object.values(p.description)[0])) || '';
+async function plgChiama(op, corpo) {
+  const r = await fetch('/api/plugins/' + op, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo || {}) });
+  const j = await r.json();
+  if (j && j.plugins) PLG = j;
+  if (j && j.errore) alert(plgTr(j.errore));
+  disegnaPlugin();
+  return j;
+}
+async function caricaPlugin() {
+  try { const r = await fetch('/api/plugins', { cache: 'no-store' }); if (r.ok) PLG = await r.json(); } catch {}
+  disegnaPlugin();
+}
+function disegnaPlugin() {
+  const attivi = PLG.plugins.filter(p => p.running).length;
+  $('impPluginConta').textContent = PLG.plugins.length ? plgTr('{n} applicati su {tot}', { n: attivi, tot: PLG.plugins.length }) : '';
+  if (!$('plugin').open) return;
+  $('plgCartella').textContent = PLG.dir ? plgTr('Cartella: {dir}', { dir: PLG.dir }) : '';
+  $('plgApri').hidden = !!PLG.mobile;
+  const sel = $('plgModello'), prima = sel.value;
+  sel.replaceChildren(...PLG.examples.map(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; o.dataset.noi18n = ''; return o; }));
+  if (PLG.examples.includes(prima)) sel.value = prima;
+  $('plgCrea').disabled = !PLG.examples.length;
+  const box = $('plgLista');
+  if (!PLG.plugins.length) {
+    const v = document.createElement('div'); v.className = 'plgVuota';
+    v.textContent = plgTr('Nessun plugin. Crea il primo dal modello qui sotto, oppure metti una cartella con un plugin.json nella cartella dei plugin.');
+    box.replaceChildren(v); return;
+  }
+  box.replaceChildren(...PLG.plugins.map((p, i) => {
+    const riga = document.createElement('div');
+    riga.className = 'plgRiga' + (p.running ? ' attivo' : '') + (p.access === 'full' ? ' pieno' : '');
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!p.applied; cb.disabled = !!(p.errors && p.errors.length);
+    cb.setAttribute('aria-label', plgTr('Applica {nome}', { nome: plgNome(p) }));
+    cb.onchange = () => cb.checked ? applicaPlugin(p) : plgChiama('applica', { id: p.id, on: false });
+    const mezzo = document.createElement('div');
+    const t = document.createElement('div'); t.className = 'nome';
+    const n = document.createElement('span'); n.textContent = plgNome(p); n.dataset.noi18n = '';
+    const v = document.createElement('span'); v.className = 'ver'; v.textContent = 'v' + (p.version || '?') + (p.author ? ' · ' + p.author : ''); v.dataset.noi18n = '';
+    t.append(n, v);
+    mezzo.append(t);
+    const d = plgDesc(p); if (d) { const x = document.createElement('p'); x.className = 'desc'; x.textContent = d; x.dataset.noi18n = ''; mezzo.append(x); }
+    const chip = (testo, cls) => { const c = document.createElement('span'); c.className = 'chip' + (cls ? ' ' + cls : ''); c.textContent = plgTr(testo); return c; };
+    const k = p.kinds || [];
+    if (k.includes('theme')) mezzo.append(chip('Tema'));
+    if (k.includes('data')) mezzo.append(chip('Compendio'));
+    if (p.access === 'sandbox') mezzo.append(chip('Codice in sandbox'));
+    if (p.access === 'full') mezzo.append(chip('⚠ Accesso completo', 'rosso'));
+    if (p.scope === 'network') mezzo.append(chip('Cambia la rete'));
+    if (p.access === 'sandbox' && p.permissions && p.permissions.length) {
+      const x = document.createElement('p'); x.className = 'desc';
+      x.textContent = plgTr('Permessi: {lista}', { lista: p.permissions.map(q => plgTr({ 'chat.read': 'leggere la chat', 'chat.write': 'scrivere in chat', 'chat.commands': 'comandi in chat', 'ui.buttons': 'pulsanti sul tavolo', 'ui.notify': 'avvisi sul tavolo' }[q] || q)).join(', ') });
+      mezzo.append(x);
+    }
+    const stato = document.createElement('p'); stato.className = 'stato';
+    if (p.errors && p.errors.length) { stato.classList.add('err'); stato.textContent = plgTr(p.errors[0]); }
+    else if (p.applied && p.blocked) { stato.textContent = plgTr(p.blocked); }
+    else if (p.running) { stato.classList.add('ok'); stato.textContent = plgTr('Applicato'); }
+    else stato.textContent = '';
+    if (stato.textContent) mezzo.append(stato);
+    for (const w of p.warnings || []) { const x = document.createElement('p'); x.className = 'stato'; x.textContent = plgTr(w); mezzo.append(x); }
+    if (p.access === 'full' && p.consented && p.applied) {
+      const x = document.createElement('button'); x.type = 'button'; x.className = 'b'; x.style.marginTop = '6px';
+      x.textContent = plgTr('Togli il consenso');
+      x.onclick = () => plgChiama('revoca', { id: p.id });
+      mezzo.append(x);
+    }
+    const az = document.createElement('div'); az.className = 'az';
+    const su = document.createElement('button'); su.type = 'button'; su.textContent = '↑'; su.title = plgTr('Prima'); su.disabled = i === 0;
+    const giu = document.createElement('button'); giu.type = 'button'; giu.textContent = '↓'; giu.title = plgTr('Dopo'); giu.disabled = i === PLG.plugins.length - 1;
+    const sposta = dx => { const ids = PLG.plugins.map(x => x.id); const [x] = ids.splice(i, 1); ids.splice(i + dx, 0, x); plgChiama('ordine', { ids }); };
+    su.onclick = () => sposta(-1); giu.onclick = () => sposta(1);
+    az.append(su, giu);
+    if (!PLG.mobile) { const ap = document.createElement('button'); ap.type = 'button'; ap.textContent = '📂'; ap.title = plgTr('Apri la cartella del plugin'); ap.onclick = () => plgChiama('cartella', { id: p.id }); az.append(ap); }
+    riga.append(cb, mezzo, az);
+    return riga;
+  }));
+}
+// accesso completo: due avvisi, il secondo con il nome da scrivere e il pulsante che si sblocca dopo 5 secondi
+let plgAttesa = null;
+async function applicaPlugin(p) {
+  if (p.access === 'full' && !p.consented) {
+    plgAttesa = p;
+    $('plgA1Nome').textContent = plgNome(p) + ' v' + (p.version || '?');
+    $('plgA1Chi').textContent = p.author ? plgTr('di {autore}', { autore: p.author }) : plgTr('autore sconosciuto');
+    $('plgAvviso1').showModal(); $('plgA1Annulla').focus();
+    disegnaPlugin();
+    return;
+  }
+  plgChiama('applica', { id: p.id, on: true });
+}
+let plgConto = 0;
+$('plgA1Annulla').onclick = () => { $('plgAvviso1').close(); plgAttesa = null; };
+$('plgA1Continua').onclick = () => {
+  $('plgAvviso1').close();
+  if (!plgAttesa) return;
+  $('plgA2Nome').textContent = plgNome(plgAttesa);
+  $('plgA2Testo').value = ''; $('plgA2Errore').hidden = true;
+  const b = $('plgA2Consenti'); let s = 5;
+  b.disabled = true; b.textContent = plgTr('Consenti comunque') + ' (' + s + ')';
+  clearInterval(plgConto);
+  plgConto = setInterval(() => { s--; b.textContent = plgTr('Consenti comunque') + (s > 0 ? ' (' + s + ')' : ''); if (s <= 0) { clearInterval(plgConto); b.disabled = false; } }, 1000);
+  $('plgAvviso2').showModal(); $('plgA2Annulla').focus();
+};
+$('plgA2Annulla').onclick = () => { clearInterval(plgConto); $('plgAvviso2').close(); plgAttesa = null; };
+$('plgA2Consenti').onclick = async () => {
+  if (!plgAttesa) return;
+  const r = await fetch('/api/plugins/consenso', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: plgAttesa.id, hash: plgAttesa.hash, nome: $('plgA2Testo').value }) }).then(x => x.json()).catch(() => ({ errore: 'Non riesco a parlare con LIBRE VTT' }));
+  if (r.plugins) PLG = r;
+  if (r.errore) { $('plgA2Errore').textContent = plgTr(r.errore); $('plgA2Errore').hidden = false; return; }
+  $('plgAvviso2').close(); plgAttesa = null; disegnaPlugin();
+};
+for (const id of ['plgAvviso1', 'plgAvviso2']) $(id).addEventListener('close', () => { if (!$('plgAvviso1').open && !$('plgAvviso2').open) disegnaPlugin(); });
+$('impPlugin').onclick = () => { $('impostazioni').close(); $('plugin').showModal(); caricaPlugin(); };
+$('plgChiudi').onclick = () => $('plugin').close();
+$('plgApri').onclick = () => plgChiama('cartella', {});
+$('plgCrea').onclick = async () => { const j = await plgChiama('crea', { modello: $('plgModello').value, apri: true }); if (j && j.creato) disegnaPlugin(); };
+$('plgNessuno').onclick = async () => { for (const p of PLG.plugins.filter(x => x.applied)) await plgChiama('applica', { id: p.id, on: false }); };
+$('plgZip').onclick = () => $('plgZipFile').click();
+$('plgZipFile').onchange = async () => {
+  const f = $('plgZipFile').files[0]; $('plgZipFile').value = '';
+  if (!f) return;
+  const r = await fetch('/api/plugins/installa', { method: 'POST', headers: { 'Content-Type': 'application/zip' }, body: f }).then(x => x.json()).catch(() => ({ errore: 'Installazione non riuscita' }));
+  if (r.plugins) PLG = r;
+  if (r.errore) alert(plgTr(r.errore));
+  disegnaPlugin();
+};
+$('plugin').addEventListener('click', e => { if (e.target === $('plugin')) $('plugin').close(); });
+caricaPlugin();
 
 carica();
 setInterval(carica, 4000);

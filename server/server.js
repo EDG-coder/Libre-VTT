@@ -26,6 +26,12 @@ const MIME = {
 
 const DATA = path.join(CAMP, 'data');           // chat e stato della mappa (restano anche se spegni il server)
 const STATE_KEYS = new Set(['board', 'chat', 'sheets', 'chats', 'notes']);
+// I plugin (Documenti › LIBRE VTT › Plugins): quali applicare lo decide la rotellina della home (vedi server/plugins.js)
+const PLUGINS = process.env.LIBRE_PLUGINS_DIR && process.env.LIBRE_PLUGINS_STATE
+  ? require('./plugins.js').createPlugins({ dir: path.resolve(process.env.LIBRE_PLUGINS_DIR), stateFile: path.resolve(process.env.LIBRE_PLUGINS_STATE),
+    appVersion: String((() => { try { return require('../package.json').version; } catch { return ''; } })()) })
+  : null;
+const { cleanCss } = require('./plugins.js');
 const BOOT = Date.now();               // cambia a ogni avvio del server (serve per mostrare la guida una volta)
 
 fs.mkdirSync(ASSETS, { recursive: true });
@@ -256,6 +262,10 @@ function elencoCompendio(res) {
   };
   giro(path.join(cartellaSistema().dir, 'compendio'), true, 'sistema/compendio/');
   giro(COMP, false, 'compendio/');
+  if (PLUGINS) for (const p of PLUGINS.active()) if (p.compendium) {
+    const d = PLUGINS.runningFile(p.id, 'data/compendium');
+    if (d) giro(d, true, 'plugins/' + p.id + '/data/compendium/');
+  }
   json(res, 200, { pacchetti: out, visibilita: leggiJsonF(path.join(COMP, 'visibilita.json'), { pacchetti: {}, voci: {} }) });
 }
 const corpoBin = (req, res, max, fn) => {
@@ -518,6 +528,7 @@ function handle(req, res) {
     if (route === 'PUT /api/state') return saveState(req, res, q);
     if (route === 'GET /api/miniatura') return getMini(res, q);
     if (route === 'GET /api/sistema') return infoSistema(res);
+    if (route === 'GET /api/plugins') return json(res, 200, { plugins: PLUGINS ? PLUGINS.active() : [], disponibili: !!PLUGINS });
     if (route === 'GET /api/compendio') return elencoCompendio(res);
     if (route === 'GET /api/open5e') return open5e(res, q);
     if (route === 'POST /api/compendio/importa') return importaPacchetto(req, res);
@@ -557,6 +568,29 @@ function handle(req, res) {
         'Cache-Control': 'public, max-age=31536000, immutable',
         'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': CSP_SVG
       }), res.end(d)));
+  }
+  // i file dei plugin applicati (solo quelli che la home ha acceso, e solo tipi innocui o il loro codice)
+  if (rel.startsWith('/plugins/')) {
+    const m = /^\/plugins\/([a-z0-9][a-z0-9._-]{0,63})\/(.+)$/.exec(rel);
+    const file = m && PLUGINS ? PLUGINS.runningFile(m[1], m[2]) : null;
+    const ext = file ? path.extname(file).toLowerCase() : '';
+    const type = ext === '.html' ? null : MIME[ext];
+    if (!file || !type) return send(res, 404, 'Non trovato');
+    return fs.readFile(file, (err, d) => {
+      if (err) return send(res, 404, 'Non trovato');
+      if (ext === '.css') d = cleanCss(d.toString('utf8'));
+      send(res, 200, d, type);
+    });
+  }
+  // la pagina dove gira il codice dei plugin in sandbox: senza origine, senza rete, solo il suo script
+  if (rel === '/plugin-sandbox.html') {
+    return fs.readFile(path.join(WEB, 'plugin-sandbox.html'), (err, d) => {
+      if (err) return send(res, 404, 'Non trovato');
+      const hash = [...d.toString('utf8').matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x => `'sha256-${require('crypto').createHash('sha256').update(x[1], 'utf8').digest('base64')}'`).join(' ');
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy': `default-src 'none'; script-src ${hash} blob:; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'; sandbox allow-scripts` });
+      res.end(d);
+    });
   }
   // i pacchetti del compendio della campagna
   if (rel.startsWith('/compendio/')) {

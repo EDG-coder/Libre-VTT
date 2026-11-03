@@ -1,0 +1,10 @@
+{
+  "id": "full-access-example",
+  "name": { "it": "Esempio ad accesso completo", "en": "Full access example" },
+  "description": { "it": "Mostra gli agganci: aggiunge l'ora ai messaggi che scrivi e ricorda i dadi tirati. Chiede l'accesso completo, quindi passa per i due avvisi.", "en": "Shows hooks: adds the time to the messages you write and counts the dice you roll. Asks for full access, so it goes through the two warnings." },
+  "version": "1.0.0",
+  "author": "LIBRE VTT",
+  "license": "MIT",
+  "libreVtt": ">=3.8",
+  "access": "full"
+}

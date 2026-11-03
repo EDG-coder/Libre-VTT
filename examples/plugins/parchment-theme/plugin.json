@@ -1,0 +1,9 @@
+{
+  "id": "parchment-theme",
+  "name": { "it": "Tema pergamena", "en": "Parchment theme" },
+  "description": { "it": "Colori caldi da vecchia mappa: un esempio di tema fatto solo di CSS.", "en": "Warm old-map colours: an example of a CSS-only theme." },
+  "version": "1.0.0",
+  "author": "LIBRE VTT",
+  "license": "MIT",
+  "libreVtt": ">=3.8"
+}
