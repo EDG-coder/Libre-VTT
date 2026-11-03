@@ -45,4 +45,16 @@ const intestazioniPagina = (html, opz) => ({
   'X-Content-Type-Options': 'nosniff'
 });
 
-module.exports = { cspPagina, intestazioniPagina };
+// Sul telefono anche le altre app possono parlare con 127.0.0.1: i server rispondono solo alla finestra
+// di LIBRE VTT, che ha il cookie «libre_k» con il segreto avuto dall'app (lo mette l'avviatore, e vale
+// per tutte le porte di 127.0.0.1). Sul computer il segreto non c'è e non si controlla niente.
+const SEGRETO = String(process.env.LIBRE_SEGRETO || '');
+delete process.env.LIBRE_SEGRETO;
+function segretoOk(req) {
+  if (!SEGRETO) return true;
+  const ck = /(?:^|;\s*)libre_k=([^;]*)/.exec(req.headers.cookie || '');
+  let dato = ''; try { dato = ck ? decodeURIComponent(ck[1]) : ''; } catch {}
+  return dato.length === SEGRETO.length && crypto.timingSafeEqual(Buffer.from(dato), Buffer.from(SEGRETO));
+}
+
+module.exports = { cspPagina, intestazioniPagina, segretoOk };

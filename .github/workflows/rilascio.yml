@@ -200,6 +200,8 @@ jobs:
           # le note: prima le novità di questa versione (le mostra anche l'avviso di aggiornamento dell'app), poi quale file scaricare
           { [ -f .github/novita.md ] && cat .github/novita.md && echo; cat .github/note-rilascio.md; } > note.md
           cp tutto/link-*/* tutto/installatori/* tutto/setup-exe/* tutto/dmg/* tutto/app-android/* tutto/app-ios/* file/
+          # le impronte di tutti i file: l'app controlla quella dell'aggiornamento prima di aprirlo
+          (cd file && sha256sum $(ls | grep -v '\.sha256$') > SHA256SUMS.txt && cat SHA256SUMS.txt)
           ls -la file
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" file/* --clobber --repo "$GITHUB_REPOSITORY"

@@ -43,7 +43,7 @@ const saveAssetIndex = () => { try { fs.writeFileSync(path.join(DATA, 'assets.js
 const assetFile = h => assetIndex[h] ? path.join(ASSETS, h + assetIndex[h].ext) : null;
 const haveAsset = h => { const f = assetFile(h); return !!(f && fs.existsSync(f)); };
 const SVG = require('../condiviso/svg-pulito.js');
-const { intestazioniPagina } = require('./csp.js');
+const { intestazioniPagina, segretoOk } = require('./csp.js');
 // I soli tipi che il deposito accetta: immagini e (per il compendio del master) JSON. Qualsiasi altro
 // (text/html, application/javascript...) servito da 127.0.0.1 girerebbe con i permessi del tavolo.
 const mimeAmmesso = m => { const t = String(m || '').toLowerCase().split(';')[0].trim(); return MIME_EXT[t] ? t : null; };
@@ -243,7 +243,10 @@ function broadcast(msg, filter) {
 }
 function sendPlayers() {
   const list = playerList();
-  broadcast({ t: 'players', list });
+  // ai giocatori non serve sapere da quale dispositivo arrivano gli altri, che cosa stanno guardando o
+  // che cosa hanno chiesto per ultimo: quello resta al master e al pannello
+  const ridotta = list.map(({ peer, percorso, viewScene, viewRect, lastOp, lastAt, ops, client, ...resto }) => resto);
+  for (const c of clients) c.send({ t: 'players', list: c.role === 'master' ? list : ridotta });
   panelPush({ t: 'players', list });
 }
 
@@ -1526,7 +1529,7 @@ function onUpgrade(req, sock, head) {
   const local = /^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(sock.remoteAddress || '');
   const org = req.headers.origin || '';
   const okOrigin = !org || /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(org);
-  if (!key || url.pathname !== '/ws' || !local || !okOrigin) { sock.destroy(); return; }
+  if (!key || url.pathname !== '/ws' || !local || !okOrigin || !segretoOk(req)) { sock.destroy(); return; }
 
   sock.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n' +
     'Sec-WebSocket-Accept: ' + wsAccept(key) + '\r\n\r\n');
@@ -1777,6 +1780,7 @@ function bridgeSveglia() {
 // dall'host attraverso il tubo e la scrive nella cartella, così la volta dopo è già pronta.
 const waiting = new Map();               // hash -> { parts, bytes, mime, name, res:[], timer }
 
+let byteDallHost = 0;                  // (giocatore) quanto ha già salvato di quello mandato dall'host
 function wantAsset(hash) {
   let w = waiting.get(hash);
   if (w) return w.promise;
@@ -1809,6 +1813,8 @@ function bridgeAsset(msg) {
   const buf = Buffer.concat(w.parts);
   const got = crypto.createHash('sha256').update(buf).digest('hex');
   if (got !== msg.hash) { console.error('file arrivato rovinato:', msg.hash.slice(0, 8)); w.done(null); return; }
+  // un host che manda immagini su immagini non riempie il disco di chi gioca: 3 GB per sessione al massimo
+  if ((byteDallHost += buf.length) > 3 * 1024 * 1024 * 1024) { console.error('troppe immagini dall\'host: non le salvo più'); w.done(null); return; }
   storeAsset(buf, w.mime, w.name);
   console.log(`↓ ricevuta immagine ${(w.name || msg.hash.slice(0, 8))} (${Math.round(buf.length / 1024)} kB)`);
   w.done(buf);
@@ -1854,6 +1860,8 @@ function httpHandler(req, res) {
   const url = new URL(req.url, 'http://localhost');
   const local = /^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/.test(req.socket.remoteAddress || '');
   if (!local) return sendHttp(res, 403, 'Il pannello si apre solo da questo computer.');
+  // le immagini del deposito si chiedono anche senza cookie (fetch da un'altra porta); tutto il resto no
+  if (!url.pathname.startsWith('/asset/') && req.method !== 'OPTIONS' && !segretoOk(req)) return sendHttp(res, 403, 'Questa finestra non è quella di LIBRE VTT.');
 
   // Il VTT sta su un'altra porta di questo stesso computer: gli lasciamo chiamare le api.
   const origin = req.headers.origin || '';

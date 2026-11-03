@@ -16,7 +16,7 @@ const MAX_BYTES = 30 * 1024 * 1024;
 const IMG = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.svg']);
 const TYPE_EXT = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp', 'image/avif': '.avif', 'image/bmp': '.bmp', 'image/svg+xml': '.svg' };
 const SVG = require('../condiviso/svg-pulito.js');
-const { intestazioniPagina } = require('./csp.js');
+const { intestazioniPagina, segretoOk } = require('./csp.js');
 const ASSET_MIME = new Set([...Object.keys(TYPE_EXT), 'application/json']);
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -500,10 +500,12 @@ function hostLocale(req, porta) {
 }
 function handle(req, res) {
   if (!hostLocale(req, PORT)) return send(res, 403, 'Host non permesso');
+  if (!segretoOk(req)) return send(res, 403, 'Questa finestra non è quella di LIBRE VTT.');
   const url = new URL(req.url, 'http://localhost'), q = url.searchParams, p = url.pathname;
   if (p.startsWith('/api/')) {
     const origin = req.headers.origin;
-    if (req.method !== 'GET' && origin && !/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) return send(res, 403, 'Origine non consentita');
+    // le richieste che cambiano qualcosa vengono solo dalle nostre pagine, servite da questa stessa porta
+    if (req.method !== 'GET' && origin && !new RegExp('^http://(localhost|127\\.0\\.0\\.1|\\[::1\\]):' + PORT + '$').test(origin)) return send(res, 403, 'Origine non consentita');
     const route = `${req.method} ${p}`;
     if (route === 'GET /api/assets') return json(res, 200, listAll());
     if (route === 'POST /api/assets') return saveUpload(req, res, q);
@@ -576,6 +578,9 @@ function handle(req, res) {
   const file = path.join(base, rel === '/' ? 'index.html' : dalProgramma ? rel.slice(dalProgramma[0].length) : rel);
   const type = MIME[path.extname(file).toLowerCase()];
   if (!file.startsWith(base + path.sep) || !type) return send(res, 404, 'Non trovato');
+  // dalla cartella delle immagini della campagna escono solo immagini (una campagna arrivata da fuori
+  // potrebbe avere dentro una pagina .html o uno script)
+  if (base === CAMP && !IMG.has(path.extname(file).toLowerCase())) return send(res, 404, 'Non trovato');
   fs.readFile(file, (err, data) => err ? send(res, 404, 'Non trovato') : send(res, 200, data, type));
 }
 

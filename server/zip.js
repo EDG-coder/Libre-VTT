@@ -160,7 +160,11 @@ function estraiZip(fileZip, dest, { maxByte = 4 * 1024 * 1024 * 1024, maxVoci = 
       const dati = leggi(locale + 30 + lh.readUInt16LE(26) + lh.readUInt16LE(28), compresso);
       let out;
       if (metodo === 0) out = dati;
-      else if (metodo === 8) out = zlib.inflateRawSync(dati);
+      else if (metodo === 8) {
+        // non più grande di quanto dichiarato: uno zip «bomba» non riempie la memoria
+        try { out = zlib.inflateRawSync(dati, { maxOutputLength: Math.max(1, pieno) }); }
+        catch { throw new Error(`«${nome}» nello .zip è rovinato.`); }
+      }
       else throw new Error(`«${nome}» usa una compressione che non conosco.`);
       if (out.length !== pieno || crc32(out) !== crc) throw new Error(`«${nome}» nello .zip è rovinato.`);
       fs.mkdirSync(path.dirname(finale), { recursive: true });
