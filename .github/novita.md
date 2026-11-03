@@ -1,11 +1,10 @@
-## Novità della 3.7.9
+## Novità della 3.8.0
 
-**Aggiornamento di sicurezza, consigliato a tutti**
-- **Corretti diversi problemi di sicurezza:** in certe condizioni un sito aperto nel browser, un file condiviso (un pacchetto del compendio, una campagna, una scena) o un partecipante malintenzionato potevano interferire con una partita in rete o con il computer di chi gioca. Aggiorna sia il master sia i giocatori.
-- **Il codice nuovo si accetta a mano:** quando il master cambia il codice della campagna, chi gioca vede un avviso e passa al codice nuovo solo premendo «Sì, passa al nuovo».
-- **Aggiornamenti controllati:** prima di aprire l'installatore di un aggiornamento, l'app controlla che sia identico a quello pubblicato (con il file `SHA256SUMS.txt` della release).
-- **Limiti contro gli abusi:** un giocatore non può più mandare richieste o messaggi a raffica, né file enormi, rallentando la partita per tutti. Il master non ha limiti.
-
-**Nuove piattaforme**
-- **Windows su ARM, nativo:** sui PC con processore ARM (per esempio Snapdragon) `LIBRE-VTT-Setup.exe` e `Installa-LIBRE-VTT-Windows.cmd` installano Node e il collegamento a distanza per ARM, senza emulazione.
-- **Linux su RISC-V:** `Installa-LIBRE-VTT-Linux.sh` funziona anche sui computer RISC-V a 64 bit, con Node e il collegamento a distanza già dentro.
+**Plugin: temi, compendi e funzioni nuove fatti dalla community**
+- **Dalla rotellina ⚙ della home:** in *Impostazioni › Plugin › Gestisci i plugin* vedi tutti i plugin che hai, li applichi con una spunta, scegli l'ordine con le frecce (più in basso vuol dire applicato dopo: in caso di conflitto vince lui) e apri la loro cartella.
+- **Un plugin è una cartella:** sta in *Documenti › LIBRE VTT › Plugins*, con dentro un `plugin.json` e, a scelta, un tema (`style.css`), dei pacchetti per il compendio (`data/compendium/`) e del codice (`client.js`), con i testi tradotti in `locales/`. Si installa anche da un file `.zip`.
+- **Si applicano subito:** il tavolo prende un plugin entro pochi secondi, anche se è già aperto, senza ricaricare. Togliendo la spunta il plugin resta caricato in memoria, pronto da riapplicare all'istante.
+- **Due livelli per il codice.** *In sandbox* (quello normale): gira in una cornice isolata, senza internet e senza accesso alla pagina, e può fare solo quello che dichiara nei permessi (leggere e scrivere in chat, aggiungere comandi, pulsanti e avvisi). *Ad accesso completo*: può agganciarsi a qualsiasi funzione del tavolo e cambiare tutto. Prima di applicarlo LIBRE VTT mostra due avvisi: nel secondo va scritto il nome del plugin e il pulsante si sblocca dopo 5 secondi. Il consenso vale solo per quei file: se il plugin cambia, viene richiesto. Finché è applicato, in alto sul tavolo c'è un bollino rosso.
+- **Agganci ovunque:** un plugin ad accesso completo può intervenire prima, dopo o al posto di ognuna delle circa 400 funzioni del tavolo (chat, dadi, scene, schede, rete…).
+- **Facile da creare:** con *＋ Crea* parti da un modello già pronto (un plugin vuoto, un tema, un plugin in sandbox, uno ad accesso completo). La guida completa è in `docs/plugins.md` nel progetto su GitHub.
+- **Nella prima versione i plugin valgono sul tuo computer:** l'invio dei plugin del master ai giocatori e i plugin che girano sul server della partita arriveranno in una versione successiva.

@@ -27,7 +27,8 @@ function cspPagina(html, { youtube = false } = {}) {
     "media-src * data: blob:",
     "connect-src * ws://127.0.0.1:* ws://localhost:* data: blob:",
     "font-src 'self' data:",
-    youtube ? "frame-src https://www.youtube.com https://www.youtube-nocookie.com" : "frame-src 'none'",
+    // 'self': la cornice senza origine dove gira il codice dei plugin in sandbox (plugin-sandbox.html)
+    youtube ? "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com" : "frame-src 'none'",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

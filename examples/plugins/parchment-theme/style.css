@@ -1,0 +1,9 @@
+/* A theme changes the variables of the table (the full list is in docs/plugins.md).
+   The dark and the light theme both become parchment here. */
+:root, :root[data-theme="dark"], :root[data-theme="light"] {
+  --bg: #d9c7a1; --panel: #efe3c6; --panel-2: #e6d6b2; --panel-3: #dccaa2; --line: #b59d6e;
+  --text: #2b1d0e; --text-soft: #4a3720; --muted: #6f5a3c;
+  --msg: #e6d3ac; --roll-bg: #e9d9b5; --roll-text: #7a2e12;
+  --hint-bg: rgba(239, 227, 198, .85); --hint-text: #4a3720;
+  --accent: #8a3b12; --board-fill: #efe3c6; color-scheme: light;
+}

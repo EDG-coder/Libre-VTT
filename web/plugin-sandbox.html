@@ -1,0 +1,86 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>plugin</title></head><body>
+<script>
+// The sandbox of one plugin. This page has no origin of its own (sandbox without allow-same-origin),
+// cannot reach the network (connect-src 'none'), cannot see the table's page, its storage or its cookies.
+// It talks to the table only through postMessage; the table checks every request against the plugin's
+// permissions (web/js/plugins/loader.js). The plugin's code arrives as text and runs from a blob: URL.
+(function () {
+  'use strict';
+  const parent = window.parent;
+  let calls = 0;
+  const pending = new Map(), listeners = new Map(), buttons = new Map(), commands = new Map();
+  let info = null, mod = null, store = {};
+  const post = m => parent.postMessage(m, '*');
+  const call = (method, ...args) => new Promise((ok, ko) => {
+    const n = ++calls;
+    pending.set(n, { ok, ko });
+    post({ type: 'call', call: n, method, args });
+  });
+  const fill = (s, vars) => String(s).replace(/\{(\w+)\}/g, (x, k) => vars && vars[k] != null ? String(vars[k]) : x);
+  const emit = (name, data) => {
+    for (const fn of listeners.get(name) || []) {
+      try { fn(data); } catch (e) { post({ type: 'error', message: String(e && e.stack || e) }); }
+    }
+  };
+  function makeApi() {
+    return Object.freeze({
+      id: info.id, lang: info.lang, access: 'sandbox', permissions: info.permissions.slice(),
+      t: (key, vars) => fill(info.strings[key] != null ? info.strings[key] : key, vars),
+      on(name, fn) {
+        if (typeof fn !== 'function') return;
+        if (!listeners.has(name)) { listeners.set(name, []); post({ type: 'subscribe', name }); }
+        listeners.get(name).push(fn);
+      },
+      chat: Object.freeze({ write: text => call('chat.write', String(text)) }),
+      ui: Object.freeze({
+        notify: text => call('ui.notify', String(text)),
+        button: ({ label, title, onClick } = {}) => call('ui.button', { label: String(label || ''), title: String(title || '') })
+          .then(id => { buttons.set(id, onClick); return id; })
+      }),
+      commands: Object.freeze({
+        add: (name, fn) => call('commands.add', String(name)).then(() => { commands.set(String(name).toLowerCase(), fn); })
+      }),
+      storage: Object.freeze({
+        get: key => store[key],
+        set: (key, value) => { store[key] = value; return call('storage.set', String(key), value); }
+      })
+    });
+  }
+  window.addEventListener('message', async e => {
+    if (e.source !== parent) return;
+    const m = e.data || {};
+    if (m.type === 'load' && !info) {
+      info = m; store = m.storage || {};
+      try {
+        const url = URL.createObjectURL(new Blob([m.code], { type: 'text/javascript' }));
+        mod = await import(url);
+        URL.revokeObjectURL(url);
+        const start = mod.activate || mod.default;
+        if (typeof start !== 'function') throw new Error('client.js must export a function activate(vtt)');
+        await start(makeApi());
+        post({ type: 'loaded' });
+      } catch (err) { post({ type: 'error', message: String(err && err.stack || err), fatal: true }); }
+    } else if (m.type === 'reply') {
+      const p = pending.get(m.call); if (!p) return;
+      pending.delete(m.call);
+      m.ok ? p.ok(m.value) : p.ko(new Error(m.error || 'refused'));
+    } else if (m.type === 'event') {
+      if (m.name === 'ui.click' && buttons.get(m.data)) { try { buttons.get(m.data)(); } catch (err) { post({ type: 'error', message: String(err) }); } return; }
+      if (m.name === 'command') {
+        const fn = commands.get(String(m.data.name).toLowerCase());
+        if (fn) { try { await fn(m.data.args, m.data.text); } catch (err) { post({ type: 'error', message: String(err) }); } }
+        return;
+      }
+      emit(m.name, m.data);
+    } else if (m.type === 'deactivate') {
+      try { if (mod && typeof mod.deactivate === 'function') await mod.deactivate(); } catch {}
+      post({ type: 'deactivated' });
+    }
+  });
+  window.addEventListener('error', e => post({ type: 'error', message: String(e.message || e) }));
+  window.addEventListener('unhandledrejection', e => post({ type: 'error', message: String(e.reason && e.reason.stack || e.reason) }));
+  post({ type: 'ready' });
+})();
+</script>
+</body></html>

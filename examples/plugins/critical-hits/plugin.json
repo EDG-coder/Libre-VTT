@@ -1,0 +1,11 @@
+{
+  "id": "critical-hits",
+  "name": { "it": "Critici in chat", "en": "Critical hits in chat" },
+  "description": { "it": "Esempio di plugin in sandbox: avvisa quando esce un 20 naturale, aggiunge il comando /moneta e un pulsante.", "en": "Sandboxed plugin example: announces natural 20s, adds the /coin command and a button." },
+  "version": "1.0.0",
+  "author": "LIBRE VTT",
+  "license": "MIT",
+  "libreVtt": ">=3.8",
+  "access": "sandbox",
+  "permissions": ["chat.read", "chat.write", "chat.commands", "ui.buttons", "ui.notify"]
+}

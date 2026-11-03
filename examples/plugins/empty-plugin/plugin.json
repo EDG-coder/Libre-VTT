@@ -1,0 +1,10 @@
+{
+  "id": "empty-plugin",
+  "name": { "it": "Il mio plugin", "en": "My plugin" },
+  "description": { "it": "Un plugin vuoto da cui partire: modifica questi file.", "en": "An empty plugin to start from: edit these files." },
+  "version": "0.1.0",
+  "author": "",
+  "libreVtt": ">=3.8",
+  "access": "sandbox",
+  "permissions": ["chat.write", "chat.commands"]
+}

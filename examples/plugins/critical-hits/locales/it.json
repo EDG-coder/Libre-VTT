@@ -1,0 +1,8 @@
+{
+  "critical": "⚔️ 20 naturale di {who}!",
+  "someone": "qualcuno",
+  "coin": "🪙 Moneta: {side}",
+  "heads": "testa",
+  "tails": "croce",
+  "coin.button": "Lancia una moneta"
+}

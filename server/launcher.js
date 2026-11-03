@@ -910,7 +910,7 @@ async function avvia(mode, id, campagna) {
   salvaConf();
   state.porte = { web: WEB_PORT, game: GAME_PORT, link: LINK_PORT };
 
-  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP, MYVTT_PREDEFINITE: PREDEFINITE, MYVTT_CAMP_HOME: CAMP_HOME, LIBRE_SEGRETO: SEGRETO }, keep: true });
+  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP, MYVTT_PREDEFINITE: PREDEFINITE, MYVTT_CAMP_HOME: CAMP_HOME, LIBRE_SEGRETO: SEGRETO, LIBRE_PLUGINS_DIR: PLUGINS_DIR, LIBRE_PLUGINS_STATE: PLUGINS_STATE }, keep: true });
   if (!await aspettaPorta(WEB_PORT)) return fallisci('Il tavolo non si è acceso.');
 
   if (mode !== 'solo') {
@@ -1036,6 +1036,19 @@ async function scaricaPronto() {
 // Sul computer si scarica l'installatore giusto e lo si avvia; su Android si scarica l'APK e
 // lo installa l'app (Android chiede sempre conferma); su iPhone si può solo avvisare.
 const VERSIONE = String((leggiJson(path.join(ROOT, 'package.json')) || {}).version || '');
+
+// ---------- Plugins (the ⚙ in the home) ----------
+// The folder sits next to «Campagne» (Documents › LIBRE VTT › Plugins); on phones inside the app's own folder.
+const PLUGINS_DIR = MOBILE ? path.join(USERDIR, 'plugins') : path.join(path.dirname(CAMP_HOME), 'Plugins');
+const PLUGINS_STATE = path.join(USERDIR, 'plugins.json');
+const PLUGIN_EXAMPLES = path.join(ROOT, 'examples', 'plugins');
+const PLUGINS = require('./plugins').createPlugins({ dir: PLUGINS_DIR, stateFile: PLUGINS_STATE, appVersion: VERSIONE });
+function pluginExamples() {
+  try { return fs.readdirSync(PLUGIN_EXAMPLES, { withFileTypes: true }).filter(e => e.isDirectory() && fs.existsSync(path.join(PLUGIN_EXAMPLES, e.name, 'plugin.json'))).map(e => e.name); } catch { return []; }
+}
+function pluginsInfo() {
+  return { dir: PLUGINS_DIR, mobile: !!MOBILE, plugins: PLUGINS.list(), examples: pluginExamples() };
+}
 function repoGitHub() {
   const r = leggiJson(path.join(ROOT, 'rilascio.json')) || {};
   const repo = String(process.env.MYVTT_REPO || r.repo || 'EDG-coder/Libre-VTT').trim();
@@ -1652,7 +1665,7 @@ const server = http.createServer(async (req, res) => {
     if (o && o !== `http://127.0.0.1:${UI_PORT}` && o !== `http://localhost:${UI_PORT}`) return invia(res, 403, 'no');
     // JSON e basta (un altro sito non può mandarlo senza chiedere il permesso al browser); lo zip di un sistema solo dove serve
     const ct = req.headers['content-type'] || '';
-    if (!/^application\/json/.test(ct) && !(u.pathname === '/api/sistema/carica' && /^application\/zip/.test(ct))) return invia(res, 415, 'no');
+    if (!/^application\/json/.test(ct) && !((u.pathname === '/api/sistema/carica' || u.pathname === '/api/plugins/installa') && /^application\/zip/.test(ct))) return invia(res, 415, 'no');
   }
   const corpo = fn => {
     let body = '';
@@ -1710,6 +1723,51 @@ const server = http.createServer(async (req, res) => {
     });
   }
   // un file di sistema (.libresistema / .zip) che arriva dalla finestra: lo si tiene finché non si sceglie
+  // --- plugins ---
+  if (u.pathname === '/api/plugins' && req.method === 'GET') return ok(pluginsInfo());
+  if (u.pathname.startsWith('/api/plugins/') && req.method === 'POST' && u.pathname !== '/api/plugins/installa') {
+    const op = u.pathname.slice(13);
+    return corpo(m => {
+      const id = String(m.id || '');
+      try {
+        if (op === 'applica') {
+          const p = PLUGINS.list().find(x => x.id === id);
+          if (!p) return ok({ errore: 'Plugin non trovato' });
+          if (m.on && p.access === 'full' && !p.consented) return ok({ serveConsenso: true, ...pluginsInfo() });
+          PLUGINS.setApplied(id, !!m.on);
+        } else if (op === 'ordine') PLUGINS.setOrder(Array.isArray(m.ids) ? m.ids.map(String) : []);
+        else if (op === 'consenso') PLUGINS.giveConsent(id, String(m.hash || ''), String(m.nome || ''));
+        else if (op === 'revoca') PLUGINS.revokeConsent(id);
+        else if (op === 'cartella') { fs.mkdirSync(PLUGINS_DIR, { recursive: true }); if (!MOBILE) mostraCartella(m.id ? (PLUGINS.folderOf(id) || PLUGINS_DIR) : PLUGINS_DIR); }
+        else if (op === 'crea') {
+          const nome = String(m.modello || '');
+          if (!pluginExamples().includes(nome)) return ok({ errore: 'Modello non trovato' });
+          const nuovo = PLUGINS.createFrom(path.join(PLUGIN_EXAMPLES, nome), m.nuovoId ? String(m.nuovoId) : nome);
+          if (m.apri && !MOBILE) mostraCartella(path.join(PLUGINS_DIR, nuovo));
+          return ok({ creato: nuovo, ...pluginsInfo() });
+        } else return invia(res, 404, 'no');
+        ok(pluginsInfo());
+      } catch (e) { ok({ errore: e.message, ...pluginsInfo() }); }
+    });
+  }
+  if (u.pathname === '/api/plugins/installa' && req.method === 'POST') {
+    const parti = []; let n = 0, troppo = false;
+    req.on('data', d => { n += d.length; if (n > 60 * 1024 * 1024) { troppo = true; req.destroy(); } else parti.push(d); });
+    req.on('end', () => {
+      if (troppo) return;
+      const b = Buffer.concat(parti);
+      if (b.length < 4 || b.readUInt32LE(0) !== 0x04034b50) return ok({ errore: 'Non è un file .zip.' });
+      const tmp = path.join(os.tmpdir(), 'libre-plugin-' + Date.now().toString(36));
+      try {
+        fs.writeFileSync(tmp + '.zip', b);
+        estraiZip(tmp + '.zip', tmp, { maxByte: 60 * 1024 * 1024, maxVoci: 2000 });
+        const id = PLUGINS.installFolder(tmp);
+        ok({ installato: id, ...pluginsInfo() });
+      } catch (e) { ok({ errore: e.message, ...pluginsInfo() }); }
+      finally { try { fs.rmSync(tmp, { recursive: true, force: true }); fs.rmSync(tmp + '.zip', { force: true }); } catch {} }
+    });
+    return;
+  }
   if (u.pathname === '/api/sistema/carica' && req.method === 'POST') {
     const parti = []; let n = 0, troppo = false;
     req.on('data', d => { n += d.length; if (n > 60 * 1024 * 1024) { troppo = true; req.destroy(); } else parti.push(d); });

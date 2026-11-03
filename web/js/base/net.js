@@ -48,7 +48,7 @@ const netAs = () => NET.on || (NET.retrying && !!NET.me);
 function isMaster() { return !netAs() || (NET.me && NET.me.role === 'master'); }
 function can(p) { return !netAs() || !NET.me ? true : !!(NET.me.perms && NET.me.perms[p]); }
 
-const netSend = o => { try { NET.ws && NET.ws.readyState === 1 && NET.ws.send(JSON.stringify(o)); } catch {} };
+function netSend(o) { try { NET.ws && NET.ws.readyState === 1 && NET.ws.send(JSON.stringify(o)); } catch {} }   // una funzione (non una costante): i plugin la possono agganciare (net.send)
 // ---------- La coda: quello che si fa senza collegamento non si perde ----------
 // Ogni intento ha un numero (q) e resta in coda finché il server non risponde «ok» (fatto, o rifiutato).
 // Se il collegamento cade, quello che c'è in coda si rimanda al ritorno, in ordine; il server riconosce i

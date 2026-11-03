@@ -133,6 +133,14 @@ Se scegli una cartella che non è una campagna te lo chiede prima, e ci aggiunge
 `assets/` senza toccare il resto. La campagna che avevi prima delle campagne (dentro la cartella
 del gioco) compare nell'elenco come «La campagna di prima».
 
+## I plugin
+
+Temi, pacchetti del compendio e funzioni nuove fatti da chiunque. Stanno in **Documenti › LIBRE VTT › Plugins**
+(una cartella per plugin, con dentro un `plugin.json`) e si gestiscono dalla rotellina ⚙ della home:
+*Impostazioni › Plugin › Gestisci i plugin*. Una spunta li applica al tavolo, anche già aperto; le frecce
+decidono l'ordine; *＋ Crea* parte da un modello pronto. Il codice gira in una sandbox senza internet, a meno che il
+plugin chieda l'accesso completo: in quel caso LIBRE VTT lo applica solo dopo due avvisi. Come si fanno: [docs/plugins.md](docs/plugins.md).
+
 ## Se cade la connessione
 
 Se il collegamento cade mentre l'app è aperta (wifi, portatile in pausa, il master che riavvia),
@@ -195,6 +203,8 @@ dalla pagina dell'esecuzione, senza pubblicare.
 | `web/js/regole/` | i sistemi di gioco e il compendio |
 | `web/lib/` | le librerie di altri (pdf-lib, pdf.js) |
 | `sistemi/` | i sistemi di gioco già pronti (D&D 5e 2014 e 2024, vuoto) con il loro compendio |
+| `examples/plugins/` | i modelli dei plugin (vuoto, tema, sandbox, accesso completo) usati da «＋ Crea» |
+| `docs/` | la guida per chi fa i plugin |
 | `assets/` | lo sfondo di benvenuto |
 | `pacchetti/` | quello che serve per costruire le versioni da installare: `installer/`, `mac/`, `mobile/`, e il collegamento `uffa-link/` |
 | `sviluppo/` | gli strumenti per chi sviluppa (il convertitore delle regole SRD) |

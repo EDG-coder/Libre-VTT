@@ -1,0 +1,8 @@
+{
+  "critical": "⚔️ Natural 20 by {who}!",
+  "someone": "someone",
+  "coin": "🪙 Coin: {side}",
+  "heads": "heads",
+  "tails": "tails",
+  "coin.button": "Flip a coin"
+}

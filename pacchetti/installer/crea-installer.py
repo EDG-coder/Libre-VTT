@@ -35,7 +35,7 @@ PROGETTO = os.path.dirname(os.path.dirname(QUI))      # pacchetti/installer → 
 
 # Quello che va installato: i file del programma (con le stesse cartelle del progetto), non le
 # campagne o i dati di chi lo costruisce.
-CARTELLE = ['server', 'condiviso', 'web', 'sistemi']             # tutto quello che c'è dentro
+CARTELLE = ['server', 'condiviso', 'web', 'sistemi', 'examples']             # tutto quello che c'è dentro
 FILE = ['package.json', 'assets/Sfondi/main.webp', 'assets/Sfondi/main-en.webp',
         'pacchetti/uffa-link/Cargo.toml', 'pacchetti/uffa-link/Cargo.lock']
 LINK_SRC = 'pacchetti/uffa-link/src'                              # i sorgenti del collegamento (si compila sul posto se serve)
