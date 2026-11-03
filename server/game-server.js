@@ -1553,6 +1553,7 @@ let bridge = null, bridgeBuf = '', bridgeQueue = [], bridgeQueueBytes = 0;
 // nuova e non sa chi sia. Glielo ripresentiamo noi, così il giocatore rientra da solo,
 // con lo stesso gettone (quindi stesso nome, stessi permessi, stesse schede).
 let lastHello = null;
+let invitoInAttesa = null;            // il codice nuovo mandato dall'host, finché chi gioca non lo accetta
 let hostUp = false, lastFromHost = 0, bridgeTries = 0, bridgeTimer = 0;
 const linkState = up => {
   if (hostUp === up) return;
@@ -1645,7 +1646,8 @@ function versoBrowser(msg, giaInOrdine) {
     lastHello.token = msg.you.token; if (msg.you.firma) lastHello.firma = msg.you.firma;
     avviatore('identita', { token: msg.you.token, firma: msg.you.firma || null, campagna: msg.you.campagna || null, nome: msg.you.name || null });
   }
-  if (msg.t === 'invito' && /^[a-f0-9]{64}$/.test(String(msg.codice || ''))) avviatore('nuovo-codice', { codice: msg.codice });
+  // il codice nuovo si tiene da parte: si passa lì solo quando chi gioca lo conferma (invito.accetta)
+  if (msg.t === 'invito' && /^[a-f0-9]{64}$/.test(String(msg.codice || ''))) invitoInAttesa = msg.codice;
   if (msg.t === 'bye') lastHello = null;                // allontanato: non lo si ripresenta da soli
   // dove è arrivato il browser (versione del mondo, ultimo messaggio di chat): se il tubo si riapre
   // lo ripresentiamo da lì, e l'host gli manda solo quello che si è perso
@@ -1969,7 +1971,7 @@ function httpHandler(req, res) {
   // chiede di mandare il codice nuovo ai giocatori collegati (/api/invito) e riapre la sessione.
   if (url.pathname === '/api/invito/cambia' && req.method === 'POST') {
     if (MODE !== 'host') return sendHttp(res, 409, 'questo è un giocatore, non l\'host');
-    console.log('@@LIBRE cambia-codice');
+    avviatore('cambia-codice');
     logAction({ name: 'MASTER', token: '' }, 'codice', true, 'nuovo codice d\'invito');
     return sendHttp(res, 202, '{"ok":true}', 'application/json');
   }
@@ -1998,7 +2000,10 @@ function httpHandler(req, res) {
 }
 
 /** Una riga per l'avviatore, che legge quello che scriviamo (vedi launcher.js, «@@LIBRE»). */
-function avviatore(cosa, dati) { console.log('@@LIBRE ' + cosa + ' ' + JSON.stringify(dati || {})); }
+// La riga porta la parola segreta che l'avviatore ci ha dato (LIBRE_CANALE): senza, la ignora.
+const CANALE = /^[a-f0-9]{32}$/.test(process.env.LIBRE_CANALE || '') ? process.env.LIBRE_CANALE : '0'.repeat(32);
+delete process.env.LIBRE_CANALE;
+function avviatore(cosa, dati) { process.stdout.write('@@LIBRE ' + CANALE + ' ' + cosa + ' ' + JSON.stringify(dati || {}) + '\n'); }
 // L'identità salvata dall'avviatore per questa campagna (nel file di configurazione del programma):
 // se il browser ha perso la sua (dati cancellati, un altro browser), si presenta con questa.
 let identitaSalvata = null;
@@ -2020,6 +2025,10 @@ if (MODE === 'join') {
     let m; try { m = JSON.parse(raw); } catch { return; }
     if (m.t === 'eco') { c.send({ t: 'eco' }); bridgeSveglia(); return; }   // il browser c'è; e il tubo?
     if (m.t === 'miniatura') return salvaMiniatura(m);         // resta qui: all'host non serve
+    if (m.t === 'invito.accetta') {                            // chi gioca ha detto sì al codice nuovo del master
+      if (invitoInAttesa && m.codice === invitoInAttesa) { avviatore('nuovo-codice', { codice: invitoInAttesa }); invitoInAttesa = null; }
+      return;
+    }
     // Vale l'identità salvata per questa campagna: il browser ne tiene una sola per tutte (e può
     // averla persa: dati cancellati, un altro browser)
     if (m.t === 'hello' && !m.canale && identitaSalvata) m = { ...m, token: identitaSalvata.token, firma: identitaSalvata.firma || undefined };

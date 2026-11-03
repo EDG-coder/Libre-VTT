@@ -266,6 +266,9 @@ function lancia(cmd, args, opts) {
 // opts.keep: se si ferma da solo mentre si gioca, lo si riaccende (con un po' d'attesa che
 // cresce se continua a cadere). Si spegne davvero solo con «ferma» o chiudendo la finestra.
 let gen = 0;                                                   // cambia a ogni avvio/spegnimento
+// Le righe «@@LIBRE …» del server di gioco valgono solo con questa parola segreta: un nome o un
+// messaggio arrivato dalla rete e scritto nel registro non può fingersi una sua richiesta.
+const CANALE_REGOLE = crypto.randomBytes(16).toString('hex');
 const restarts = {};
 function run(key, cmd, args, opts = {}) {
   const myGen = gen, born = Date.now();
@@ -273,8 +276,9 @@ function run(key, cmd, args, opts = {}) {
   state.procs[key] = p;
   const pipe = (s, kind) => s.on('data', d => String(d).split(/\r?\n/).forEach(l => {
     if (!l.trim()) return;
-    const cmd = key === 'regole' && /^@@LIBRE ([\w-]+) (.*)$/.exec(l);    // una richiesta del server di gioco (vedi avviatore())
-    if (cmd) { try { dalServerDiGioco(cmd[1], JSON.parse(cmd[2] || '{}')); } catch (e) { say('Richiesta del server di gioco non valida: ' + e.message, 'warn'); } return; }
+    const cmd = key === 'regole' && kind === '' && /^@@LIBRE ([a-f0-9]{32}) ([\w-]+) (.*)$/.exec(l);    // una richiesta del server di gioco (vedi avviatore())
+    if (cmd && cmd[1] !== CANALE_REGOLE) return;                // una riga che si finge sua: la si ignora
+    if (cmd) { try { dalServerDiGioco(cmd[2], JSON.parse(cmd[3] || '{}')); } catch (e) { say('Richiesta del server di gioco non valida: ' + e.message, 'warn'); } return; }
     const m = l.match(/^\s{6}([a-z0-9]{40,})\s*$/i);          // l'ID stampato da uffa-link
     // nel registro della finestra: niente istruzioni da terminale, e l'ID accorciato (quello intero è nel riquadro «Codice»)
     const daTerminale = /Ctrl\+C|uffa-link\/target|Ora avvia anche|uffa-link (host|join)\b|Il VTT si collega a ws:/.test(l);
@@ -920,7 +924,7 @@ async function avvia(mode, id, campagna) {
       if (state.joinCodice) ricordaUnita(state.joinCodice, {});
     }
     run('regole', NODE, [path.join('server', 'game-server.js'), mode === 'host' ? 'host' : 'join'],
-      { env: { PORT: String(GAME_PORT), LINK_PORT: String(LINK_PORT), DATA_DIR: path.join(CAMP, 'data'), LINK_ID_FILE, ...extra }, keep: true });
+      { env: { PORT: String(GAME_PORT), LINK_PORT: String(LINK_PORT), DATA_DIR: path.join(CAMP, 'data'), LINK_ID_FILE, LIBRE_CANALE: CANALE_REGOLE, ...extra }, keep: true });
     if (!await aspettaPorta(GAME_PORT)) return fallisci('Il server di gioco non si è acceso.');
 
     if (MOBILE ? !LINK_CTRL : !linkBin()) return fallisci(MOBILE ? 'Il collegamento a distanza dell\'app non è partito: chiudi l\'app e riaprila.' : 'Manca il collegamento a distanza: premi «Prepara» e riprova.');
