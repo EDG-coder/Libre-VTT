@@ -1,0 +1,164 @@
+→ Scarico nodejs-mobile 18.20.4 per Android
+→ Compilo il collegamento per arm64-v8a (aarch64-linux-android)
+info: component rust-std for target aarch64-linux-android is up to date
+[1m[92m    Updating[0m crates.io index
+[1m[92m     Locking[0m 364 packages to highest Rust 1.91 compatible versions
+[1m[92m      Adding[0m generic-array v0.14.7 [1m[33m(available: v0.14.9)[0m
+[1m[92m      Adding[0m jni v0.21.1 [1m[33m(available: v0.22.4)[0m
+[1m[92m      Adding[0m libc v0.2.189 [1m[33m(available: v0.2.191)[0m
+[1m[92m Downloading[0m crates ...
+[1m[92m  Downloaded[0m cc v1.11.0
+[1m[92m  Downloaded[0m ctutils v0.4.8
+[1m[92m  Downloaded[0m log v0.4.35
+[1m[92m  Downloaded[0m utf8_iter v1.1.0
+[1m[92m  Downloaded[0m utf_types v1.0.0
+[1m[92m   Compiling[0m log v0.4.35
+[1m[92m   Compiling[0m cc v1.11.0
+[1m[92m   Compiling[0m utf_types v1.0.0
+[1m[92m   Compiling[0m jni-sys v0.3.1
+[1m[92m   Compiling[0m utf8_iter v1.1.0
+[1m[92m   Compiling[0m tracing v0.1.44
+[1m[92m   Compiling[0m icu_collections v2.4.0
+[1m[92m   Compiling[0m jni v0.22.4
+[1m[92m   Compiling[0m icu_properties v2.4.0
+[1m[92m   Compiling[0m icu_normalizer v2.4.0
+[1m[92m   Compiling[0m idna_adapter v1.2.2
+[1m[92m   Compiling[0m idna v1.1.0
+[1m[92m   Compiling[0m url v2.5.8
+[1m[92m   Compiling[0m ring v0.17.14
+[1m[92m   Compiling[0m h2 v0.4.20
+[1m[92m   Compiling[0m tower-http v0.6.11
+[1m[92m   Compiling[0m noq-udp v1.4.0
+[1m[92m   Compiling[0m netlink-packet-route v0.33.0
+[1m[92m   Compiling[0m hyper v1.12.0
+[1m[92m   Compiling[0m hyper-util v0.1.21
+[1m[92m   Compiling[0m jni v0.21.1
+[1m[92m   Compiling[0m blake3 v1.8.7
+[1m[92m   Compiling[0m netlink-sys v0.9.0
+[1m[92m   Compiling[0m netlink-sys v0.8.8
+[1m[92m   Compiling[0m netdev v0.46.3
+[1m[92m   Compiling[0m iroh-metrics v1.0.2
+[1m[92m   Compiling[0m iroh-base v1.4.1
+[1m[92m   Compiling[0m netlink-proto v0.12.2
+[1m[92m   Compiling[0m attohttpc v0.30.1
+[1m[92m   Compiling[0m rustls v0.23.46
+[1m[92m   Compiling[0m netlink-packet-route v0.31.0
+[1m[92m   Compiling[0m rustls-webpki v0.103.16
+[1m[92m   Compiling[0m igd-next v0.17.1
+[1m[92m   Compiling[0m netwatch v0.19.3
+[1m[92m   Compiling[0m tokio-rustls v0.26.6
+[1m[92m   Compiling[0m hyper-rustls v0.27.10
+[1m[92m   Compiling[0m rustls-platform-verifier v0.7.1
+[1m[92m   Compiling[0m reqwest v0.13.5
+[1m[92m   Compiling[0m n0-dns-resolver v0.1.0
+[1m[92m   Compiling[0m noq-proto v1.4.0
+[1m[92m   Compiling[0m iroh-dns v1.4.1
+[1m[92m   Compiling[0m tokio-websockets v0.13.3
+[1m[92m   Compiling[0m noq v1.4.0
+[1m[92m   Compiling[0m ctutils v0.4.8
+[1m[92m   Compiling[0m portmapper v0.19.3
+[1m[92m   Compiling[0m iroh-relay v1.4.1
+[1m[92m   Compiling[0m iroh v1.4.1
+[1m[92m   Compiling[0m uffa-link v0.2.0 (/home/runner/work/Libre-VTT/Libre-VTT/pacchetti/uffa-link)
+[1m[92m    Finished[0m `release` profile [optimized] target(s) in 1m 34s
+→ Compilo il collegamento per armeabi-v7a (armv7-linux-androideabi)
+info: component rust-std for target armv7-linux-androideabi is up to date
+[1m[92m   Compiling[0m log v0.4.35
+[1m[92m   Compiling[0m utf_types v1.0.0
+[1m[92m   Compiling[0m ring v0.17.14
+[1m[92m   Compiling[0m jni-sys v0.3.1
+[1m[92m   Compiling[0m utf8_iter v1.1.0
+[1m[92m   Compiling[0m tracing v0.1.44
+[1m[92m   Compiling[0m icu_collections v2.4.0
+[1m[92m   Compiling[0m jni v0.22.4
+[1m[92m   Compiling[0m icu_normalizer v2.4.0
+[1m[92m   Compiling[0m icu_properties v2.4.0
+[1m[92m   Compiling[0m h2 v0.4.20
+[1m[92m   Compiling[0m idna_adapter v1.2.2
+[1m[92m   Compiling[0m idna v1.1.0
+[1m[92m   Compiling[0m rustls v0.23.46
+[1m[92m   Compiling[0m url v2.5.8
+[1m[92m   Compiling[0m rustls-webpki v0.103.16
+[1m[92m   Compiling[0m hyper v1.12.0
+[1m[92m   Compiling[0m tower-http v0.6.11
+[1m[92m   Compiling[0m noq-udp v1.4.0
+[1m[92m   Compiling[0m hyper-util v0.1.21
+[1m[92m   Compiling[0m netlink-packet-route v0.33.0
+[1m[92m   Compiling[0m tokio-rustls v0.26.6
+[1m[92m   Compiling[0m hyper-rustls v0.27.10
+[1m[92m   Compiling[0m rustls-platform-verifier v0.7.1
+[1m[92m   Compiling[0m jni v0.21.1
+[1m[92m   Compiling[0m reqwest v0.13.5
+[1m[92m   Compiling[0m netlink-sys v0.9.0
+[1m[92m   Compiling[0m netlink-sys v0.8.8
+[1m[92m   Compiling[0m noq-proto v1.4.0
+[1m[92m   Compiling[0m netdev v0.46.3
+[1m[92m   Compiling[0m iroh-metrics v1.0.2
+[1m[92m   Compiling[0m blake3 v1.8.7
+[1m[92m   Compiling[0m n0-dns-resolver v0.1.0
+[1m[92m   Compiling[0m netlink-proto v0.12.2
+[1m[92m   Compiling[0m iroh-base v1.4.1
+[1m[92m   Compiling[0m attohttpc v0.30.1
+[1m[92m   Compiling[0m netlink-packet-route v0.31.0
+[1m[92m   Compiling[0m tokio-websockets v0.13.3
+[1m[92m   Compiling[0m noq v1.4.0
+[1m[92m   Compiling[0m iroh-dns v1.4.1
+[1m[92m   Compiling[0m netwatch v0.19.3
+[1m[92m   Compiling[0m igd-next v0.17.1
+[1m[92m   Compiling[0m ctutils v0.4.8
+[1m[92m   Compiling[0m iroh-relay v1.4.1
+[1m[92m   Compiling[0m portmapper v0.19.3
+[1m[92m   Compiling[0m iroh v1.4.1
+[1m[92m   Compiling[0m uffa-link v0.2.0 (/home/runner/work/Libre-VTT/Libre-VTT/pacchetti/uffa-link)
+[1m[92m    Finished[0m `release` profile [optimized] target(s) in 1m 19s
+→ Compilo il collegamento per x86_64 (x86_64-linux-android)
+info: component rust-std for target x86_64-linux-android is up to date
+[1m[92m   Compiling[0m log v0.4.35
+[1m[92m   Compiling[0m utf_types v1.0.0
+[1m[92m   Compiling[0m ring v0.17.14
+[1m[92m   Compiling[0m jni-sys v0.3.1
+[1m[92m   Compiling[0m blake3 v1.8.7
+[1m[92m   Compiling[0m utf8_iter v1.1.0
+[1m[92m   Compiling[0m tracing v0.1.44
+[1m[92m   Compiling[0m icu_collections v2.4.0
+[1m[92m   Compiling[0m h2 v0.4.20
+[1m[92m   Compiling[0m icu_normalizer v2.4.0
+[1m[92m   Compiling[0m icu_properties v2.4.0
+[1m[92m   Compiling[0m jni v0.22.4
+[1m[92m   Compiling[0m idna_adapter v1.2.2
+[1m[92m   Compiling[0m idna v1.1.0
+[1m[92m   Compiling[0m rustls v0.23.46
+[1m[92m   Compiling[0m url v2.5.8
+[1m[92m   Compiling[0m rustls-webpki v0.103.16
+[1m[92m   Compiling[0m hyper v1.12.0
+[1m[92m   Compiling[0m tower-http v0.6.11
+[1m[92m   Compiling[0m noq-udp v1.4.0
+[1m[92m   Compiling[0m hyper-util v0.1.21
+[1m[92m   Compiling[0m netlink-sys v0.8.8
+[1m[92m   Compiling[0m netlink-packet-route v0.33.0
+[1m[92m   Compiling[0m tokio-rustls v0.26.6
+[1m[92m   Compiling[0m hyper-rustls v0.27.10
+[1m[92m   Compiling[0m rustls-platform-verifier v0.7.1
+[1m[92m   Compiling[0m jni v0.21.1
+[1m[92m   Compiling[0m reqwest v0.13.5
+[1m[92m   Compiling[0m netlink-sys v0.9.0
+[1m[92m   Compiling[0m n0-dns-resolver v0.1.0
+[1m[92m   Compiling[0m netdev v0.46.3
+[1m[92m   Compiling[0m noq-proto v1.4.0
+[1m[92m   Compiling[0m netlink-proto v0.12.2
+[1m[92m   Compiling[0m attohttpc v0.30.1
+[1m[92m   Compiling[0m iroh-base v1.4.1
+[1m[92m   Compiling[0m iroh-metrics v1.0.2
+[1m[92m   Compiling[0m netlink-packet-route v0.31.0
+[1m[92m   Compiling[0m tokio-websockets v0.13.3
+[1m[92m   Compiling[0m noq v1.4.0
+[1m[92m   Compiling[0m iroh-dns v1.4.1
+[1m[92m   Compiling[0m netwatch v0.19.3
+[1m[92m   Compiling[0m igd-next v0.17.1
+[1m[92m   Compiling[0m ctutils v0.4.8
+[1m[92m   Compiling[0m portmapper v0.19.3
+[1m[92m   Compiling[0m iroh-relay v1.4.1
+[1m[92m   Compiling[0m iroh v1.4.1
+[1m[92m   Compiling[0m uffa-link v0.2.0 (/home/runner/work/Libre-VTT/Libre-VTT/pacchetti/uffa-link)
+[1m[92m    Finished[0m `release` profile [optimized] target(s) in 1m 16s
+✓ Pronto. Ora: cd "/home/runner/work/Libre-VTT/Libre-VTT/pacchetti/mobile/android" && ./gradlew assembleRelease
