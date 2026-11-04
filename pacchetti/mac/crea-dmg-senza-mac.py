@@ -42,8 +42,8 @@ def prepara_app(stage, node_arm64=None, node_x64=None, uffa_link=None, repo=None
     os.makedirs(os.path.join(c, 'MacOS'))
     os.makedirs(dest)
     shutil.copyfile(os.path.join(QUI, 'Info.plist'), os.path.join(c, 'Info.plist'))
-    shutil.copyfile(os.path.join(QUI, 'myvtt'), os.path.join(c, 'MacOS', 'myvtt'))
-    os.chmod(os.path.join(c, 'MacOS', 'myvtt'), 0o755)
+    shutil.copyfile(os.path.join(QUI, 'libre-vtt'), os.path.join(c, 'MacOS', 'libre-vtt'))
+    os.chmod(os.path.join(c, 'MacOS', 'libre-vtt'), 0o755)
     shutil.copyfile(os.path.join(QUI, 'AppIcon.icns'), os.path.join(res, 'AppIcon.icns'))
     n = 0
     for disco, rel in file_programma():
@@ -307,7 +307,7 @@ def scrivi_iso(stage, uscita, volume='LIBRE VTT'):
 
 def main(argv):
     uscita = os.path.join(PROGETTO, 'LIBRE VTT.dmg')
-    opz = {'--node-arm64': None, '--node-x64': None, '--uffa-link': None, '--repo': os.environ.get('MYVTT_REPO')}
+    opz = {'--node-arm64': None, '--node-x64': None, '--uffa-link': None, '--repo': os.environ.get('LIBRE_REPO') or os.environ.get('MYVTT_REPO')}
     i = 0
     while i < len(argv):
         if argv[i] in opz:
@@ -316,7 +316,7 @@ def main(argv):
         else:
             uscita = os.path.abspath(argv[i])
             i += 1
-    stage = tempfile.mkdtemp(prefix='myvtt-dmg-')
+    stage = tempfile.mkdtemp(prefix='libre-vtt-dmg-')
     try:
         n = prepara_app(stage, opz['--node-arm64'], opz['--node-x64'], opz['--uffa-link'], opz['--repo'])
         byte = scrivi_iso(stage, uscita)

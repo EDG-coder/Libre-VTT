@@ -14,14 +14,14 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 # nodejs.org e GitHub vogliono TLS 1.2: su alcuni Windows 10 PowerShell parte ancora con 1.0
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
-$script:Self = $env:MYVTT_SELF
+$script:Self = $env:LIBRE_SELF
 $script:Nome = 'LIBRE VTT'
 $script:Dest = Join-Path $env:LOCALAPPDATA 'LIBRE VTT'
 $script:Vecchia = Join-Path $env:LOCALAPPDATA 'MY VTT'     # la cartella di prima del cambio di nome
 $script:Dist = 'https://nodejs.org/dist/latest-v22.x'
-if ($env:MYVTT_NODE_DIST) { $script:Dist = $env:MYVTT_NODE_DIST }
+if ($env:LIBRE_NODE_DIST) { $script:Dist = $env:LIBRE_NODE_DIST } elseif ($env:MYVTT_NODE_DIST) { $script:Dist = $env:MYVTT_NODE_DIST }
 $script:Fatto = $false
-$script:Log = Join-Path $env:TEMP 'myvtt-installa.log'
+$script:Log = Join-Path $env:TEMP 'libre-vtt-installa.log'
 Set-Content -Path $script:Log -Value ("LIBRE VTT - installazione " + (Get-Date)) -Encoding UTF8
 
 # che Windows e': 64 bit Intel/AMD o ARM (anche se questo PowerShell fosse a 32 bit)
@@ -142,7 +142,7 @@ function NodeVa([string]$exe) {
 # ------------------------------------------------------------------ l'installazione
 function Installa {
   if (-not $script:Arch) { Ferma 'Questo Windows non e'' a 64 bit: LIBRE VTT ha bisogno di un Windows 10 o 11 a 64 bit.' }
-  $tmp = Join-Path $env:TEMP ('myvtt-' + [guid]::NewGuid().ToString('N'))
+  $tmp = Join-Path $env:TEMP ('libre-vtt-' + [guid]::NewGuid().ToString('N'))
   New-Item -ItemType Directory -Force -Path $tmp | Out-Null
   # prima il programma si chiamava «MY VTT»: la sua cartella (Node, impostazioni, strumenti)
   # diventa quella nuova, e spariscono i vecchi collegamenti e la vecchia voce in «App installate»

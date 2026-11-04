@@ -113,6 +113,8 @@
   /* ---------- «Mi unisco»: le campagne a cui ti sei già unito ---------- */
   #uniteLista { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
   #uniteLista:empty { display: none; }
+  #masterServer .nota { margin: 8px 0; font-size: .84rem; color: var(--muted); }
+  #masterServer input { width: 100%; box-sizing: border-box; }
   .unita { position: relative; display: flex; flex-direction: column; text-align: left; padding: 0; overflow: hidden;
     border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; font: inherit; cursor: pointer; }
   .unita:hover { border-color: var(--accent); }
@@ -376,6 +378,11 @@
       <button class="b go" id="entra">Entra</button>
       <button class="b" id="indietro">Indietro</button>
     </div>
+    <details class="log" id="masterServer">
+      <summary>Conduco io su un server dedicato</summary>
+      <p class="nota">Se la partita gira su un server dedicato (per esempio una schedina sempre accesa), il master entra da qui come tutti, con la chiave del master che il server ha scritto all'avvio. Basta la prima volta: dopo il server ti riconosce.</p>
+      <input type="text" id="chiaveMaster" placeholder="Chiave del master (32 caratteri)" autocomplete="off" spellcheck="false" maxlength="48">
+    </details>
   </div>
 
   <div class="box hide" id="boxCamp">
@@ -470,7 +477,7 @@ const $ = id => document.getElementById(id);
 const NAT = window.LIBRE_NATIVO || { disponibile: false };
 if (NAT.disponibile) document.documentElement.classList.add('app');
 const azione = what => fetch('/api/azione', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(what) });
-let S = {}, codiceInSospeso = null, campagnaInSospeso = null, campModo = null, inPartenza = false;
+let S = {}, codiceInSospeso = null, chiaveInSospeso = '', campagnaInSospeso = null, campModo = null, inPartenza = false;
 
 function logLine(e) {
   const d = document.createElement('div');
@@ -602,8 +609,10 @@ $('entra').onclick = () => {
   chiudiUnite();
   const id = $('codice').value.trim();
   if (!id) { $('codice').focus(); return; }
-  if (!S.link) { codiceInSospeso = id; $('boxJoin').classList.add('hide'); chiediPreparazione('join'); return; }
-  azione({ what: 'join', id });
+  const chiaveMaster = $('chiaveMaster').value.trim();
+  if (!S.link) { codiceInSospeso = id; chiaveInSospeso = chiaveMaster; $('boxJoin').classList.add('hide'); chiediPreparazione('join'); return; }
+  azione({ what: 'join', id, chiaveMaster });
+  $('chiaveMaster').value = '';
   $('boxJoin').classList.add('hide');
 };
 $('codice').addEventListener('keydown', e => { if (e.key === 'Enter') $('entra').click(); });
@@ -890,7 +899,7 @@ es.onmessage = ev => {
     if (!prima && S.link && dopoPrep) {
       const poi = dopoPrep; dopoPrep = null;
       if (poi === 'host') { inPartenza = true; azione({ what: 'host', campagna: campagnaInSospeso }); }
-      else if (poi === 'join' && codiceInSospeso) azione({ what: 'join', id: codiceInSospeso });
+      else if (poi === 'join' && codiceInSospeso) { azione({ what: 'join', id: codiceInSospeso, chiaveMaster: chiaveInSospeso }); chiaveInSospeso = ''; }
     }
     // Da solo o ospite si va dritti al tavolo; chi conduce resta qui a prendersi il codice.
     if (S.mode && S.mode !== 'host' && !S.busy && !S.error && !window._andato) {

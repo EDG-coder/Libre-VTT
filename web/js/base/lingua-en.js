@@ -2387,4 +2387,13 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Non è un file .zip.": "Not a .zip file.",
 "Installazione non riuscita": "Installation failed",
 "Non riesco a parlare con LIBRE VTT": "I can't talk to LIBRE VTT",
+
+// ---------- server dedicato (3.8.1) ----------
+"Conduco io su un server dedicato": "I'm the GM on a dedicated server",
+"Se la partita gira su un server dedicato (per esempio una schedina sempre accesa), il master entra da qui come tutti, con la chiave del master che il server ha scritto all'avvio. Basta la prima volta: dopo il server ti riconosce.": "If the game runs on a dedicated server (for example a small always-on board), the GM joins from here like everyone else, with the GM key the server printed at startup. Only the first time: after that the server recognises you.",
+"Chiave del master (32 caratteri)": "GM key (32 characters)",
+"Sei il master: la campagna è quella del server.": "You're the GM: the campaign is the one on the server.",
+"La chiave del master non è giusta: sei entrato come giocatore.": "The GM key is wrong: you joined as a player.",
+"Sul server serve almeno un master: prima dai il ruolo a qualcun altro.": "The server needs at least one GM: give the role to someone else first.",
+"Il server non ha risposto.": "The server didn't answer.",
 });

@@ -65,12 +65,12 @@ final class Motore {
         try {
             Os.setenv("HOME", dati.getAbsolutePath(), true);
             Os.setenv("TMPDIR", app.getCacheDir().getAbsolutePath(), true);
-            Os.setenv("MYVTT_MOBILE", "android", true);
-            Os.setenv("MYVTT_USERDIR", utente.getAbsolutePath(), true);
-            Os.setenv("MYVTT_CAMPAGNE", campagne.getAbsolutePath(), true);
-            Os.setenv("MYVTT_LINK_CONTROLLO", String.valueOf(portaCollegamento), true);
-            Os.setenv("MYVTT_SEGRETO", segreto, true);
-            Os.setenv("MYVTT_PRONTO_FILE", pronto.getAbsolutePath(), true);
+            Os.setenv("LIBRE_MOBILE", "android", true);
+            Os.setenv("LIBRE_USERDIR", utente.getAbsolutePath(), true);
+            Os.setenv("LIBRE_CAMPAGNE", campagne.getAbsolutePath(), true);
+            Os.setenv("LIBRE_LINK_CONTROLLO", String.valueOf(portaCollegamento), true);
+            Os.setenv("LIBRE_APP_SEGRETO", segreto, true);
+            Os.setenv("LIBRE_PRONTO_FILE", pronto.getAbsolutePath(), true);
             Os.setenv("UI_PORT", "4100", true);
             Os.unsetenv("NODE_OPTIONS");
         } catch (Exception e) {

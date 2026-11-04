@@ -45,7 +45,11 @@ const netName = () => { try { return localStorage.getItem('uffa-name') || ''; } 
 // Se però la sessione è solo caduta e ci si sta ricollegando, valgono ancora i tuoi permessi:
 // un giocatore non diventa master perché il filo si è staccato per un attimo.
 const netAs = () => NET.on || (NET.retrying && !!NET.me);
-function isMaster() { return !netAs() || (NET.me && NET.me.role === 'master'); }
+// NET.adotta: un master entrato da fuori (server dedicato) sta prendendo il mondo dal server, come farebbe un
+// giocatore: per quel momento non comanda (altrimenti il suo mondo locale, vuoto, prenderebbe il posto di quello vero).
+function isMaster() { return !netAs() || (!NET.adotta && NET.me && NET.me.role === 'master'); }
+/** Sei il master ma l'host è un'altra macchina (server dedicato): il mondo vero sta lì, non qui. */
+function masterRemoto() { return !!(NET.remoto && NET.me && NET.me.role === 'master'); }
 function can(p) { return !netAs() || !NET.me ? true : !!(NET.me.perms && NET.me.perms[p]); }
 
 function netSend(o) { try { NET.ws && NET.ws.readyState === 1 && NET.ws.send(JSON.stringify(o)); } catch {} }   // una funzione (non una costante): i plugin la possono agganciare (net.send)
@@ -249,6 +253,14 @@ function netHandle(m) {
         ? 'Sei collegato come master: la sessione è tua.'
         : 'Sei collegato come giocatore (' + m.you.name + ').', 'live');
       if (back) setTimeout(() => { if (netBar.className === 'live') netSayHide(); }, 4000);
+      NET.remoto = !!m.remoto;                   // l'host è altrove (siamo passati dal ponte di questo computer)
+      // Master entrato da fuori: la prima volta il mondo vero è quello del server, e lo si prende così com'è.
+      // Dopo (rientrando da una caduta) si continua come un master qualsiasi.
+      if (m.world && masterRemoto() && !NET.adottato) {
+        netAdotta(m.world, m.ver);
+        if (m.needName) askName('Scegli il nome con cui ti vedranno gli altri.');
+        return;
+      }
       applyRole();
       if (m.world) netMondoPieno(m.world, m.ver);
       else if (m.riprendi) netRiprendi(m);       // rientrato dopo una caduta: solo quello che ci si è persi
@@ -273,6 +285,12 @@ function netHandle(m) {
     case 'you': {
       const before = NET.me;
       NET.me = m.you;
+      // diventato master su un server dedicato: finora vedeva il mondo da giocatore (solo una parte), quindi
+      // prima di comandare prende quello intero, che il server gli manda subito dopo
+      if (NET.remoto && m.you.role === 'master' && (!before || before.role !== 'master')) {
+        NET.adotta = true; NET.daAdottare = true;
+        setTimeout(() => { if (NET.daAdottare) netSend({ t: 'sync' }); }, 5000);
+      }
       try { localStorage.setItem('uffa-name', m.you.name); } catch {}
       applyRole();
       if (before && before.name !== m.you.name) netSay('Adesso ti chiami «' + m.you.name + '».');
@@ -282,7 +300,9 @@ function netHandle(m) {
     }
     case 'rename': askName(m.reason || 'Il master ti chiede di cambiare nome.'); return;
     case 'notice': netSay(m.text || '', m.kind || 'warn'); return;
-    case 'world': netMondoPieno(m.world, m.ver); return;
+    case 'world':
+      if (NET.daAdottare && masterRemoto()) { NET.daAdottare = false; netAdotta(m.world, m.ver); return; }
+      netMondoPieno(m.world, m.ver); return;
     case 'delta': netDelta(m); return;
     case 'players': NET.players = m.list || []; return;
     case 'chat': netChat(m.msg); return;
@@ -342,6 +362,24 @@ function netHandle(m) {
       return;
     }
   }
+}
+
+/** Il master entrato da fuori prende il mondo del server (scene, schede, note, turni, sistema di gioco). Si
+ *  aspetta che la mappa e le schede salvate su questo computer siano caricate: arrivando dopo, le coprirebbero. */
+async function netAdotta(w, ver) {
+  NET.adotta = true;
+  try {
+    for (let i = 0; i < 150 && !((typeof boardReady === 'undefined' || boardReady) && (typeof sheetsReady === 'undefined' || sheetsReady)); i++) await new Promise(r => setTimeout(r, 100));
+    await netMondoPieno(w, ver);
+    if (w.turni && typeof turniDaSalvataggio === 'function') turniDaSalvataggio(w.turni);
+    if (w.fogColor) settings.fogColor = w.fogColor;
+    settings.dadiProvvisori = !!w.dadiProvvisori;
+  } catch (e) { console.error('mondo del server', e); }
+  finally { NET.adotta = false; }
+  NET.adottato = true;
+  applyRole();
+  netSay('Sei il master: la campagna è quella del server.', 'live');
+  if (typeof scheduleBoardSave === 'function') scheduleBoardSave();      // una copia anche qui
 }
 
 // ---------- I file (mappe, segnalini) ----------
@@ -653,8 +691,10 @@ async function netPushBoard() {
         if (el) el.dataset.gid = ph.gid;
       }
     }
-    const compendio = typeof COMPENDIO !== 'undefined' && COMPENDIO.perRete ? await COMPENDIO.perRete().catch(() => null) : null;
-    intent('board', { board: { compendio, active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, dadiProvvisori: !!settings.dadiProvvisori, unita: settings.unit, turni: settings.turni || null, scenes: b.scenes, sheets, sistema: typeof SISTEMA !== 'undefined' && SISTEMA.perRete ? SISTEMA.perRete() : null } });
+    // il master entrato da fuori non ha qui il compendio della campagna (sta sul server): quello resta com'è
+    const compendio = !masterRemoto() && typeof COMPENDIO !== 'undefined' && COMPENDIO.perRete ? await COMPENDIO.perRete().catch(() => null) : null;
+    const sistema = masterRemoto() && NET.world && NET.world.sistema ? null : typeof SISTEMA !== 'undefined' && SISTEMA.perRete ? SISTEMA.perRete() : null;
+    intent('board', { board: { compendio, active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, dadiProvvisori: !!settings.dadiProvvisori, unita: settings.unit, turni: settings.turni || null, scenes: b.scenes, sheets, sistema } });
   } finally { NET.pushing = false; }
 }
 

@@ -38,12 +38,12 @@ enum Motore {
 
         setenv("HOME", NSHomeDirectory(), 1)
         setenv("TMPDIR", NSTemporaryDirectory(), 1)
-        setenv("MYVTT_MOBILE", "ios", 1)
-        setenv("MYVTT_USERDIR", utente.path, 1)
-        setenv("MYVTT_CAMPAGNE", campagne.path, 1)
-        setenv("MYVTT_LINK_CONTROLLO", String(porta), 1)
-        setenv("MYVTT_SEGRETO", segreto, 1)
-        setenv("MYVTT_PRONTO_FILE", pronto.path, 1)
+        setenv("LIBRE_MOBILE", "ios", 1)
+        setenv("LIBRE_USERDIR", utente.path, 1)
+        setenv("LIBRE_CAMPAGNE", campagne.path, 1)
+        setenv("LIBRE_LINK_CONTROLLO", String(porta), 1)
+        setenv("LIBRE_APP_SEGRETO", segreto, 1)
+        setenv("LIBRE_PRONTO_FILE", pronto.path, 1)
         setenv("UI_PORT", "4100", 1)
         unsetenv("NODE_OPTIONS")
 

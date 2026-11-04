@@ -10,7 +10,9 @@ set -u
 cd "$(dirname "$0")/../.." || exit 1
 PROG="$(pwd)"
 OUT="${1:-$PROG/LIBRE VTT.dmg}"
-DIST="${MYVTT_NODE_DIST:-https://nodejs.org/dist/latest-v22.x}"
+DIST="${LIBRE_NODE_DIST:-${MYVTT_NODE_DIST:-https://nodejs.org/dist/latest-v22.x}}"
+REPO="${LIBRE_REPO:-${MYVTT_REPO:-}}"
+LINK="${LIBRE_LINK:-${MYVTT_LINK:-}}"
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 STAGE="$W/stage"; APPD="$STAGE/LIBRE VTT.app"; RES="$APPD/Contents/Resources"; DEST="$RES/app"
 passo() { printf '\n▸ %s\n' "$*"; }
@@ -23,7 +25,7 @@ muori() {
 passo "Preparo l'app"
 mkdir -p "$APPD/Contents/MacOS" "$DEST" || muori "non riesco a creare le cartelle"
 cp pacchetti/mac/Info.plist "$APPD/Contents/Info.plist" || muori "manca pacchetti/mac/Info.plist"
-cp pacchetti/mac/myvtt "$APPD/Contents/MacOS/myvtt" && chmod 755 "$APPD/Contents/MacOS/myvtt" || muori "manca pacchetti/mac/myvtt"
+cp pacchetti/mac/libre-vtt "$APPD/Contents/MacOS/libre-vtt" && chmod 755 "$APPD/Contents/MacOS/libre-vtt" || muori "manca pacchetti/mac/libre-vtt"
 cp pacchetti/mac/AppIcon.icns "$RES/AppIcon.icns" || muori "manca pacchetti/mac/AppIcon.icns"
 # i file del programma: la stessa lista degli installatori per Linux e Windows
 python3 - "$DEST" <<'PY' || muori "non riesco a copiare il programma"
@@ -34,7 +36,7 @@ for disco, rel in c.file_programma():
     shutil.copyfile(disco, os.path.join(sys.argv[1], rel))
 PY
 # su GitHub Actions: l'app saprà da dove scaricare il collegamento già pronto
-[ -n "${MYVTT_REPO:-}" ] && printf '{\n  "repo": "%s"\n}\n' "$MYVTT_REPO" > "$DEST/rilascio.json"
+[ -n "$REPO" ] && printf '{\n  "repo": "%s"\n}\n' "$REPO" > "$DEST/rilascio.json"
 echo "  $(ls "$DEST" | wc -l | tr -d ' ') voci nel programma"
 
 passo "Scarico Node.js per Apple Silicon e per Intel (nodejs.org)"
@@ -54,9 +56,9 @@ done
 
 RUSTUP="$(command -v rustup || echo "$HOME/.cargo/bin/rustup")"
 CARGO="$(command -v cargo || echo "$HOME/.cargo/bin/cargo")"
-if [ -n "${MYVTT_LINK:-}" ] && [ -f "$MYVTT_LINK" ]; then
-  passo "Uso il collegamento a distanza già compilato ($MYVTT_LINK)"
-  mkdir -p "$DEST/bin" && cp "$MYVTT_LINK" "$DEST/bin/uffa-link" && chmod 755 "$DEST/bin/uffa-link"
+if [ -n "$LINK" ] && [ -f "$LINK" ]; then
+  passo "Uso il collegamento a distanza già compilato ($LINK)"
+  mkdir -p "$DEST/bin" && cp "$LINK" "$DEST/bin/uffa-link" && chmod 755 "$DEST/bin/uffa-link"
 elif [ -x "$RUSTUP" ] && [ -x "$CARGO" ]; then
   passo "Compilo il collegamento a distanza per Apple Silicon e per Intel (qualche minuto)"
   if "$RUSTUP" target add aarch64-apple-darwin x86_64-apple-darwin \

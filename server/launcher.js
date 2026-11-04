@@ -15,16 +15,21 @@ const { intestazioniPagina } = require('./csp');
 const ROOT = path.join(__dirname, '..');                      // la cartella del programma
 const WEB = path.join(ROOT, 'web');                           // le pagine
 
+// Le variabili d'ambiente si chiamano LIBRE_*. Quelle di quando il programma si chiamava «MY VTT» (MYVTT_*)
+// valgono ancora: gli script di avvio e le app già installati le usano, e devono continuare a funzionare.
+// (Il segreto dell'app per telefono è LIBRE_APP_SEGRETO: LIBRE_SEGRETO è quello che passiamo noi ai server.)
+function amb(k) { const v = process.env['LIBRE_' + k]; return v !== undefined && v !== '' ? v : process.env['MYVTT_' + k]; }
+
 // Dentro l'app per Android o per iPhone/iPad (nodejs-mobile) non si possono lanciare altri
 // programmi: il tavolo e il server di gioco girano come «worker» in questo stesso Node, e il
 // collegamento a distanza vive nell'app, che ce lo fa usare da una porta di controllo.
 // L'app ci passa: la cartella dell'utente, quella delle campagne, la porta di controllo del
 // collegamento, un segreto (solo la sua finestra può usare le nostre API) e il file dove
 // scrivere l'indirizzo quando siamo pronti.
-const MOBILE = /^(android|ios)$/.test(process.env.MYVTT_MOBILE || '') ? process.env.MYVTT_MOBILE : null;
-const SEGRETO = MOBILE ? String(process.env.MYVTT_SEGRETO || '') : '';
-const LINK_CTRL = MOBILE ? +process.env.MYVTT_LINK_CONTROLLO || 0 : 0;
-const PRONTO_FILE = process.env.MYVTT_PRONTO_FILE || '';
+const MOBILE = /^(android|ios)$/.test(amb('MOBILE') || '') ? amb('MOBILE') : null;
+const SEGRETO = MOBILE ? String((amb('APP_SEGRETO') || process.env.MYVTT_SEGRETO) || '') : '';
+const LINK_CTRL = MOBILE ? +amb('LINK_CONTROLLO') || 0 : 0;
+const PRONTO_FILE = amb('PRONTO_FILE') || '';
 // Porte preferite. Se sul computer sono già occupate da altri programmi (3000 e 4000 sono
 // classiche per tanti strumenti) se ne scelgono altre libere e ce le si ricorda: quella del
 // tavolo deve restare la stessa da una volta all'altra, perché il browser tiene l'identità del
@@ -41,13 +46,13 @@ const scrivibile = d => {
   if (IN_APP && path.resolve(d).startsWith(ROOT)) return false;
   try { fs.accessSync(d, fs.constants.W_OK); return true; } catch { return false; }
 };
-const USERDIR = process.env.MYVTT_USERDIR || (WIN
+const USERDIR = amb('USERDIR') || (WIN
   ? path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'LIBRE VTT')
   : MAC ? path.join(os.homedir(), 'Library', 'Application Support', 'LIBRE VTT')
   : path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'libre-vtt'));
 // Il programma prima si chiamava «MY VTT»: la sua cartella (campagne recenti, Rust e Zig già
 // scaricati) passa alla nuova, una volta sola, invece di ricominciare da zero.
-if (!process.env.MYVTT_USERDIR && !fs.existsSync(USERDIR)) {
+if (!amb('USERDIR') && !fs.existsSync(USERDIR)) {
   const vecchia = path.join(path.dirname(USERDIR), WIN || MAC ? 'MY VTT' : 'my-vtt');
   try { if (fs.existsSync(vecchia)) fs.renameSync(vecchia, USERDIR); } catch {}
 }
@@ -144,7 +149,7 @@ function stato() {
 // Preferenze della home (rotellina): lingua, dimensione dell'interfaccia, tema, regole facoltative.
 // t = quando sono cambiate l'ultima volta: il tavolo le prende solo se sono più nuove delle sue.
 let finestraScala = null;                // il fattore con cui è stata aperta la finestra (sul computer)
-function prefCorrenti() { return { lingua: /^(it|en)$/.test(process.env.MYVTT_LINGUA || '') ? process.env.MYVTT_LINGUA : null, scala: 100, tema: 'dark', caratLibere: false, spareggioDes: true, dpr: null, t: 0, ...(conf.pref || {}) }; }
+function prefCorrenti() { return { lingua: /^(it|en)$/.test(amb('LINGUA') || '') ? amb('LINGUA') : null, scala: 100, tema: 'dark', caratLibere: false, spareggioDes: true, dpr: null, t: 0, ...(conf.pref || {}) }; }
 function salvaPref(m) {
   const p = prefCorrenti(), prima = JSON.stringify(p);
   if (m.lingua === 'it' || m.lingua === 'en') p.lingua = m.lingua;
@@ -174,7 +179,7 @@ function argScala() {
 const ENV_VIA = new Set(['NODE_OPTIONS', 'NODE_PATH', 'PORT', 'RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_TARGET_DIR',
   'CARGO_BUILD_TARGET', 'CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN', 'RUSTC', 'RUSTC_WRAPPER', 'RUSTDOC',
   'CC', 'CXX', 'AR', 'LD', 'CFLAGS', 'CXXFLAGS', 'LDFLAGS', 'CPPFLAGS', 'LIBRARY_PATH', 'LD_LIBRARY_PATH',
-  'DATA_DIR', 'CAMPAIGN_DIR', 'LINK_PORT', 'LINK_ID_FILE']);
+  'DATA_DIR', 'CAMPAIGN_DIR', 'LINK_PORT', 'LINK_ID_FILE', 'LIBRE_DEDICATO', 'CHIAVE_MASTER']);
 function envPulito(extra) {
   const e = {};
   for (const [k, v] of Object.entries(process.env)) {
@@ -494,7 +499,7 @@ function trovaDocumenti() {
   for (const n of ['Documents', 'Documenti']) { const d = path.join(home, n); if (fs.existsSync(d)) return d; }
   return home;
 }
-const CAMP_HOME = process.env.MYVTT_CAMPAGNE ? path.resolve(process.env.MYVTT_CAMPAGNE) : path.join(cartellaDocumenti(), 'LIBRE VTT', 'Campagne');
+const CAMP_HOME = amb('CAMPAGNE') ? path.resolve(amb('CAMPAGNE')) : path.join(cartellaDocumenti(), 'LIBRE VTT', 'Campagne');
 const PREDEFINITE = path.join(USERDIR, 'predefinite.json');   // le impostazioni per le campagne nuove
 const CAMP_VECCHIE = MOBILE ? null : path.join(cartellaDocumenti(), 'MY VTT', 'Campagne');   // di quando si chiamava «MY VTT»
 
@@ -877,7 +882,7 @@ function campagneSuICloud() {
   return CAMP_HOME.includes('Mobile Documents') || (fs.existsSync(docICloud) && CAMP_HOME.startsWith(path.join(os.homedir(), 'Documents')));
 }
 
-async function avvia(mode, id, campagna) {
+async function avvia(mode, id, campagna, opz = {}) {
   if (state.mode) stopAll();
   state.error = null;
   state.busy = 'Accendo…'; push();
@@ -910,7 +915,7 @@ async function avvia(mode, id, campagna) {
   salvaConf();
   state.porte = { web: WEB_PORT, game: GAME_PORT, link: LINK_PORT };
 
-  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP, MYVTT_PREDEFINITE: PREDEFINITE, MYVTT_CAMP_HOME: CAMP_HOME, LIBRE_SEGRETO: SEGRETO, LIBRE_PLUGINS_DIR: PLUGINS_DIR, LIBRE_PLUGINS_STATE: PLUGINS_STATE }, keep: true });
+  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP, LIBRE_PREDEFINITE: PREDEFINITE, LIBRE_CAMP_HOME: CAMP_HOME, LIBRE_SEGRETO: SEGRETO, LIBRE_PLUGINS_DIR: PLUGINS_DIR, LIBRE_PLUGINS_STATE: PLUGINS_STATE }, keep: true });
   if (!await aspettaPorta(WEB_PORT)) return fallisci('Il tavolo non si è acceso.');
 
   if (mode !== 'solo') {
@@ -925,6 +930,9 @@ async function avvia(mode, id, campagna) {
       const e = state.joinCodice && unite()[state.joinCodice];
       if (e && e.idGiocatore) extra.IDENTITA = JSON.stringify({ token: e.idGiocatore, firma: e.firma || null });
       if (state.joinCodice) ricordaUnita(state.joinCodice, {});
+      // la chiave del master di un server dedicato: va al server una volta, entrando (non la si salva)
+      const chiave = String(opz.chiaveMaster || '').replace(/[\s-]/g, '').toLowerCase();
+      if (/^[a-f0-9]{32}$/.test(chiave)) extra.CHIAVE_MASTER = chiave;
     }
     run('regole', NODE, [path.join('server', 'game-server.js'), mode === 'host' ? 'host' : 'join'],
       { env: { PORT: String(GAME_PORT), LINK_PORT: String(LINK_PORT), DATA_DIR: path.join(CAMP, 'data'), LINK_ID_FILE, LIBRE_CANALE: CANALE_REGOLE, LIBRE_SEGRETO: SEGRETO, ...extra }, keep: true });
@@ -990,7 +998,7 @@ const sha256File = f => new Promise((res, rej) => {
   fs.createReadStream(f).on('data', d => h.update(d)).on('end', () => res(h.digest('hex'))).on('error', rej);
 });
 async function scaricaTesto(url) {
-  const t = path.join(os.tmpdir(), `myvtt-${process.pid}-${Math.random().toString(36).slice(2)}`);
+  const t = path.join(os.tmpdir(), `libre-vtt-${process.pid}-${Math.random().toString(36).slice(2)}`);
   try { return await scarica(url, t) ? fs.readFileSync(t, 'utf8') : null; } finally { try { fs.unlinkSync(t); } catch {} }
 }
 const primaImpronta = t => { const m = String(t || '').match(/\b[a-f0-9]{64}\b/i); return m ? m[0].toLowerCase() : null; };
@@ -1000,8 +1008,8 @@ const ferma = msg => { throw new Ferma(msg); };
 // --- 2. già pronto da GitHub ---
 function rilascio() {
   const r = leggiJson(path.join(ROOT, 'rilascio.json')) || {};
-  const repo = String(process.env.MYVTT_REPO || r.repo || '').trim();
-  const base = process.env.MYVTT_RILASCIO_BASE || r.base;
+  const repo = String(amb('REPO') || r.repo || '').trim();
+  const base = amb('RILASCIO_BASE') || r.base;
   if (base) return String(base).replace(/\/$/, '');
   if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return null;
   return `https://github.com/${repo}/releases/${r.tag ? 'download/' + r.tag : 'latest/download'}`;
@@ -1051,7 +1059,7 @@ function pluginsInfo() {
 }
 function repoGitHub() {
   const r = leggiJson(path.join(ROOT, 'rilascio.json')) || {};
-  const repo = String(process.env.MYVTT_REPO || r.repo || 'EDG-coder/Libre-VTT').trim();
+  const repo = String(amb('REPO') || r.repo || 'EDG-coder/Libre-VTT').trim();
   return /^[\w.-]+\/[\w.-]+$/.test(repo) ? repo : null;
 }
 /** >0 se a è più nuova di b ("3.1.0" contro "3.0.9") */
@@ -1104,14 +1112,14 @@ function versioniNuove(lista, attuale) {
 }
 let ultimoControllo = null;
 async function controllaAggiornamento(forza) {
-  if (process.env.MYVTT_NO_AGGIORNAMENTI) return { attuale: VERSIONE, nuova: null };
+  if (amb('NO_AGGIORNAMENTI')) return { attuale: VERSIONE, nuova: null };
   // si ricorda per poco «non c'è niente di nuovo» (una versione può uscire mentre l'app è aperta)
   if (!forza && ultimoControllo && Date.now() - ultimoControllo.quando < (ultimoControllo.dati.nuova ? 6 * 3600e3 : 10 * 60e3)) return ultimoControllo.dati;
   const repo = repoGitHub();
   if (!VERSIONE || !repo) return { attuale: VERSIONE, nuova: null };
   // le ultime 30 release, per mostrare le novità di tutte quelle uscite dopo la propria
   let lista = null;
-  try { lista = JSON.parse(await scaricaTesto(process.env.MYVTT_API_RILASCI || `https://api.github.com/repos/${repo}/releases?per_page=30`) || 'null'); } catch {}
+  try { lista = JSON.parse(await scaricaTesto(amb('API_RILASCI') || `https://api.github.com/repos/${repo}/releases?per_page=30`) || 'null'); } catch {}
   if (lista && !Array.isArray(lista)) lista = [lista];
   const nuove = versioniNuove(lista, VERSIONE);
   if (!nuove) {
@@ -1231,7 +1239,7 @@ async function rustPrivato() {
   if (cargoPath()) return cargoPath();
   // il programma di installazione di Rust (su Windows sempre quello x64: gira anche sui PC ARM)
   const triple = WIN ? 'x86_64-pc-windows-msvc' : MAC ? `${ARCH_CPU}-apple-darwin` : `${ARCH_CPU}-unknown-linux-gnu`;
-  const url = `${process.env.MYVTT_RUST_DIST || 'https://static.rust-lang.org/rustup/dist'}/${triple}/rustup-init${EXE}`;
+  const url = `${amb('RUST_DIST') || 'https://static.rust-lang.org/rustup/dist'}/${triple}/rustup-init${EXE}`;
   fs.mkdirSync(TOOLS, { recursive: true });
   const exe = path.join(TOOLS, 'rustup-init' + EXE);
   say('Scarico Rust nella cartella di LIBRE VTT (non tocca il resto del computer)…');
@@ -1254,7 +1262,7 @@ async function zigPrivato() {
   const trova = () => { try { for (const d of fs.readdirSync(dir)) { const z = path.join(dir, d, 'zig' + EXE); if (fs.existsSync(z)) return z; } } catch {} return null; };
   if (trova()) return trova();
   say('Scarico Zig, che fa da compilatore C (al posto di Visual Studio o build-essential)…');
-  let idx = null; try { idx = JSON.parse(await scaricaTesto(process.env.MYVTT_ZIG_INDEX || 'https://ziglang.org/download/index.json') || 'null'); } catch {}
+  let idx = null; try { idx = JSON.parse(await scaricaTesto(amb('ZIG_INDEX') || 'https://ziglang.org/download/index.json') || 'null'); } catch {}
   const chiave = `${WIN ? 'x86_64' : ZIG_CPU}-${WIN ? 'windows' : MAC ? 'macos' : 'linux'}`;   // su Windows tutto gira come x64 (anche sui PC ARM)
   const ver = idx && (idx[ZIG_PREFERITO] && idx[ZIG_PREFERITO][chiave] ? ZIG_PREFERITO : Object.keys(idx).find(k => /^\d+\.\d+\.\d+$/.test(k) && idx[k][chiave]));
   const voce = ver && idx[ver][chiave];
@@ -1507,7 +1515,7 @@ function sorvegliaSenzaFinestra() {
   sorvegliando = true; ultimoSegno = Date.now();
   setInterval(() => {
     if (listeners.size || presenti.size) ultimoSegno = Date.now();
-    if (Date.now() - ultimoSegno > +(process.env.MYVTT_ATTESA_MS || 180000)) {
+    if (Date.now() - ultimoSegno > +(amb('ATTESA_MS') || 180000)) {
       console.log('Nessuna pagina di LIBRE VTT aperta da qualche minuto: spengo.');
       stopAll(); setTimeout(() => process.exit(0), 300);
     }
@@ -1525,7 +1533,7 @@ const presenti = new Set();
 let finestraProc = null, senzaPagineDa = 0, ultimoGiro = Date.now();
 // 3 s bastano per un ricaricamento; il passaggio menu ↔ tavolo (che può metterci di più a caricare)
 // avvisa prima con /api/passaggio e ha 20 s.
-const ATTESA_CHIUSURA = +(process.env.MYVTT_CHIUSURA_MS || 3000);
+const ATTESA_CHIUSURA = +(amb('CHIUSURA_MS') || 3000);
 let passaggioFino = 0;
 // Un browser con il profilo di LIBRE VTT rimasto acceso senza finestre (su macOS resta nel Dock):
 // se gli chiediamo una finestra --app ne apre una normale con una scheda nuova. Prima lo si chiude.
@@ -1681,7 +1689,7 @@ const server = http.createServer(async (req, res) => {
     return corpo(m => {
       ok({ ok: true });
       if (m.what === 'solo' || m.what === 'host') avvia(m.what, null, String(m.campagna || ''));
-      else if (m.what === 'join') avvia('join', String(m.id || '').trim());
+      else if (m.what === 'join') avvia('join', String(m.id || '').trim(), null, { chiaveMaster: m.chiaveMaster });
       else if (m.what === 'prepara') prepara();
       else if (m.what === 'ferma') stopAll();
     });

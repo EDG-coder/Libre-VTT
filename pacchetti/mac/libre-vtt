@@ -6,20 +6,21 @@
 
 RES="$(cd "$(dirname "$0")/../Resources" && pwd)"
 APP="$RES/app"
-SUPPORT="${MYVTT_USERDIR:-$HOME/Library/Application Support/LIBRE VTT}"
-LOGDIR="${MYVTT_LOGDIR:-$HOME/Library/Logs/LIBRE VTT}"
+# (le variabili si chiamano LIBRE_*; MYVTT_* sono i nomi di quando il programma si chiamava «MY VTT»)
+SUPPORT="${LIBRE_USERDIR:-${MYVTT_USERDIR:-$HOME/Library/Application Support/LIBRE VTT}}"
+LOGDIR="${LIBRE_LOGDIR:-${MYVTT_LOGDIR:-$HOME/Library/Logs/LIBRE VTT}}"
 # prima si chiamava «MY VTT»: la sua cartella passa alla nuova, una volta sola
 VECCHIA="$HOME/Library/Application Support/MY VTT"
-[ -z "${MYVTT_USERDIR:-}" ] && [ ! -e "$SUPPORT" ] && [ -d "$VECCHIA" ] && mv "$VECCHIA" "$SUPPORT" 2>/dev/null
+[ -z "${LIBRE_USERDIR:-${MYVTT_USERDIR:-}}" ] && [ ! -e "$SUPPORT" ] && [ -d "$VECCHIA" ] && mv "$VECCHIA" "$SUPPORT" 2>/dev/null
 mkdir -p "$SUPPORT" "$LOGDIR"
 LOG="$LOGDIR/avvio.log"
 : > "$LOG"
-export MYVTT_USERDIR="$SUPPORT"
+export LIBRE_USERDIR="$SUPPORT"
 # opzioni di Node lasciate da altri programmi installati: qui non devono valere
 unset NODE_OPTIONS NODE_PATH
 
 # Se Node manca lo si scarica dal sito ufficiale (dopo averlo chiesto): ramo LTS 22.
-DIST="${MYVTT_NODE_DIST:-https://nodejs.org/dist/latest-v22.x}"
+DIST="${LIBRE_NODE_DIST:-${MYVTT_NODE_DIST:-https://nodejs.org/dist/latest-v22.x}}"
 case "$(uname -m)" in arm64) ARCH=arm64 ;; *) ARCH=x64 ;; esac
 
 log() { echo "$*" >> "$LOG"; }

@@ -1,10 +1,15 @@
-## Novità della 3.8.0
+## Novità della 3.8.1
 
-**Plugin: temi, compendi e funzioni nuove fatti dalla community**
-- **Dalla rotellina ⚙ della home:** in *Impostazioni › Plugin › Gestisci i plugin* vedi tutti i plugin che hai, li applichi con una spunta, scegli l'ordine con le frecce (più in basso vuol dire applicato dopo: in caso di conflitto vince lui) e apri la loro cartella.
-- **Un plugin è una cartella:** sta in *Documenti › LIBRE VTT › Plugins*, con dentro un `plugin.json` e, a scelta, un tema (`style.css`), dei pacchetti per il compendio (`data/compendium/`) e del codice (`client.js`), con i testi tradotti in `locales/`. Si installa anche da un file `.zip`.
-- **Si applicano subito:** il tavolo prende un plugin entro pochi secondi, anche se è già aperto, senza ricaricare. Togliendo la spunta il plugin resta caricato in memoria, pronto da riapplicare all'istante.
-- **Due livelli per il codice.** *In sandbox* (quello normale): gira in una cornice isolata, senza internet e senza accesso alla pagina, e può fare solo quello che dichiara nei permessi (leggere e scrivere in chat, aggiungere comandi, pulsanti e avvisi). *Ad accesso completo*: può agganciarsi a qualsiasi funzione del tavolo e cambiare tutto. Prima di applicarlo LIBRE VTT mostra due avvisi: nel secondo va scritto il nome del plugin e il pulsante si sblocca dopo 5 secondi. Il consenso vale solo per quei file: se il plugin cambia, viene richiesto. Finché è applicato, in alto sul tavolo c'è un bollino rosso.
-- **Agganci ovunque:** un plugin ad accesso completo può intervenire prima, dopo o al posto di ognuna delle circa 400 funzioni del tavolo (chat, dadi, scene, schede, rete…).
-- **Facile da creare:** con *＋ Crea* parti da un modello già pronto (un plugin vuoto, un tema, un plugin in sandbox, uno ad accesso completo). La guida completa è in `docs/plugins.md` nel progetto su GitHub.
-- **Nella prima versione i plugin valgono sul tuo computer:** l'invio dei plugin del master ai giocatori e i plugin che girano sul server della partita arriveranno in una versione successiva.
+**Server dedicato: la partita sempre aperta su una macchina senza schermo**
+- **Una versione di LIBRE VTT che collega e basta:** su una schedina sempre accesa (ARM o RISC-V), un vecchio portatile o un server gira solo la parte che tiene la campagna e collega i dispositivi. Nessuno gioca da lì: tutti, master compreso, entrano dal proprio LIBRE VTT con «Mi unisco» e il codice della partita.
+- **Si installa con** `bash Installa-LIBRE-VTT-Linux.sh --server`: niente finestre né menu, parte da solo all'accensione e scrive il codice della partita e la **chiave del master**. Dalla cartella del progetto: `npm run server`.
+- **Il master lo autorizza il server:** chi conduce, la prima volta, scrive la chiave del master sotto il codice in «Mi unisco» (*Conduco io su un server dedicato*). Dopo il server lo riconosce da solo. Senza la chiave, o con quella sbagliata, si entra da giocatore; chi si siede alla macchina del server non diventa master.
+- **Più master:** dal pannello della sessione il master può dare il ruolo di master anche ad altri; il server tiene sempre almeno un master. Ruoli e chiave si gestiscono anche dalla riga di comando del server (`giocatori`, `master <nome>`, `nuova-chiave`).
+- **Il pannello della sessione funziona anche da fuori:** il master entrato da un altro computer apre il pannello dal suo tavolo e regola permessi, provvedimenti, ruoli e codice della partita sul server.
+- **La campagna resta sul server:** il master che entra da fuori prende scene, schede, note e turni dal server e li modifica da lì. Una campagna già giocata si porta sul server copiandone la cartella.
+
+**Sistemato**
+- L'installatore per Linux si fermava con un errore su RISC-V, e anche su PC e ARM quando doveva scaricare Node.
+- `npm start` cercava un file che non c'è più: ora avvia il tavolo (`npm run app` la finestra di avvio).
+- I nomi rimasti di quando il programma si chiamava «MY VTT»: le variabili d'ambiente ora sono `LIBRE_*` (quelle vecchie valgono ancora), e i file di avvio per Mac e l'installatore per Windows hanno il nome nuovo.
+- Su Linux, la voce nel menu creata dalla cartella del progetto ora apre davvero LIBRE VTT.
