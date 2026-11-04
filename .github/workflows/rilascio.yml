@@ -84,8 +84,8 @@ jobs:
           cd ../../out && shasum -a 256 uffa-link-macos-universal > uffa-link-macos-universal.sha256
       - name: Crea il .dmg (con Node e il collegamento dentro)
         env:
-          MYVTT_REPO: ${{ github.repository }}
-          MYVTT_LINK: ${{ github.workspace }}/out/uffa-link-macos-universal
+          LIBRE_REPO: ${{ github.repository }}
+          LIBRE_LINK: ${{ github.workspace }}/out/uffa-link-macos-universal
         run: bash pacchetti/mac/crea-dmg.sh "$PWD/dmg/LIBRE-VTT.dmg"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -161,7 +161,7 @@ jobs:
           if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe' }
           $v = '${{ inputs.versione || github.ref_name }}' -replace '^v', ''
           if ($v -notmatch '^\d') { $v = '0.0.0' }
-          & $iscc "/DVersione=$v" pacchetti\installer\windows\myvtt.iss
+          & $iscc "/DVersione=$v" pacchetti\installer\windows\libre-vtt.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

@@ -4,6 +4,11 @@
 //   node server/game-server.js host          il master: tiene lo stato, decide, tira i dadi
 //   node server/game-server.js join          un giocatore: fa solo da ponte verso uffa-link
 //
+// Con LIBRE_DEDICATO=1 l'host è un «server dedicato» (vedi server/server-dedicato.js): gira da solo su una
+// macchina senza schermo e nessuno su questa macchina è il master. Il master entra da fuori, come gli altri,
+// e lo diventa solo se il server lo autorizza: con la chiave del master (data/master.chiave) o perché un
+// master già autorizzato gli ha dato quel ruolo dal pannello.
+//
 // Porte (tutte e due i modi):
 //   4000  pannello di controllo (http) e collegamento del browser (ws://127.0.0.1:4000/ws)
 //   4010  porta di servizio per uffa-link (solo in «host»: ci arrivano i giocatori da iroh)
@@ -17,6 +22,7 @@ const LUCE = require('../condiviso/luce-calcolo.js');
 const VERS = require('../condiviso/versioni.js');
 
 const MODE = (process.argv[2] || 'host').toLowerCase();
+const DEDICATO = MODE === 'host' && process.env.LIBRE_DEDICATO === '1';
 const PORT = +(process.env.PORT || 4000);
 const LINK_PORT = +(process.env.LINK_PORT || 4010);
 const ROOT = path.join(__dirname, '..');           // la cartella del programma
@@ -120,6 +126,31 @@ function writeJson(f, v) {
 // Il documento del mondo: è quello che il master manda e che tutti ricevono (filtrato).
 let world = readJson('world.json', null) || {};
 world = Object.assign({ v: 1, active: null, publicScene: null, scenes: [], sheets: [], chat: [], music: null, fog: {} }, world);
+
+// Server dedicato con una campagna copiata da un computer: le immagini che il mondo cita con il percorso della
+// campagna («assets/mappa.webp») e che non sono ancora nel deposito ci entrano adesso, così chi gioca le riceve
+// anche senza il master che le carica.
+function importaImmaginiCampagna() {
+  const CAMP = process.env.CAMPAIGN_DIR ? path.resolve(process.env.CAMPAIGN_DIR) : path.dirname(DATA);
+  const ESTENSIONI = { '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.avif': 'image/avif', '.svg': 'image/svg+xml', '.bmp': 'image/bmp' };
+  let n = 0;
+  const prendi = o => {
+    if (!o || typeof o.url !== 'string' || (o.gid && haveAsset(o.gid))) return;
+    if (/^(gs:|data:|blob:|https?:)/i.test(o.url)) return;
+    let rel; try { rel = decodeURIComponent(o.url.split(/[?#]/)[0]).replace(/^\/+/, ''); } catch { return; }
+    const base = /^(condiviso|sistemi)\//.test(rel) ? ROOT : CAMP;
+    const f = path.resolve(base, rel), mime = ESTENSIONI[path.extname(f).toLowerCase()];
+    if (!mime || !f.startsWith(base + path.sep)) return;
+    let buf; try { buf = fs.readFileSync(f); } catch { return; }
+    if (buf.length > MAX_ASSET) return;
+    const h = storeAsset(buf, mime, path.basename(f));
+    if (h) { o.gid = h; n++; }
+  };
+  for (const sc of world.scenes || []) { prendi(sc.bg); for (const ph of sc.photos || []) if (!ph.shape) prendi(ph); }
+  for (const sh of world.sheets || []) prendi(sh.icon);
+  if (n) { writeJson('world.json', world); console.log(`  Immagini della campagna messe nel deposito: ${n}.`); }
+}
+if (DEDICATO) importaImmaginiCampagna();
 const newId = pre => pre + Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
 // Chi gioca: gettone -> { name, role, overrides, sheets:{id:'r'|'rw'}, lastSeen }
 let roster = readJson('players.json', null) || {};
@@ -143,14 +174,27 @@ function firmaValida(token, firma) {
   if (typeof firma !== 'string' || !/^[a-f0-9]{32}$/.test(firma)) return false;
   return crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(firmaDi(token)));
 }
+// La chiave del master del server dedicato: la scrive server-dedicato.js e la si rilegge ogni volta (la si
+// può cambiare mentre il server gira). Chi la presenta entrando diventa master.
+const CHIAVE_MASTER_FILE = path.join(DATA, 'master.chiave');
+function chiaveMasterOk(x) {
+  if (!DEDICATO || typeof x !== 'string') return false;
+  let k = '';
+  try { k = fs.readFileSync(CHIAVE_MASTER_FILE, 'utf8').trim().toLowerCase(); } catch { return false; }
+  const v = x.trim().toLowerCase().replace(/[\s-]/g, '');
+  if (!/^[a-f0-9]{32}$/.test(k) || v.length !== k.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(v), Buffer.from(k));
+}
 /** L'identità con cui entra chi saluta: il suo gettone se è buono, altrimenti uno nuovo dato da noi.
- *  Il browser di questo computer (chi conduce) non passa dal tubo: di lui ci si fida come prima. */
+ *  Il browser di questo computer (chi conduce) non passa dal tubo: di lui ci si fida come prima.
+ *  Sul server dedicato no: lì nessuno conduce da questa macchina, e la firma la mostrano tutti. */
 function identitaDi(m, c) {
   const token = str(m.token, 64), firma = str(m.firma, 64);
-  if (c && c.kind === 'ws' && /^[a-f0-9]{24}$/.test(token)) return token;
+  if (c && c.kind === 'ws' && !DEDICATO && /^[a-f0-9]{24}$/.test(token)) return token;
   if (/^[a-f0-9]{24}$/.test(token)) {
     if (firmaValida(token, firma)) { const rec = roster[token]; if (rec) rec.firmaRichiesta = true; return token; }
     const rec = roster[token];
+    if (rec && rec.role === 'master') return crypto.randomBytes(12).toString('hex');   // il posto del master si prende solo con la firma
     if (rec && !rec.firmaRichiesta) return token;          // di prima delle firme
   }
   return crypto.randomBytes(12).toString('hex');
@@ -1331,7 +1375,17 @@ function onMessage(c, raw) {
     if (usc && Date.now() - usc < 120000) { const l = cadute.get(token) || []; l.push(Date.now()); cadute.set(token, l.slice(-10)); }
     const rec = recOf(token);
     // Il master è chi sta davanti alla macchina che ospita: arriva dal browser locale.
-    if (c.kind === 'ws' && MODE === 'host' && !hasMaster()) rec.role = 'master';
+    // Sul server dedicato invece arriva da fuori: è master chi lo è già nel registro (con la sua firma) o chi
+    // presenta la chiave del master.
+    let chiaveSbagliata = false;
+    if (DEDICATO) {
+      if (m.chiaveMaster) {
+        if (chiaveMasterOk(m.chiaveMaster)) {
+          if (rec.role !== 'master') logAction({ name: rec.name || 'nuovo', token }, 'master', true, 'chiave del master');
+          rec.role = 'master'; rec.approved = true; rec.banned = false;
+        } else if (rec.role !== 'master') chiaveSbagliata = true;
+      }
+    } else if (c.kind === 'ws' && MODE === 'host' && !hasMaster()) rec.role = 'master';
     else if (rec.role === 'master' && c.kind === 'link') rec.role = 'player';   // da fuori non si entra da master
     const want = uniqueName(token, m.name || rec.name);
     rec.name = want || (rec.role === 'master' ? 'Master' : 'Giocatore ' + c.id);
@@ -1362,6 +1416,10 @@ function onMessage(c, raw) {
     }
     rec.firstSeenDone = true;
     sendWelcome(c);
+    if (chiaveSbagliata) {
+      logAction(c, 'master', false, 'chiave del master sbagliata');
+      c.send({ t: 'notice', text: 'La chiave del master non è giusta: sei entrato come giocatore.', kind: 'warn' });
+    }
     return;
   }
 
@@ -1372,6 +1430,16 @@ function onMessage(c, raw) {
     return;
   }
   if (!c.token) return;                                           // niente prima del saluto
+
+  // il pannello di un master entrato da fuori (server dedicato): le stesse azioni del pannello di qui
+  if (m.t === 'pannello') {
+    const id = str(m.id, 20);
+    const r = c.kind === 'link' && c.role === 'master' && !c.pending && API_PANNELLO[m.p]
+      ? apiPannello(m.p, m.corpo && typeof m.corpo === 'object' ? m.corpo : {}, c)
+      : { codice: 403, dati: 'solo il master' };
+    c.send({ t: 'pannello.r', id, codice: r.codice, dati: r.dati });
+    return;
+  }
 
   if (m.t === 'leave') {                                          // si è scollegato a mano
     logAction(c, 'uscita', true, 'scollegato da sé');
@@ -1635,6 +1703,8 @@ function bridgeConnect() {
       if (msg.t === 'beat') { bridgeSend({ t: 'pong' }); continue; }   // il ponte è vivo anche senza browser
       if (msg.t === 'eco') continue;                        // la risposta al nostro «ci sei?»: basta che sia arrivata
       if (msg.t === 'welcome') hostSaStabile = Array.isArray(msg.sa) && msg.sa.includes('stabile');
+      if (msg.t === 'pannello.r') { const f = pannelloAttese.get(String(msg.id)); if (f) { pannelloAttese.delete(String(msg.id)); f({ codice: +msg.codice || 500, dati: msg.dati }); } continue; }
+      if (msg.t === 'pannello.e') { if (masterQui() && msg.msg) panelPush(msg.msg); continue; }
       versoBrowser(msg);
     }
     stabileApri();                                         // l'host c'è: apriamo anche il canale stabile
@@ -1678,6 +1748,10 @@ function versoBrowser(msg, giaInOrdine) {
     }
   }
   if (msg.t === 'world' || msg.t === 'welcome') { attesaDelta = new Map(); clearTimeout(attesaTimer); attesaTimer = 0; }
+  // il browser deve sapere che l'host è altrove: un master entrato da fuori prende il mondo dal server
+  if (msg.t === 'welcome') msg = { ...msg, remoto: true };
+  if ((msg.t === 'welcome' || msg.t === 'you') && msg.you) ruoloQui = msg.you.role || null;
+  if (msg.t === 'bye') ruoloQui = null;
   if (msg.t === 'welcome' && msg.you && lastHello) {    // l'identità data dall'host (con la firma): da qui in poi si usa quella
     lastHello.token = msg.you.token; if (msg.you.firma) lastHello.firma = msg.you.firma;
     avviatore('identita', { token: msg.you.token, firma: msg.you.firma || null, campagna: msg.you.campagna || null, nome: msg.you.name || null });
@@ -1831,15 +1905,150 @@ function bridgeSend(obj) {
 
 // ======================= Pannello di controllo =======================
 const panels = new Set();
-function panelPush(msg) { for (const r of panels) { try { r.write('data: ' + JSON.stringify(msg) + '\n\n'); } catch {} } }
+function panelPush(msg) {
+  for (const r of panels) { try { r.write('data: ' + JSON.stringify(msg) + '\n\n'); } catch {} }
+  // i master entrati da fuori (server dedicato) hanno il pannello sul loro computer: glielo giriamo dal tubo
+  if (MODE === 'host') for (const c of clients) if (c.kind === 'link' && c.role === 'master' && c.token && !c.pending) c.send({ t: 'pannello.e', msg });
+}
 
-function readBody(req, res, fn) {
-  let body = '';
-  req.on('data', d => { body += d; if (body.length > 40000) req.destroy(); });
-  req.on('end', () => {
-    let m; try { m = JSON.parse(body); } catch { return sendHttp(res, 400, 'dati non validi'); }
-    try { fn(m); } catch (e) { console.error('api', e.message); if (!res.headersSent) sendHttp(res, 500, 'errore'); }
+// ---------- Il pannello di un master entrato da fuori (solo in «join») ----------
+// L'host ci ha fatto master: le richieste del pannello di questo computer vanno all'host, con un numero, e
+// la risposta torna con lo stesso numero.
+let ruoloQui = null;
+const masterQui = () => ruoloQui === 'master';
+const pannelloAttese = new Map();
+let pannelloN = 0;
+function pannelloDallHost(p, corpo) {
+  const id = 'p' + (++pannelloN);
+  return new Promise(res => {
+    const t = setTimeout(() => { pannelloAttese.delete(id); res({ codice: 504, dati: 'Il server non ha risposto.' }); }, 15000);
+    pannelloAttese.set(id, r => { clearTimeout(t); res(r); });
+    bridgeSend({ t: 'pannello', id, p, corpo });
   });
+}
+
+/** Il corpo JSON di una richiesta (al massimo `max` byte; 0: nessun corpo). */
+function leggiCorpo(req, res, max, fn) {
+  const fatto = m => Promise.resolve().then(() => fn(m)).catch(e => { console.error('api', e.message); if (!res.headersSent) sendHttp(res, 500, 'errore'); });
+  if (!max) return fatto({});
+  let body = '';
+  req.on('data', d => { body += d; if (body.length > max) req.destroy(); });
+  req.on('end', () => {
+    let m; try { m = JSON.parse(body || '{}'); } catch { return sendHttp(res, 400, 'dati non validi'); }
+    fatto(m && typeof m === 'object' ? m : {});
+  });
+}
+
+// Le azioni del pannello (permessi, moderazione, regole della sessione...). Le stesse arrivano dall'http di
+// questa macchina (il master locale) o dal tubo (un master entrato da fuori, sul server dedicato).
+const API_PANNELLO = { '/api/state': 'GET', '/api/perm': 'POST', '/api/scene': 'POST', '/api/mod': 'POST', '/api/session': 'POST',
+  '/api/invito/cambia': 'POST', '/api/invito': 'POST', '/api/kick': 'POST' };
+const NON_HOST = { codice: 409, dati: 'questo è un giocatore, non l\'host' };
+function statoPannello() {
+  let sessionId = null;
+  try { sessionId = fs.readFileSync(LINK_ID_FILE, 'utf8').trim() || null; } catch {}
+  return {
+    mode: MODE, dedicato: DEDICATO || undefined, sessionId, perms: PERMS, roles: Object.keys(ROLE_DEFAULTS), defaults: ROLE_DEFAULTS,
+    session,
+    players: playerList(),
+    log: actionLog.slice(-120),
+    roster: Object.entries(roster).map(([token, r]) => ({
+      token, ...r, perms: permsOf(r),
+      online: [...clients].some(c => c.token === token),
+      live: playerList().find(p => p.token === token) || null
+    })),
+    sheets: (world.sheets || []).map(s => ({ id: s.id, name: s.name, owner: s.owner || null })),
+    scenes: (world.scenes || []).map(s => ({ id: s.id, name: s.name })),
+    publicScene: world.publicScene, active: world.active,
+    chat: (world.chat || []).slice(-40)
+  };
+}
+/** Esegue un'azione del pannello. chi: il master che la chiede (per il registro). → { codice, dati } */
+function apiPannello(p, m, chi) {
+  m = m || {};
+  const io = chi ? { name: chi.name || 'MASTER', token: chi.token } : { name: 'MASTER', token: '' };
+  if (p === '/api/state') return { codice: 200, dati: statoPannello() };
+  if (MODE !== 'host') return NON_HOST;
+  switch (p) {
+    case '/api/perm': {
+      // sul server dedicato almeno un master deve restare: chi è l'ultimo non si toglie il ruolo da solo
+      if (DEDICATO && m.role && m.role !== 'master' && roster[m.token] && roster[m.token].role === 'master'
+        && !Object.entries(roster).some(([t, r]) => t !== m.token && r.role === 'master' && !r.banned)) {
+        return { codice: 409, dati: 'Sul server serve almeno un master: prima dai il ruolo a qualcun altro.' };
+      }
+      const ok = applyPerm(m);
+      if (ok && m.role) logAction(io, 'ruolo', true, (roster[m.token].name || '?') + ' → ' + m.role);
+      return { codice: ok ? 200 : 404, dati: { ok } };
+    }
+    case '/api/scene':
+      world.publicScene = m.id || null;
+      scheduleSave(); pushWorldAll(); panelPush({ t: 'scene', id: world.publicScene });
+      return { codice: 200, dati: { ok: true } };
+    case '/api/mod': {
+      const rec = roster[m.token];
+      if (!rec) return { codice: 404, dati: { ok: false } };
+      if (chi && m.token === chi.token && ['ban', 'freeze', 'mute', 'refuse'].includes(m.action)) return { codice: 409, dati: { ok: false } };
+      const live = () => [...clients].filter(c => c.token === m.token);
+      const nome = rec.name || 'questa persona';
+      switch (m.action) {
+        case 'ban':
+          rec.banned = true;
+          for (const c of live()) shutOut(c, 'Il master ti ha bandito dalla sessione.');
+          break;
+        case 'unban': rec.banned = false; break;
+        case 'mute': rec.muted = !!m.value; break;
+        case 'freeze': rec.frozen = !!m.value; break;
+        case 'resetPerms': rec.overrides = {}; break;
+        case 'approve':
+          rec.approved = true;
+          for (const c of live()) if (c.pending) sendWelcome(c);
+          break;
+        case 'refuse':
+          rec.approved = false;
+          for (const c of live()) shutOut(c, 'Il master non ti ha fatto entrare.');
+          break;
+        case 'forceName':
+          for (const c of live()) c.send({ t: 'rename', reason: str(m.reason, 200) || 'Il master ti chiede di cambiare nome.' });
+          break;
+        case 'message':
+          for (const c of live()) c.send({ t: 'notice', text: str(m.text, 400), kind: 'warn' });
+          break;
+        default: return { codice: 400, dati: { ok: false } };
+      }
+      logAction(io, 'mod.' + m.action, true, nome);
+      scheduleSave(); sendPlayers(); pushWorldAll();
+      return { codice: 200, dati: { ok: true } };
+    }
+    case '/api/session':
+      for (const k of ['locked', 'approval', 'paused']) if (k in m) session[k] = !!m[k];
+      if ('maxPlayers' in m) session.maxPlayers = Math.max(0, Math.min(40, parseInt(m.maxPlayers, 10) || 0));
+      logAction(io, 'sessione', true, JSON.stringify(session));
+      scheduleSave();
+      panelPush({ t: 'session', session });
+      broadcast({ t: 'session', session });
+      return { codice: 200, dati: { ok: true, session } };
+    // «Cambia codice» dal pannello: l'avviatore (che legge le nostre righe) fa una chiave nuova, poi
+    // chiede di mandare il codice nuovo ai giocatori collegati (/api/invito) e riapre la sessione.
+    case '/api/invito/cambia':
+      avviatore('cambia-codice');
+      logAction(io, 'codice', true, 'nuovo codice d\'invito');
+      return { codice: 202, dati: { ok: true } };
+    case '/api/invito': {
+      if (chi) return { codice: 403, dati: 'solo da questa macchina' };   // lo manda l'avviatore, non un master da fuori
+      const codice = str(m.codice, 80);
+      if (!/^[a-f0-9]{64}$/.test(codice)) return { codice: 400, dati: 'codice non valido' };
+      // solo a chi è dentro adesso (e passa dal tubo): lo salvano da soli e si ricollegano lì
+      for (const c of clients) if (c.kind === 'link' && c.token && !c.pending) c.send({ t: 'invito', codice, campagna: CAMPAGNA_NOME || undefined });
+      return { codice: 200, dati: { ok: true } };
+    }
+    case '/api/kick':
+      if (chi && m.token === chi.token) return { codice: 409, dati: { ok: false } };
+      for (const c of [...clients]) if (c.token === m.token) { c.send({ t: 'bye', reason: 'allontanato dal master' }); c.close(); }
+      if (m.forget) delete roster[m.token];
+      scheduleSave(); sendPlayers();
+      return { codice: 200, dati: { ok: true } };
+  }
+  return { codice: 404, dati: 'Non trovato' };
 }
 const sendHttp = (res, code, body, type = 'text/plain; charset=utf-8') => {
   res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
@@ -1907,25 +2116,9 @@ function httpHandler(req, res) {
     return wantAsset(hash).then(buf => buf ? serve() : sendHttp(res, 504, 'L\'host non ha mandato l\'immagine'));
   }
 
-  if (url.pathname === '/api/state') {
-    let sessionId = null;
-    try { sessionId = fs.readFileSync(LINK_ID_FILE, 'utf8').trim() || null; } catch {}
-    return sendHttp(res, 200, JSON.stringify({
-      mode: MODE, sessionId, perms: PERMS, roles: Object.keys(ROLE_DEFAULTS), defaults: ROLE_DEFAULTS,
-      session,
-      players: playerList(),
-      log: actionLog.slice(-120),
-      roster: Object.entries(roster).map(([token, r]) => ({
-        token, ...r, perms: permsOf(r),
-        online: [...clients].some(c => c.token === token),
-        live: playerList().find(p => p.token === token) || null
-      })),
-      sheets: (world.sheets || []).map(s => ({ id: s.id, name: s.name, owner: s.owner || null })),
-      scenes: (world.scenes || []).map(s => ({ id: s.id, name: s.name })),
-      publicScene: world.publicScene, active: world.active,
-      chat: (world.chat || []).slice(-40)
-    }), 'application/json');
-  }
+  // --- le api del pannello ---
+  // Sull'host le esegue lui. Da giocatore, se l'host ci ha fatto master (server dedicato), le giriamo all'host
+  // dal tubo; altrimenti lo stato è quello di questo ponte e il resto non si può fare.
   if (url.pathname === '/api/events') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
     res.write(': benvenuto\n\n');
@@ -1933,109 +2126,16 @@ function httpHandler(req, res) {
     req.on('close', () => panels.delete(res));
     return;
   }
-  if (url.pathname === '/api/perm' && req.method === 'POST') {
-    let body = '';
-    req.on('data', d => { body += d; if (body.length > 20000) req.destroy(); });
-    req.on('end', () => {
-      let m; try { m = JSON.parse(body); } catch { return sendHttp(res, 400, 'dati non validi'); }
-      if (MODE !== 'host') return sendHttp(res, 409, 'questo è un giocatore, non l\'host');
-      const ok = applyPerm(m);
-      sendHttp(res, ok ? 200 : 404, JSON.stringify({ ok }), 'application/json');
+  const api = API_PANNELLO[url.pathname];
+  if (api && (api === 'GET' ? req.method === 'GET' : req.method === 'POST')) {
+    return leggiCorpo(req, res, api === 'GET' ? 0 : 40000, async m => {
+      let r;
+      if (MODE === 'join' && masterQui()) r = await pannelloDallHost(url.pathname, m);
+      else if (MODE === 'join' && url.pathname !== '/api/state') r = { codice: 409, dati: 'questo è un giocatore, non l\'host' };
+      else r = apiPannello(url.pathname, m);
+      const testo = typeof r.dati === 'string' ? r.dati : JSON.stringify(r.dati);
+      sendHttp(res, r.codice, testo, typeof r.dati === 'string' ? 'text/plain; charset=utf-8' : 'application/json');
     });
-    return;
-  }
-  if (url.pathname === '/api/scene' && req.method === 'POST') {
-    let body = '';
-    req.on('data', d => { body += d; if (body.length > 4000) req.destroy(); });
-    req.on('end', () => {
-      let m; try { m = JSON.parse(body); } catch { return sendHttp(res, 400, 'dati non validi'); }
-      world.publicScene = m.id || null;
-      scheduleSave(); pushWorldAll(); panelPush({ t: 'scene', id: world.publicScene });
-      sendHttp(res, 200, '{"ok":true}', 'application/json');
-    });
-    return;
-  }
-  // --- moderazione: una sola porta per tutte le azioni dirette su una persona ---
-  if (url.pathname === '/api/mod' && req.method === 'POST') {
-    return readBody(req, res, m => {
-      if (MODE !== 'host') return sendHttp(res, 409, 'questo è un giocatore, non l\'host');
-      const rec = roster[m.token];
-      if (!rec) return sendHttp(res, 404, '{"ok":false}', 'application/json');
-      const live = () => [...clients].filter(c => c.token === m.token);
-      const nome = rec.name || 'questa persona';
-      switch (m.action) {
-        case 'ban':
-          rec.banned = true;
-          for (const c of live()) shutOut(c, 'Il master ti ha bandito dalla sessione.');
-          break;
-        case 'unban': rec.banned = false; break;
-        case 'mute': rec.muted = !!m.value; break;
-        case 'freeze': rec.frozen = !!m.value; break;
-        case 'resetPerms': rec.overrides = {}; break;
-        case 'approve':
-          rec.approved = true;
-          for (const c of live()) if (c.pending) sendWelcome(c);
-          break;
-        case 'refuse':
-          rec.approved = false;
-          for (const c of live()) shutOut(c, 'Il master non ti ha fatto entrare.');
-          break;
-        case 'forceName':
-          for (const c of live()) c.send({ t: 'rename', reason: str(m.reason, 200) || 'Il master ti chiede di cambiare nome.' });
-          break;
-        case 'message':
-          for (const c of live()) c.send({ t: 'notice', text: str(m.text, 400), kind: 'warn' });
-          break;
-        default: return sendHttp(res, 400, '{"ok":false}', 'application/json');
-      }
-      logAction({ name: 'MASTER', token: '' }, 'mod.' + m.action, true, nome);
-      scheduleSave(); sendPlayers(); pushWorldAll();
-      sendHttp(res, 200, '{"ok":true}', 'application/json');
-    });
-  }
-
-  // --- regole della sessione ---
-  if (url.pathname === '/api/session' && req.method === 'POST') {
-    return readBody(req, res, m => {
-      if (MODE !== 'host') return sendHttp(res, 409, 'questo è un giocatore, non l\'host');
-      for (const k of ['locked', 'approval', 'paused']) if (k in m) session[k] = !!m[k];
-      if ('maxPlayers' in m) session.maxPlayers = Math.max(0, Math.min(40, parseInt(m.maxPlayers, 10) || 0));
-      logAction({ name: 'MASTER', token: '' }, 'sessione', true, JSON.stringify(session));
-      scheduleSave();
-      panelPush({ t: 'session', session });
-      broadcast({ t: 'session', session });
-      sendHttp(res, 200, JSON.stringify({ ok: true, session }), 'application/json');
-    });
-  }
-
-  // «Cambia codice» dal pannello: l'avviatore (che legge le nostre righe) fa una chiave nuova, poi
-  // chiede di mandare il codice nuovo ai giocatori collegati (/api/invito) e riapre la sessione.
-  if (url.pathname === '/api/invito/cambia' && req.method === 'POST') {
-    if (MODE !== 'host') return sendHttp(res, 409, 'questo è un giocatore, non l\'host');
-    avviatore('cambia-codice');
-    logAction({ name: 'MASTER', token: '' }, 'codice', true, 'nuovo codice d\'invito');
-    return sendHttp(res, 202, '{"ok":true}', 'application/json');
-  }
-  if (url.pathname === '/api/invito' && req.method === 'POST') {
-    return readBody(req, res, m => {
-      const codice = str(m.codice, 80);
-      if (MODE !== 'host' || !/^[a-f0-9]{64}$/.test(codice)) return sendHttp(res, 400, 'codice non valido');
-      // solo a chi è dentro adesso (e passa dal tubo): lo salvano da soli e si ricollegano lì
-      for (const c of clients) if (c.kind === 'link' && c.token && !c.pending) c.send({ t: 'invito', codice, campagna: CAMPAGNA_NOME || undefined });
-      sendHttp(res, 200, '{"ok":true}', 'application/json');
-    });
-  }
-  if (url.pathname === '/api/kick' && req.method === 'POST') {
-    let body = '';
-    req.on('data', d => { body += d; if (body.length > 20000) req.destroy(); });
-    req.on('end', () => {
-      let m; try { m = JSON.parse(body); } catch { return sendHttp(res, 400, 'dati non validi'); }
-      for (const c of [...clients]) if (c.token === m.token) { c.send({ t: 'bye', reason: 'allontanato dal master' }); c.close(); }
-      if (m.forget) delete roster[m.token];
-      scheduleSave(); sendPlayers();
-      sendHttp(res, 200, '{"ok":true}', 'application/json');
-    });
-    return;
   }
   sendHttp(res, 404, 'Non trovato');
 }
@@ -2048,6 +2148,8 @@ function avviatore(cosa, dati) { process.stdout.write('@@LIBRE ' + CANALE + ' ' 
 // L'identità salvata dall'avviatore per questa campagna (nel file di configurazione del programma):
 // se il browser ha perso la sua (dati cancellati, un altro browser), si presenta con questa.
 let identitaSalvata = null;
+const CHIAVE_MASTER = /^[a-f0-9]{32}$/i.test(String(process.env.CHIAVE_MASTER || '').replace(/[\s-]/g, '')) ? String(process.env.CHIAVE_MASTER).replace(/[\s-]/g, '').toLowerCase() : '';
+delete process.env.CHIAVE_MASTER;
 try { const x = JSON.parse(process.env.IDENTITA || 'null'); if (x && /^[a-f0-9]{24}$/.test(x.token)) identitaSalvata = x; } catch {}
 /** La miniatura dell'ultima scena vista, per il riquadro di «Mi unisco» (la tiene l'avviatore). */
 function salvaMiniatura(m) {
@@ -2073,6 +2175,8 @@ if (MODE === 'join') {
     // Vale l'identità salvata per questa campagna: il browser ne tiene una sola per tutte (e può
     // averla persa: dati cancellati, un altro browser)
     if (m.t === 'hello' && !m.canale && identitaSalvata) m = { ...m, token: identitaSalvata.token, firma: identitaSalvata.firma || undefined };
+    // la chiave del master del server dedicato, se chi gioca l'ha scritta entrando (vale solo lì)
+    if (m.t === 'hello' && !m.canale && CHIAVE_MASTER) m = { ...m, chiaveMaster: CHIAVE_MASTER };
     if (m.t === 'hello') lastHello = m;
     if (m.t === 'name' && lastHello) lastHello = { ...lastHello, name: m.name };
     if (m.t === 'leave') { lastHello = null; if (stabile) stabile.destroy(); }   // scollegato a mano: non ripresentarlo
@@ -2121,7 +2225,8 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log(`  Server di gioco in modo «${MODE}».`);
   console.log(`  Pannello:  http://localhost:${PORT}`);
   console.log(`  Il VTT si collega a ws://127.0.0.1:${PORT}/ws`);
-  console.log(MODE === 'host'
+  if (DEDICATO) console.log('  Server dedicato: nessuno conduce da questa macchina, il master entra da fuori.');
+  else console.log(MODE === 'host'
     ? `  Ora avvia anche:  pacchetti/uffa-link/target/release/uffa-link host`
     : `  Ora avvia anche:  pacchetti/uffa-link/target/release/uffa-link join <ID>`);
   console.log();

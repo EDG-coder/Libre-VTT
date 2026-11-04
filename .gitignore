@@ -5,14 +5,16 @@
 /assets/Sfondi/*
 !/assets/Sfondi/main.webp
 !/assets/Sfondi/main-en.webp
+libre-vtt-avvio.log
 myvtt-avvio.log
 LIBRE VTT.lnk
 uffa-link.id
 # …e quello che si costruisce
 /pacchetti/uffa-link/target/
-# compilato prima del riordino delle cartelle
-/uffa-link/
 /installatori/
+# il collegamento compilato nella cartella di prima del riordino: l'avviatore lo cerca ancora lì
+# (chi aggiorna una cartella vecchia lo ritrova), quindi resta fuori da GitHub anche se oggi non si crea più
+/uffa-link/
 /pacchetti/installer/windows/stage/
 *.dmg
 __pycache__/

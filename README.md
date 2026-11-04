@@ -43,6 +43,9 @@ niente pacchetti di sistema: alla fine LIBRE VTT è nel menu delle applicazioni 
 toglie dal menu (tasto destro sull'icona › *Disinstalla LIBRE VTT*). Con zenity o kdialog (GNOME,
 KDE…) usa le finestre grafiche, altrimenti fa tutto nel terminale.
 
+Per una macchina senza schermo che fa solo da **server dedicato** (vedi più giù):
+`bash Installa-LIBRE-VTT-Linux.sh --server`.
+
 ### Dove si installa, e perché non dà fastidio al resto
 
 Su Windows e Linux tutto finisce in **una sola cartella privata**:
@@ -107,14 +110,16 @@ Se usi la cartella invece del .dmg: puoi tenere `LIBRE VTT.app` dov'è oppure tr
 **Applicazioni**. Se la sposti, **la prima volta** ti chiede dov'è la cartella del gioco e se la
 ricorda. Se poi scompatti una versione nuova, **«avvio/Cambia cartella collegata (macOS).command»** le
 fa dimenticare quella vecchia. Se cliccandola non succede proprio niente, lo zip ha perso il
-permesso di esecuzione: in Terminale `chmod +x ` + trascina `LIBRE VTT.app` + `/Contents/MacOS/myvtt`,
-Invio, una volta sola. Il registro è in `myvtt-avvio.log` nella cartella del gioco.
+permesso di esecuzione: in Terminale `chmod +x ` + trascina `LIBRE VTT.app` + `/Contents/MacOS/libre-vtt`,
+Invio, una volta sola. Il registro è in `libre-vtt-avvio.log` nella cartella del gioco.
 
 ### Se preferisci fare a mano
 
 Gli avviatori di prima ci sono ancora, in `avvio/`: `start.command` / `start.bat` (da solo),
 `avvia-master.*` e `avvia-giocatore.*` (a distanza), e il classico `node server/server.js`
 (`CAMPAIGN_DIR=/percorso/campagna node server/server.js` per usare una campagna).
+Con npm: `npm start` (il tavolo da solo, come `start.*`), `npm run app` (la finestra di avvio) e
+`npm run server` (il server dedicato).
 
 ## Le campagne
 
@@ -153,6 +158,45 @@ Non riprova solo se ti sei **scollegato tu** (Impostazioni → Sessione → *Sco
 nell'avviso) o se il master ti ha allontanato. *Collegati adesso* ti rimette dentro.
 Anche i pezzi dietro le quinte (server, collegamento) si riaccendono da soli se si fermano.
 
+## Server dedicato (una macchina sempre accesa, senza schermo)
+
+Per avere la partita sempre aperta, come su un sito, ma a casa propria: una schedina che consuma
+pochi watt (ARM a 64 bit o RISC-V, per esempio un Raspberry Pi o una Orange Pi), un vecchio
+portatile o un server. Lì gira solo la parte che **collega**: la campagna, il server di gioco e il
+collegamento a distanza. Nessuno gioca da lì: **tutti**, master compreso, entrano dal proprio
+LIBRE VTT con «Mi unisco» e il codice della partita.
+
+    bash Installa-LIBRE-VTT-Linux.sh --server      # oppure, dalla cartella del progetto:
+    node server/server-dedicato.js                 # (npm run server)
+
+All'avvio scrive due cose: il **codice della partita** (da mandare a tutti) e la **chiave del
+master**. Chi conduce, la prima volta, in «Mi unisco» apre *Conduco io su un server dedicato* e
+scrive la chiave sotto il codice: il server lo fa master e da lì in poi lo riconosce dalla sua
+identità firmata, senza chiave. Dal suo **pannello della sessione** il master può dare il ruolo di
+master anche ad altri (il server tiene sempre almeno un master). Senza la chiave, o con quella
+sbagliata, si entra da giocatore. Chi si siede alla macchina del server non diventa master.
+
+Il master entrato da fuori prende **il mondo del server** (scene, schede, note, turni, sistema di
+gioco) e lo modifica da lì; il compendio è quello della campagna sul server, che vede come lo
+vedono i giocatori. Per portare sul server una campagna già giocata, se ne copia la cartella
+(*Documenti › LIBRE VTT › Campagne › nome*) e si avvia con `--campagna <cartella>`: le immagini
+che il mondo cita vengono messe nel deposito all'avvio.
+
+Comandi utili (con l'installatore: `~/.local/share/libre-vtt/avvia-server <comando>`):
+
+| comando | che cosa fa |
+|---|---|
+| `codice` | il codice della partita |
+| `chiave` / `nuova-chiave` | la chiave del master / una nuova (la vecchia non vale più; chi è già master lo resta) |
+| `giocatori` | chi c'è nel registro, con il ruolo e chi è collegato |
+| `master <nome>` / `giocatore <nome>` | dà o toglie il ruolo di master (anche a server acceso) |
+
+Opzioni: `--campagna <cartella>` (predefinita `~/libre-vtt-server`), `--porta`, `--porta-link`,
+`--collegamento <uffa-link>`. Il collegamento lo trova nell'installazione, oppure lo scarica dalla
+pagina delle release controllandone l'impronta. Con l'installatore parte da solo come servizio
+dell'utente (`systemctl --user status libre-vtt-server`); perché parta all'accensione anche senza
+entrare con l'utente: `sudo loginctl enable-linger $USER`, una volta sola.
+
 ## Creare gli installatori
 
 ### Con GitHub (consigliato): tutto dentro, niente da scaricare per chi installa
@@ -185,6 +229,7 @@ dalla pagina dell'esecuzione, senza pubblicare.
 | `server/launcher.js` | la finestra di avvio, accende e spegne il resto | `127.0.0.1:4100` |
 | `server/server.js` | serve i file del VTT e le immagini | `127.0.0.1:3000` |
 | `server/game-server.js` | **decide**: permessi, tiri di dado, chi vede cosa | `127.0.0.1:4000` |
+| `server/server-dedicato.js` | il server dedicato: server di gioco e collegamento, senza finestre | — |
 | `pacchetti/uffa-link` | porta i byte da una macchina all'altra con iroh | `127.0.0.1:4010` |
 
 ### Le cartelle del progetto
@@ -193,7 +238,7 @@ dalla pagina dell'esecuzione, senza pubblicare.
 |---|---|
 | `avvio/` | gli avviatori per usare il progetto così com'è (`.vbs`, `.desktop`, `.app`, `start.*`, `avvia-*`) |
 | `server/` | i programmi che girano con Node: avviatore, tavolo, server di gioco |
-| `condiviso/` | il codice usato sia dal server sia dal browser (il calcolo della luce dinamica) |
+| `condiviso/` | il codice usato sia dal server sia dal browser (luce dinamica, pulizia degli SVG, versioni del mondo) e, in `token-srd/`, i segnalini dei mostri dell'SRD: restano qui perché le campagne salvate li citano con questo percorso |
 | `web/` | le pagine: `index.html` (il tavolo), `launcher.html`, `panel.html`, le icone |
 | `web/css/` | gli stili |
 | `web/js/base/` | il cuore del tavolo: mappa, strumenti, rete, telefono, lingue |
@@ -208,6 +253,15 @@ dalla pagina dell'esecuzione, senza pubblicare.
 | `assets/` | lo sfondo di benvenuto |
 | `pacchetti/` | quello che serve per costruire le versioni da installare: `installer/`, `mac/`, `mobile/`, e il collegamento `uffa-link/` |
 | `sviluppo/` | gli strumenti per chi sviluppa (il convertitore delle regole SRD) |
+
+**I nomi.** Il programma si chiama LIBRE VTT; prima si chiamava «MY VTT». Le variabili d'ambiente
+ora si chiamano `LIBRE_*`: quelle di prima, `MYVTT_*`, valgono ancora, così gli script e le app già
+installati continuano a funzionare. Restano volutamente col nome vecchio gli identificativi che, se
+cambiassero, farebbero perdere qualcosa a chi aggiorna: gli identificativi delle app per Mac
+(`local.myvtt.*`: macOS chiederebbe di nuovo i permessi), le cartelle «MY VTT» che l'installatore
+sposta una volta sola. Il collegamento a distanza si chiama `uffa-link` e parla il protocollo
+`uffa-vtt/1`: con un nome nuovo le versioni di prima non troverebbero più il file da scaricare e
+non potrebbero giocare con quelle nuove, quindi resta così.
 
 Il browser parla sempre e solo con il proprio computer. Il server di gioco è l'unica fonte vera
 dei dati: il browser **chiede**, il server **decide**. Se un giocatore manomettesse la sua

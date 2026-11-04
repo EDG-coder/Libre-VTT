@@ -3,6 +3,9 @@
 #
 #   Doppio clic → «Esegui» (o tasto destro → Esegui come programma), oppure: bash LIBRE-VTT-Linux.sh
 #   bash LIBRE-VTT-Linux.sh --si     installa senza fare domande
+#   bash LIBRE-VTT-Linux.sh --server come «server dedicato» per una macchina senza schermo (una schedina
+#                                    sempre accesa): niente finestre né menu, parte da solo all'accensione
+#                                    (servizio di systemd dell'utente) e tiene la campagna in ~/libre-vtt-server
 #
 # Tutto finisce in UNA cartella privata, ~/.local/share/libre-vtt:
 #   app/       il programma
@@ -13,9 +16,12 @@
 set -u
 NOME="LIBRE VTT"
 SELF="$(readlink -f "$0")"
-DEST="${MYVTT_DEST:-${XDG_DATA_HOME:-$HOME/.local/share}/libre-vtt}"
-DIST="${MYVTT_NODE_DIST:-https://nodejs.org/dist/latest-v22.x}"
-SI=0; for a in "$@"; do [ "$a" = "--si" ] && SI=1; done
+# (le variabili si chiamano LIBRE_*; MYVTT_* sono i nomi di quando il programma si chiamava «MY VTT»)
+DEST="${LIBRE_DEST:-${MYVTT_DEST:-${XDG_DATA_HOME:-$HOME/.local/share}/libre-vtt}}"
+NODE_DIST_SCELTA="${LIBRE_NODE_DIST:-${MYVTT_NODE_DIST:-}}"
+DIST="${NODE_DIST_SCELTA:-https://nodejs.org/dist/latest-v22.x}"
+SI=0; SERVER=0; DIST_RISCV=
+for a in "$@"; do case "$a" in --si) SI=1 ;; --server) SERVER=1 ;; esac; done
 unset NODE_OPTIONS NODE_PATH
 
 # ---------------------------------------------------------------- come parlare con chi installa
@@ -23,17 +29,18 @@ UI=testo
 if [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
   if command -v zenity >/dev/null 2>&1; then UI=zenity; elif command -v kdialog >/dev/null 2>&1; then UI=kdialog; fi
 fi
-[ -n "${MYVTT_UI:-}" ] && UI="$MYVTT_UI"
+UI_SCELTA="${LIBRE_UI:-${MYVTT_UI:-}}"
+[ -n "$UI_SCELTA" ] && UI="$UI_SCELTA"
 # lanciato con un doppio clic, senza finestre per parlare: si apre un terminale
-if [ "$UI" = testo ] && [ ! -t 0 ] && [ "$SI" = 0 ] && [ -z "${MYVTT_IN_TERMINALE:-}" ] && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+if [ "$UI" = testo ] && [ ! -t 0 ] && [ "$SI" = 0 ] && [ -z "${LIBRE_IN_TERMINALE:-}" ] && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
   for t in x-terminal-emulator gnome-terminal konsole xfce4-terminal mate-terminal lxterminal xterm; do
     command -v "$t" >/dev/null 2>&1 || continue
-    if [ "$t" = gnome-terminal ]; then exec gnome-terminal -- env MYVTT_IN_TERMINALE=1 bash "$SELF" "$@"; fi
-    exec "$t" -e env MYVTT_IN_TERMINALE=1 bash "$SELF" "$@"
+    if [ "$t" = gnome-terminal ]; then exec gnome-terminal -- env LIBRE_IN_TERMINALE=1 bash "$SELF" "$@"; fi
+    exec "$t" -e env LIBRE_IN_TERMINALE=1 bash "$SELF" "$@"
   done
 fi
 
-LOG="$(mktemp -t myvtt-installa.XXXXXX.log)"
+LOG="$(mktemp -t libre-vtt-installa.XXXXXX.log)"
 log() { echo "$(date '+%H:%M:%S') $*" >> "$LOG"; }
 esc() { printf '%s' "$1" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g'; }   # per zenity (testo con markup)
 
@@ -97,7 +104,7 @@ case "$(uname -m)" in
   riscv64) ARCH=riscv64
            # nodejs.org non fa Node per RISC-V: lo fanno le «unofficial builds» dello stesso progetto
            # (lì non c'è «latest-v22.x»: la versione si cerca nell'elenco, più sotto, solo se serve)
-           [ -n "$MYVTT_NODE_DIST" ] || DIST_RISCV=1 ;;
+           [ -n "$NODE_DIST_SCELTA" ] || DIST_RISCV=1 ;;
   *) errore "Questo computer ($(uname -m)) non è tra quelli su cui gira LIBRE VTT (serve un PC a 64 bit Intel/AMD, ARM o RISC-V)." ;;
 esac
 RIGA=$(awk '/^__ARCHIVIO_QUI_SOTTO__$/ { print NR + 1; exit }' "$SELF")
@@ -109,7 +116,7 @@ if [ ! -e "$DEST" ] && [ -x "$VECCHIA/avvia" ]; then
   DOMANDA="Qui c'è MY VTT, che adesso si chiama LIBRE VTT: lo aggiorno a questa versione con il nuovo nome?
 
 Le campagne e le impostazioni restano come sono."
-elif [ -x "$DEST/avvia" ]; then
+elif [ -x "$DEST/avvia" ] || [ -x "$DEST/avvia-server" ]; then
   DOMANDA="LIBRE VTT è già installato: lo aggiorno a questa versione?
 
 Le campagne e le impostazioni restano come sono."
@@ -118,6 +125,9 @@ else
 $DEST
 
 Non serve la password e non si tocca niente del sistema né quello che hai già installato."
+  [ "$SERVER" = 1 ] && DOMANDA="$DOMANDA
+
+Come server dedicato: senza finestre, parte da solo all'accensione e tiene la campagna in ~/libre-vtt-server."
   if [ "$INCLUSO_NODE" = 0 ] && ! node_ok "$DEST/runtime/node/bin/node"; then
     DOMANDA="$DOMANDA
 
@@ -191,7 +201,7 @@ cat > "$DEST/avvia" <<'AVVIA'
 # Avvia LIBRE VTT con il suo Node e la sua cartella, ignorando quello che c'è nel sistema.
 D="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 unset NODE_OPTIONS NODE_PATH
-export MYVTT_USERDIR="$D/utente"
+export LIBRE_USERDIR="$D/utente"
 mkdir -p "$D/utente"
 LOG="$D/utente/avvio.log"
 "$D/runtime/node/bin/node" "$D/app/server/launcher.js" > "$LOG" 2>&1 &
@@ -222,6 +232,8 @@ if [ "$SI" = 0 ]; then
   elif command -v kdialog >/dev/null 2>&1 && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then kdialog --title "LIBRE VTT" --yesno "$TESTO" 2>/dev/null || exit 0
   else printf '%s\n' "$TESTO"; read -r -p "[s/N] " r; case "$r" in s|S|si|y|Y) ;; *) exit 0 ;; esac; fi
 fi
+command -v systemctl >/dev/null 2>&1 && systemctl --user disable --now libre-vtt-server.service >/dev/null 2>&1
+rm -f "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/libre-vtt-server.service"
 pkill -f "$D/app/" 2>/dev/null
 APPS="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 rm -f "$APPS/libre-vtt.desktop" "${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/256x256/apps/libre-vtt.png"
@@ -234,7 +246,66 @@ if [ "$SI" = 0 ]; then
   else echo "LIBRE VTT è stato tolto."; fi
 fi
 DISINSTALLA
-chmod 755 "$DEST/avvia" "$DEST/disinstalla"
+cat > "$DEST/avvia-server" <<'SERVER'
+#!/bin/bash
+# LIBRE VTT come server dedicato (senza schermo): tiene la campagna e collega master e giocatori.
+#   avvia-server               accende tutto        avvia-server codice   il codice della partita
+#   avvia-server chiave        la chiave del master avvia-server giocatori   chi c'è, con il ruolo
+#   avvia-server master <nome> dà il ruolo di master    (le altre opzioni: avvia-server aiuto)
+D="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+unset NODE_OPTIONS NODE_PATH
+exec "$D/runtime/node/bin/node" "$D/app/server/server-dedicato.js" "$@"
+SERVER
+chmod 755 "$DEST/avvia" "$DEST/disinstalla" "$DEST/avvia-server"
+
+# ---------------------------------------------------------------- come server dedicato
+if [ "$SERVER" = 1 ]; then
+  passo 90 "Preparo il server dedicato…"
+  CAMP="${LIBRE_SERVER_CAMPAGNA:-$HOME/libre-vtt-server}"
+  SERVIZIO=0
+  if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
+    U="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+    mkdir -p "$U"
+    cat > "$U/libre-vtt-server.service" <<UNITA
+[Unit]
+Description=LIBRE VTT, server dedicato
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart="$DEST/avvia-server" avvia --campagna "$CAMP"
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+UNITA
+    systemctl --user daemon-reload >/dev/null 2>&1
+    systemctl --user enable libre-vtt-server.service >/dev/null 2>&1 && systemctl --user restart libre-vtt-server.service >/dev/null 2>&1 && SERVIZIO=1
+  fi
+  chiudi_progresso
+  log "installato come server in $DEST (servizio: $SERVIZIO)"
+  if [ "$SERVIZIO" = 1 ]; then
+    for i in 1 2 3 4 5 6 7 8 9 10; do [ -s "$CAMP/data/master.chiave" ] && break; sleep 1; done
+    echo
+    echo "✔ LIBRE VTT è acceso come server dedicato (servizio «libre-vtt-server» dell'utente)."
+    echo
+    echo "  Il codice della partita:  $("$DEST/avvia-server" codice --campagna "$CAMP")"
+    echo "  La chiave del master:     $("$DEST/avvia-server" chiave --campagna "$CAMP")"
+    echo
+    echo "  Il master entra dal suo LIBRE VTT con «Mi unisco»: codice, e sotto la chiave del master."
+    echo "  Registro:   journalctl --user -u libre-vtt-server -f"
+    echo "  Spegnere:   systemctl --user stop libre-vtt-server"
+    echo "  Per farlo partire all'accensione anche senza entrare con l'utente, una volta sola:"
+    echo "              sudo loginctl enable-linger $USER"
+  else
+    echo
+    echo "✔ LIBRE VTT è installato come server dedicato."
+    echo "  Qui non c'è systemd per l'utente: accendilo con  \"$DEST/avvia-server\""
+    echo "  (codice e chiave del master li scrive all'avvio; poi «avvia-server codice» e «avvia-server chiave»)."
+  fi
+  exit 0
+fi
 
 passo 85 "Aggiungo LIBRE VTT al menu delle applicazioni…"
 APPS="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
@@ -273,7 +344,7 @@ log "installato in $DEST"
 if chiedi "LIBRE VTT è installato. Lo trovi nel menu delle applicazioni (e sulla Scrivania).
 
 Lo apro adesso?" "Apri LIBRE VTT" "Più tardi"; then
-  [ "$SI" = 1 ] && [ -n "${MYVTT_NON_APRIRE:-}" ] || (setsid "$DEST/avvia" >/dev/null 2>&1 &)
+  [ "$SI" = 1 ] && [ -n "${LIBRE_NON_APRIRE:-${MYVTT_NON_APRIRE:-}}" ] || (setsid "$DEST/avvia" >/dev/null 2>&1 &)
 fi
 exit 0
 __ARCHIVIO_QUI_SOTTO__

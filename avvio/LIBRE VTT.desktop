@@ -3,6 +3,6 @@ Type=Application
 Name=LIBRE VTT
 Comment=Tavolo da gioco virtuale
 Exec=bash -c 'cd "$(dirname "%k")" && ./avvia-app.sh'
-Icon=myvtt-icona
+Icon=libre-vtt-icona
 Terminal=false
 Categories=Game;

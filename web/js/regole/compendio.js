@@ -13,7 +13,8 @@
   const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const conduco = () => typeof isMaster !== 'function' || isMaster();
   const inRete = () => typeof NET !== 'undefined' && NET.on;
-  const giocatore = () => inRete() && !conduco();
+  // il master entrato da fuori (server dedicato) vede il compendio che il server manda, come un giocatore
+  const giocatore = () => inRete() && (!conduco() || (typeof masterRemoto === 'function' && masterRemoto()));
 
   const TIPI = [
     ['mostro', 'Mostri', 'Mostro'], ['incantesimo', 'Incantesimi', 'Incantesimo'], ['oggetto', 'Oggetti', 'Oggetto'],
@@ -153,7 +154,7 @@
   // Il master manda l'elenco dei pacchetti visibili; per quelli della campagna prepara un file JSON
   // con le sole voci visibili e lo mette nel deposito (come le immagini). Si rifà solo quando cambia.
   C.perRete = async function () {
-    if (!C.pronto || !conduco()) return null;
+    if (!C.pronto || !conduco() || giocatore()) return null;
     const firma = JSON.stringify([C.pacchetti.map(p => p.id), C.vis, Object.keys(C.traduzioni || {}).length, C._tradVer || 0]);
     if (C._rete && C._reteFirma === firma) return C._rete;
     const out = { pacchetti: [], giocatoriImportano: !!C.vis.giocatoriImportano };

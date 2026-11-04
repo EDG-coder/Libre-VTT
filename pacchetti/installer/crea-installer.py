@@ -17,7 +17,7 @@ a distanza già compilato (è quello che fa GitHub Actions, vedi .github/workflo
     --link-linux-x64 <file>   --link-linux-arm64 <file>   --link-linux-riscv64 <file>
     --link-win-x64 <file.exe>   --link-win-arm64 <file.exe>
     --repo utente/progetto    (scritto in rilascio.json: l'app saprà dove scaricare il collegamento)
-    --stage-windows <cartella>   prepara anche i file per setup.exe (pacchetti/installer/windows/myvtt.iss)
+    --stage-windows <cartella>   prepara anche i file per setup.exe (pacchetti/installer/windows/libre-vtt.iss)
 """
 import base64
 import fnmatch
@@ -165,7 +165,7 @@ def prepara_windows(dest, opz):
     if rj:
         with open(os.path.join(dest, 'app', 'rilascio.json'), 'wb') as f:
             f.write(rj)
-    # un Node e un collegamento per processore: setup.exe installa quelli giusti (vedi Check: in myvtt.iss)
+    # un Node e un collegamento per processore: setup.exe installa quelli giusti (vedi Check: in libre-vtt.iss)
     for arch in ('x64', 'arm64'):
         node = opz.get('node-win-' + arch)
         if node:

@@ -1,6 +1,10 @@
 {
   "name": "libre-vtt",
-  "version": "3.8.0",
+  "version": "3.8.1",
   "private": true,
-  "scripts": { "start": "node server.js" }
+  "scripts": {
+    "start": "node server/server.js",
+    "app": "node server/launcher.js",
+    "server": "node server/server-dedicato.js"
+  }
 }

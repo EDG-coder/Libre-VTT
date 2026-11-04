@@ -67,7 +67,7 @@ fi
 printf '%s' "$CARTELLA" > "$CONF_FILE" 2>/dev/null
 
 cd "$CARTELLA" || exit 1
-LOG="$CARTELLA/myvtt-avvio.log"
+LOG="$CARTELLA/libre-vtt-avvio.log"
 : > "$LOG"
 
 avvisa() {

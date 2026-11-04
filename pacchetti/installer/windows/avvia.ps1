@@ -1,9 +1,9 @@
 # Avvia LIBRE VTT con il suo Node e la sua cartella, senza finestre nere e ignorando il resto del sistema.
 $D = Split-Path -Parent $MyInvocation.MyCommand.Path
 Remove-Item Env:NODE_OPTIONS, Env:NODE_PATH -ErrorAction SilentlyContinue
-$env:MYVTT_USERDIR = Join-Path $D 'utente'
-New-Item -ItemType Directory -Force -Path $env:MYVTT_USERDIR | Out-Null
-$log = Join-Path $env:MYVTT_USERDIR 'avvio.log'
+$env:LIBRE_USERDIR = Join-Path $D 'utente'
+New-Item -ItemType Directory -Force -Path $env:LIBRE_USERDIR | Out-Null
+$log = Join-Path $env:LIBRE_USERDIR 'avvio.log'
 $node = Join-Path $D 'runtime\node\node.exe'
 $js = Join-Path $D 'app\server\launcher.js'
 $si = New-Object System.Diagnostics.ProcessStartInfo

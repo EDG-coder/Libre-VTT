@@ -356,12 +356,14 @@ function salvaVisibilita(req, res) {
 }
 
 // ---------- Impostazioni a due livelli ----------
-// Le predefinite per le campagne nuove stanno nella cartella utente (MYVTT_PREDEFINITE, la passa
+// Le predefinite per le campagne nuove stanno nella cartella utente (LIBRE_PREDEFINITE, la passa
 // l'avviatore); una campagna appena creata ne riceve una copia in data/predefinite.json, che il tavolo
 // usa la prima volta. «Applica a:» copia le impostazioni del tavolo nelle altre campagne della
-// cartella delle campagne (MYVTT_CAMP_HOME): solo le impostazioni, mai scene, schede o chat.
-const PREDEF = process.env.MYVTT_PREDEFINITE ? path.resolve(process.env.MYVTT_PREDEFINITE) : null;
-const CAMP_HOME = process.env.MYVTT_CAMP_HOME ? path.resolve(process.env.MYVTT_CAMP_HOME) : null;
+// cartella delle campagne (LIBRE_CAMP_HOME): solo le impostazioni, mai scene, schede o chat.
+// (con i nomi di prima, MYVTT_*, per un avviatore più vecchio)
+const PREDEF_ENV = process.env.LIBRE_PREDEFINITE || process.env.MYVTT_PREDEFINITE, CAMP_HOME_ENV = process.env.LIBRE_CAMP_HOME || process.env.MYVTT_CAMP_HOME;
+const PREDEF = PREDEF_ENV ? path.resolve(PREDEF_ENV) : null;
+const CAMP_HOME = CAMP_HOME_ENV ? path.resolve(CAMP_HOME_ENV) : null;
 const CHIAVI_COMUNI = ['theme', 'autoBg', 'resToken', 'resBg', 'gridDefault', 'border', 'ping', 'unit', 'sheetClose', 'rulerCenter', 'fogColor', 'fogVeil',
   'caratLibere', 'spareggioDes', 'dadiProvvisori', 'boxLabels', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'modelliScheda'];
 const soloComuni = s => Object.fromEntries(CHIAVI_COMUNI.filter(k => s && s[k] !== undefined).map(k => [k, s[k]]));

@@ -35,7 +35,7 @@
   // ---------- in partita ----------
   S.perRete = () => S.dati ? { id: S.id, dati: S.dati, formule: S.formule, personalizzato: S.personalizzato } : null;
   window.sistemaDalMaster = function (x) {
-    if (!x || !x.dati || conduco()) return;
+    if (!x || !x.dati || (conduco() && !(typeof masterRemoto === 'function' && masterRemoto()))) return;
     if (S.daRete && JSON.stringify(S.perRete()) === JSON.stringify(x)) return;
     S.daRete = true;
     applica(x);

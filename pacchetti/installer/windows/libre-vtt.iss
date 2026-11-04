@@ -4,7 +4,7 @@
 ; %LOCALAPPDATA%\LIBRE VTT, niente permessi da amministratore, niente PATH.
 ;
 ;   python pacchetti\installer\crea-installer.py out --stage-windows pacchetti\installer\windows\stage --node-win-x64 ... --link-win-x64 ...
-;   iscc /DVersione=3.0 pacchetti\installer\windows\myvtt.iss
+;   iscc /DVersione=3.0 pacchetti\installer\windows\libre-vtt.iss
 
 #ifndef Versione
   #define Versione "3.0"
