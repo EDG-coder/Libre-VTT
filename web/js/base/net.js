@@ -61,7 +61,7 @@ function netSend(o) { try { NET.ws && NET.ws.readyState === 1 && NET.ws.send(JSO
 // e i pezzi delle immagini non aspettano: senza collegamento non partono (le immagini hanno la loro attesa).
 NET.coda = []; NET.n = 0;
 NET.sessione = [...crypto.getRandomValues(new Uint8Array(4))].map(b => b.toString(16).padStart(2, '0')).join('');
-const NET_SUBITO = new Set(['percorso.prova', 'ping', 'asset.put', 'asset.have', 'asset.get']);
+const NET_SUBITO = new Set(['percorso.prova', 'ping', 'righello', 'asset.put', 'asset.have', 'asset.get']);
 function netChiave(op, x) {
   switch (op) {
     case 'token.move': return 'mv:' + x.scene + ':' + x.id;
@@ -245,6 +245,8 @@ function netHandle(m) {
       NET.retrying = false; NET.hostDown = false; NET.tries = 0; NET.pending = false;
       try { localStorage.setItem('uffa-token', m.you.token); if (m.you.firma) localStorage.setItem('uffa-firma', m.you.firma); } catch {}
       NET.conferme = Array.isArray(m.sa) && m.sa.includes('ok');   // l'host conferma gli intenti? (dalla 3.7)
+      NET.sa = Array.isArray(m.sa) ? m.sa : [];
+      netRighelliVia();
       const rimandate = netRimanda();
       if (!NET.conferme) NET.coda = [];
       if (back && rimandate) netSay(tr('Ricollegato: ho mandato le {n} cose fatte mentre eri scollegato.', { n: rimandate }), 'live');
@@ -313,6 +315,7 @@ function netHandle(m) {
       try { startPing(x, y, { r: m.r, v: m.v, color: m.color, altrui: true }); } finally { netFromServer = false; }
       return;
     }
+    case 'righello': netRighelloAltrui(m); return;
     case 'notes':
       if (typeof noteDalServer === 'function' && m.notes) noteDalServer(m.notes, m.from === (NET.me && NET.me.id));
       return;
@@ -810,6 +813,49 @@ function netTiroProvvisorio(expr, label) {
   if (typeof diceLast !== 'undefined') diceLast.textContent = tr('Tiro provvisorio: {n} (parte quando torna il collegamento)', { n: r.total });
   return true;
 }
+
+// ---------- Righello: chi misura lo vedono tutti, con il nome sopra ----------
+// Si manda al più ogni 80 ms (punti nel mondo, non sullo schermo: ognuno lo vede alla sua vista) e quando
+// sparisce. Un host di prima della 3.8.2 non lo conosce: non gli si manda niente.
+let righelloUltimo = 0, righelloTimer = 0, righelloMandato = false;
+function netRighello(r, fine) {
+  clearTimeout(righelloTimer);
+  if (!NET.on || !(NET.sa || []).includes('righello')) return;
+  if (fine || !r) { if (righelloMandato) { righelloMandato = false; intent('righello', { fine: true }); } return; }
+  const manda = () => {
+    if (!ruler) return;
+    righelloUltimo = Date.now(); righelloMandato = true;
+    const p = q => [Math.round(q.x), Math.round(q.y)];
+    intent('righello', { scene: cur && cur.id, pts: ruler.pts.map(p), b: p(ruler.b) });
+  };
+  const attesa = 80 - (Date.now() - righelloUltimo);
+  if (attesa <= 0) manda(); else righelloTimer = setTimeout(manda, attesa);
+}
+const righelliAltrui = new Map();      // chi sta misurando -> { by, scene, pts, b, timer }
+const righelliSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+righelliSvg.id = 'righelliSvg'; document.body.appendChild(righelliSvg);
+function netRighelloAltrui(m) {
+  const k = String(m.id), prima = righelliAltrui.get(k);
+  if (prima) clearTimeout(prima.timer);
+  if (m.fine || !Array.isArray(m.pts) || !Array.isArray(m.b)) righelliAltrui.delete(k);
+  else {
+    const r = { by: String(m.by || '?'), scene: m.scene || null, pts: m.pts.map(([x, y]) => ({ x: +x || 0, y: +y || 0 })), b: { x: +m.b[0] || 0, y: +m.b[1] || 0 } };
+    r.timer = setTimeout(() => { righelliAltrui.delete(k); disegnaRighelliAltrui(); }, 8000);   // se non arriva la fine
+    righelliAltrui.set(k, r);
+  }
+  disegnaRighelliAltrui();
+}
+function disegnaRighelliAltrui() {
+  let svg = '';
+  for (const r of righelliAltrui.values()) {
+    if (r.scene && cur && r.scene !== cur.id) continue;      // misura su un'altra scena
+    svg += rulerSvgDi([...r.pts, r.b], r.by);
+  }
+  righelliSvg.innerHTML = svg;
+}
+function netRighelliVia() { for (const r of righelliAltrui.values()) clearTimeout(r.timer); righelliAltrui.clear(); disegnaRighelliAltrui(); }
+// seguono la mappa quando si sposta o si ingrandisce la vista
+var applyView = (prev => function () { const r = prev.apply(this, arguments); if (righelliAltrui.size) disegnaRighelliAltrui(); return r; })(applyView);
 
 // Ping: lo vedono tutti.
 var startPing = (prev => function (x, y, o) {

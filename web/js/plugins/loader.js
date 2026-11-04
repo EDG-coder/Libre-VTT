@@ -31,7 +31,7 @@
     if (dock) return dock;
     dock = document.createElement('div');
     dock.id = 'pluginDock';
-    dock.innerHTML = '<div class="plgBtns"></div><div class="plgFull" hidden></div><div class="plgNotes" aria-live="polite"></div>';
+    dock.innerHTML = '<div class="plgBtns"></div><div class="plgNotes" aria-live="polite"></div>';
     document.body.appendChild(dock);
     return dock;
   }
@@ -43,12 +43,81 @@
     dockEl().querySelector('.plgNotes').appendChild(n);
     setTimeout(() => n.remove(), 5000);
   }
+  // The red dot: a few pixels in the top-left corner while a full-access plugin is applied, under
+  // everything else (it never covers a button). It is hidden only with «/plugin pallino» typed in the chat
+  // and confirmed by a click: both must be real input (isTrusted), so a plugin cannot switch it off by
+  // calling functions or faking events. Its listeners are added here, before any plugin runs.
+  const DOT_KEY = 'libre.plgDot';
+  let dotOff = false;
+  try { dotOff = localStorage.getItem(DOT_KEY) === '0'; } catch {}
+  let dot = null;
+  function dotEl() {
+    if (dot && dot.isConnected) return dot;
+    dot = document.createElement('div');
+    dot.id = 'plgDot';
+    dot.hidden = true;
+    dot.setAttribute('role', 'img');
+    document.body.appendChild(dot);
+    return dot;
+  }
   function refreshBadge() {
     const full = [...applied.values()].filter(a => a.info.access === 'full');
-    const b = dockEl().querySelector('.plgFull');
-    b.hidden = !full.length;
-    b.textContent = '⚠ ' + tr('accesso completo') + (full.length > 1 ? ' ×' + full.length : '');
-    b.title = tr('Plugin con accesso completo applicati: {nomi}. Si gestiscono dalla rotellina della home.', { nomi: full.map(a => nameOf(a.info)).join(', ') });
+    const d = dotEl();
+    d.hidden = !full.length || dotOff;
+    const t = tr('Plugin con accesso completo applicati: {nomi}. Si gestiscono dalla rotellina della home.', { nomi: full.map(a => nameOf(a.info)).join(', ') });
+    d.title = t;
+    d.setAttribute('aria-label', t);
+  }
+  const chatLine = text => notify('', text);      // only on this screen: a chat line would reach the others
+  function askHideDot() {
+    if (document.getElementById('plgDotAsk')) return;
+    const box = document.createElement('div');
+    box.id = 'plgDotAsk';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    const p = document.createElement('p');
+    p.textContent = tr('Nascondere il pallino rosso che segnala i plugin con accesso completo? Si rimette con lo stesso comando.');
+    const no = document.createElement('button'), yes = document.createElement('button');
+    no.type = yes.type = 'button';
+    no.textContent = tr('Lascialo');
+    yes.textContent = tr('Nascondi');
+    yes.className = 'plgDotYes';
+    const row = document.createElement('div');
+    row.append(no, yes);
+    box.append(p, row);
+    document.body.appendChild(box);
+    box.tabIndex = -1;
+    box.focus();                                   // not on a button: the Enter of the command would press it
+    const close = () => box.remove();
+    no.addEventListener('click', close);
+    yes.addEventListener('click', e => {
+      if (!e.isTrusted) return;                    // only a real click: a plugin's .click() does nothing
+      close();
+      dotOff = true;
+      try { localStorage.setItem(DOT_KEY, '0'); } catch {}
+      refreshBadge();
+      chatLine(tr('Pallino dei plugin nascosto. Per rimetterlo scrivi /plugin pallino.'));
+    });
+    box.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  }
+  function dotCommand(e) {
+    const input = document.getElementById('chatInput');
+    if (!e.isTrusted || !input || !/^\/plugins?\s+(pallino|dot)$/i.test(input.value.trim())) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    input.value = '';
+    input.style.height = '';
+    if (dotOff) {
+      dotOff = false;
+      try { localStorage.removeItem(DOT_KEY); } catch {}
+      refreshBadge();
+      chatLine(tr('Pallino dei plugin di nuovo visibile.'));
+    } else askHideDot();
+  }
+  {
+    const input = document.getElementById('chatInput'), send = document.getElementById('chatSend');
+    if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) dotCommand(e); }, true);
+    if (send) send.addEventListener('click', dotCommand, true);
   }
   const nameOf = info => typeof info.name === 'string' ? info.name : (info.name && (info.name[lang()] || info.name.en || info.name.it || Object.values(info.name)[0])) || info.id;
 

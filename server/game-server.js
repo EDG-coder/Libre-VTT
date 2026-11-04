@@ -1047,6 +1047,17 @@ function handleIntent(c, m) {
       return;
     }
 
+    // --- righello: chi misura lo vedono gli altri, col suo nome (non resta da nessuna parte) ---
+    case 'righello': {
+      const num = v => Math.max(-1e7, Math.min(1e7, Math.round(+v) || 0));
+      const pt = a => Array.isArray(a) ? [num(a[0]), num(a[1])] : [0, 0];
+      const msg = m.fine || !Array.isArray(m.pts)
+        ? { t: 'righello', id: c.id, fine: true }
+        : { t: 'righello', id: c.id, by: c.name, scene: str(m.scene, 60) || null, pts: m.pts.slice(0, 40).map(pt), b: pt(m.b) };
+      broadcast(msg, k => k !== c && !k.leggera && !k.pending);
+      return;
+    }
+
     // --- schede ---
     case 'sheet.add': {
       const d = m.sheet && typeof m.sheet === 'object' ? m.sheet : {};
@@ -1301,6 +1312,7 @@ function detach(c) {
   if (c.token) uscite.set(c.token, Date.now());
   c.codaC = []; clearTimeout(c.timerC); clearTimeout(c.timerB);
   console.log(`- ${c.kind} #${c.id} se n'è andato`);
+  broadcast({ t: 'righello', id: c.id, fine: true });          // il suo righello, se stava misurando, sparisce
   sendPlayers();
 }
 
@@ -1508,7 +1520,7 @@ function shutOut(c, reason) {
 // («ok», per la coda del browser) e canale stabile. Un giocatore con la versione nuova usa queste cose solo
 // se l'host le annuncia: con un host vecchio il canale stabile sembrerebbe un secondo ingresso (e
 // butterebbe fuori il primo), e le conferme non arriverebbero mai.
-const SA = ['ok', 'stabile'];
+const SA = ['ok', 'stabile', 'righello'];
 // I messaggi di chat cancellati di recente: chi rientra senza ricaricare il mondo li toglie anche da sé.
 const chatTolti = [];
 function sendWelcome(c) {

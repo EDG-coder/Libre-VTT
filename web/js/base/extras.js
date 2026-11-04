@@ -408,32 +408,42 @@ const syncRulerPlus = () => rulerPlus.classList.toggle('on', !!(ruler && ruler.t
 rulerPlus.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); rulerJoint(); });
 rulerGrip.addEventListener('click', () => setRuler(!rulerOn));
 $('unitSel').addEventListener('change', rulerTitle);
-function clearRuler() { clearTimeout(rulerFade); rulerSvg.replaceChildren(); ruler = null; syncRulerPlus(); }
+function clearRuler() { clearTimeout(rulerFade); const cera = !!ruler; rulerSvg.replaceChildren(); ruler = null; syncRulerPlus(); if (cera && typeof netRighello === 'function') netRighello(null, true); }
 const cellCenter = (x, y) => { const c = cellOf(x, y), p = cellPos(c.i, c.j); return { x: p.x + grid.size / 2, y: p.y + grid.size / 2 }; };
 const rp = e => { const x = (e.clientX - view.x) / view.s, y = (e.clientY - view.y) / view.s; return settings.rulerCenter ? cellCenter(x, y) : snapPoint(x, y); };
 // Il righello è un percorso: ruler.pts sono i punti fissati (il primo è la partenza, gli altri le
 // giunzioni) e ruler.b è la fine, che segue il puntatore. Il tasto destro (o «+») fissa la fine e
 // ne parte un altro segmento; Backspace toglie l'ultima giunzione, Esc cancella. Il totale è la somma.
 const misura = cells => { const c = unitaCasella(), n = +(cells * c.per).toFixed(c.u === 'mi' ? 2 : 1); return `${n} ${c.u === 'mi' ? (n === 1 ? tr('miglio') : tr('miglia')) : c.u}`; };
-function drawRuler() {
-  const k = view.s, mondo = [...ruler.pts, ruler.b], pts = mondo.map(p => ({ x: p.x * k + view.x, y: p.y * k + view.y }));
+/** Il disegno di un righello (punti nel mondo) per l'SVG sopra la mappa. Con «nome» è quello di un altro:
+ *  ha un colore suo e il nome sopra la misura. */
+function rulerSvgDi(mondo, nome) {
+  const k = view.s, pts = mondo.map(p => ({ x: p.x * k + view.x, y: p.y * k + view.y }));
   const tratti = [];
   let cells = 0;
   for (let i = 1; i < mondo.length; i++) {
     const c = Math.hypot(mondo[i].x - mondo[i - 1].x, mondo[i].y - mondo[i - 1].y) / grid.size;
     cells += c; tratti.push(c);
   }
+  const col = nome == null ? '#ffd93d' : coloreDiNome(nome);
   const linea = pts.map(p => `${p.x},${p.y}`).join(' '), fine = pts[pts.length - 1];
   let svg = `<polyline points="${linea}" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>` +
-    `<polyline points="${linea}" fill="none" stroke="#ffd93d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` +
-    pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="5" fill="#ffd93d" stroke="#000" stroke-opacity=".6"/>`).join('');
+    `<polyline points="${linea}" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>` +
+    pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="5" fill="${col}" stroke="#000" stroke-opacity=".6"/>`).join('');
   // con più segmenti, in piccolo la lunghezza di ognuno
   if (tratti.length > 1) tratti.forEach((c, i) => {
     if (c < .05) return;
     svg += `<text class="pezzo" x="${(pts[i].x + pts[i + 1].x) / 2 + 8}" y="${(pts[i].y + pts[i + 1].y) / 2 + 16}">${misura(c)}</text>`;
   });
+  if (nome != null) svg += `<text class="chi" x="${fine.x + 12}" y="${fine.y - 31}" style="fill: ${col}">${esc(nome)}</text>`;
   svg += `<text x="${fine.x + 12}" y="${fine.y - 12}">${misura(cells)} · ${+cells.toFixed(1)} ${tr('caselle')}</text>`;
-  rulerSvg.innerHTML = svg;
+  return svg;
+}
+// un colore fisso per ogni nome, così due righelli insieme non si confondono
+const coloreDiNome = nome => { let h = 0; for (const ch of String(nome)) h = (h * 31 + ch.codePointAt(0)) >>> 0; return `hsl(${h % 360} 85% 62%)`; };
+function drawRuler() {
+  rulerSvg.innerHTML = rulerSvgDi([...ruler.pts, ruler.b]);
+  if (typeof netRighello === 'function') netRighello(ruler);
 }
 /** Fissa la fine del segmento: diventa una giunzione e ne parte un altro, collegato. */
 function rulerJoint() {

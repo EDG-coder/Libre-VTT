@@ -156,7 +156,9 @@ e rimetterla lo riapplica all'istante. Se cambi i file, il plugin si ricarica da
   possono usare internet.
 - I plugin ad accesso completo possono fare tutto quello che fa LIBRE VTT. Per questo il consenso è legato
   all'impronta SHA-256 di tutti i file del plugin: se ne cambia anche uno solo, va dato di nuovo. Finché è
-  applicato, sul tavolo c'è il bollino rosso «accesso completo».
+  applicato, in alto a sinistra sul tavolo c'è un pallino rosso di pochi pixel (passandoci sopra dice quali
+  plugin sono). Si nasconde scrivendo `/plugin pallino` in chat e confermando con un clic; lo stesso comando
+  lo rimette. Comando e clic devono essere veri (tastiera e mouse): un plugin non può nasconderlo così.
 - In ogni caso, in una partita in rete decide il server del master: un plugin sul computer di un giocatore non
   gli dà poteri che il master non gli ha dato.
 - Se un plugin rompe il tavolo, togli la spunta dalla home (*Togli tutti* li toglie tutti).
