@@ -1131,3 +1131,8 @@ html.ui-tel #turniBarra .tbTesta { font-size: 13px; padding: 6px 10px; gap: 8px;
 .sheetFolder > button:hover { background: var(--panel-3); color: var(--text, inherit); }
 .sheetFolder.sopra { outline: 2px dashed #ff6fa8; outline-offset: -2px; background: color-mix(in srgb, #ff6fa8 10%, transparent); }
 #sheetDialog #sheetFolderIn { width: 100%; }
+/* i righelli degli altri, col nome di chi misura (net.js) */
+#righelliSvg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 6; pointer-events: none; }
+#righelliSvg text { font: 600 14px system-ui, sans-serif; paint-order: stroke; stroke: rgba(0, 0, 0, .75); stroke-width: 4px; fill: #fff; }
+#righelliSvg text.pezzo { font-size: 11px; font-weight: 500; opacity: .9; }
+#righelliSvg text.chi { font-size: 13px; font-weight: 700; }

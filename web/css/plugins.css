@@ -11,12 +11,23 @@
   border: 1px solid var(--line); background: var(--panel); color: var(--text);
 }
 #pluginDock .plgBtn:hover, #pluginDock .plgBtn:focus-visible { border-color: var(--accent); }
-#pluginDock .plgFull {
-  font-size: .72rem; font-weight: 700; letter-spacing: .02em; padding: 3px 8px; border-radius: 999px;
-  background: #b3261e; color: #fff; cursor: help;
-}
 #pluginDock .plgNotes { display: flex; flex-direction: column; gap: 4px; }
 #pluginDock .plgNote {
   padding: 8px 12px; border-radius: 10px; font-size: .85rem; line-height: 1.35;
   background: var(--panel); color: var(--text); border: 1px solid var(--line); box-shadow: 0 4px 16px rgb(0 0 0 / .25);
 }
+/* the red dot of the full-access plugins: tiny, in the corner left free by everything else, under it all */
+#plgDot {
+  position: fixed; left: calc(3px + env(safe-area-inset-left)); top: calc(3px + env(safe-area-inset-top)); z-index: 1;
+  width: 5px; height: 5px; border-radius: 50%; background: #e0261b; box-shadow: 0 0 0 1px rgb(0 0 0 / .35); cursor: help;
+}
+#plgDot[hidden] { display: none; }
+#plgDotAsk {
+  position: fixed; left: 50%; top: 30%; transform: translateX(-50%); z-index: 500000; width: min(380px, calc(100vw - 32px));
+  padding: 14px 16px; border-radius: 12px; background: var(--panel); color: var(--text); border: 1px solid var(--line);
+  box-shadow: 0 10px 30px rgb(0 0 0 / .5); font-size: .92rem; line-height: 1.4;
+}
+#plgDotAsk p { margin: 0 0 12px; }
+#plgDotAsk div { display: flex; justify-content: flex-end; gap: 8px; }
+#plgDotAsk button { min-height: 34px; padding: 4px 12px; border-radius: 8px; font: inherit; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+#plgDotAsk .plgDotYes { background: #b3261e; border-color: #b3261e; color: #fff; }

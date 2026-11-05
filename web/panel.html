@@ -224,11 +224,21 @@ function draw() {
     return b;
   }));
 
+  // Mentre scrivi un nome o hai aperto la tendina del ruolo, l'elenco aspetta: rifarlo adesso chiuderebbe
+  // quello che stai usando. Si aggiorna appena esci dal campo.
+  const fuoco = document.activeElement;
+  if ($('who').contains(fuoco) && (fuoco.tagName === 'SELECT' || (fuoco.tagName === 'INPUT' && fuoco.type !== 'checkbox'))) { whoInSospeso = true; drawLog(); return; }
+  whoInSospeso = false;
   const people = S.roster.filter(r => r.role !== 'master' || r.online);
   people.sort((a, b) => (b.online - a.online) || String(a.name).localeCompare(String(b.name)));
+  const scroll = document.scrollingElement.scrollTop;
   $('who').replaceChildren(...(people.length ? people.map(rowFor) : [Object.assign(document.createElement('span'), { className: 'empty', textContent: 'Ancora nessuno.' })]));
+  document.scrollingElement.scrollTop = scroll;
   drawLog();
 }
+let whoInSospeso = false;
+const apertiPermessi = new Set();     // di chi hai aperto «Permessi e schede»: restano aperti quando l'elenco si aggiorna
+$('who').addEventListener('focusout', () => setTimeout(() => { if (whoInSospeso && S) draw(); }, 0));
 
 function chip(text, cls) {
   const t = document.createElement('span');
@@ -249,7 +259,7 @@ function rowFor(r) {
   if (r.online && !L.pending) dot.title = { verde: 'Collegamento buono', giallo: 'Collegamento debole', rosso: 'Collegamento pessimo' }[L.qualita || 'verde'];
   const nm = document.createElement('span'); nm.className = 'pName';
   const ni = document.createElement('input'); ni.value = r.name || '(senza nome)'; ni.title = 'Cambia il nome';
-  ni.onchange = () => post('/api/perm', { token: r.token, name: ni.value }).then(load);
+  ni.onchange = () => { ni.blur(); post('/api/perm', { token: r.token, name: ni.value }).then(load); };
   nm.append(dot, ni);
   const sel = document.createElement('select');
   for (const role of ['master', 'player', 'spectator']) {
@@ -257,7 +267,7 @@ function rowFor(r) {
     o.value = role; o.textContent = ROLE_IT[role]; o.selected = r.role === role;
     sel.append(o);
   }
-  sel.onchange = () => post('/api/perm', { token: r.token, role: sel.value }).then(load);
+  sel.onchange = () => { sel.blur(); post('/api/perm', { token: r.token, role: sel.value }).then(load); };
   head.append(nm, sel);
   if (L.pending) head.append(chip('in attesa', 'warn'));
   else head.append(chip(r.online ? 'collegato' : 'non c\'è' + (r.lastSeen ? ' · ' + durata(Math.round((Date.now() - r.lastSeen) / 1000)) + ' fa' : '')));
@@ -327,6 +337,8 @@ function rowFor(r) {
 
   // --- permessi, chiusi di default per non riempire la pagina ---
   const det = document.createElement('details');
+  det.open = apertiPermessi.has(r.token);
+  det.ontoggle = () => { if (det.open) apertiPermessi.add(r.token); else apertiPermessi.delete(r.token); };
   const sum = document.createElement('summary');
   const n = S.perms.filter(k => !!r.perms[k]).length;
   sum.textContent = `Permessi (${n} di ${S.perms.length}) e schede`;
