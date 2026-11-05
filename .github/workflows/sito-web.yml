@@ -1,0 +1,58 @@
+# La versione web di LIBRE VTT su GitHub Pages: il tavolo che gira tutto nel browser, gratis, senza
+# installare niente. Si avvia a mano da Actions → Sito web → Run workflow (di solito dopo una release).
+#
+# Cosa c'è: mappa, segnalini, schede, dadi, nebbia, luce dinamica, compendio SRD, musica.
+# Cosa no: le partite in rete (servono il programma o il server dedicato), la home con le campagne,
+# l'importazione di pacchetti e manuali nel compendio, i plugin. Tutto resta nel browser di chi lo apre.
+#
+# Prima volta: Settings → Pages → Build and deployment → Source: «GitHub Actions».
+name: Sito web
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  costruisci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepara i file del sito
+        run: |
+          set -e
+          mkdir -p _site
+          # le pagine del tavolo, il codice comune, i sistemi di gioco già pronti e lo sfondo di benvenuto
+          cp -r web/. _site/
+          cp -r condiviso sistemi _site/
+          mkdir -p _site/assets && cp -r assets/Sfondi _site/assets/
+          # la home e il pannello del master parlano solo col programma: sul sito non servono
+          rm -f _site/launcher.html _site/panel.html
+          # il segnale «sei nella versione web» (prima di tutti gli altri script)
+          echo 'window.LIBRE_WEB = true;' > _site/js/base/versione-web.js
+          sed -i 's#<script src="js/plugins/base.js"></script>#<script src="js/base/versione-web.js"></script>\n&#' _site/index.html
+          grep -q 'versione-web.js' _site/index.html
+          touch _site/.nojekyll
+          du -sh _site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  pubblica:
+    needs: costruisci
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pubblica.outputs.page_url }}
+    steps:
+      - id: pubblica
+        uses: actions/deploy-pages@v4

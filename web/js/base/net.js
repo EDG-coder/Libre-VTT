@@ -1107,7 +1107,7 @@ function netSyncForm() {
 }
 // Il collegamento «torna all'avvio» ha senso solo se sei partito dall'app.
 // Sta anche nel menu delle scene, dove si trova subito.
-if ($('netHome')) {
+if ($('netHome') && !window.LIBRE_WEB) {   // nella versione web non c'è nessun avviatore da cercare
   const home = [$('netHome'), $('sceneHome')].filter(Boolean);
   for (const a of home) {
     a.hidden = true; a.href = 'http://127.0.0.1:' + NET.uiPort + '/';

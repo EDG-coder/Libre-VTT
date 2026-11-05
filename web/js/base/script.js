@@ -2146,7 +2146,9 @@ addEventListener('DOMContentLoaded', async () => {      // dopo che sheets.js ed
   try { primo = await serverStore.list(); online = true; modeMsg = 'Le foto vengono salvate nella cartella assets/.'; }
   catch {
     store = localStore;
-    modeMsg = 'Server spento: le foto restano solo in questo browser. Per salvarle nella cartella assets/ avvia "node server.js" e apri http://localhost:3000.';
+    modeMsg = window.LIBRE_WEB
+      ? tr('Versione web: tutto resta solo in questo browser (niente partite in rete). Per giocare con gli altri scarica il programma.')
+      : 'Server spento: le foto restano solo in questo browser. Per salvarle nella cartella assets/ avvia "node server.js" e apri http://localhost:3000.';
   }
   setStatus();
   await reload(primo);  // l'elenco degli assets (già letto qui sopra) serve per ritrovare le immagini delle scene
