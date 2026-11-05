@@ -13,6 +13,18 @@ Download dell'ultima versione:
 
 Tavolo da gioco virtuale che gira sul tuo computer.
 
+![Una sessione nel bosco: segnalini sulla griglia e dadi in chat](docs/immagini/bosco.webp)
+
+| La nebbia di guerra (il master vede attraverso il velo) | Le schede, collegate ai segnalini |
+|---|---|
+| ![La cripta con la nebbia](docs/immagini/cripta.webp) | ![La scheda di un goblin](docs/immagini/scheda.webp) |
+
+<sub>Mappe disegnate per queste immagini; segnalini dell'SRD inclusi nel programma.</sub>
+
+**Segnalazioni e idee**: apri una [segnalazione](https://github.com/EDG-coder/Libre-VTT/issues/new/choose).
+Per contribuire leggi [CONTRIBUTING.md](CONTRIBUTING.md); per un problema di sicurezza
+[SECURITY.md](SECURITY.md); per l'accessibilità [ACCESSIBILITY.md](ACCESSIBILITY.md).
+
 ## Come si avvia
 
 ### macOS: `LIBRE VTT.dmg`

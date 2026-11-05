@@ -1,0 +1,21 @@
+name: Idea
+description: Una funzione nuova o un miglioramento
+labels: [idea]
+body:
+  - type: textarea
+    id: bisogno
+    attributes:
+      label: Che cosa ti serve al tavolo
+      description: Racconta la situazione di gioco, non solo la soluzione.
+    validations:
+      required: true
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Come te lo immagini
+  - type: dropdown
+    id: chi
+    attributes:
+      label: Per chi
+      multiple: true
+      options: [Master, Giocatori, Chi scrive plugin]
