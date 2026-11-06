@@ -148,7 +148,8 @@ function netConnect() {
   NET.ws = ws;
   ws.onopen = () => {
     // delta: sappiamo ricevere solo i pezzi cambiati; ver e chatDa: dove eravamo rimasti (per rientrare senza ricaricare tutto)
-    ws.send(JSON.stringify({ t: 'hello', token: netToken(), firma: netFirma(), name: netName(), client: 'LIBRE VTT 2', delta: 1, ver: NET.ver || 0, chatDa: NET.chatUltimo || '' }));
+    // NET.account (solo dal sito, vedi gioca-web.js): codice e impronta della password, tenuti solo in memoria
+    ws.send(JSON.stringify({ t: 'hello', token: netToken(), firma: netFirma(), name: netName(), client: 'LIBRE VTT 2', delta: 1, ver: NET.ver || 0, chatDa: NET.chatUltimo || '', account: NET.account || undefined }));
   };
   ws.onmessage = e => {
     if (NET.ws !== ws) return;
@@ -282,6 +283,9 @@ function netHandle(m) {
       if (m.needName) askName('Scegli il nome con cui ti vedranno gli altri.');
       return;
     }
+    case 'account':                              // (dal sito) il master ti ha dato un account, o la password è stata scelta
+      if (typeof window.libreWebAccount === 'function') window.libreWebAccount(m);
+      return;
     case 'invito': {                             // (giocatore) il master ha cambiato il codice: si passa al nuovo solo se lo dici tu
       const codice = String(m.codice || '');
       if (!/^[a-f0-9]{64}$/.test(codice)) return;
