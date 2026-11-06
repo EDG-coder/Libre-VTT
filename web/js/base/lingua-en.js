@@ -1025,6 +1025,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Il collegamento con chi conduce si è interrotto: mi sto ricollegando da solo.": "The connection with the GM dropped: reconnecting by myself.",
 "Ti sei scollegato a mano: non riprovo finché non premi «Collegati adesso».": "You disconnected manually: I won't retry until you press «Connect now».",
 "Non collegato: stai giocando da solo su questo computer.": "Not connected: you're playing alone on this computer.",
+"Sei un giocatore: aspetto di potermi collegare a chi conduce.": "You're a player: waiting to connect to the GM.",
 "Stai conducendo tu. Collegati adesso: {n}.": "You're the GM. Connected now: {n}.",
 "Sei un giocatore in questa sessione ({nome}).": "You're a player in this session ({nome}).",
 // motivi che manda il server di gioco

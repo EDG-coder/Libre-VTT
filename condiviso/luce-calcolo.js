@@ -153,6 +153,38 @@
     }
     return semplifica(pts);
   }
+  /**
+   * Come visuale(), ma per chi sta proprio sopra un muro o una porta chiusa (il centro del segnalino sulla linea):
+   * da lì i raggi passerebbero dai due lati e si vedrebbe anche la stanza di là. Si guarda da un pelo più in qua
+   * e da un pelo più in là, e vale il lato da cui si vede meno (meglio poco che la stanza dietro la porta).
+   */
+  function visuaSicura(ox, oy, segs, raggio) {
+    const normali = [];                                   // le direzioni per staccarsi dalle linee qui sotto
+    for (const s of segs) {
+      const dx = s[2] - s[0], dy = s[3] - s[1], L2 = dx * dx + dy * dy;
+      if (!(L2 > 0)) continue;
+      const t = Math.max(0, Math.min(1, ((ox - s[0]) * dx + (oy - s[1]) * dy) / L2));
+      if (Math.hypot(ox - s[0] - dx * t, oy - s[1] - dy * t) >= 0.5) continue;
+      const L = Math.sqrt(L2), nx = -dy / L, ny = dx / L;
+      if (!normali.some(([ax, ay]) => Math.abs(ax * ny - ay * nx) < 0.02)) normali.push([nx, ny]);   // le parallele valgono una
+      if (normali.length >= 3) break;
+    }
+    if (!normali.length) return visuale(ox, oy, segs, raggio);
+    // da un'unità più in qua e più in là di ogni linea (sopra un angolo: i quattro spicchi attorno)
+    let prove = [[ox, oy]];
+    for (const [nx, ny] of normali) prove = prove.flatMap(([x, y]) => [[x + nx, y + ny], [x - nx, y - ny]]);
+    let migliore = null, area0 = Infinity;
+    for (const [x, y] of prove) {
+      const poly = visuale(x, y, segs, raggio), a = area(poly);
+      if (poly.length >= 6 && a < area0) { area0 = a; migliore = poly; }
+    }
+    return migliore || visuale(ox, oy, segs, raggio);
+  }
+  function area(poly) {
+    let a = 0;
+    for (let i = 0, n = poly.length / 2, j = n - 1; i < n; j = i++) a += poly[j * 2] * poly[i * 2 + 1] - poly[i * 2] * poly[j * 2 + 1];
+    return Math.abs(a / 2);
+  }
   /** Toglie i punti che stanno in linea con i vicini (sono tanti, e non servono). */
   function semplifica(q) {
     const p = [];                                   // prima via i doppioni uno dopo l'altro
@@ -225,7 +257,7 @@
     const cs = cella > 0 ? cella : 50;
     const out = { amb: luce.ambiente, occhi: [], luci: [] };
     for (const o of occhi) {
-      const poly = visuale(o.x, o.y, segs);
+      const poly = visuaSicura(o.x, o.y, segs);
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       for (let i = 0; i < poly.length; i += 2) { x0 = Math.min(x0, poly[i]); x1 = Math.max(x1, poly[i]); y0 = Math.min(y0, poly[i + 1]); y1 = Math.max(y1, poly[i + 1]); }
       out.occhi.push({ x: arrot(o.x), y: arrot(o.y), scuro: arrot((o.scuro || 0) * cs), poly, box: [x0, y0, x1, y1] });
@@ -236,7 +268,7 @@
       if (!(R > 0)) continue;
       const utile = out.occhi.some(o => l.x + R >= o.box[0] && l.x - R <= o.box[2] && l.y + R >= o.box[1] && l.y - R <= o.box[3]);
       if (!utile) continue;
-      out.luci.push({ x: arrot(l.x), y: arrot(l.y), r: arrot(l.r * cs), rf: arrot(l.rf * cs), col: l.col, poly: visuale(l.x, l.y, segs, R + 1) });
+      out.luci.push({ x: arrot(l.x), y: arrot(l.y), r: arrot(l.r * cs), rf: arrot(l.rf * cs), col: l.col, poly: visuaSicura(l.x, l.y, segs, R + 1) });
     }
     return out;
   }

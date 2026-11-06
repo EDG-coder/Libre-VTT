@@ -47,7 +47,8 @@
   function vistaOra() {
     const l = cur && cur.luce;
     if (!l || !l.on) return null;
-    if (!conduco()) return cur.vista || null;
+    // chi gioca senza ancora la vista del server (appena aperto, o l'host non risponde): tutto buio, non la mappa intera
+    if (!conduco()) return cur.vista || { amb: l.ambiente === 'luce' || l.ambiente === 'penombra' ? l.ambiente : 'buio', ricordo: l.ricordo, occhi: [], luci: [] };
     return stato.anteprima ? vistaLocale() : null;
   }
   /** La stessa vista del server, calcolata qui (per l'anteprima di chi conduce). */
@@ -122,6 +123,11 @@
       a.setTransform(...T); a.imageSmoothingEnabled = true; a.globalAlpha = 0.3;
       for (const [dx, dy] of [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]]) a.drawImage(im, g.x + dx * g.q, g.y + dy * g.q, g.cols * g.q, g.rows * g.q);
       a.globalAlpha = 1;
+      // la sfumatura resta dentro i quadretti visti: senza, sbavava di là da muri e porte (e attraverso una porta
+      // chiusa si intravedeva un filo della stanza accanto)
+      a.globalCompositeOperation = 'destination-in'; a.imageSmoothingEnabled = false;
+      a.drawImage(im, g.x, g.y, g.cols * g.q, g.rows * g.q);
+      a.globalCompositeOperation = 'source-over'; a.imageSmoothingEnabled = true;
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'destination-out'; ctx.globalAlpha = 0.66;
       ctx.drawImage(aiuto, 0, 0);
       ctx.globalAlpha = 1; ctx.setTransform(...T);
