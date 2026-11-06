@@ -74,9 +74,11 @@ module.exports = function relayHost({ entra, esce, avvisa }) {
       const c = giocatori.get(d.slice(0, i));
       if (c && c.onRaw) c.onRaw(d.slice(i + 1));
     };
-    w.onclose = e => {
+    // (il WebSocket di Node, se il collegamento non riesce, dà solo «error» senza «close»: tutti e due finiscono qui)
+    const giu = e => {
       if (ws !== w) return;
       ws = null;
+      try { w.close(); } catch {}
       chiudiGiocatori();
       const eraSu = stato.collegato;
       stato.collegato = false;
@@ -85,7 +87,8 @@ module.exports = function relayHost({ entra, esce, avvisa }) {
       dici();
       riprova();
     };
-    w.onerror = () => {};
+    w.onclose = giu;
+    w.onerror = () => giu();
   }
   function riprova() {
     if (fermo) return;
