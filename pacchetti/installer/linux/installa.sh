@@ -109,7 +109,19 @@ case "$(uname -m)" in
 esac
 RIGA=$(awk '/^__ARCHIVIO_QUI_SOTTO__$/ { print NR + 1; exit }' "$SELF")
 [ -n "$RIGA" ] || errore "Questo file di installazione è incompleto: scaricalo di nuovo."
-INCLUSO_NODE=0; tail -n +"$RIGA" "$SELF" | tar -tzf - 2>/dev/null | grep -q "^node-linux-$ARCH/bin/node$" && INCLUSO_NODE=1
+# i Node che ci sono qui dentro (lo scrive crea-installer.py): gli altri si scaricano da nodejs.org
+NODE_INCLUSI="__NODE_INCLUSI__"
+INCLUSO_NODE=0; case " $NODE_INCLUSI " in *" $ARCH "*) INCLUSO_NODE=1 ;; esac
+# l'archivio è compresso con xz: quasi tutte le distribuzioni hanno «xz»; se manca va python3
+# (o «unxz» di busybox)
+decomprimi() {
+  if command -v xz >/dev/null 2>&1; then xz -dc
+  elif command -v unxz >/dev/null 2>&1; then unxz -c
+  elif command -v python3 >/dev/null 2>&1; then python3 -c 'import lzma, shutil, sys; shutil.copyfileobj(lzma.open(sys.stdin.buffer), sys.stdout.buffer)'
+  else return 9; fi
+}
+command -v xz >/dev/null 2>&1 || command -v unxz >/dev/null 2>&1 || command -v python3 >/dev/null 2>&1 \
+  || errore "Per estrarre il programma serve «xz» (o python3): installalo (es. sudo apt install xz-utils) e riprova."
 
 VECCHIA="$(dirname "$DEST")/my-vtt"     # prima il programma si chiamava «MY VTT»
 if [ ! -e "$DEST" ] && [ -x "$VECCHIA/avvia" ]; then
@@ -146,7 +158,7 @@ if [ ! -e "$DEST" ] && [ -x "$VECCHIA/avvia" ]; then
 fi
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 passo 5 "Estraggo il programma…"
-tail -n +"$RIGA" "$SELF" | tar -xzf - -C "$TMP" 2>>"$LOG" || errore "Il file di installazione è rovinato: scaricalo di nuovo."
+tail -n +"$RIGA" "$SELF" | decomprimi 2>>"$LOG" | tar -xf - -C "$TMP" 2>>"$LOG" || errore "Il file di installazione è rovinato: scaricalo di nuovo."
 [ -f "$TMP/app/server/launcher.js" ] || errore "Il file di installazione è incompleto: scaricalo di nuovo."
 
 # ---------------------------------------------------------------- Node, solo per LIBRE VTT

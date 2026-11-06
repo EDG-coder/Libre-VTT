@@ -6,6 +6,8 @@
 #     Rust con rustup; altrimenti lo compila l'app la prima volta che serve (chiedendolo)
 #
 #   bash pacchetti/mac/crea-dmg.sh [uscita.dmg]        (oppure doppio clic su «Crea il DMG.command»)
+#   LIBRE_MAC_ARCH=arm64 (o x64) bash pacchetti/mac/crea-dmg.sh ...   solo per Apple Silicon (o Intel):
+#                                                    circa metà del peso
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 PROG="$(pwd)"
@@ -13,6 +15,8 @@ OUT="${1:-$PROG/LIBRE VTT.dmg}"
 DIST="${LIBRE_NODE_DIST:-${MYVTT_NODE_DIST:-https://nodejs.org/dist/latest-v22.x}}"
 REPO="${LIBRE_REPO:-${MYVTT_REPO:-}}"
 LINK="${LIBRE_LINK:-${MYVTT_LINK:-}}"
+ARCHS="${LIBRE_MAC_ARCH:-arm64 x64}"
+for A in $ARCHS; do case "$A" in arm64|x64) ;; *) echo "LIBRE_MAC_ARCH: «$A» non va (arm64 o x64)"; exit 1 ;; esac; done
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 STAGE="$W/stage"; APPD="$STAGE/LIBRE VTT.app"; RES="$APPD/Contents/Resources"; DEST="$RES/app"
 passo() { printf '\n▸ %s\n' "$*"; }
@@ -39,9 +43,9 @@ PY
 [ -n "$REPO" ] && printf '{\n  "repo": "%s"\n}\n' "$REPO" > "$DEST/rilascio.json"
 echo "  $(ls "$DEST" | wc -l | tr -d ' ') voci nel programma"
 
-passo "Scarico Node.js per Apple Silicon e per Intel (nodejs.org)"
+passo "Scarico Node.js per: $ARCHS (nodejs.org)"
 curl -fsSL "$DIST/SHASUMS256.txt" -o "$W/SHASUMS256.txt" || muori "non riesco a raggiungere nodejs.org"
-for A in arm64 x64; do
+for A in $ARCHS; do
   F="$(grep -oE "node-v[0-9]+\.[0-9]+\.[0-9]+-darwin-$A\.tar\.gz" "$W/SHASUMS256.txt" | head -1)"
   [ -n "$F" ] || muori "non trovo Node per $A"
   curl -fSL --progress-bar "$DIST/$F" -o "$W/$F" || muori "scaricamento di $F interrotto"
@@ -59,6 +63,14 @@ CARGO="$(command -v cargo || echo "$HOME/.cargo/bin/cargo")"
 if [ -n "$LINK" ] && [ -f "$LINK" ]; then
   passo "Uso il collegamento a distanza già compilato ($LINK)"
   mkdir -p "$DEST/bin" && cp "$LINK" "$DEST/bin/uffa-link" && chmod 755 "$DEST/bin/uffa-link"
+  # per un solo tipo di Mac basta la sua metà del file universale
+  if [ "$ARCHS" = arm64 ] || [ "$ARCHS" = x64 ]; then
+    L="$ARCHS"; [ "$L" = x64 ] && L=x86_64
+    if lipo "$DEST/bin/uffa-link" -verify_arch "$L" 2>/dev/null && [ "$(lipo -archs "$DEST/bin/uffa-link")" != "$L" ]; then
+      lipo "$DEST/bin/uffa-link" -thin "$L" -output "$W/uffa-link-thin" && mv "$W/uffa-link-thin" "$DEST/bin/uffa-link" \
+        && chmod 755 "$DEST/bin/uffa-link" && codesign --force --sign - "$DEST/bin/uffa-link" && echo "  tenuta solo la parte $L"
+    fi
+  fi
 elif [ -x "$RUSTUP" ] && [ -x "$CARGO" ]; then
   passo "Compilo il collegamento a distanza per Apple Silicon e per Intel (qualche minuto)"
   if "$RUSTUP" target add aarch64-apple-darwin x86_64-apple-darwin \
@@ -84,7 +96,9 @@ rm -f "$OUT"
 # e se proprio non va si crea l'immagine con il nostro programma in Python (non compressa, ma uguale).
 FATTO=""
 for TENTATIVO in 1 2 3 4 5; do
-  if ERR="$(hdiutil create -volname "LIBRE VTT" -srcfolder "$STAGE" -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov "$OUT" 2>&1)"; then FATTO=1; break; fi
+  # ULMO = compresso con LZMA (da macOS 10.15; Node 22 vuole comunque macOS 11): molto più
+  # piccolo di UDZO (zlib), un po' più lento da creare, uguale da aprire
+  if ERR="$(hdiutil create -volname "LIBRE VTT" -srcfolder "$STAGE" -fs HFS+ -format ULMO -ov "$OUT" 2>&1)"; then FATTO=1; break; fi
   echo "  hdiutil (tentativo $TENTATIVO): $ERR"
   sleep $((TENTATIVO * 4))
 done

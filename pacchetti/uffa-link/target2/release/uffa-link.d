@@ -1,0 +1,1 @@
+/home/user/Libre-VTT/pacchetti/uffa-link/target2/release/uffa-link: /home/user/Libre-VTT/pacchetti/uffa-link/src/controllo.rs /home/user/Libre-VTT/pacchetti/uffa-link/src/lib.rs /home/user/Libre-VTT/pacchetti/uffa-link/src/main.rs
