@@ -21,7 +21,7 @@
     if (!cur) return null;
     if (!cur.luce && crea) cur.luce = { on: false, ambiente: 'buio', ricordo: 'scuro', muri: [], luci: [] };
     const l = cur.luce;
-    if (l) { l.muri = Array.isArray(l.muri) ? l.muri : []; l.luci = Array.isArray(l.luci) ? l.luci : []; }
+    if (l) { l.muri = Array.isArray(l.muri) ? l.muri : []; l.luci = Array.isArray(l.luci) ? l.luci : []; l.passaggi = Array.isArray(l.passaggi) ? l.passaggi : []; }
     return l || null;
   }
   // caselle ↔ piedi o metri, come il righello
@@ -148,7 +148,7 @@
         g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(0.85, 'rgba(255,255,255,.5)'); g.addColorStop(1, 'rgba(255,255,255,0)');
         a.fillStyle = g; a.fillRect(o.x - o.scuro, o.y - o.scuro, o.scuro * 2, o.scuro * 2);
       }
-      {                                                // il proprio segnalino si vede sempre
+      if (!o.v) {                                      // il proprio segnalino si vede sempre (non la vista dentro un passaggio)
         const r = cs * 0.75, g = a.createRadialGradient(o.x, o.y, 0, o.x, o.y, r);
         g.addColorStop(0, 'rgba(255,255,255,.6)'); g.addColorStop(0.6, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
         a.fillStyle = g; a.fillRect(o.x - r, o.y - r, r * 2, r * 2);
@@ -209,12 +209,24 @@
         if (R1 > 0) h += `<circle cx="${x.x}" cy="${x.y}" r="${R1}" class="lAlone forte" stroke-width="${px(1.5)}" style="--c:${x.col}"/>`;
         h += `<circle cx="${x.x}" cy="${x.y}" r="${px(11)}" class="lFonte" stroke-width="${px(2)}" style="--c:${x.col}"/>`;
       }
+      (l.passaggi || []).forEach((q, i) => {
+        for (const [t, n] of [[q.a, i + 1 + ''], [q.b, i + 1 + '′']]) {
+          if (!Array.isArray(t)) continue;
+          h += `<line x1="${+t[0] || 0}" y1="${+t[1] || 0}" x2="${+t[2] || 0}" y2="${+t[3] || 0}" class="lPassaggio" stroke-width="${px(5)}" stroke-dasharray="${px(10)} ${px(5)}"/>`;
+          for (const k of [0, 2]) h += `<circle cx="${+t[k] || 0}" cy="${+t[k + 1] || 0}" r="${px(4)}" class="lPunto"/>`;
+          h += `<g class="lPassoNum" data-i="${i}" transform="translate(${(+t[0] + +t[2]) / 2 || 0} ${(+t[1] + +t[3]) / 2 || 0}) scale(${px(1)})"><title>${tr('Passaggio {n}: tocca il numero con «Passaggio» per invertire il verso', { n: i + 1 })}</title><circle r="12"/><text y="4" text-anchor="middle">${n}</text></g>`;
+        }
+      });
+      if (stato.passo && stato.passo.a) {
+        const t = stato.passo.a;
+        h += `<line x1="${t[0]}" y1="${t[1]}" x2="${t[2]}" y2="${t[3]}" class="lPassaggio" stroke-width="${px(5)}"/>`;
+      }
       if (stato.stanza) {
         const { a, b } = stato.stanza;
         h += `<rect x="${Math.min(a.x, b.x)}" y="${Math.min(a.y, b.y)}" width="${Math.abs(b.x - a.x)}" height="${Math.abs(b.y - a.y)}" class="lStanza" stroke-width="${px(3)}" stroke-dasharray="${px(8)} ${px(6)}"/>`;
       }
       const c = stato.catena, p = stato.cursore;
-      if (c && p) h += `<line x1="${c.x}" y1="${c.y}" x2="${p.x}" y2="${p.y}" class="lAnteprima ${stato.modo === 'porta' ? 'porta' : ''}" stroke-width="${px(3)}" stroke-dasharray="${px(8)} ${px(6)}"/>`;
+      if (c && p) h += `<line x1="${c.x}" y1="${c.y}" x2="${p.x}" y2="${p.y}" class="lAnteprima ${stato.modo === 'porta' ? 'porta' : stato.modo === 'passaggio' ? 'passaggio' : ''}" stroke-width="${px(3)}" stroke-dasharray="${px(8)} ${px(6)}"/>`;
     }
     // le porte: si vedono (e si aprono) anche fuori dal livello
     for (const w of porte) {
@@ -270,11 +282,56 @@
     const punti = [];
     for (const w of l.muri) for (const k of [1, 2]) if (Math.hypot(w['x' + k] - p.x, w['y' + k] - p.y) * s < 12) punti.push({ w, k });
     if (punti.length) return { punti };
+    for (const q of l.passaggi) for (const lato of ['a', 'b']) for (const k of [0, 2]) {
+      const t = q[lato];
+      if (Array.isArray(t) && Math.hypot(t[k] - p.x, t[k + 1] - p.y) * s < 12) return { passo: q, lato, k };
+    }
     let best = null, d0 = 10 / s;
     for (const w of l.muri) { const d = distSeg(p, w); if (d < d0) { d0 = d; best = w; } }
-    return best ? { muro: best } : null;
+    if (best) return { muro: best };
+    for (const q of l.passaggi) for (const lato of ['a', 'b']) {
+      const t = q[lato];
+      if (Array.isArray(t) && distSeg(p, { x1: t[0], y1: t[1], x2: t[2], y2: t[3] }) < 10 / s) return { passaggio: q };
+    }
+    return null;
   }
-  function fineCatena() { stato.catena = null; disegnaSegni(); }
+  function fineCatena() { stato.catena = null; stato.passo = null; disegnaSegni(); }
+
+  // ---------- Passaggi (scale, botole…): due tratti lontani collegati, nei due sensi ----------
+  /** Quanto spazio libero c'è da una parte del tratto (raggi nel mezzo piano), fino a 10 caselle. */
+  function spazioDa(t, lato, segs) {
+    const mx = (t[0] + t[2]) / 2, my = (t[1] + t[3]) / 2, dx = t[2] - t[0], dy = t[3] - t[1], L = Math.hypot(dx, dy) || 1;
+    const nx = -dy / L * lato, ny = dx / L * lato, max = cella() * 10, base = Math.atan2(ny, nx);
+    let somma = 0;
+    for (let i = -3; i <= 3; i++) {
+      const a = base + i * Math.PI / 8, rx = Math.cos(a), ry = Math.sin(a), ox = mx + nx * 2, oy = my + ny * 2;
+      let best = max;
+      for (const s of segs) {
+        const sx = s[2] - s[0], sy = s[3] - s[1], den = rx * sy - ry * sx;
+        if (Math.abs(den) < 1e-12) continue;
+        const qx = s[0] - ox, qy = s[1] - oy, k = (qx * sy - qy * sx) / den, u = (qx * ry - qy * rx) / den;
+        if (k > 1e-6 && u >= 0 && u <= 1 && k < best) best = k;
+      }
+      somma += best;
+    }
+    return somma / 7;
+  }
+  /** Il verso: entrando nel primo tratto dalla parte libera si deve uscire dall'altro nella sua parte libera. */
+  function orienta(l, a, b) {
+    const segs = l.muri.filter(w => !(w.porta && w.aperta)).map(w => [w.x1, w.y1, w.x2, w.y2]);
+    const libero = t => { const s1 = spazioDa(t, 1, segs), s2 = spazioDa(t, -1, segs); return Math.abs(s1 - s2) < cella() * 0.5 ? 0 : s1 > s2 ? 1 : -1; };
+    const la = libero(a), lb = libero(b);
+    // con la trasformazione la sinistra di a va sulla sinistra di b, e chi entra da sinistra esce a destra
+    return la && lb && la === lb ? [b[2], b[3], b[0], b[1]] : b;
+  }
+  segni.addEventListener('pointerdown', e => {
+    const g = e.target.closest('.lPassoNum'); if (!g || !luceAttiva() || stato.modo !== 'passaggio') return;
+    e.stopPropagation(); e.preventDefault();
+    const q = luceDi(true).passaggi[+g.dataset.i]; if (!q) return;
+    q.b = [q.b[2], q.b[3], q.b[0], q.b[1]];
+    if (typeof netSay === 'function') netSay(tr('Passaggio {n}: verso invertito.', { n: +g.dataset.i + 1 }));
+    cambiata();
+  });
   /** Una porta larga una casella dove hai cliccato sul muro: il muro resta prima e dopo. */
   function metteiPorta(l, w, p) {
     const dx = w.x2 - w.x1, dy = w.y2 - w.y1, L = Math.hypot(dx, dy) || 1;
@@ -290,13 +347,28 @@
   }
 
   viewport.addEventListener('pointerdown', e => {
-    if (!luceAttiva() || e.button !== 0 || e.target.closest('.lPorta')) return;
+    if (!luceAttiva() || e.button !== 0 || e.target.closest('.lPorta') || (stato.modo === 'passaggio' && e.target.closest('.lPassoNum'))) return;
     e.stopImmediatePropagation(); e.preventDefault();
     const l = luceDi(true), p0 = nelMondo(e);
     if (stato.modo === 'porta' && !stato.catena) {
       // clic su un muro: lì diventa una porta larga una casella (il muro si divide in due pezzi)
       const q = sotto(p0);
       if (q && q.muro && !q.muro.porta) { metteiPorta(l, q.muro, p0); cambiata(); return; }
+    }
+    if (stato.modo === 'passaggio') {
+      // quattro clic: inizio e fine del primo tratto, poi inizio e fine del secondo
+      const p = agganciaPunto(p0, e);
+      if (!stato.catena) { stato.catena = p; stato.cursore = p; disegnaSegni(); return; }
+      const a = stato.catena;
+      if (Math.hypot(p.x - a.x, p.y - a.y) * view.s < 4) return;
+      const t = [a.x, a.y, p.x, p.y];
+      stato.catena = null;
+      if (!stato.passo || !stato.passo.a) { stato.passo = { a: t }; disegnaSegni(); sincronizza(); return; }
+      l.passaggi.push({ id: nuovoId(), a: stato.passo.a, b: orienta(l, stato.passo.a, t) });
+      stato.passo = null;
+      if (typeof netSay === 'function') netSay(tr('Passaggio {n} creato: chi lo attraversa esce dall\'altra parte.', { n: l.passaggi.length }));
+      cambiata(); sincronizza();
+      return;
     }
     if (stato.modo === 'stanza') {
       const p = agganciaPunto(p0, e);
@@ -324,6 +396,7 @@
     if (stato.modo === 'gomma') {
       const q = sotto(p0);
       if (q && q.luce) l.luci = l.luci.filter(x => x !== q.luce);
+      else if (q && (q.passo || q.passaggio)) { const via = q.passo || q.passaggio; l.passaggi = l.passaggi.filter(x => x !== via); }
       else if (q && q.punti) { const via = new Set(q.punti.map(x => x.w)); l.muri = l.muri.filter(w => !via.has(w)); }
       else if (q && q.muro) l.muri = l.muri.filter(w => w !== q.muro);
       else return;
@@ -346,6 +419,8 @@
     if (!g || g.id !== e.pointerId) return;
     e.stopImmediatePropagation();
     if (g.luce) { g.luce.x = p0.x; g.luce.y = p0.y; }
+    else if (g.passo) { const p = agganciaPunto(p0, e); g.passo[g.lato][g.k] = p.x; g.passo[g.lato][g.k + 1] = p.y; }
+    else if (g.passaggio) { /* un passaggio intero non si trascina: si spostano i suoi estremi */ }
     else if (g.punti) { const p = agganciaPunto(p0, e); for (const { w, k } of g.punti) { w['x' + k] = p.x; w['y' + k] = p.y; } }
     else if (g.muro) { const dx = p0.x - g.da.x, dy = p0.y - g.da.y; Object.assign(g.muro, { x1: g.orig.x1 + dx, y1: g.orig.y1 + dy, x2: g.orig.x2 + dx, y2: g.orig.y2 + dy }); }
     disegnaSegni(); if (stato.anteprima) disegna();
@@ -368,7 +443,7 @@
   viewport.addEventListener('dblclick', e => { if (luceAttiva() && stato.catena) { e.stopImmediatePropagation(); fineCatena(); } }, true);
   addEventListener('keydown', e => {
     if (!luceAttiva() || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement && document.activeElement.tagName)) return;
-    if ((e.key === 'Escape' || e.key === 'Enter') && stato.catena) { e.preventDefault(); fineCatena(); }
+    if ((e.key === 'Escape' || e.key === 'Enter') && (stato.catena || stato.passo)) { e.preventDefault(); fineCatena(); sincronizza(); }
   });
 
   /** Qualcosa è cambiato: si ridisegna e si salva (col server acceso, il salvataggio lo manda anche ai giocatori). */
@@ -432,6 +507,7 @@
           <button type="button" data-m="muro">🧱 ${tr('Muro')}</button>
           <button type="button" data-m="stanza">▭ ${tr('Stanza')}</button>
           <button type="button" data-m="porta">🚪 ${tr('Porta')}</button>
+          <button type="button" data-m="passaggio" title="${tr('Collega due punti lontani della mappa (per esempio le scale fra due piani)')}">🌀 ${tr('Passaggio')}</button>
           <button type="button" data-m="sposta">✋ ${tr('Sposta')}</button>
           <button type="button" data-m="gomma">🧽 ${tr('Gomma')}</button>
         </div>
@@ -464,11 +540,12 @@
     stanza: 'Trascina da un angolo all\'altro: quattro muri. Poi le porte con «Porta», cliccando su un muro.',
     porta: 'Clicca su un muro: lì diventa una porta larga una casella. Oppure due clic: dove comincia e dove finisce. Un tocco sul simbolo la apre o la chiude, anche dagli altri livelli.',
     luce: 'Un clic dove vuoi la luce (con le misure qui sotto). Trascina una luce per spostarla.',
-    sposta: 'Trascina un estremo (si spostano insieme tutti i muri che ci arrivano), un muro intero o una luce.',
-    gomma: 'Tocca un muro, una porta o una luce per toglierli.'
+    passaggio: 'Collega due punti lontani, nei due sensi (per esempio le scale fra due piani sulla stessa mappa): due clic per il primo tratto (la cima delle scale), due clic per il secondo (il fondo delle scale nell\'altro piano). La luce ci passa come se fossero attaccati, e chi ci cammina attraverso esce dall\'altra parte. Se esce dal lato sbagliato, tocca il numero del passaggio per invertirlo.',
+    sposta: 'Trascina un estremo (si spostano insieme tutti i muri che ci arrivano), un muro intero, una luce o l\'estremo di un passaggio.',
+    gomma: 'Tocca un muro, una porta, una luce o un passaggio per toglierli.'
   };
   let scheda = 'luci';
-  const MODI_TAB = { luci: ['luce', 'sposta', 'gomma'], muri: ['muro', 'stanza', 'porta', 'sposta', 'gomma'] };
+  const MODI_TAB = { luci: ['luce', 'sposta', 'gomma'], muri: ['muro', 'stanza', 'porta', 'passaggio', 'sposta', 'gomma'] };
   function modoVista() {
     const l = luceDi(false), f = cur && cur.fog;
     const n = !!(f && f.on), lu = !!(l && l.on);
@@ -491,7 +568,7 @@
     $l('luceVel').checked = !(l && l.velocita === false);
     box.querySelectorAll('#luceRic button').forEach(b => b.classList.toggle('on', b.dataset.v === ((l && l.ricordo) || 'scuro')));
     box.querySelectorAll('[data-modi] button').forEach(b => b.classList.toggle('on', b.dataset.m === stato.modo));
-    $l('luceTip').textContent = scheda === 'luci' || scheda === 'muri' ? tr(TIP[stato.modo] || '') : '';
+    $l('luceTip').textContent = scheda === 'luci' || scheda === 'muri' ? tr(TIP[stato.modo] || '') + (stato.modo === 'passaggio' && stato.passo ? ' ' + tr('Ora il secondo tratto.') : '') : '';
     $l('luceNuova').hidden = stato.modo !== 'luce';
     $l('luceFine').hidden = !(stato.modo === 'muro' || stato.modo === 'porta');
     if (document.activeElement !== $l('luceR')) $l('luceR').value = +(stato.r * perCasella()).toFixed(1);
@@ -509,6 +586,7 @@
     if (l && l.on) {
       voci.push([true, tr('Luce dinamica accesa')]);
       voci.push([muri + porte > 0, muri + porte ? tr('{n} muri, {p} porte', { n: muri, p: porte }) : tr('nessun muro: si vede fino al bordo della mappa'), 'muri', true]);
+      if (l.passaggi.length) voci.push([true, tr('{n} passaggi', { n: l.passaggi.length }), 'muri', true]);
       voci.push([amb !== 'buio' || luci > 0 || scuro, amb !== 'buio' ? tr('è giorno o penombra: le luci non servono') : luci ? tr('{n} luci', { n: luci }) : scuro ? tr('nessuna luce, ma c\'è la scurovisione') : tr('al buio e senza luci: il party non vede niente'), 'luci']);
       voci.push([party.length > 0, party.length ? tr('{n} segnalini nel party', { n: party.length }) : tr('nessun segnalino del party (tocca per sceglierlo)'), 'party']);
     }
@@ -567,7 +645,7 @@
   $l('luceRic').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) { luceDi(true).ricordo = b.dataset.v; cambiata(); } });
   box.querySelectorAll('[data-modi]').forEach(g => g.addEventListener('click', e => {
     const b = e.target.closest('[data-m]'); if (!b) return;
-    stato.modo = b.dataset.m; stato.catena = null; stato.stanza = null;
+    stato.modo = b.dataset.m; stato.catena = null; stato.stanza = null; stato.passo = null;
     if (typeof layer !== 'undefined' && layer !== 'luce') setLayer('luce');
     sincronizza(); disegnaSegni();
   }));
@@ -690,5 +768,32 @@
     afterBoardLoad = function () { const r = prima.apply(this, arguments); disegna(); disegnaSegni(); sincronizza(); return r; };   // eslint-disable-line no-global-assign
   }
   window.luceRidisegna = () => { disegna(); disegnaSegni(); };
+
+  // ======================= Attraversare un passaggio =======================
+  // Il master (o chi gioca da solo) sposta i segnalini qui: se il tragitto taglia un passaggio, il segnalino
+  // esce dall'altra parte. Per i giocatori in rete lo decide il server (i passaggi, come i muri, restano suoi).
+  window.dopoSpostamento = function (lista) {
+    if (typeof NET !== 'undefined' && NET.on && typeof isMaster === 'function' && !isMaster()) return;
+    const l = luceDi(false);
+    if (!l || !l.passaggi.length) return;
+    const pass = { passaggi: C.pulisci(l).passaggi };
+    let ultimo = null;
+    for (const [el, x0, y0] of lista) {
+      if (!el || el._shape || (el.dataset.layer || 'tokens') !== 'tokens') continue;
+      const w = num(el, 'width'), h = num(el, 'height');
+      const s = C.salto(pass, x0 + w / 2, y0 + h / 2, num(el, 'left') + w / 2, num(el, 'top') + h / 2);
+      if (!s) continue;
+      el.style.left = s.x - w / 2 + 'px'; el.style.top = s.y - h / 2 + 'px';
+      ultimo = s;
+    }
+    if (ultimo) { disegna(); seguiSalto(ultimo.x, ultimo.y); }
+  };
+  /** Dopo un salto la vista va dove è uscito il segnalino, se è fuori dallo schermo. */
+  window.seguiSalto = function (x, y) {
+    if (typeof view === 'undefined' || typeof setView !== 'function') return;
+    const sx = x * view.s + view.x, sy = y * view.s + view.y, m = 60;
+    if (sx > m && sy > m && sx < innerWidth - m && sy < innerHeight - m) return;
+    setView({ x: innerWidth / 2 - x * view.s, y: innerHeight / 2 - y * view.s, s: view.s }, true);
+  };
   sincronizza();
 })();

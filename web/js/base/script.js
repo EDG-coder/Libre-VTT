@@ -512,6 +512,8 @@ viewport.addEventListener('pointermove', e => {
 function stop() {
   if (mode === 'marquee') finishMarquee();
   if (mode === 'photo' && !photoMoved && selection.length > 1) select(activeEl);     // clic semplice: resta solo questo
+  // passato per un passaggio (le scale fra due piani)? esce dall'altra parte (per i giocatori in rete decide il server)
+  if (mode === 'photo' && photoMoved && activeEl && typeof dopoSpostamento === 'function') dopoSpostamento([[activeEl, origX, origY], ...group.map(g => [g.el, g.x, g.y])]);
   group = [];
   const wasFrame = activeEl === bgBox || activeEl === board;
   clearTimeout(holdTimer); holdTimer = 0;
