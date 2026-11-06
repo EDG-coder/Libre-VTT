@@ -190,10 +190,33 @@ function disegnaTela() {
     ctx.drawImage(map, (l - r.x) * kx, (t - r.y) * ky, (rr - l) * kx, (bb - t) * ky,
       (view.x + l * view.s) * dpr, (view.y + t * view.s) * dpr, (rr - l) * view.s * dpr, (bb - t) * view.s * dpr);
   } catch {}
+  tintaSuTela(ctx, dpr);
+}
+// Il colore delle luci dinamiche (#luceTinta, in luce.js) si fonde con la mappa in «soft-light».
+// Con la mappa su questo canvas, fuori da #stage, il browser non ha sotto niente con cui fonderlo:
+// su iPad, mentre la vista si muove, la tinta diventava una velatura gialla su tutta la mappa.
+// Qui la si disegna direttamente sopra la mappa, con la stessa fusione; quella nella pagina resta nascosta.
+function tintaSuTela(ctx, dpr) {
+  const t = document.getElementById('luceTinta');
+  if (!t || t.hidden || !(t.width > 0 && t.height > 0)) return;
+  const x = parseFloat(t.style.left) || 0, y = parseFloat(t.style.top) || 0;
+  const w = parseFloat(t.style.width) || 0, h = parseFloat(t.style.height) || 0;
+  if (!(w > 0 && h > 0)) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'soft-light'; ctx.globalAlpha = 0.85;
+  try { ctx.drawImage(t, (view.x + x * view.s) * dpr, (view.y + y * view.s) * dpr, w * view.s * dpr, h * view.s * dpr); } catch {}
+  ctx.restore();
 }
 const ridisegnaTela = () => { if (TELA && !TELA.raf) TELA.raf = requestAnimationFrame(() => { TELA.raf = 0; disegnaTela(); }); };
 if (TELA) {
-  map.addEventListener('load', ridisegnaTela);
+  // Safari (iPhone/iPad) a volte dà l'immagine per caricata prima di averla decodificata: il primo
+  // disegno veniva vuoto e la mappa restava nera finché non la si spostava. Si ridisegna anche a
+  // decodifica finita e poco dopo.
+  map.addEventListener('load', () => {
+    ridisegnaTela();
+    if (typeof map.decode === 'function') map.decode().then(ridisegnaTela, () => {});
+    setTimeout(ridisegnaTela, 300);
+  });
   new MutationObserver(ridisegnaTela).observe(bgBox, { attributes: true, attributeFilter: ['style', 'hidden', 'data-url'] });
   new MutationObserver(ridisegnaTela).observe(board, { attributes: true, attributeFilter: ['style'] });
 }

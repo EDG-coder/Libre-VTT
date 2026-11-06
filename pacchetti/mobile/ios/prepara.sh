@@ -29,7 +29,7 @@ mkdir -p "$FW"
 echo "→ Copio il programma"
 P="$QUI/LibreVTT/nodejs-project"
 rm -rf "$P"; mkdir -p "$P/assets/Sfondi"
-for d in server condiviso web sistemi examples; do cp -R "$RADICE/$d" "$P/"; done
+for d in server condiviso web sistemi plugins-inclusi; do cp -R "$RADICE/$d" "$P/"; done
 cp "$RADICE/package.json" "$P/"
 rm -f "$P/server/zigwrap.js"
 cp "$RADICE/assets/Sfondi/main.webp" "$RADICE/assets/Sfondi/main-en.webp" "$P/assets/Sfondi/"

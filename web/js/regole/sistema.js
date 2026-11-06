@@ -1,5 +1,5 @@
 // ---------- Il sistema di gioco della campagna ----------
-// Il tavolo (mappa, segnalini, dadi, chat, musica, nebbia) non sa niente di D&D: le regole
+// Il tavolo (mappa, segnalini, dadi, chat, musica, nebbia) non sa niente di un gioco in particolare: le regole
 // arrivano dal «sistema» della campagna, che il server del tavolo serve da /sistema/…
 //   sistema.json   nome, caratteristiche, abilità, valute, condizioni, regole, quali schede usa
 //   formule.json   le formule (le legge formule.js, senza eval)
@@ -42,7 +42,7 @@
   };
 
   // ---------- quali modelli di scheda ----------
-  const NOMI = { standard: 'Standard · scheda italiana D&D 5e (3 pagine)', dnd5e: 'Open · D&D 5ª edizione', simple: 'Open · Semplice (solo testo)', generica: 'Scheda del sistema (caratteristiche e abilità)' };
+  const NOMI = { standard: 'Standard · scheda 5e a tre pagine (SRD)', dnd5e: 'Open · 5ª edizione (SRD)', simple: 'Open · Semplice (solo testo)', generica: 'Scheda del sistema (caratteristiche e abilità)' };
   function modelli() {
     const fs = document.querySelector('#sheetForm .types'); if (!fs || !S.dati) return;
     const vuoi = Array.isArray(S.dati.schede) && S.dati.schede.length ? S.dati.schede : ['standard', 'dnd5e', 'simple'];

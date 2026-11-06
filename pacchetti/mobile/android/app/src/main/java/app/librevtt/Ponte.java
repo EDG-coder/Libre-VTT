@@ -99,12 +99,6 @@ final class Ponte {
                 case "leggiFile":
                     leggiFile(id, m.optString("uri"));
                     return;
-                case "scaricaApk":
-                    scaricaApk(id, m.optString("url"), m.optString("nome"), m.optLong("byte", 0));
-                    return;
-                case "installaApk":
-                    installaApk(id, m.optString("file"));
-                    return;
                 case "apriEsterno":
                     att.apriFuori(m.optString("url"));
                     break;
@@ -447,127 +441,8 @@ final class Ponte {
     }
 
     // ------------------------------------------------------------------ aggiornare l'app
-
-    /** L'APK scaricato dall'avviatore, in attesa che l'utente permetta a LIBRE VTT di installare app. */
-    private File apkInAttesa;
-
-    private void installaApk(int id, String percorso) {
-        File f = new File(percorso);
-        File cartella = new File(Motore.utente, "aggiornamenti");
-        try {
-            if (!f.isFile() || !f.getCanonicalPath().startsWith(cartella.getCanonicalPath() + File.separator) || !f.getName().endsWith(".apk")) {
-                rispondi(id, errore("Il file dell'aggiornamento non c'è più: riprova."));
-                return;
-            }
-        } catch (IOException e) {
-            rispondi(id, errore("Il file dell'aggiornamento non si legge: riprova."));
-            return;
-        }
-        // Android 8+: serve il permesso «installa app sconosciute» per LIBRE VTT (si dà una volta sola)
-        if (Build.VERSION.SDK_INT >= 26 && !att.getPackageManager().canRequestPackageInstalls()) {
-            apkInAttesa = f;
-            try {
-                att.startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        Uri.parse("package:" + att.getPackageName())));
-            } catch (ActivityNotFoundException e) {
-                apkInAttesa = null;
-                rispondi(id, errore("Apri Impostazioni → App → LIBRE VTT → Installa app sconosciute, attivalo e riprova."));
-                return;
-            }
-            JSONObject r = new JSONObject();
-            try { r.put("permesso", true); } catch (JSONException ignorata) { /* no */ }
-            rispondi(id, r);
-            return;
-        }
-        apriInstallazione(f);
-        rispondi(id, Boolean.TRUE);
-    }
-
-    /**
-     * Scarica l'APK nuovo con la rete di Android (gli stessi certificati del browser: il Node dentro
-     * l'app non sempre riesce a parlare con GitHub) e poi apre l'installazione.
-     */
-    private void scaricaApk(final int id, final String indirizzo, String nome, final long attesi) {
-        final String pulito = nome == null ? "" : nome.replaceAll("[^A-Za-z0-9._-]", "_");
-        // solo gli APK delle release su GitHub (il resto non è un aggiornamento nostro)
-        if (!indirizzo.matches("^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/releases/download/[^\\s]+$") || !pulito.endsWith(".apk")) { rispondi(id, errore("Indirizzo dell'aggiornamento non valido.")); return; }
-        new Thread(new Runnable() {
-            @Override public void run() {
-                File cartella = new File(Motore.utente, "aggiornamenti");
-                cartella.mkdirs();
-                File[] vecchi = cartella.listFiles();
-                if (vecchi != null) for (File v : vecchi) //noinspection ResultOfMethodCallIgnored
-                    v.delete();
-                File dest = new File(cartella, pulito), parte = new File(cartella, pulito + ".part");
-                java.net.HttpURLConnection c = null;
-                try {
-                    String url = indirizzo;
-                    for (int salti = 0; ; salti++) {             // GitHub rimanda a un altro indirizzo: lo si segue
-                        c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
-                        c.setInstanceFollowRedirects(false);
-                        c.setConnectTimeout(20000);
-                        c.setReadTimeout(60000);
-                        c.setRequestProperty("User-Agent", "LIBRE-VTT");
-                        int code = c.getResponseCode();
-                        if (code >= 300 && code < 400 && salti < 6) {
-                            String dove = c.getHeaderField("Location");
-                            c.disconnect();
-                            if (dove == null) throw new IOException("rimando senza indirizzo");
-                            url = new java.net.URL(new java.net.URL(url), dove).toString();
-                            if (!url.startsWith("https://")) throw new IOException("rimando non sicuro");
-                            continue;
-                        }
-                        if (code != 200) throw new IOException("HTTP " + code);
-                        break;
-                    }
-                    long tot = c.getContentLengthLong(), got = 0, ultimo = 0;
-                    if (tot <= 0) tot = attesi;
-                    try (InputStream in = c.getInputStream(); OutputStream out = new FileOutputStream(parte)) {
-                        byte[] buf = new byte[64 * 1024];
-                        int n;
-                        while ((n = in.read(buf)) > 0) {
-                            out.write(buf, 0, n);
-                            got += n;
-                            long ora = System.currentTimeMillis();
-                            if (tot > 0 && ora - ultimo > 700) {
-                                ultimo = ora;
-                                js("window.LIBRE_AGG_PROGRESSO&&LIBRE_AGG_PROGRESSO(" + (got * 100 / tot) + ")");
-                            }
-                        }
-                    }
-                    if (attesi > 0 && parte.length() != attesi) throw new IOException("il file scaricato è incompleto");
-                    if (!parte.renameTo(dest)) throw new IOException("non riesco a salvare il file");
-                    att.runOnUiThread(new Runnable() {
-                        @Override public void run() { installaApk(id, dest.getAbsolutePath()); }
-                    });
-                } catch (Exception e) {
-                    Log.e(Motore.TAG, "Aggiornamento", e);
-                    //noinspection ResultOfMethodCallIgnored
-                    parte.delete();
-                    rispondi(id, errore("Scaricamento non riuscito (" + e.getMessage() + "): riprova."));
-                } finally {
-                    if (c != null) c.disconnect();
-                }
-            }
-        }, "aggiornamento").start();
-    }
-
-    /** Dopo aver dato il permesso si torna nell'app: l'installazione riparte da sola. */
-    void riprovaInstallazione() {
-        if (apkInAttesa == null) return;
-        if (Build.VERSION.SDK_INT >= 26 && !att.getPackageManager().canRequestPackageInstalls()) return;
-        File f = apkInAttesa;
-        apkInAttesa = null;
-        if (f.isFile()) apriInstallazione(f);
-    }
-
-    private void apriInstallazione(File f) {
-        Uri u = Condivisi.indirizzo(f);
-        Intent i = new Intent(Intent.ACTION_VIEW).setDataAndType(u, "application/vnd.android.package-archive")
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        i.setClipData(ClipData.newRawUri(f.getName(), u));
-        avvia(i);
-    }
+    // Niente aggiornamenti scaricati dall'app: le versioni nuove arrivano dallo store (Google Play non
+    // accetta app che installano altre app) o si scaricano a mano dalla pagina delle release.
 
     // ------------------------------------------------------------------ vibrazione e schermo
 

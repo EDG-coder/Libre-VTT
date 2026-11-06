@@ -236,6 +236,7 @@
   .plgPiede { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; margin-top: 12px; }
   .plgPiede .gruppo { display: flex; flex-wrap: wrap; gap: 8px; }
   .plgCrea { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  .plg [hidden] { display: none !important; }
   .plgCrea select { min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; font: inherit; padding: 0 8px; }
   /* gli avvisi per l'accesso completo: volutamente seri */
   dialog.avvisoPlg { width: min(480px, calc(100vw - 24px)); border: 2px solid #b3261e; border-radius: 16px; background: var(--panel); color: var(--text); padding: 20px; }
@@ -289,7 +290,7 @@
   <h2 id="plgTit">Plugin</h2>
   <p class="nota">Spunta un plugin per applicarlo: il tavolo lo prende entro pochi secondi, anche se è già aperto. Togliendo la spunta resta caricato, pronto da riapplicare. Più in basso nell'elenco vuol dire applicato dopo: in caso di conflitto vince lui.</p>
   <div class="plgLista" id="plgLista"></div>
-  <div class="plgCrea">
+  <div class="plgCrea" id="plgCreaRiga">
     <span class="nota">Nuovo plugin dal modello:</span>
     <select id="plgModello" aria-label="Modello del plugin"></select>
     <button class="b" type="button" id="plgCrea">＋ Crea</button>
@@ -397,7 +398,7 @@
     </div>
     <div class="box avviso hide" id="campSistema" style="margin-top:10px">
       <div class="t">Con quale sistema di gioco si gioca «<span id="campSisNome"></span>»?</div>
-      <p>Si sceglie una volta sola e resta salvato nella campagna. Le campagne fatte prima di adesso sono di solito D&amp;D 5e (2014).</p>
+      <p>Si sceglie una volta sola e resta salvato nella campagna. Le campagne fatte prima di adesso sono di solito 5e (SRD 5.1, 2014).</p>
       <div class="sceltaSis" id="sisVecchia"></div>
       <div class="row" style="margin-top:10px">
         <button class="b go" id="campSisOk">Continua</button>
@@ -1008,8 +1009,9 @@ function disegnaPlugin() {
   const attivi = PLG.plugins.filter(p => p.running).length;
   $('impPluginConta').textContent = PLG.plugins.length ? plgTr('{n} applicati su {tot}', { n: attivi, tot: PLG.plugins.length }) : '';
   if (!$('plugin').open) return;
-  $('plgCartella').textContent = PLG.dir ? plgTr('Cartella: {dir}', { dir: PLG.dir }) : '';
-  $('plgApri').hidden = !!PLG.mobile;
+  // telefoni e tablet: solo i plugin inclusi nell'app (niente cartella, modelli o .zip)
+  $('plgCartella').textContent = PLG.dir && !PLG.mobile ? plgTr('Cartella: {dir}', { dir: PLG.dir }) : '';
+  $('plgApri').hidden = $('plgZip').hidden = $('plgCreaRiga').hidden = !!PLG.mobile;
   const sel = $('plgModello'), prima = sel.value;
   sel.replaceChildren(...PLG.examples.map(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; o.dataset.noi18n = ''; return o; }));
   if (PLG.examples.includes(prima)) sel.value = prima;
@@ -1017,7 +1019,8 @@ function disegnaPlugin() {
   const box = $('plgLista');
   if (!PLG.plugins.length) {
     const v = document.createElement('div'); v.className = 'plgVuota';
-    v.textContent = plgTr('Nessun plugin. Crea il primo dal modello qui sotto, oppure metti una cartella con un plugin.json nella cartella dei plugin.');
+    v.textContent = PLG.mobile ? plgTr('Per ora l\'app non include plugin: arriveranno con gli aggiornamenti.')
+      : plgTr('Nessun plugin. Crea il primo dal modello qui sotto, oppure metti una cartella con un plugin.json nella cartella dei plugin.');
     box.replaceChildren(v); return;
   }
   box.replaceChildren(...PLG.plugins.map((p, i) => {
@@ -1233,12 +1236,15 @@ $('aggSi').onclick = async () => {
   } catch (e) { $('aggErr').textContent = 'Non sono riuscito ad aggiornare: ' + e.message; $('aggErr').classList.remove('hide'); }
   finally { $('aggSi').disabled = false; }
 };
-setTimeout(controllaAgg, 1500);
+// Nelle app per telefoni e tablet niente controllo su GitHub: le versioni nuove arrivano dallo store.
+const AGG_SPENTI = !!NAT.disponibile;
+if (AGG_SPENTI) $('aggRiga').classList.add('hide');
+else setTimeout(controllaAgg, 1500);
 $('aggOra').addEventListener('click', e => controllaOra(e));
 // ogni volta che si torna nell'app (o nella finestra) si ricontrolla (al massimo una volta al minuto)
 let ultimoAgg = Date.now();
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && Date.now() - ultimoAgg > 60e3) { ultimoAgg = Date.now(); controllaAgg(); }
+  if (!AGG_SPENTI && document.visibilityState === 'visible' && Date.now() - ultimoAgg > 60e3) { ultimoAgg = Date.now(); controllaAgg(); }
 });
 // «Controlla aggiornamenti» in fondo alla pagina: subito, senza aspettare
 async function controllaOra(ev) {

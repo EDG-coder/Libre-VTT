@@ -453,7 +453,6 @@ public final class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         if (input != null) input.registerInputDeviceListener(dispositivi, h);
-        if (ponte != null) ponte.riprovaInstallazione();
         avvisaPagina();
     }
 
