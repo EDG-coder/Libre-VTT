@@ -4,9 +4,9 @@ LIBRE VTT, il tavolo da gioco virtuale per D&D 5e.
 
 | Sistema | File |
 |---|---|
-| **Windows 10/11** (64 bit, Intel/AMD o ARM) | **`LIBRE-VTT-Setup.exe`**: doppio clic e avanti. Sui PC ARM (Snapdragon) installa la versione nativa. In alternativa `Installa-LIBRE-VTT-Windows.cmd` |
-| **Mac** (macOS 11 o più recente, Apple Silicon e Intel) | **`LIBRE-VTT.dmg`**: aprilo e trascina LIBRE VTT in Applicazioni |
-| **Linux** (64 bit, Intel/AMD, ARM o RISC-V) | **`Installa-LIBRE-VTT-Linux.sh`**: `bash Installa-LIBRE-VTT-Linux.sh` |
+| **Windows 10/11** (64 bit, Intel/AMD o ARM) | **`LIBRE-VTT-Setup-x64.exe`**: doppio clic e avanti. Per i PC ARM (Snapdragon) **`LIBRE-VTT-Setup-ARM64.exe`**. `LIBRE-VTT-Setup.exe` va su tutti e due ma pesa di più; in alternativa `Installa-LIBRE-VTT-Windows.cmd` |
+| **Mac** (macOS 11 o più recente) | **`LIBRE-VTT-Mac-AppleSilicon.dmg`** per i Mac con chip Apple (M1, M2…), **`LIBRE-VTT-Mac-Intel.dmg`** per quelli Intel: aprilo e trascina LIBRE VTT in Applicazioni. Non sai quale hai? `LIBRE-VTT.dmg` va su tutti e due ma pesa di più |
+| **Linux** (64 bit) | **`Installa-LIBRE-VTT-Linux-x64.sh`** per Intel/AMD, **`-arm64.sh`** per ARM, **`-riscv64.sh`** per RISC-V: `bash Installa-LIBRE-VTT-Linux-x64.sh`. `Installa-LIBRE-VTT-Linux.sh` li ha tutti dentro |
 | **Android** (telefoni e tablet, Android 7 o più recente; anche Samsung DeX e Chromebook) | **`LIBRE-VTT-Android.apk`**: aprilo dal telefono e consenti l'installazione. `LIBRE-VTT-Android-arm64.apk` è più leggero e va su quasi tutti i telefoni di oggi |
 | **iPhone e iPad** (iOS 15 o più recente) | **`LIBRE-VTT-Xcode.zip`**: il progetto di Xcode già pronto, da aprire su un Mac (istruzioni nel LEGGIMI). Oppure **`LIBRE-VTT-iOS.ipa`** da installare con Sideloadly o AltStore |
 | **Codice sorgente** | «Source code (zip)» qui sotto |

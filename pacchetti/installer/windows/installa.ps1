@@ -166,13 +166,15 @@ function Installa {
   foreach ($x in @($pac, $nodeTmp)) { if (Test-Path $x) { Remove-Item $x -Recurse -Force } }
   try {
     Passo 5 'Estraggo il programma...'
-    $t = [System.IO.File]::ReadAllText($script:Self, [System.Text.Encoding]::UTF8)
-    $i = $t.IndexOf('::ARCH' + 'IVIO::')
-    if ($i -lt 0) { Ferma 'Questo file di installazione e'' incompleto: scaricalo di nuovo.' }
-    $b64 = ($t.Substring($i + 12) -replace '\s', '')
+    # il programma e' un .zip attaccato in fondo a questo file, dal byte LIBRE_INIZIO in poi
+    $inizio = [int64]$env:LIBRE_INIZIO
     $zip = Join-Path $tmp 'pacchetto.zip'
-    [System.IO.File]::WriteAllBytes($zip, [Convert]::FromBase64String($b64))
-    $t = $null; $b64 = $null
+    $in = [System.IO.File]::OpenRead($script:Self)
+    $lungo = $in.Length
+    if ($inizio -le 0 -or $lungo -le $inizio) { $in.Close(); Ferma 'Questo file di installazione e'' incompleto: scaricalo di nuovo.' }
+    [void]$in.Seek($inizio, [System.IO.SeekOrigin]::Begin)
+    $out = [System.IO.File]::Create($zip)
+    try { $in.CopyTo($out) } finally { $out.Close(); $in.Close() }
     [System.IO.Compression.ZipFile]::ExtractToDirectory($zip, $pac)
     if (-not (Test-Path (Join-Path $pac 'app\server\launcher.js'))) { Ferma 'Questo file di installazione e'' incompleto: scaricalo di nuovo.' }
 

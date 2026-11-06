@@ -9,6 +9,11 @@
 #ifndef Versione
   #define Versione "3.0"
 #endif
+; /DSolo=x64 oppure /DSolo=arm64: un setup con dentro un solo processore (più leggero),
+; LIBRE-VTT-Setup-x64.exe / LIBRE-VTT-Setup-ARM64.exe. Senza: LIBRE-VTT-Setup.exe con tutti e due.
+#ifndef Solo
+  #define Solo ""
+#endif
 
 [Setup]
 AppId={{6E3C2A5B-7D41-4F0E-9B8A-3D2C1F5E9A71}
@@ -23,10 +28,21 @@ DisableProgramGroupPage=yes
 DisableReadyPage=yes
 PrivilegesRequired=lowest
 ; PC Intel/AMD a 64 bit e PC ARM (Windows 11): su ARM Node e il collegamento sono quelli nativi
+#if Solo == "arm64"
+ArchitecturesAllowed=arm64
+ArchitecturesInstallIn64BitMode=arm64
+OutputBaseFilename=LIBRE-VTT-Setup-ARM64
+#elif Solo == "x64"
+; (va anche sui PC ARM con Windows 11, che fanno girare i programmi x64)
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+OutputBaseFilename=LIBRE-VTT-Setup-x64
+#else
 ArchitecturesAllowed=x64compatible or arm64
 ArchitecturesInstallIn64BitMode=x64compatible or arm64
-OutputDir=..\..\..\installatori
 OutputBaseFilename=LIBRE-VTT-Setup
+#endif
+OutputDir=..\..\..\installatori
 SetupIconFile=..\..\..\web\icona.ico
 UninstallDisplayIcon={app}\app\web\icona.ico
 UninstallDisplayName=LIBRE VTT
@@ -43,10 +59,18 @@ Name: "desktop"; Description: "Metti un'icona sul desktop"
 
 [Files]
 Source: "stage\app\*"; DestDir: "{app}\app"; Flags: ignoreversion recursesubdirs createallsubdirs
+#if Solo == "x64"
+Source: "stage\runtime-x64\*"; DestDir: "{app}\runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "stage\bin-x64\uffa-link.exe"; DestDir: "{app}\utente\bin"; Flags: ignoreversion skipifsourcedoesntexist
+#elif Solo == "arm64"
+Source: "stage\runtime-arm64\*"; DestDir: "{app}\runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "stage\bin-arm64\uffa-link.exe"; DestDir: "{app}\utente\bin"; Flags: ignoreversion skipifsourcedoesntexist
+#else
 Source: "stage\runtime-x64\*"; DestDir: "{app}\runtime"; Check: not IsArm64; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "stage\runtime-arm64\*"; DestDir: "{app}\runtime"; Check: IsArm64; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
 Source: "stage\bin-x64\uffa-link.exe"; DestDir: "{app}\utente\bin"; Check: not IsArm64; Flags: ignoreversion skipifsourcedoesntexist
 Source: "stage\bin-arm64\uffa-link.exe"; DestDir: "{app}\utente\bin"; Check: IsArm64; Flags: ignoreversion skipifsourcedoesntexist
+#endif
 Source: "stage\avvia.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]

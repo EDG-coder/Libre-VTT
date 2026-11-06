@@ -27,9 +27,13 @@ Per contribuire leggi [CONTRIBUTING.md](CONTRIBUTING.md); per un problema di sic
 
 ## Come si avvia
 
-### macOS: `LIBRE VTT.dmg`
+### macOS: `LIBRE-VTT-Mac-AppleSilicon.dmg` o `LIBRE-VTT-Mac-Intel.dmg`
 
-1. Apri **LIBRE VTT.dmg** e trascina **LIBRE VTT** su **Applicazioni**. Fine: dentro c'è tutto,
+Il primo per i Mac con chip Apple (M1, M2…), il secondo per quelli Intel. Se non sai quale hai
+(menu Mela › *Informazioni su questo Mac*, voce «Chip» o «Processore»), `LIBRE-VTT.dmg` va su tutti e due
+ma pesa di più.
+
+1. Apri il **.dmg** e trascina **LIBRE VTT** su **Applicazioni**. Fine: dentro c'è tutto,
    niente cartelle sparse.
 2. La prima volta macOS dice che l'app viene da uno sviluppatore che non conosce (non è firmata
    da Apple). Vai in **Impostazioni di Sistema → Privacy e sicurezza**, in fondo, e premi
@@ -41,14 +45,21 @@ Le campagne vanno in **Documenti › LIBRE VTT › Campagne**; il resto in
 `~/Library/Application Support/LIBRE VTT` e il registro dell'avvio in `~/Library/Logs/LIBRE VTT`.
 Dentro l'app non si scrive mai, quindi funziona anche lanciata direttamente dal disco del .dmg.
 
-### Windows: `LIBRE-VTT-Setup.exe` (o `Installa LIBRE VTT.cmd`)
+### Windows: `LIBRE-VTT-Setup-x64.exe` (o `Installa LIBRE VTT.cmd`)
+
+`LIBRE-VTT-Setup-x64.exe` per quasi tutti i PC; `LIBRE-VTT-Setup-ARM64.exe` per i PC ARM
+(Snapdragon). `LIBRE-VTT-Setup.exe` va su tutti e due ma pesa di più.
 
 Doppio clic e **Installa**. Non servono permessi da amministratore e non serve avere già niente:
 funziona su un Windows appena installato. Alla fine trovi LIBRE VTT nel menu Start e sul desktop; si
 toglie da *Impostazioni › App › App installate*. Windows la prima volta può avvisare che il file
 viene da internet: «Esegui comunque» / «Ulteriori informazioni › Esegui».
 
-### Linux: `Installa-LIBRE-VTT-Linux.sh`
+### Linux: `Installa-LIBRE-VTT-Linux-x64.sh` (o `-arm64.sh`, `-riscv64.sh`)
+
+Uno per processore: `x64` per i PC Intel/AMD, `arm64` per ARM (es. Raspberry Pi a 64 bit),
+`riscv64` per RISC-V (`uname -m` te lo dice). `Installa-LIBRE-VTT-Linux.sh` li ha dentro tutti.
+Serve `xz` per estrarlo, che c'è in quasi tutte le distribuzioni (altrimenti basta python3).
 
 Tasto destro › *Esegui come programma* (o `bash Installa-LIBRE-VTT-Linux.sh`). Niente password,
 niente pacchetti di sistema: alla fine LIBRE VTT è nel menu delle applicazioni e sulla Scrivania; si
@@ -219,7 +230,9 @@ entrare con l'utente: `sudo loginctl enable-linger $USER`, una volta sola.
    premi *Publish*.
 3. *Actions* fa il resto (circa 15 minuti): compila il collegamento a distanza per Windows (x64 e
    ARM), Linux (x64, ARM e RISC-V) e Mac, e mette nella release `LIBRE-VTT-Setup.exe`, `Installa-LIBRE-VTT-Linux.sh`,
-   `Installa-LIBRE-VTT-Windows.cmd` e `LIBRE-VTT.dmg`, ognuno con dentro Node e il collegamento.
+   `Installa-LIBRE-VTT-Windows.cmd` e `LIBRE-VTT.dmg`, ognuno con dentro Node e il collegamento,
+   più una versione più leggera per ogni processore (`LIBRE-VTT-Setup-x64.exe`, `LIBRE-VTT-Mac-AppleSilicon.dmg`,
+   `Installa-LIBRE-VTT-Linux-arm64.sh`…).
    Da lì in poi le app scaricano il collegamento da questa release.
 
 Senza tag (*Actions › Rilascio › Run workflow*) costruisce tutto lo stesso e lo lascia scaricabile

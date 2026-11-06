@@ -5,6 +5,9 @@
 #     l'app lo scarica da qui (rilascio.json), invece di doverlo compilare sul computer di chi gioca
 #   - LIBRE-VTT-Setup.exe (Windows), Installa-LIBRE-VTT-Linux.sh, Installa-LIBRE-VTT-Windows.cmd e
 #     LIBRE-VTT.dmg: con dentro anche Node e il collegamento, quindi non scaricano niente.
+#     Di Node c'è solo il programma (niente npm & co.). Oltre a questi, che vanno su tutti i
+#     processori, uno più leggero per processore: LIBRE-VTT-Setup-x64.exe / -ARM64.exe,
+#     LIBRE-VTT-Mac-AppleSilicon.dmg / -Mac-Intel.dmg, Installa-LIBRE-VTT-Linux-x64.sh / -arm64.sh / -riscv64.sh
 #   - le app per Android e iPhone/iPad (vedi app.yml)
 #
 # Si avvia creando un tag che comincia con «v» (es. da GitHub: Releases → Draft a new release →
@@ -30,6 +33,11 @@ jobs:
   collegamento:
     name: Collegamento ${{ matrix.nome }}
     runs-on: ${{ matrix.os }}
+    env:
+      # più piccolo: senza i simboli per il debug, ottimizzato tutto insieme (solo qui, non per le app)
+      CARGO_PROFILE_RELEASE_STRIP: 'true'
+      CARGO_PROFILE_RELEASE_LTO: 'true'
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '1'
     strategy:
       fail-fast: false
       matrix:
@@ -68,6 +76,10 @@ jobs:
   mac:
     name: Mac (collegamento universale e .dmg)
     runs-on: macos-latest
+    env:
+      CARGO_PROFILE_RELEASE_STRIP: 'true'
+      CARGO_PROFILE_RELEASE_LTO: 'true'
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '1'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Compila per Apple Silicon e Intel
@@ -82,11 +94,15 @@ jobs:
             target/aarch64-apple-darwin/release/uffa-link target/x86_64-apple-darwin/release/uffa-link
           codesign --force --sign - ../../out/uffa-link-macos-universal
           cd ../../out && shasum -a 256 uffa-link-macos-universal > uffa-link-macos-universal.sha256
-      - name: Crea il .dmg (con Node e il collegamento dentro)
+      - name: Crea i .dmg (con Node e il collegamento dentro)
         env:
           LIBRE_REPO: ${{ github.repository }}
           LIBRE_LINK: ${{ github.workspace }}/out/uffa-link-macos-universal
-        run: bash pacchetti/mac/crea-dmg.sh "$PWD/dmg/LIBRE-VTT.dmg"
+        run: |
+          bash pacchetti/mac/crea-dmg.sh "$PWD/dmg/LIBRE-VTT.dmg"
+          LIBRE_MAC_ARCH=arm64 bash pacchetti/mac/crea-dmg.sh "$PWD/dmg/LIBRE-VTT-Mac-AppleSilicon.dmg"
+          LIBRE_MAC_ARCH=x64 bash pacchetti/mac/crea-dmg.sh "$PWD/dmg/LIBRE-VTT-Mac-Intel.dmg"
+          ls -la dmg
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: link-macos-universal
@@ -94,7 +110,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dmg
-          path: dmg/LIBRE-VTT.dmg
+          path: dmg/*.dmg
 
   installatori:
     name: Installatori Linux e Windows
@@ -154,6 +170,36 @@ jobs:
         with:
           name: stage-windows
           path: pacchetti/installer/windows/stage
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: installatori
+          path: prova-cmd
+      - name: Prova Installa-LIBRE-VTT-Windows.cmd (il programma attaccato in fondo, non più in base64)
+        shell: pwsh
+        run: |
+          $cmd = (Resolve-Path prova-cmd\Installa-LIBRE-VTT-Windows.cmd).Path
+          Get-ChildItem $env:TEMP -Filter 'libre-vtt-installa-*.ps1' -ErrorAction SilentlyContinue | Remove-Item -Force
+          # 1. cmd.exe apre il file vero (testo + .zip in fondo) e il preambolo tira fuori la parte PowerShell
+          $p = Start-Process cmd.exe -ArgumentList '/c', "`"$cmd`"" -Wait -PassThru -WindowStyle Hidden
+          if ($p.ExitCode -ne 0) { throw "il .cmd è uscito con $($p.ExitCode)" }
+          Start-Sleep -Seconds 3
+          # (la finestra dell'installazione resta aperta ad aspettare un clic: la si chiude)
+          Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object { $_.CommandLine -like '*libre-vtt-installa-*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+          $ps = Get-ChildItem $env:TEMP -Filter 'libre-vtt-installa-*.ps1' | Select-Object -First 1
+          if (-not $ps) { throw 'il preambolo non ha scritto la parte PowerShell' }
+          $err = $null; [void][System.Management.Automation.Language.Parser]::ParseFile($ps.FullName, [ref]$null, [ref]$err)
+          if ($err) { throw "la parte PowerShell estratta non si legge: $err" }
+          # 2. lo stesso modo di installa.ps1 per prendere il .zip dal byte LIBRE_INIZIO
+          $testa = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($cmd), 0, 4096)
+          $inizio = [int64]([regex]::Match($testa, 'LIBRE_INIZIO=(\d{10})').Groups[1].Value)
+          $zip = Join-Path $env:TEMP 'prova-pacchetto.zip'
+          $in = [IO.File]::OpenRead($cmd); [void]$in.Seek($inizio, [IO.SeekOrigin]::Begin)
+          $out = [IO.File]::Create($zip); try { $in.CopyTo($out) } finally { $out.Close(); $in.Close() }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $z = [IO.Compression.ZipFile]::OpenRead($zip)
+          $nomi = $z.Entries.FullName; $z.Dispose()
+          foreach ($n in @('app/server/launcher.js', 'node-win-x64/node.exe')) { if ($nomi -notcontains $n) { throw "nel pacchetto manca $n" } }
+          Write-Host "ok: PowerShell estratto ($($ps.Length) byte), pacchetto da $inizio con $($nomi.Count) file"
       - name: Inno Setup
         shell: pwsh
         run: |
@@ -161,12 +207,16 @@ jobs:
           if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress; $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe' }
           $v = '${{ inputs.versione || github.ref_name }}' -replace '^v', ''
           if ($v -notmatch '^\d') { $v = '0.0.0' }
-          & $iscc "/DVersione=$v" pacchetti\installer\windows\libre-vtt.iss
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # quello per tutti i PC, e uno più leggero per processore
+          foreach ($solo in @('', 'x64', 'arm64')) {
+            & $iscc "/DVersione=$v" "/DSolo=$solo" pacchetti\installer\windows\libre-vtt.iss
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          Get-ChildItem installatori | Format-Table Name, Length
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: setup-exe
-          path: installatori/LIBRE-VTT-Setup.exe
+          path: installatori/LIBRE-VTT-Setup*.exe
 
   app:
     name: App
