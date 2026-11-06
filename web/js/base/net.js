@@ -47,10 +47,11 @@ const netName = () => { try { return localStorage.getItem('uffa-name') || ''; } 
 const netAs = () => NET.on || (NET.retrying && !!NET.me);
 // NET.adotta: un master entrato da fuori (server dedicato) sta prendendo il mondo dal server, come farebbe un
 // giocatore: per quel momento non comanda (altrimenti il suo mondo locale, vuoto, prenderebbe il posto di quello vero).
-function isMaster() { return !netAs() || (!NET.adotta && NET.me && NET.me.role === 'master'); }
+// Sul sito (window.LIBRE_WEB) si gioca solo da giocatore: mai il master, neanche da scollegati.
+function isMaster() { if (window.LIBRE_WEB) return false; return !netAs() || (!NET.adotta && NET.me && NET.me.role === 'master'); }
 /** Sei il master ma l'host è un'altra macchina (server dedicato): il mondo vero sta lì, non qui. */
 function masterRemoto() { return !!(NET.remoto && NET.me && NET.me.role === 'master'); }
-function can(p) { return !netAs() || !NET.me ? true : !!(NET.me.perms && NET.me.perms[p]); }
+function can(p) { if (window.LIBRE_WEB && !NET.me) return false; return !netAs() || !NET.me ? true : !!(NET.me.perms && NET.me.perms[p]); }
 
 function netSend(o) { try { NET.ws && NET.ws.readyState === 1 && NET.ws.send(JSON.stringify(o)); } catch {} }   // una funzione (non una costante): i plugin la possono agganciare (net.send)
 // ---------- La coda: quello che si fa senza collegamento non si perde ----------
@@ -137,10 +138,10 @@ let netTimer = 0;
 
 function netConnect() {
   clearTimeout(netTimer); netTimer = 0;
-  if (!NET.port) return;                                     // si gioca da soli
+  if (!NET.port && !NET.relay) return;                      // si gioca da soli (NET.relay: dal sito, vedi gioca-web.js)
   if (NET.ws && NET.ws.readyState <= 1) return;            // ce n'è già uno aperto o in apertura
   let ws;
-  try { ws = new WebSocket('ws://127.0.0.1:' + NET.port + '/ws'); } catch { return netRetry(); }
+  try { ws = new WebSocket(NET.relay || 'ws://127.0.0.1:' + NET.port + '/ws'); } catch { return netRetry(); }
   NET.ws = ws;
   ws.onopen = () => {
     // delta: sappiamo ricevere solo i pezzi cambiati; ver e chatDa: dove eravamo rimasti (per rientrare senza ricaricare tutto)
@@ -174,7 +175,7 @@ function netCaduto(ws) {
 // sua volta il tubo verso l'host. Lo stesso controllo si fa da soli se da 20 secondi non arriva niente.
 NET.ultimo = Date.now();
 function netControlla() {
-  if (NET.manual || NET.stopped || !NET.port || !NET.everOn) return;
+  if (NET.manual || NET.stopped || !(NET.port || NET.relay) || !NET.everOn) return;
   const ws = NET.ws;
   if (!ws || ws.readyState > 1) { NET.tries = 0; netConnect(); return; }
   if (ws.readyState !== 1 || NET._eco) return;
@@ -191,6 +192,13 @@ function netRetry() {
   // Se non c'è mai stato un server, dopo pochi tentativi si smette: si sta giocando da soli
   // e non ha senso riempire la console di errori. Se invece la sessione è caduta, si insiste
   // senza limite, ogni pochi secondi.
+  // dal sito: finché il master non apre la partita si aspetta, senza smettere
+  if (NET.relay && !NET.everOn) {
+    netSay(tr('Aspetto che il master apra la partita… (tentativo {n})', { n: NET.tries }), 'retry', { label: tr('Smetti'), fn: netDisconnect });
+    clearTimeout(netTimer);
+    netTimer = setTimeout(netConnect, Math.min(15000, 2000 * NET.tries));
+    return;
+  }
   if (!NET.everOn && NET.tries > 4) {
     if (netBar.className === 'retry') netSay('Nessun server di gioco su questa porta: stai giocando da solo.', 'warn');
     return;
@@ -273,6 +281,7 @@ function netHandle(m) {
     case 'invito': {                             // (giocatore) il master ha cambiato il codice: si passa al nuovo solo se lo dici tu
       const codice = String(m.codice || '');
       if (!/^[a-f0-9]{64}$/.test(codice)) return;
+      if (NET.relay && typeof window.libreWebNuovoCodice === 'function') { window.libreWebNuovoCodice(codice); return; }
       netSay(tr('Il master ha cambiato il codice della campagna. Passo al codice nuovo e mi ricollego?'), 'live',
         { label: tr('Sì, passa al nuovo'), fn: () => { netSend({ t: 'invito.accetta', codice }); netSay(tr('Codice nuovo salvato: mi ricollego…'), 'retry'); } });
       return;
@@ -341,6 +350,9 @@ function netHandle(m) {
       if (m.hash) NET.assetKnown.add(m.hash);
       return;
     }
+    case 'asset.data': case 'asset.miss':          // (dal sito) i pezzi di un'immagine chiesta al master: vedi gioca-web.js
+      if (typeof window.libreWebAsset === 'function') window.libreWebAsset(m);
+      return;
     case 'asset.need':
       for (const h of m.hashes || []) NET.assetKnown.delete(h);
       return;

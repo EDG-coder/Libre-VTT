@@ -192,7 +192,12 @@ function identitaDi(m, c) {
   const token = str(m.token, 64), firma = str(m.firma, 64);
   if (c && c.kind === 'ws' && !DEDICATO && /^[a-f0-9]{24}$/.test(token)) return token;
   if (/^[a-f0-9]{24}$/.test(token)) {
-    if (firmaValida(token, firma)) { const rec = roster[token]; if (rec) rec.firmaRichiesta = true; return token; }
+    if (firmaValida(token, firma)) {
+      const rec = roster[token];
+      if (c && c.web && rec && rec.role === 'master') return crypto.randomBytes(12).toString('hex');   // dal sito mai il master
+      if (rec) rec.firmaRichiesta = true;
+      return token;
+    }
     const rec = roster[token];
     if (rec && rec.role === 'master') return crypto.randomBytes(12).toString('hex');   // il posto del master si prende solo con la firma
     if (rec && !rec.firmaRichiesta) return token;          // di prima delle firme
@@ -1227,6 +1232,7 @@ function pompaC(c) {
 function applyPerm(m) {
   const rec = roster[m.token];
   if (!rec) return false;
+  if (m.role === 'master' && rec.web) return false;               // chi gioca dal sito non può fare il master
   if (m.role && ['master', 'player', 'spectator'].includes(m.role)) rec.role = m.role;
   if (m.perm && PERMS.includes(m.perm)) {
     rec.overrides = rec.overrides || {};
@@ -1340,7 +1346,7 @@ function onMessage(c, raw) {
   // riga scritta da uffa-link: la prima di ogni collegamento dal tubo, una volta sola. Dopo, o da un
   // browser, è qualcuno che vuole farsi passare per un altro: la si ignora.
   if (m.t === 'peer') {
-    if (c.kind === 'link' && !c.giaParlato && /^[a-z0-9]{8,80}$/i.test(String(m.id || ''))) { c.peer = String(m.id); c.percorso = percorsoDi(c.peer); }
+    if (c.kind === 'link' && !c.web && !c.giaParlato && /^[a-z0-9]{8,80}$/i.test(String(m.id || ''))) { c.peer = String(m.id); c.percorso = percorsoDi(c.peer); }
     c.giaParlato = true;
     return;
   }
@@ -1356,7 +1362,7 @@ function onMessage(c, raw) {
   }
   if (m.t === 'hello' && m.canale === 'stabile') {                         // si apre il canale stabile di un giocatore già noto
     const token = str(m.token, 64), rec = roster[token];
-    if (c.kind !== 'link' || !/^[a-f0-9]{24}$/.test(token) || !rec || rec.banned) { c.close(); return; }
+    if (c.kind !== 'link' || c.web || !/^[a-f0-9]{24}$/.test(token) || !rec || rec.banned) { c.close(); return; }
     if (rec.firmaRichiesta && !firmaValida(token, str(m.firma, 64))) { c.close(); return; }
     clients.delete(c);                                                     // non è una persona in più
     c.stabile = true; c.token = token;
@@ -1390,7 +1396,9 @@ function onMessage(c, raw) {
     // Sul server dedicato invece arriva da fuori: è master chi lo è già nel registro (con la sua firma) o chi
     // presenta la chiave del master.
     let chiaveSbagliata = false;
-    if (DEDICATO) {
+    // Dal sito (relay) si entra solo da giocatore: mai la chiave del master, mai il posto del master.
+    if (c.web) { rec.web = true; if (rec.role === 'master') rec.role = 'player'; }
+    else if (DEDICATO) {
       if (m.chiaveMaster) {
         if (chiaveMasterOk(m.chiaveMaster)) {
           if (rec.role !== 'master') logAction({ name: rec.name || 'nuovo', token }, 'master', true, 'chiave del master');
@@ -1954,13 +1962,13 @@ function leggiCorpo(req, res, max, fn) {
 // Le azioni del pannello (permessi, moderazione, regole della sessione...). Le stesse arrivano dall'http di
 // questa macchina (il master locale) o dal tubo (un master entrato da fuori, sul server dedicato).
 const API_PANNELLO = { '/api/state': 'GET', '/api/perm': 'POST', '/api/scene': 'POST', '/api/mod': 'POST', '/api/session': 'POST',
-  '/api/invito/cambia': 'POST', '/api/invito': 'POST', '/api/kick': 'POST' };
+  '/api/invito/cambia': 'POST', '/api/invito': 'POST', '/api/kick': 'POST', '/api/relay': 'POST' };
 const NON_HOST = { codice: 409, dati: 'questo è un giocatore, non l\'host' };
 function statoPannello() {
   let sessionId = null;
   try { sessionId = fs.readFileSync(LINK_ID_FILE, 'utf8').trim() || null; } catch {}
   return {
-    mode: MODE, dedicato: DEDICATO || undefined, sessionId, perms: PERMS, roles: Object.keys(ROLE_DEFAULTS), defaults: ROLE_DEFAULTS,
+    mode: MODE, dedicato: DEDICATO || undefined, sessionId, relay: relay ? relay.stato() : undefined, perms: PERMS, roles: Object.keys(ROLE_DEFAULTS), defaults: ROLE_DEFAULTS,
     session,
     players: playerList(),
     log: actionLog.slice(-120),
@@ -2051,7 +2059,17 @@ function apiPannello(p, m, chi) {
       if (!/^[a-f0-9]{64}$/.test(codice)) return { codice: 400, dati: 'codice non valido' };
       // solo a chi è dentro adesso (e passa dal tubo): lo salvano da soli e si ricollegano lì
       for (const c of clients) if (c.kind === 'link' && c.token && !c.pending) c.send({ t: 'invito', codice, campagna: CAMPAGNA_NOME || undefined });
+      // il relay: la stanza cambia con il codice (la chiave nuova la scrive l'avviatore tra poco)
+      if (relay) setTimeout(() => relay.ricollega(), 4000);
       return { codice: 200, dati: { ok: true } };
+    }
+    // «Partita pubblica» (dal menu del master): i giocatori entrano anche dal sito, attraverso il relay
+    case '/api/relay': {
+      if (chi) return { codice: 403, dati: 'solo da questa macchina' };
+      if (MODE !== 'host' || !relay) return NON_HOST;
+      if (m.url) { if (!relay.avvia(String(m.url).slice(0, 300), RELAY_CHIAVE)) return { codice: 400, dati: relay.stato() }; }
+      else relay.ferma();
+      return { codice: 200, dati: relay.stato() };
     }
     case '/api/kick':
       if (chi && m.token === chi.token) return { codice: 409, dati: { ok: false } };
@@ -2173,6 +2191,25 @@ function salvaMiniatura(m) {
   } catch {}
 }
 
+// ======================= Il relay: i giocatori del sito =======================
+// Vedi server/relay-host.js. L'avviatore passa l'indirizzo (LIBRE_RELAY, solo se la partita è pubblica) e il
+// file con la chiave del codice (LIBRE_RELAY_CHIAVE); si accende e si spegne anche a partita aperta (/api/relay).
+let relay = null;
+const RELAY_CHIAVE = process.env.LIBRE_RELAY_CHIAVE || '';
+function avviaRelay() {
+  if (MODE !== 'host' || !RELAY_CHIAVE) return;
+  relay = require('./relay-host.js')({
+    entra(c) {
+      c.id = nextId++; c.token = ''; c.name = ''; c.role = 'player'; c.peer = null;
+      c.onRaw = raw => onMessage(c, raw);
+      attach(c);
+    },
+    esce(c) { detach(c); },
+    avvisa(st) { avviatore('relay', st); panelPush({ t: 'relay', relay: st }); }
+  });
+  if (process.env.LIBRE_RELAY) relay.avvia(process.env.LIBRE_RELAY, RELAY_CHIAVE);
+}
+
 // ======================= Avvio =======================
 if (MODE === 'join') {
   // In «join» il browser manda tutto all'host e riceve tutto dall'host: qui non si decide niente.
@@ -2200,6 +2237,7 @@ if (MODE === 'join') {
   bridgeWatchdog();
 } else {
   startLinkServer();
+  avviaRelay();
 }
 
 // battito: chi non risponde viene lasciato andare

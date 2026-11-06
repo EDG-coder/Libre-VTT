@@ -114,6 +114,12 @@
   #uniteLista { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
   #uniteLista:empty { display: none; }
   #masterServer .nota { margin: 8px 0; font-size: .84rem; color: var(--muted); }
+  .pubblica { margin-top: 14px; padding: 12px; border: 1px solid var(--line, #2a3040); border-radius: 10px; }
+  .pubblica .opzione { display: flex; gap: 10px; align-items: flex-start; font-size: .9rem; cursor: pointer; }
+  .pubblica .opzione input { margin-top: 3px; }
+  .pubblica .nota { margin: 8px 0; font-size: .84rem; color: var(--muted); }
+  .pubblica .nota.ok { color: var(--ok); } .pubblica .nota.err { color: var(--bad); }
+  .pubblica input[type=text] { min-width: 0; flex: 1; }
   #masterServer input { width: 100%; box-sizing: border-box; }
   .unita { position: relative; display: flex; flex-direction: column; text-align: left; padding: 0; overflow: hidden;
     border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; font: inherit; cursor: pointer; }
@@ -452,6 +458,22 @@
   <div class="box hide" id="boxPronto">
     <h2 id="prontoTit">Pronto</h2>
     <div class="row" id="prontoRighe"></div>
+    <div class="pubblica hide" id="pubblicaBox">
+      <label class="opzione"><input type="checkbox" id="pubblicaSi"> <span><b>🌐 Partita pubblica</b><br><span>I giocatori possono entrare anche dal sito, senza installare niente. Dal sito si entra solo da giocatori, mai da master.</span></span></label>
+      <p class="nota" id="pubblicaStato"></p>
+      <div class="row hide" id="pubblicaLinkRiga">
+        <input type="text" id="pubblicaLink" readonly>
+        <button class="b" id="pubblicaCopia">Copia</button>
+      </div>
+      <details class="log" id="pubblicaAvanzate">
+        <summary>Un relay tuo</summary>
+        <p class="nota">Di solito non serve: il relay lo indica il sito. Se ne hai pubblicato uno tuo (vedi docs/sito-web.md), scrivi qui il suo indirizzo; vuoto = quello del sito.</p>
+        <div class="row">
+          <input type="text" id="pubblicaIndirizzo" placeholder="wss://libre-vtt-relay.tuonome.workers.dev" autocomplete="off" spellcheck="false">
+          <button class="b" id="pubblicaSalva">Salva</button>
+        </div>
+      </details>
+    </div>
     <div class="row hide" id="prontoCamp" style="margin-top:10px; font-size:.86rem; color:var(--muted)">
       <span>📜 Campagna: <b id="prontoCampNome" style="color:var(--text)"></b></span>
       <button class="b soloPc" id="prontoCampMostra" style="padding:5px 10px; font-size:.8rem">Mostra la cartella</button>
@@ -543,12 +565,42 @@ function disegna() {
       }
     }
   }
+  disegnaPubblica(acceso && S.mode === 'host' && !S.mobile);
   $('prontoCamp').classList.toggle('hide', !(acceso && S.campagna));
   if (S.campagna) $('prontoCampNome').textContent = S.campagna.nome;
   const trp = window.tr || (x => x);
   $('piede').textContent = `LIBRE VTT ${S.versione || ''} · ${trp(S.piattaforma)} · Node ${S.node} · ` +
     trp(S.link ? 'collegamento a distanza pronto' : 'collegamento a distanza da preparare');
 }
+
+// ---------- partita pubblica (relay) ----------
+function disegnaPubblica(si) {
+  $('pubblicaBox').classList.toggle('hide', !si);
+  if (!si) return;
+  const P = S.pubblica || {}, R = S.relay || null;
+  $('pubblicaSi').checked = !!P.attiva;
+  if (document.activeElement !== $('pubblicaIndirizzo')) $('pubblicaIndirizzo').value = P.indirizzo || '';
+  const st = $('pubblicaStato');
+  st.className = 'nota';
+  if (!P.attiva) st.textContent = 'Spenta: entrano solo i giocatori con l\'app.';
+  else if (R && R.collegato) { st.textContent = '✅ Aperta: chi ha il codice entra anche dal sito.'; st.classList.add('ok'); }
+  else if (R && R.errore) { st.textContent = '⚠️ ' + R.errore; st.classList.add('err'); }
+  else st.textContent = 'Mi collego al relay…';
+  const link = P.attiva && S.sessionId && S.sito ? S.sito + '/gioca/#' + S.sessionId : '';
+  $('pubblicaLinkRiga').classList.toggle('hide', !link);
+  $('pubblicaLink').value = link;
+}
+$('pubblicaSi').onchange = async () => {
+  $('pubblicaSi').disabled = true;
+  try { await post('/api/relay', { attiva: $('pubblicaSi').checked }); } finally { $('pubblicaSi').disabled = false; carica(); }
+};
+$('pubblicaSalva').onclick = async () => {
+  const r = await post('/api/relay', { indirizzo: $('pubblicaIndirizzo').value });
+  if (r && r.errore) alert(r.errore);
+  carica();
+};
+$('pubblicaLink').onclick = () => $('pubblicaLink').select();
+$('pubblicaCopia').onclick = async () => { try { await navigator.clipboard.writeText($('pubblicaLink').value); $('pubblicaCopia').textContent = 'Copiato'; setTimeout(() => $('pubblicaCopia').textContent = 'Copia', 1400); } catch {} };
 
 async function carica() {
   try {
