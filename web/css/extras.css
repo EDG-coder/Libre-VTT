@@ -861,6 +861,11 @@ body.net-player #caselleSect { display: none; }
 #luceSegni .lPorta circle.aperta { stroke: #2ee6a6; }
 #luceSegni .lPorta text { fill: #fff; font: 600 14px system-ui, sans-serif; pointer-events: none; }
 #luceSegni:not(.modifica) .lPortaL { opacity: .55; }
+/* passaggi (scale fra due piani): due tratti collegati, col numero in mezzo */
+#luceSegni .lPassaggio, #luceSegni .lAnteprima.passaggio { stroke: #b07cff; stroke-linecap: round; }
+#luceSegni .lPassoNum { pointer-events: auto; cursor: pointer; }
+#luceSegni .lPassoNum circle { fill: rgba(18, 21, 28, .85); stroke: #b07cff; stroke-width: 2; }
+#luceSegni .lPassoNum text { fill: #fff; font: 600 12px system-ui, sans-serif; pointer-events: none; }
 #viewport.layer-luce { cursor: crosshair; }
 #viewport.layer-luce .photo { pointer-events: none; opacity: .75; }
 #layerSwitch button[data-layer="luce"].active { background: rgba(255, 176, 0, .55); box-shadow: 0 0 12px rgba(255, 176, 0, .8); }

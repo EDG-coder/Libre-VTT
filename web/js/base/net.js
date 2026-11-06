@@ -332,6 +332,9 @@ function netHandle(m) {
       }
       if (NET.world) applyWorld(NET.world);      // rimetti le cose come stanno davvero
       return;
+    case 'salto':                                // il segnalino è passato per un passaggio: la vista lo segue
+      if (typeof seguiSalto === 'function') seguiSalto(m.x, m.y);
+      return;
     case 'percorso':                             // risposta alla prova durante il trascinamento
       if (typeof percorsoRisposta === 'function') percorsoRisposta(m);
       return;

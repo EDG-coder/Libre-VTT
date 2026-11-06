@@ -1,6 +1,10 @@
 // ---------- Illuminazione dinamica: i conti (gli stessi sul server e nel browser del master) ----------
 // La scena ha  sc.luce = { on, ambiente: 'luce'|'penombra'|'buio', ricordo: 'scuro'|'nero',
-//                          muri: [{ id, x1, y1, x2, y2, porta, aperta }], luci: [{ id, x, y, r, rf, col }] }
+//                          muri: [{ id, x1, y1, x2, y2, porta, aperta }], luci: [{ id, x, y, r, rf, col }],
+//                          passaggi: [{ id, a: [x1, y1, x2, y2], b: [x1, y1, x2, y2] }] }
+// Un passaggio collega due tratti della mappa anche lontani (le scale tra due piani disegnati sulla stessa
+// mappa): la vista ci passa attraverso come se fossero attaccati, e un segnalino che attraversa un tratto
+// esce dall'altro. Vale nei due sensi.
 // Le distanze delle luci (r = luce intensa, rf = luce fioca oltre quella intensa) sono in caselle;
 // tutto il resto in unità della mappa. La visuale è un poligono esatto (i suoi vertici, [x, y, x, y…]):
 // la calcola il server e la manda ai giocatori, che non ricevono mai muri e luci della scena.
@@ -29,14 +33,23 @@
       })).filter(w => Math.hypot(w.x2 - w.x1, w.y2 - w.y1) > 0.5),
       luci: (Array.isArray(l.luci) ? l.luci : []).slice(0, 500).map(x => ({
         id: s(x.id, 40), x: num(x.x), y: num(x.y), r: Math.max(0, Math.min(200, num(x.r, 4))), rf: Math.max(0, Math.min(200, num(x.rf, 4))), col: col(x.col)
-      }))
+      })),
+      passaggi: passaggiPuliti(l.passaggi)
     };
+  }
+  function passaggiPuliti(lista) {
+    const tratto = t => Array.isArray(t) && t.length === 4 ? t.map(v => num(v)) : null;
+    const lungo = t => t && Math.hypot(t[2] - t[0], t[3] - t[1]) > 0.5;
+    return (Array.isArray(lista) ? lista : []).slice(0, 200).map(p => p && typeof p === 'object' ? { id: String(p.id == null ? '' : p.id).slice(0, 40), a: tratto(p.a), b: tratto(p.b) } : null)
+      .filter(p => p && lungo(p.a) && lungo(p.b));
   }
 
   /** I segmenti che fermano la vista: i muri, le porte chiuse e il bordo della mappa. */
   function segmenti(luce, b) {
     const out = [];
     for (const w of (luce && luce.muri) || []) if (!(w.porta && w.aperta)) out.push([w.x1, w.y1, w.x2, w.y2]);
+    // i due tratti di un passaggio fermano la vista diretta: attraverso si vede l'altra parte (vista, più sotto)
+    for (const p of (luce && luce.passaggi) || []) out.push(p.a.slice(), p.b.slice());
     if (b) {
       const { x, y, w, h } = b;
       out.push([x, y, x + w, y], [x + w, y, x + w, y + h], [x + w, y + h, x, y + h], [x, y + h, x, y]);
@@ -215,6 +228,112 @@
     return f.darkv === true || f.darkv === 'true' || f.darkv === 1 || f.darkv === '1' ? 12 : 0;     // 60 ft
   }
 
+  // ---------- Passaggi: due tratti lontani che si comportano come se fossero attaccati ----------
+  /** La trasformazione che porta il tratto «da» sul tratto «a» (spostamento, rotazione, scala): (x, y) → [x, y]. */
+  function trasforma(da, a) {
+    const ux = da[2] - da[0], uy = da[3] - da[1], vx = a[2] - a[0], vy = a[3] - a[1];
+    const L = ux * ux + uy * uy || 1;
+    const c = (ux * vx + uy * vy) / L, s = (ux * vy - uy * vx) / L;           // rotazione per scala
+    return (x, y) => { const dx = x - da[0], dy = y - da[1]; return [a[0] + c * dx - s * dy, a[1] + s * dx + c * dy]; };
+  }
+  /** I due versi di un passaggio: entrando da a si esce da b, e viceversa. */
+  const versi = p => [[p.a, p.b], [p.b, p.a]];
+  /**
+   * Quanto del tratto t si vede da (ox, oy), che ha davanti il poligono poly: [t0, t1] (da 0 a 1), oppure null.
+   * Si provano dei punti lungo il tratto, appena dalla parte di chi guarda.
+   */
+  function trattoVisto(t, ox, oy, poly) {
+    const dx = t[2] - t[0], dy = t[3] - t[1], L = Math.hypot(dx, dy) || 1;
+    const lato = Math.sign(dx * (oy - t[1]) - dy * (ox - t[0]));
+    if (!lato) return null;
+    const nx = -dy / L * lato * 1.5, ny = dx / L * lato * 1.5, N = 24;
+    let t0 = Infinity, t1 = -Infinity;
+    for (let i = 0; i <= N; i++) {
+      const k = i / N, kk = Math.min(1 - 0.02, Math.max(0.02, k));
+      if (dentro(poly, t[0] + dx * kk + nx, t[1] + dy * kk + ny)) { t0 = Math.min(t0, k); t1 = Math.max(t1, k); }
+    }
+    return t1 > t0 ? [t0, t1] : null;
+  }
+  /**
+   * Quello che si vede guardando dentro il tratto «uscita» da (ex, ey), che sta dalla parte opposta: solo i raggi
+   * che passano per il tratto, e solo da lì in poi (quello che c'è fra chi guarda e il tratto non conta).
+   */
+  function oltre(ex, ey, uscita, segs) {
+    const [x1, y1, x2, y2] = uscita;
+    const a1 = Math.atan2(y1 - ey, x1 - ex);
+    let ampio = Math.atan2(y2 - ey, x2 - ex) - a1;
+    while (ampio > Math.PI) ampio -= 2 * Math.PI;
+    while (ampio <= -Math.PI) ampio += 2 * Math.PI;
+    let da = a1;
+    if (ampio < 0) { da = a1 + ampio; ampio = -ampio; }
+    if (ampio < 1e-5 || ampio > Math.PI - 1e-5) return null;
+    const angoli = [da + 1e-6, da + ampio - 1e-6];
+    for (const s of segs) for (const [px, py] of [[s[0], s[1]], [s[2], s[3]]]) {
+      let k = Math.atan2(py - ey, px - ex) - da;
+      while (k < 0) k += 2 * Math.PI;
+      while (k >= 2 * Math.PI) k -= 2 * Math.PI;
+      if (k > 0 && k < ampio) for (const e of [-EPS, 0, EPS]) if (k + e > 0 && k + e < ampio) angoli.push(da + k + e);
+    }
+    angoli.sort((p, q) => p - q);
+    const indice = segs.length > 48 ? indiceDi(segs) : null;
+    const sx = x2 - x1, sy = y2 - y1, pts = [];
+    let primo = null, ultimo = null;
+    for (const a of angoli) {
+      const dx = Math.cos(a), dy = Math.sin(a);
+      const den = dx * sy - dy * sx;
+      if (Math.abs(den) < 1e-12) continue;
+      const tb = ((x1 - ex) * sy - (y1 - ey) * sx) / den;              // dove il raggio passa il tratto
+      if (!(tb > 0)) continue;
+      const ox = ex + dx * (tb + 0.5), oy = ey + dy * (tb + 0.5);
+      const t = indice ? primoIncrocio(indice, ox, oy, dx, dy) : piuVicino(segs, ox, oy, dx, dy);
+      if (t === Infinity) continue;
+      const sul = [ex + dx * tb, ey + dy * tb];
+      if (!primo) primo = sul;
+      ultimo = sul;
+      pts.push(arrot(ox + dx * t), arrot(oy + dy * t));
+    }
+    if (!primo || pts.length < 2) return null;
+    return semplifica([arrot(primo[0]), arrot(primo[1]), ...pts, arrot(ultimo[0]), arrot(ultimo[1])]);
+  }
+  /**
+   * Per chi guarda da (ox, oy) con davanti poly: le viste attraverso i passaggi che ha davanti.
+   * → [{ x, y, poly }] dove (x, y) è il punto «di là» che corrisponde a chi guarda (serve per le distanze).
+   */
+  function attraverso(luce, ox, oy, poly, segs, maxD) {
+    const out = [];
+    for (const p of (luce && luce.passaggi) || []) for (const [ing, usc] of versi(p)) {
+      if (maxD > 0) {
+        const dx = ing[2] - ing[0], dy = ing[3] - ing[1], L2 = dx * dx + dy * dy || 1;
+        const k = Math.max(0, Math.min(1, ((ox - ing[0]) * dx + (oy - ing[1]) * dy) / L2));
+        if (Math.hypot(ox - (ing[0] + k * dx), oy - (ing[1] + k * dy)) > maxD) continue;
+      }
+      const tv = trattoVisto(ing, ox, oy, poly);
+      if (!tv) continue;
+      const T = trasforma(ing, usc), pt = k => T(ing[0] + (ing[2] - ing[0]) * k, ing[1] + (ing[3] - ing[1]) * k);
+      const [ex, ey] = T(ox, oy);
+      const poli = oltre(ex, ey, [...pt(tv[0]), ...pt(tv[1])], segs);
+      if (poli && poli.length >= 6) out.push({ x: arrot(ex), y: arrot(ey), poly: poli });
+    }
+    return out;
+  }
+  /**
+   * Il tratto da (ax, ay) a (bx, by) attraversa un passaggio? → { t, x, y, uscita } con (x, y) dove si
+   * arriva dall'altra parte (il punto b portato oltre), oppure null. Conta il primo che si incontra.
+   */
+  function salto(luce, ax, ay, bx, by) {
+    let best = null;
+    for (const p of (luce && luce.passaggi) || []) for (const [ing, usc] of versi(p)) {
+      const w = { x1: ing[0], y1: ing[1], x2: ing[2], y2: ing[3] };
+      if (!taglia(w, ax, ay, bx, by)) continue;
+      const d = (bx - ax) * (w.y2 - w.y1) - (by - ay) * (w.x2 - w.x1);
+      const t = ((w.x1 - ax) * (w.y2 - w.y1) - (w.y1 - ay) * (w.x2 - w.x1)) / d;
+      if (best && best.t <= t) continue;
+      const T = trasforma(ing, usc), [x, y] = T(bx, by);
+      best = { t, x, y, id: p.id, prima: [ax + (bx - ax) * t, ay + (by - ay) * t], dopo: T(ax + (bx - ax) * t, ay + (by - ay) * t), T };
+    }
+    return best;
+  }
+
   /**
    * La vista del party: per ogni segnalino del party (occhi = [{x, y, scuro}], scuro in caselle)
    * il suo poligono; per ogni luce (anche quelle portate dai segnalini) il suo poligono, ma solo se
@@ -224,19 +343,28 @@
     const segs = segmenti(luce, board);
     const cs = cella > 0 ? cella : 50;
     const out = { amb: luce.ambiente, occhi: [], luci: [] };
-    for (const o of occhi) {
-      const poly = visuale(o.x, o.y, segs);
+    const scatola = poly => {
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       for (let i = 0; i < poly.length; i += 2) { x0 = Math.min(x0, poly[i]); x1 = Math.max(x1, poly[i]); y0 = Math.min(y0, poly[i + 1]); y1 = Math.max(y1, poly[i + 1]); }
-      out.occhi.push({ x: arrot(o.x), y: arrot(o.y), scuro: arrot((o.scuro || 0) * cs), poly, box: [x0, y0, x1, y1] });
+      return [x0, y0, x1, y1];
+    };
+    const conPassaggi = !!(luce.passaggi && luce.passaggi.length);
+    for (const o of occhi) {
+      const poly = visuale(o.x, o.y, segs), scuro = arrot((o.scuro || 0) * cs);
+      out.occhi.push({ x: arrot(o.x), y: arrot(o.y), scuro, poly, box: scatola(poly) });
+      // attraverso i passaggi: un «occhio» in più dall'altra parte (v = non è un segnalino vero)
+      if (conPassaggi) for (const q of attraverso(luce, o.x, o.y, poly, segs)) out.occhi.push({ x: q.x, y: q.y, scuro, poly: q.poly, box: scatola(q.poly), v: 1 });
     }
     const tutte = [...(luce.luci || []), ...(luciSegnalini || [])];
+    const utile = (x, y, R) => out.occhi.some(o => x + R >= o.box[0] && x - R <= o.box[2] && y + R >= o.box[1] && y - R <= o.box[3]);
     for (const l of tutte) {
       const R = (l.r + l.rf) * cs;
       if (!(R > 0)) continue;
-      const utile = out.occhi.some(o => l.x + R >= o.box[0] && l.x - R <= o.box[2] && l.y + R >= o.box[1] && l.y - R <= o.box[3]);
-      if (!utile) continue;
-      out.luci.push({ x: arrot(l.x), y: arrot(l.y), r: arrot(l.r * cs), rf: arrot(l.rf * cs), col: l.col, poly: visuale(l.x, l.y, segs, R + 1) });
+      const luce1 = { r: arrot(l.r * cs), rf: arrot(l.rf * cs), col: l.col };
+      const poly = utile(l.x, l.y, R) || conPassaggi ? visuale(l.x, l.y, segs, R + 1) : null;
+      if (poly && utile(l.x, l.y, R)) out.luci.push({ x: arrot(l.x), y: arrot(l.y), ...luce1, poly });
+      // la luce che passa per un passaggio illumina anche dall'altra parte
+      if (poly && conPassaggi) for (const q of attraverso(luce, l.x, l.y, poly, segs, R)) if (utile(q.x, q.y, R)) out.luci.push({ x: q.x, y: q.y, ...luce1, poly: q.poly });
     }
     return out;
   }
@@ -407,5 +535,5 @@
     return false;
   }
 
-  return { leggiDistanza, percorso, rettangoloGriglia, attraversa, pulisci, segmenti, visuale, dentro, scurovisione, vista, visibile, griglia, riempi, segnaVisto, comprimi, espandi };
+  return { leggiDistanza, percorso, salto, trasforma, attraverso, rettangoloGriglia, attraversa, pulisci, segmenti, visuale, dentro, scurovisione, vista, visibile, griglia, riempi, segnaVisto, comprimi, espandi };
 });

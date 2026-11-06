@@ -2409,3 +2409,17 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Sul server serve almeno un master: prima dai il ruolo a qualcun altro.": "The server needs at least one GM: give the role to someone else first.",
 "Il server non ha risposto.": "The server didn't answer.",
 });
+
+// passaggi (scale fra due piani sulla stessa mappa)
+Object.assign(window.LIBRE_LINGUE.en, {
+"Passaggio": "Passage",
+"Collega due punti lontani della mappa (per esempio le scale fra due piani)": "Link two distant spots on the map (for example the stairs between two floors)",
+"Passaggio {n}: tocca il numero con «Passaggio» per invertire il verso": "Passage {n}: tap the number with «Passage» to flip its direction",
+"Passaggio {n}: verso invertito.": "Passage {n}: direction flipped.",
+"Passaggio {n} creato: chi lo attraversa esce dall'altra parte.": "Passage {n} created: whoever walks through comes out on the other side.",
+"Collega due punti lontani, nei due sensi (per esempio le scale fra due piani sulla stessa mappa): due clic per il primo tratto (la cima delle scale), due clic per il secondo (il fondo delle scale nell'altro piano). La luce ci passa come se fossero attaccati, e chi ci cammina attraverso esce dall'altra parte. Se esce dal lato sbagliato, tocca il numero del passaggio per invertirlo.": "Links two distant spots, both ways (for example the stairs between two floors on the same map): two clicks for the first line (the top of the stairs), two clicks for the second (the bottom of the stairs on the other floor). Light goes through as if they were joined, and whoever walks across comes out on the other side. If they come out on the wrong side, tap the passage number to flip it.",
+"Trascina un estremo (si spostano insieme tutti i muri che ci arrivano), un muro intero, una luce o l'estremo di un passaggio.": "Drag an endpoint (all walls meeting there move together), a whole wall, a light or a passage endpoint.",
+"Tocca un muro, una porta, una luce o un passaggio per toglierli.": "Tap a wall, a door, a light or a passage to remove it.",
+"Ora il secondo tratto.": "Now the second line.",
+"{n} passaggi": "{n} passages"
+});
