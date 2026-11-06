@@ -733,6 +733,9 @@ body.net-player #caselleSect { display: none; }
 .compCerca input, .compCerca select, .compFiltri select { font: inherit; font-size: 13px; padding: 7px 9px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); }
 .compFiltri { display: flex; flex-wrap: wrap; gap: 6px; }
 .compFiltri select { flex: 1 1 120px; min-width: 0; }
+.compOrdine { display: flex; gap: 4px; flex: 1 1 100%; min-width: 0; }
+.compOrdine select { flex: 1 1 auto; }
+.compVerso { flex: none; padding: 4px 10px; font-size: 15px; }
 .compAzioni { flex-wrap: wrap; gap: 6px; }
 .compAzioni .btn { padding: 6px 9px; font-size: 13px; }
 .compAzioni .btn[hidden] { display: none; }
