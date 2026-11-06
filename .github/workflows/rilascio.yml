@@ -220,3 +220,15 @@ jobs:
             gh release create "$TAG" file/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
               --title "LIBRE VTT ${TAG#v}" --notes-file note.md
           fi
+
+  # la versione sito web, aggiornata insieme alla release (dove va lo decide la variabile SITO_WEB:
+  # vedi sito-web.yml; senza variabile si costruisce soltanto)
+  sito:
+    name: Sito web
+    needs: pubblica
+    uses: ./.github/workflows/sito-web.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    secrets: inherit
