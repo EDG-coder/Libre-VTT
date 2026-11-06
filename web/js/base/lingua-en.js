@@ -539,6 +539,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Dadi": "Dice",
 "Il dado personalizzato va da 2 a 1000 facce.": "The custom die goes from 2 to 1000 sides.",
 "Le foto vengono salvate nella cartella assets/.": "Photos are saved in the assets/ folder.",
+"Versione web: tutto resta solo in questo browser (niente partite in rete). Per giocare con gli altri scarica il programma.": "Web version: everything stays only in this browser (no online games). To play with others, download the program.",
 "Apri o chiudi il menu degli strumenti": "Open or close the tools menu",
 "Selezione: clic sugli oggetti disegnati": "Selection: click drawn objects",
 "Penna": "Pen",

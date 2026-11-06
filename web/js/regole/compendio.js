@@ -556,12 +556,12 @@
   // I segnalini dei mostri dell'SRD (condiviso/token-srd/): indice.json lega il nome inglese al file.
   // Nelle partite in rete l'immagine finisce nel deposito come le altre (netEnsureWorldAssets).
   let tokenSrd = null;
-  fetch('/condiviso/token-srd/indice.json').then(r => r.ok ? r.json() : null).then(j => { tokenSrd = j; }).catch(() => {});
+  fetch('condiviso/token-srd/indice.json').then(r => r.ok ? r.json() : null).then(j => { tokenSrd = j; }).catch(() => {});
   function tokenDelMostro(v) {
     if (!tokenSrd) return null;
     const k = n => String(n || '').toLowerCase().replace(/’/g, "'").replace(/\s+/g, ' ').trim();
     const f = tokenSrd[k(v.en)] || tokenSrd[k(v.nome)] || tokenSrd[k(v.it)];
-    return f ? { url: '/condiviso/token-srd/' + f } : null;
+    return f ? { url: 'condiviso/token-srd/' + f } : null;
   }
   function schedaDaMostro(v) {
     const D = typeof SISTEMA !== 'undefined' && SISTEMA.dati;
