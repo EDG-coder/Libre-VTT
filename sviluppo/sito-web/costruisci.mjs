@@ -18,6 +18,9 @@ import { fileURLToPath } from 'node:url';
 const RADICE = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const OUT = resolve(process.argv[2] || join(RADICE, '_site'));
 const URL_SITO = (process.env.SITO_URL || '').replace(/\/+$/, '');
+// l'indirizzo del relay (wss://…): lo leggono il tavolo del sito e l'app del master (relay.json)
+const RELAY = (process.env.SITO_RELAY || '').trim().replace(/^https:/i, 'wss:').replace(/\/+$/, '');
+if (RELAY && !/^wss:\/\/[\w.-]+(:\d+)?(\/[\w./-]*)?$/i.test(RELAY)) { console.error('SITO_RELAY non valido: ' + RELAY); process.exit(1); }
 const MAX = 25 * 1024 * 1024;                       // Cloudflare Pages non accetta file più grandi
 
 const versione = JSON.parse(readFileSync(join(RADICE, 'package.json'), 'utf8')).version;
@@ -51,6 +54,10 @@ let html = readFileSync(tavolo, 'utf8');
 const primo = '<script src="js/plugins/base.js"></script>';
 if (!html.includes(primo)) throw new Error('web/index.html: non trovo ' + primo + ' (va aggiornato costruisci.mjs)');
 html = html.replace(primo, '<script src="js/base/versione-web.js"></script>\n' + primo);
+// e dopo tutti: l'ingresso da giocatore con il codice del master, e le immagini che arrivano dal relay
+cpSync(join(RADICE, 'sviluppo/sito-web/gioca'), GIOCA, { recursive: true, filter: salta });
+if (!html.includes('</body>')) throw new Error('web/index.html: manca </body>');
+html = html.replace('</body>', '<script src="gioca-web.js"></script>\n</body>');
 writeFileSync(tavolo, html);
 
 // ---------- la pagina di presentazione ----------
@@ -63,6 +70,8 @@ if (URL_SITO) p = p.replace('<!--SITO_URL-->', `<link rel="canonical" href="${UR
 writeFileSync(pagina, p.replace('<!--SITO_URL-->\n', ''));
 
 // ---------- per i motori di ricerca e per Cloudflare ----------
+if (RELAY) writeFileSync(join(OUT, 'relay.json'), JSON.stringify({ relay: RELAY }) + '\n');
+else console.warn('Attenzione: SITO_RELAY non c\'è, dal sito non si potrà entrare nelle partite.');
 writeFileSync(join(OUT, 'robots.txt'), 'User-agent: *\nAllow: /\n' + (URL_SITO ? `Sitemap: ${URL_SITO}/sitemap.xml\n` : ''));
 if (URL_SITO) writeFileSync(join(OUT, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
@@ -76,6 +85,9 @@ writeFileSync(join(OUT, '_headers'), [
   '  X-Frame-Options: SAMEORIGIN',
   '/gioca/*',
   '  X-Robots-Tag: noindex',
+  '/relay.json',
+  '  Access-Control-Allow-Origin: *',
+  '  Cache-Control: public, max-age=300',
   '/gioca/sistemi/*',
   '  Cache-Control: public, max-age=3600',
   '/gioca/condiviso/token-srd/*',

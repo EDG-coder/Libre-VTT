@@ -2445,6 +2445,28 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "La chiave del master non è giusta: sei entrato come giocatore.": "The GM key is wrong: you joined as a player.",
 "Sul server serve almeno un master: prima dai il ruolo a qualcun altro.": "The server needs at least one GM: give the role to someone else first.",
 "Il server non ha risposto.": "The server didn't answer.",
+// versione sito web e partita pubblica (relay)
+"Aspetto che il master apra la partita… (tentativo {n})": "Waiting for the GM to open the game… (attempt {n})",
+"Entra nella partita del tuo master: ti serve il codice che ti ha mandato.": "Join your GM's game: you need the code they sent you.",
+"Incolla qui il codice (o il link)": "Paste the code (or the link) here",
+"Come ti vedranno gli altri": "How the others will see you",
+"Dal sito si gioca solo come giocatore. Per condurre una partita serve l'app.": "On the website you can only play as a player. Running a game needs the app.",
+"Scarica l'app": "Download the app",
+"Questo sito non ha ancora un relay: per ora si gioca solo con l'app.": "This website has no relay yet: for now you can only play with the app.",
+"Questo browser non lascia arrivare le immagini della partita: prova con un altro (Chrome, Edge, Firefox o Safari aggiornati).": "This browser won't let the game's images through: try another one (an up-to-date Chrome, Edge, Firefox or Safari).",
+"Il codice non va bene: è lungo 64 caratteri, fatto di numeri e lettere da a a f.": "That code isn't right: it is 64 characters long, made of digits and the letters a to f.",
+"Scrivi un nome di almeno due lettere.": "Write a name of at least two letters.",
+"Il master ha cambiato il codice: passo a quello nuovo…": "The GM changed the code: switching to the new one…",
+"🌐 Partita pubblica": "🌐 Public game",
+"I giocatori possono entrare anche dal sito, senza installare niente. Dal sito si entra solo da giocatori, mai da master.": "Players can also join from the website, with nothing to install. From the website you join only as a player, never as the GM.",
+"Spenta: entrano solo i giocatori con l'app.": "Off: only players with the app can join.",
+"✅ Aperta: chi ha il codice entra anche dal sito.": "✅ Open: anyone with the code can also join from the website.",
+"Mi collego al relay…": "Connecting to the relay…",
+"Un relay tuo": "Your own relay",
+"Di solito non serve: il relay lo indica il sito. Se ne hai pubblicato uno tuo (vedi docs/sito-web.md), scrivi qui il suo indirizzo; vuoto = quello del sito.": "Usually not needed: the website tells the app which relay to use. If you published your own (see docs/sito-web.md), write its address here; empty = the website's one.",
+"Partita pubblica: i giocatori possono entrare anche dal sito.": "Public game: players can also join from the website.",
+"Non trovo l'indirizzo del relay: il sito non risponde. Riprova più tardi o scrivi l'indirizzo del tuo relay.": "I can't find the relay address: the website doesn't answer. Try again later or write your relay's address.",
+"L'indirizzo del relay deve cominciare con wss://": "The relay address must start with wss://",
 });
 
 // passaggi (scale fra due piani sulla stessa mappa)

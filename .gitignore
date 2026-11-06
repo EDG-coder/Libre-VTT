@@ -35,3 +35,5 @@ xcuserdata/
 # creato da «cargo build/test» in locale: la release risolve le dipendenze da sé
 /pacchetti/uffa-link/Cargo.lock
 _site/
+/relay/.wrangler/
+/relay/node_modules/
