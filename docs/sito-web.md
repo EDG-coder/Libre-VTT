@@ -62,13 +62,18 @@ L'indirizzo del sito sarà `https://libre-vtt.pages.dev`.
    *Copy account ID* (oppure lo trovi nell'indirizzo della pagina: `dash.cloudflare.com/<ID>/…`).
 4. **Token**: https://dash.cloudflare.com/profile/api-tokens → *Create Token* → *Create Custom Token*.
    Nome «LIBRE VTT sito»; in *Permissions* aggiungi due righe: *Account* · *Cloudflare Pages* · *Edit* e
-   *Account* · *Workers Scripts* · *Edit*. *Continue to summary* → *Create Token*, e copia il token (si vede
-   una volta sola).
-5. Su GitHub, nel repository: *Settings → Secrets and variables → Actions*.
-   - scheda **Secrets** → *New repository secret*: `CLOUDFLARE_API_TOKEN` (il token) e
-     `CLOUDFLARE_ACCOUNT_ID` (l'ID).
-   - scheda **Variables** → *New repository variable*: `SITO_WEB` = `cloudflare`, e
-     `SITO_URL` = `https://libre-vtt.pages.dev` (serve a Google: sitemap e indirizzo ufficiale).
+   *Account* · *Workers Scripts* · *Edit*. In *Account Resources* scegli *Include* · il tuo account (non
+   «All accounts»). *Continue to summary* → *Create Token*, e copia il token (si vede una volta sola).
+   Non incollarlo da nessun'altra parte: va solo su GitHub, al passo 5.
+5. Su GitHub, nel repository: *Settings → Environments → New environment*, nome `cloudflare`.
+   - *Deployment branches and tags* → *Selected branches and tags* → *Add deployment branch or tag rule*:
+     ramo `main`, poi di nuovo *Add* → *Tag* `v*`. Così i segreti si aprono solo per il codice di `main` e
+     delle versioni pubblicate, non per un ramo o una copia (fork) con un workflow cambiato.
+   - più in basso, *Environment secrets* → *Add environment secret*: `CLOUDFLARE_API_TOKEN` (il token) e
+     `CLOUDFLARE_ACCOUNT_ID` (l'ID). Non metterli fra i segreti del repository.
+   - poi *Settings → Secrets and variables → Actions*, scheda **Variables** → *New repository variable*:
+     `SITO_WEB` = `cloudflare`, e `SITO_URL` = `https://libre-vtt.pages.dev` (serve a Google: sitemap e
+     indirizzo ufficiale).
 6. *Actions → Sito web → Run workflow*.
 
 Se il nome `libre-vtt` fosse già preso su Pages, aggiungi la variabile `SITO_CLOUDFLARE_NOME` con un altro
@@ -90,6 +95,8 @@ GitHub Pages non può far girare il relay: va bene solo insieme a un relay pubbl
   13.000 GB-s al giorno di tempo di lavoro: circa 28 ore di stanze attive al giorno. Si azzera a mezzanotte
   UTC; se si sfora, il relay dà errore fino al giorno dopo (non si paga niente). Il piano a pagamento è
   5 $ al mese.
+- Chi vuole cambiare il sito o il relay lo pubblica **sul suo account** (stessi passi): i segreti di
+  questo repository non arrivano alle copie (fork) né alle loro richieste di modifica.
 - Chi vuole può pubblicare **un relay suo** (stessi passi, sul suo account) e scriverne l'indirizzo
   nell'app, in «Partita pubblica → Un relay tuo».
 

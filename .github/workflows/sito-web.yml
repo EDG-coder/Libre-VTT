@@ -7,7 +7,8 @@
 #
 #   Cloudflare (sito su https://libre-vtt.pages.dev, o il nome scelto in SITO_CLOUDFLARE_NOME, e il relay
 #   per i giocatori del sito su Workers): segreti CLOUDFLARE_API_TOKEN (permessi «Cloudflare Pages: Edit» e
-#   «Workers Scripts: Edit») e CLOUDFLARE_ACCOUNT_ID. Il progetto Pages e il relay li crea lui la prima volta;
+#   «Workers Scripts: Edit») e CLOUDFLARE_ACCOUNT_ID, nell'ambiente «cloudflare» (Settings → Environments)
+#   aperto solo a main e ai tag v*. Il progetto Pages e il relay li crea lui la prima volta;
 #   l'indirizzo del relay finisce in relay.json sul sito, da dove lo leggono il tavolo e l'app del master.
 #   (Con un relay altrove: variabile SITO_RELAY = wss://…)
 #   GitHub Pages (https://edg-coder.github.io/Libre-VTT/):
@@ -33,6 +34,9 @@ jobs:
   relay:
     if: contains(vars.SITO_WEB, 'cloudflare')
     runs-on: ubuntu-latest
+    # i segreti di Cloudflare stanno nell'ambiente «cloudflare», che si apre solo da main e dai tag v*
+    # (Settings → Environments): un ramo con un workflow cambiato non li può leggere
+    environment: cloudflare
     outputs:
       url: ${{ steps.pubblica.outputs.url }}
     steps:
@@ -85,6 +89,7 @@ jobs:
     needs: costruisci
     if: needs.costruisci.outputs.cloudflare == 'true'
     runs-on: ubuntu-latest
+    environment: cloudflare
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
