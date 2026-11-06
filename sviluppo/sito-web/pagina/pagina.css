@@ -51,7 +51,6 @@ h3 { font-size: 18px; margin: 0 0 8px; }
 .btn:hover { border-color: var(--accent); }
 .btn.primo { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn.primo:hover { background: var(--accent-2); }
-.file .btn.tuo { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 
 .griglia { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .griglia article, .tre article { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
@@ -67,8 +66,28 @@ h3 { font-size: 18px; margin: 0 0 8px; }
 .tre article { display: flex; flex-direction: column; gap: 12px; }
 .tre article .btn { align-self: flex-start; margin-top: auto; }
 
-.scarica { text-align: center; }
-.scarica .file { justify-content: center; }
+.gioca { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 28px; margin: 20px 0; }
+.gioca h2 { font-size: 26px; }
+.gioca .sotto { margin: 0; }
+.entra label { display: block; font-weight: 600; margin-bottom: 8px; }
+.entra .riga { display: flex; gap: 10px; }
+.entra input { flex: 1; min-width: 0; padding: 11px 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; font-size: 16px; }
+.entra input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.entra button { border: 0; cursor: pointer; font: inherit; font-weight: 600; }
+.entra .err { color: #e5534b; font-size: 14px; margin: 8px 0 0; min-height: 1em; }
+
+.num { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; }
+
+.scarica .sotto { font-size: 16px; }
+.sistemi { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 8px; }
+.sistemi article { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.sistemi article.tuo { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.sistemi h3 { margin: 0; }
+.sistemi .req { color: var(--muted); font-size: 14px; margin: 0; }
+.sistemi .btn { text-align: center; }
+.sistemi .altro { font-size: 13px; color: var(--muted); }
+a.altro { color: var(--accent-2); }
 
 .piede { border-top: 1px solid var(--line); margin-top: 30px; padding: 24px 16px 40px; text-align: center; color: var(--muted); font-size: 14px; }
 .piede .piccolo { max-width: 820px; margin: 10px auto 0; font-size: 12px; }
@@ -77,10 +96,12 @@ h3 { font-size: 18px; margin: 0 0 8px; }
   .eroe { grid-template-columns: 1fr; }
   .griglia { grid-template-columns: 1fr 1fr; }
   .tre { grid-template-columns: 1fr; }
+  .gioca { grid-template-columns: 1fr; padding: 20px; }
 }
 @media (max-width: 560px) {
   .griglia, .foto-doppie { grid-template-columns: 1fr; }
   .testa nav { gap: 12px; }
   .bottoni .btn { flex: 1 1 100%; text-align: center; }
+  .entra .riga { flex-direction: column; }
   section { padding: 28px 0; }
 }

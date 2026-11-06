@@ -143,6 +143,7 @@ function stato() {
     porte: { ui: UI_PORT, ...(state.porte || {}) },
     piattaforma: MOBILE === 'android' ? 'Android' : MOBILE === 'ios' ? 'iPhone e iPad' : WIN ? 'Windows' : MAC ? 'macOS' : 'Linux',
     mobile: MOBILE, campHome: CAMP_HOME, versione: VERSIONE, arch: process.arch, repo: repoGitHub(),
+    relay: state.relay || null, pubblica: relayConf(), sito: SITO_WEB,
     node: process.versions.node, pref: prefCorrenti(), finestraScala
   };
 }
@@ -179,7 +180,7 @@ function argScala() {
 const ENV_VIA = new Set(['NODE_OPTIONS', 'NODE_PATH', 'PORT', 'RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_TARGET_DIR',
   'CARGO_BUILD_TARGET', 'CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN', 'RUSTC', 'RUSTC_WRAPPER', 'RUSTDOC',
   'CC', 'CXX', 'AR', 'LD', 'CFLAGS', 'CXXFLAGS', 'LDFLAGS', 'CPPFLAGS', 'LIBRARY_PATH', 'LD_LIBRARY_PATH',
-  'DATA_DIR', 'CAMPAIGN_DIR', 'LINK_PORT', 'LINK_ID_FILE', 'LIBRE_DEDICATO', 'CHIAVE_MASTER']);
+  'DATA_DIR', 'CAMPAIGN_DIR', 'LINK_PORT', 'LINK_ID_FILE', 'LIBRE_DEDICATO', 'CHIAVE_MASTER', 'LIBRE_RELAY', 'LIBRE_RELAY_CHIAVE']);
 function envPulito(extra) {
   const e = {};
   for (const [k, v] of Object.entries(process.env)) {
@@ -318,7 +319,7 @@ function stopAll() {
   for (const [k, p] of Object.entries(state.procs)) { try { p.kill(); } catch {} delete state.procs[k]; }
   try { fs.unlinkSync(LINK_ID_FILE); } catch {}
   try { fs.unlinkSync(LINK_CHIAVE_FILE); } catch {}
-  state.mode = null; state.sessionId = null; state.campagna = null; state.porte = null; state.joinCodice = null;
+  state.mode = null; state.sessionId = null; state.campagna = null; state.porte = null; state.joinCodice = null; state.relay = null;
   push();
 }
 
@@ -377,9 +378,48 @@ function ricordaUnita(codice, dati) {
   if (e.firma === null) delete e.firma;
   salvaConf();
 }
+// ---------- «Partita pubblica»: i giocatori entrano anche dal sito, attraverso il relay ----------
+// Il master sceglie (dalla home, a partita aperta) se aprire la partita anche a chi gioca dal sito, senza
+// installare niente. Il server di gioco si collega al relay (server/relay-host.js) e si fa riconoscere con la
+// chiave del codice. L'indirizzo del relay lo dice il sito (relay.json), oppure lo scrive il master (un suo relay).
+const SITO_WEB = String(amb('SITO') || 'https://libre-vtt.pages.dev').replace(/\/+$/, '');
+function relayConf() { const r = conf.relay || {}; return { attiva: !!r.attiva, indirizzo: typeof r.indirizzo === 'string' ? r.indirizzo : '' }; }
+let relayDalSito = { url: null, t: 0 };
+async function indirizzoRelay() {
+  const r = relayConf();
+  if (r.indirizzo) return r.indirizzo;
+  if (amb('RELAY_URL')) return amb('RELAY_URL');
+  if (relayDalSito.url && Date.now() - relayDalSito.t < 6 * 3600 * 1000) return relayDalSito.url;
+  try {
+    const j = JSON.parse(await scaricaTesto(SITO_WEB + '/relay.json') || 'null');
+    if (j && /^wss:\/\/[\w.-]+(:\d+)?(\/[\w./-]*)?$/i.test(String(j.relay || ''))) { relayDalSito = { url: j.relay, t: Date.now() }; return j.relay; }
+  } catch {}
+  return null;
+}
+/** Accende o spegne il relay nel server di gioco che sta girando. */
+async function applicaRelay() {
+  if (state.mode !== 'host' || !state.porte || !state.porte.game) return;
+  const r = relayConf();
+  const url = r.attiva ? await indirizzoRelay() : null;
+  if (r.attiva && !url) { state.relay = { attivo: false, errore: 'Non trovo l\'indirizzo del relay: il sito non risponde. Riprova più tardi o scrivi l\'indirizzo del tuo relay.' }; push(); return; }
+  await new Promise(res => {
+    const q = http.request({ host: '127.0.0.1', port: state.porte.game, path: '/api/relay', method: 'POST', headers: { 'Content-Type': 'application/json', ...(SEGRETO ? { Cookie: 'libre_k=' + encodeURIComponent(SEGRETO) } : {}) }, timeout: 4000 }, x => { x.resume(); x.on('end', res); });
+    q.on('error', res); q.on('timeout', () => q.destroy());
+    q.end(JSON.stringify({ url }));
+  });
+}
+
 /** Le righe «@@LIBRE …» del server di gioco. */
 function dalServerDiGioco(cosa, d) {
   if (cosa === 'cambia-codice' && state.mode === 'host') return cambiaCodice();
+  if (cosa === 'relay') {
+    const prima = state.relay;
+    state.relay = { attivo: !!d.attivo, collegato: !!d.collegato, errore: d.errore ? String(d.errore).slice(0, 200) : null };
+    if (state.relay.collegato && !(prima && prima.collegato)) say('Partita pubblica: i giocatori possono entrare anche dal sito.', 'ok');
+    else if (state.relay.errore && (!prima || prima.errore !== state.relay.errore)) say('Relay: ' + state.relay.errore, 'warn');
+    push();
+    return;
+  }
   if (state.mode !== 'join' || !state.joinCodice) return;
   const codice = state.joinCodice;
   if (cosa === 'identita' && /^[a-f0-9]{24}$/.test(String(d.token || ''))) {
@@ -924,6 +964,13 @@ async function avvia(mode, id, campagna, opz = {}) {
       // la chiave della campagna: con lei il codice resta lo stesso a ogni apertura
       try { const inv = invitoCampagna(CAMP); fs.writeFileSync(LINK_CHIAVE_FILE, inv.chiave, { mode: 0o600 }); try { fs.chmodSync(LINK_CHIAVE_FILE, 0o600); } catch {} } catch (e) { say('Il codice d\'invito non si potrà tenere fisso: ' + e.message, 'warn'); }
       extra.CAMPAGNA_NOME = state.campagna ? state.campagna.nome : '';
+      // la partita pubblica (relay): la chiave serve per farsi riconoscere, l'indirizzo solo se è accesa
+      extra.LIBRE_RELAY_CHIAVE = LINK_CHIAVE_FILE;
+      if (relayConf().attiva) {
+        const url = await indirizzoRelay();
+        if (url) extra.LIBRE_RELAY = url;
+        else say('Partita pubblica: non trovo l\'indirizzo del relay, i giocatori del sito per ora non possono entrare.', 'warn');
+      }
     } else {
       try { fs.unlinkSync(LINK_CHIAVE_FILE); } catch {}
       state.joinCodice = /^[a-f0-9]{64}$/.test(id) ? id : null;
@@ -1715,6 +1762,20 @@ const server = http.createServer(async (req, res) => {
     return corpo(m => { const c = String((m || {}).codice || ''); delete unite()[c]; try { fs.unlinkSync(path.join(UNITE_DIR, c + '.img')); } catch {} salvaConf(); ok({ ok: true }); });
   }
   if (u.pathname === '/api/invito/cambia' && req.method === 'POST') return corpo(async () => ok(await cambiaCodice()));
+  // «Partita pubblica»: { attiva, indirizzo }; vale subito se si sta conducendo, e la volta dopo
+  if (u.pathname === '/api/relay' && req.method === 'POST') return corpo(async m => {
+    const r = relayConf();
+    if (typeof m.attiva === 'boolean') r.attiva = m.attiva;
+    if (typeof m.indirizzo === 'string') {
+      const x = m.indirizzo.trim().replace(/^https:/i, 'wss:').replace(/\/+$/, '');
+      if (x && !/^wss:\/\/[\w.-]+(:\d+)?(\/[\w./-]*)?$/i.test(x)) return ok({ errore: 'L\'indirizzo del relay deve cominciare con wss://' });
+      r.indirizzo = x;
+    }
+    conf.relay = r; salvaConf();
+    if (!r.attiva) state.relay = null;
+    await applicaRelay(); push();
+    ok({ ok: true, pubblica: r });
+  });
   if (u.pathname === '/api/sfoglia') return ok(sfoglia(u.searchParams.get('path') || ''));
   if (u.pathname === '/api/campagna/info') return ok(infoCampagna(u.searchParams.get('path') || ''));
   if (u.pathname === '/api/campagna/nuova' && req.method === 'POST') {

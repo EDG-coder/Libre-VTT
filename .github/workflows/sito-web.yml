@@ -1,19 +1,21 @@
-# La versione sito web di LIBRE VTT: una pagina di presentazione e il tavolo che gira tutto nel
-# browser, gratis, senza installare niente (sviluppo/sito-web/costruisci.mjs).
+# La versione sito web di LIBRE VTT: una pagina di presentazione e il tavolo dove i giocatori entrano
+# dal browser con il codice del master, senza installare niente (sviluppo/sito-web/costruisci.mjs).
 #
 # Dove va, lo decide la variabile del repository SITO_WEB (Settings → Secrets and variables →
 # Actions → Variables): «cloudflare», «github» o «cloudflare,github». Senza variabile si costruisce
 # soltanto, e il sito resta scaricabile dalla pagina dell'esecuzione.
 #
-#   Cloudflare Pages (indirizzo https://libre-vtt.pages.dev, o il nome scelto in SITO_CLOUDFLARE_NOME):
-#     segreti CLOUDFLARE_API_TOKEN (permesso «Cloudflare Pages: Edit») e CLOUDFLARE_ACCOUNT_ID.
-#     Il progetto Pages lo crea lui la prima volta.
+#   Cloudflare (sito su https://libre-vtt.pages.dev, o il nome scelto in SITO_CLOUDFLARE_NOME, e il relay
+#   per i giocatori del sito su Workers): segreti CLOUDFLARE_API_TOKEN (permessi «Cloudflare Pages: Edit» e
+#   «Workers Scripts: Edit») e CLOUDFLARE_ACCOUNT_ID. Il progetto Pages e il relay li crea lui la prima volta;
+#   l'indirizzo del relay finisce in relay.json sul sito, da dove lo leggono il tavolo e l'app del master.
+#   (Con un relay altrove: variabile SITO_RELAY = wss://…)
 #   GitHub Pages (https://edg-coder.github.io/Libre-VTT/):
 #     Settings → Pages → Build and deployment → Source: «GitHub Actions».
 #
 # Parte da sola alla fine di «Rilascio» (solo quando pubblica una versione), oppure a mano da
-# Actions → Sito web → Run workflow. Sul sito si gioca da soli: le partite in rete dal browser
-# arriveranno con il relay.
+# Actions → Sito web → Run workflow. Dal sito si entra solo da giocatori, nella partita di un master che
+# ha l'app con «Partita pubblica» accesa.
 name: Sito web
 
 on:
@@ -28,7 +30,33 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  relay:
+    if: contains(vars.SITO_WEB, 'cloudflare')
+    runs-on: ubuntu-latest
+    outputs:
+      url: ${{ steps.pubblica.outputs.url }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Pubblica il relay su Cloudflare Workers
+        id: pubblica
+        working-directory: relay
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -e
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Mancano i segreti CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID (vedi in cima a sito-web.yml)."
+            exit 1
+          fi
+          npx --yes wrangler@4.149.0 deploy 2>&1 | tee uscita.txt
+          URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' uscita.txt | head -1)
+          if [ -z "$URL" ]; then echo "::warning::Non trovo l'indirizzo del relay nell'uscita di wrangler: uso la variabile SITO_RELAY."; fi
+          echo "url=${URL/https:/wss:}" >> "$GITHUB_OUTPUT"
+
   costruisci:
+    needs: relay
+    if: ${{ !cancelled() && needs.relay.result != 'failure' }}
     runs-on: ubuntu-latest
     outputs:
       cloudflare: ${{ contains(vars.SITO_WEB, 'cloudflare') }}
@@ -38,6 +66,7 @@ jobs:
       - name: Costruisci il sito
         env:
           SITO_URL: ${{ vars.SITO_URL }}
+          SITO_RELAY: ${{ needs.relay.outputs.url || vars.SITO_RELAY }}
         run: node sviluppo/sito-web/costruisci.mjs _site
       - name: Il sito, scaricabile dalla pagina dell'esecuzione
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

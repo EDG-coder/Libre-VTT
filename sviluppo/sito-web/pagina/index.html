@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LIBRE VTT · tavolo da gioco virtuale libero e gratuito</title>
-<meta name="description" content="LIBRE VTT è un tavolo da gioco virtuale libero e gratuito per giochi di ruolo: mappe, segnalini, nebbia di guerra, luce dinamica, schede e dadi. Provalo nel browser o scarica l'app per Windows, Mac, Linux e Android.">
+<meta name="description" content="LIBRE VTT è un tavolo da gioco virtuale libero e gratuito per giochi di ruolo: mappe, segnalini, nebbia di guerra, luce dinamica, schede e dadi. Il master usa l'app, i giocatori entrano anche dal browser con il suo codice.">
 <meta name="keywords" content="tavolo virtuale, virtual tabletop, VTT, giochi di ruolo, TTRPG, 5e, SRD, nebbia di guerra, luce dinamica, gratis, open source">
 <meta name="theme-color" content="#12151c">
 <meta property="og:type" content="website">
 <meta property="og:title" content="LIBRE VTT · tavolo da gioco virtuale libero">
-<meta property="og:description" content="Mappe, segnalini, nebbia, luce dinamica, schede e dadi. Gratis, senza account, anche nel browser.">
+<meta property="og:description" content="Mappe, segnalini, nebbia, luce dinamica, schede e dadi. Gratis, senza account: i giocatori entrano dal browser con il codice del master.">
 <meta property="og:image" content="immagini/bosco.webp">
 <meta name="twitter:card" content="summary_large_image">
 <!--SITO_URL-->
@@ -20,7 +20,8 @@
 <header class="testa">
   <a class="marchio" href="./"><img src="gioca/favicon.svg" alt="" width="28" height="28"> LIBRE VTT</a>
   <nav>
-    <a href="#modi" data-t="Come si gioca">Come si gioca</a>
+    <a href="#gioca" data-t="Gioca ora">Gioca ora</a>
+    <a href="#modi" data-t="Come funziona">Come funziona</a>
     <a href="#scarica" data-t="Scarica">Scarica</a>
     <a href="https://github.com/EDG-coder/Libre-VTT" rel="noopener">GitHub</a>
     <button id="lingua" type="button" aria-label="English">EN</button>
@@ -30,17 +31,32 @@
 <main>
   <section class="eroe">
     <div class="eroe-testo">
-      <h1 data-t="Il tavolo da gioco virtuale libero, sul tuo computer o nel browser.">Il tavolo da gioco virtuale libero, sul tuo computer o nel browser.</h1>
+      <h1 data-t="Il tavolo da gioco virtuale libero: il master sul suo computer, i giocatori anche dal browser.">Il tavolo da gioco virtuale libero: il master sul suo computer, i giocatori anche dal browser.</h1>
       <p class="sotto" data-t="Mappe, segnalini, nebbia di guerra, luce dinamica, schede collegate ai segnalini e dadi in chat. Gratis, senza account, senza pubblicità.">Mappe, segnalini, nebbia di guerra, luce dinamica, schede collegate ai segnalini e dadi in chat. Gratis, senza account, senza pubblicità.</p>
       <div class="bottoni">
-        <a class="btn primo" href="gioca/" data-t="Gioca ora nel browser">Gioca ora nel browser</a>
-        <a class="btn" href="#scarica" id="scaricaSu" data-t="Scarica l'app">Scarica l'app</a>
+        <a class="btn primo" href="#gioca" data-t="Gioca ora">Gioca ora</a>
+        <a class="btn" href="#scarica" data-t="Scarica l'app">Scarica l'app</a>
       </div>
-      <p class="nota" data-t="Nel browser si prova tutto da soli, senza installare niente. Per le partite in rete con gli amici serve l'app (presto anche dal browser).">Nel browser si prova tutto da soli, senza installare niente. Per le partite in rete con gli amici serve l'app (presto anche dal browser).</p>
     </div>
     <figure class="eroe-foto">
       <img src="immagini/bosco.webp" width="1600" height="1000" alt="Una sessione nel bosco: segnalini sulla griglia e dadi in chat" data-ta="Una sessione nel bosco: segnalini sulla griglia e dadi in chat">
     </figure>
+  </section>
+
+  <section id="gioca" class="gioca">
+    <div>
+      <h2 data-t="Gioca ora, senza installare niente">Gioca ora, senza installare niente</h2>
+      <p class="sotto" data-t="Incolla il codice che ti ha mandato il tuo master. Niente account e niente download: si entra come giocatore, direttamente dal browser, anche dal telefono.">Incolla il codice che ti ha mandato il tuo master. Niente account e niente download: si entra come giocatore, direttamente dal browser, anche dal telefono.</p>
+    </div>
+    <form class="entra" id="entra" action="gioca/" novalidate>
+      <label for="codice" data-t="Codice della partita">Codice della partita</label>
+      <div class="riga">
+        <input id="codice" spellcheck="false" autocapitalize="off" autocomplete="off" data-p="Incolla qui il codice del master" placeholder="Incolla qui il codice del master">
+        <button class="btn primo" type="submit" data-t="Entra">Entra</button>
+      </div>
+      <p class="err" id="codiceErr" role="alert"></p>
+      <p class="nota" data-t="Il master deve avere l'app aperta con «Partita pubblica» accesa. Dal sito si gioca solo da giocatori: per condurre serve l'app.">Il master deve avere l'app aperta con «Partita pubblica» accesa. Dal sito si gioca solo da giocatori: per condurre serve l'app.</p>
+    </form>
   </section>
 
   <section class="griglia">
@@ -54,7 +70,7 @@
     </article>
     <article>
       <h2 data-t="I tuoi file restano tuoi">I tuoi file restano tuoi</h2>
-      <p data-t="Le campagne stanno sul tuo computer, non su un server di qualcun altro. Puoi esportarle, copiarle e portarle dove vuoi.">Le campagne stanno sul tuo computer, non su un server di qualcun altro. Puoi esportarle, copiarle e portarle dove vuoi.</p>
+      <p data-t="La campagna sta sul computer del master, non su un server di qualcun altro. Si può esportare, copiare e portare dove si vuole.">La campagna sta sul computer del master, non su un server di qualcun altro. Si può esportare, copiare e portare dove si vuole.</p>
     </article>
     <article>
       <h2 data-t="Libero e aperto">Libero e aperto</h2>
@@ -68,41 +84,67 @@
   </section>
 
   <section id="modi" class="modi">
-    <h2 data-t="Tre modi di giocare">Tre modi di giocare</h2>
+    <h2 data-t="Come funziona">Come funziona</h2>
     <div class="tre">
       <article>
-        <h3 data-t="Nel browser">Nel browser</h3>
-        <p data-t="Apri la pagina e giochi. Ottimo per provare, preparare mappe o giocare tutti allo stesso schermo. Tutto resta salvato solo in quel browser.">Apri la pagina e giochi. Ottimo per provare, preparare mappe o giocare tutti allo stesso schermo. Tutto resta salvato solo in quel browser.</p>
-        <a class="btn primo" href="gioca/" data-t="Gioca ora">Gioca ora</a>
+        <span class="num">1</span>
+        <h3 data-t="Il master apre la partita">Il master apre la partita</h3>
+        <p data-t="Scarica l'app, sceglie «Conduco io» e la campagna, e accende «Partita pubblica». L'app gli dà un codice.">Scarica l'app, sceglie «Conduco io» e la campagna, e accende «Partita pubblica». L'app gli dà un codice.</p>
       </article>
       <article>
-        <h3 data-t="Con l'app">Con l'app</h3>
-        <p data-t="Il master conduce dal suo computer e i giocatori si uniscono da casa con un codice, anche dal telefono. Le campagne vanno nella cartella Documenti.">Il master conduce dal suo computer e i giocatori si uniscono da casa con un codice, anche dal telefono. Le campagne vanno nella cartella Documenti.</p>
-        <a class="btn" href="#scarica" data-t="Scarica">Scarica</a>
+        <span class="num">2</span>
+        <h3 data-t="Manda il codice ai giocatori">Manda il codice ai giocatori</h3>
+        <p data-t="Su WhatsApp, Telegram, Discord, dove volete. Il codice resta lo stesso da una sessione all'altra, finché il master non lo cambia.">Su WhatsApp, Telegram, Discord, dove volete. Il codice resta lo stesso da una sessione all'altra, finché il master non lo cambia.</p>
       </article>
       <article>
-        <h3 data-t="Con un server dedicato">Con un server dedicato</h3>
-        <p data-t="Per chi ha un computer sempre acceso o un piccolo server Linux: la partita resta aperta anche quando il master spegne il suo.">Per chi ha un computer sempre acceso o un piccolo server Linux: la partita resta aperta anche quando il master spegne il suo.</p>
-        <a class="btn" href="https://github.com/EDG-coder/Libre-VTT#readme" rel="noopener" data-t="Come si fa">Come si fa</a>
+        <span class="num">3</span>
+        <h3 data-t="I giocatori entrano">I giocatori entrano</h3>
+        <p data-t="Dal browser con «Gioca ora», oppure con l'app («Mi unisco») per il collegamento diretto. Senza il master collegato non si gioca.">Dal browser con «Gioca ora», oppure con l'app («Mi unisco») per il collegamento diretto. Senza il master collegato non si gioca.</p>
       </article>
     </div>
   </section>
 
   <section id="scarica" class="scarica">
     <h2 data-t="Scarica l'app">Scarica l'app</h2>
-    <p class="sotto"><span data-t="Ultima versione:">Ultima versione:</span> <strong id="versione"><!--VERSIONE--></strong></p>
-    <div class="file">
-      <a class="btn" data-so="windows" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Setup.exe">Windows</a>
-      <a class="btn" data-so="mac" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT.dmg">Mac</a>
-      <a class="btn" data-so="linux" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/Installa-LIBRE-VTT-Linux.sh">Linux</a>
-      <a class="btn" data-so="android" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Android.apk">Android</a>
+    <p class="sotto"><span data-t="Ultima versione:">Ultima versione:</span> <strong id="versione"><!--VERSIONE--></strong> · <span data-t="I file si scaricano direttamente da GitHub.">I file si scaricano direttamente da GitHub.</span></p>
+    <div class="sistemi">
+      <article data-so="windows">
+        <h3>Windows</h3>
+        <p class="req" data-t="Windows 10 e 11, 64 bit (Intel, AMD e ARM)">Windows 10 e 11, 64 bit (Intel, AMD e ARM)</p>
+        <a class="btn primo" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Setup.exe" data-t="Scarica l'installatore (.exe)">Scarica l'installatore (.exe)</a>
+        <a class="altro" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/Installa-LIBRE-VTT-Windows.cmd" data-t="In alternativa: Installa-LIBRE-VTT-Windows.cmd">In alternativa: Installa-LIBRE-VTT-Windows.cmd</a>
+      </article>
+      <article data-so="mac">
+        <h3>macOS</h3>
+        <p class="req" data-t="macOS 11 o più recente, Apple Silicon e Intel">macOS 11 o più recente, Apple Silicon e Intel</p>
+        <a class="btn primo" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT.dmg" data-t="Scarica LIBRE-VTT.dmg">Scarica LIBRE-VTT.dmg</a>
+        <span class="altro" data-t="La prima volta: Impostazioni di Sistema › Privacy e sicurezza › Apri comunque.">La prima volta: Impostazioni di Sistema › Privacy e sicurezza › Apri comunque.</span>
+      </article>
+      <article data-so="linux">
+        <h3>Linux</h3>
+        <p class="req" data-t="64 bit: Intel, AMD, ARM e RISC-V">64 bit: Intel, AMD, ARM e RISC-V</p>
+        <a class="btn primo" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/Installa-LIBRE-VTT-Linux.sh" data-t="Scarica l'installatore (.sh)">Scarica l'installatore (.sh)</a>
+        <span class="altro" data-t="Poi: bash Installa-LIBRE-VTT-Linux.sh">Poi: bash Installa-LIBRE-VTT-Linux.sh</span>
+      </article>
+      <article data-so="android">
+        <h3>Android</h3>
+        <p class="req" data-t="Android 7 o più recente, telefoni e tablet">Android 7 o più recente, telefoni e tablet</p>
+        <a class="btn primo" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Android-arm64.apk" data-t="Scarica l'APK (quasi tutti i telefoni)">Scarica l'APK (quasi tutti i telefoni)</a>
+        <a class="altro" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Android.apk" data-t="Telefoni più vecchi: APK universale">Telefoni più vecchi: APK universale</a>
+      </article>
+      <article data-so="ios">
+        <h3>iPhone e iPad</h3>
+        <p class="req" data-t="Per giocare basta il browser: «Gioca ora» qui sopra.">Per giocare basta il browser: «Gioca ora» qui sopra.</p>
+        <a class="btn" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-iOS.ipa" data-t="App (.ipa, con Sideloadly o AltStore)">App (.ipa, con Sideloadly o AltStore)</a>
+        <a class="altro" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Xcode.zip" data-t="Progetto Xcode (.zip)">Progetto Xcode (.zip)</a>
+      </article>
     </div>
-    <p class="nota"><a href="https://github.com/EDG-coder/Libre-VTT/releases/latest" rel="noopener" data-t="Tutti i file e le novità della versione">Tutti i file e le novità della versione</a></p>
+    <p class="nota"><span data-t="Dentro c'è già tutto, anche Node.js: non serve installare altro né avere permessi da amministratore.">Dentro c'è già tutto, anche Node.js: non serve installare altro né avere permessi da amministratore.</span> <a href="https://github.com/EDG-coder/Libre-VTT" rel="noopener" data-t="Codice sorgente su GitHub">Codice sorgente su GitHub</a></p>
   </section>
 </main>
 
 <footer class="piede">
-  <p><span data-t="LIBRE VTT è software libero (AGPL-3.0).">LIBRE VTT è software libero (AGPL-3.0).</span> <a href="https://github.com/EDG-coder/Libre-VTT" rel="noopener" data-t="Codice e segnalazioni">Codice e segnalazioni</a></p>
+  <p><span data-t="LIBRE VTT è software libero (AGPL-3.0).">LIBRE VTT è software libero (AGPL-3.0).</span> <a href="https://github.com/EDG-coder/Libre-VTT" rel="noopener" data-t="Codice e segnalazioni su GitHub">Codice e segnalazioni su GitHub</a></p>
   <p class="piccolo">This work includes material taken from the System Reference Document 5.1 ("SRD 5.1") and the System Reference Document 5.2 ("SRD 5.2") by Wizards of the Coast LLC, available at https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 and SRD 5.2 are licensed under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/legalcode). LIBRE VTT is not affiliated with or endorsed by Wizards of the Coast.</p>
 </footer>
 <script src="pagina.js"></script>
