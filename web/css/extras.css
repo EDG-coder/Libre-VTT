@@ -300,6 +300,12 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 #chatTabs button.dot::after { content: ""; position: absolute; top: 5px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #ff5f57; }
 .msg { white-space: pre-wrap; }
 .msg.rule { align-self: stretch; max-width: none; background: color-mix(in srgb, #ffd93d 12%, var(--panel-3)); border: 1px solid rgba(255, 217, 61, .45); border-radius: 12px; }
+.msg.calc { border-left: 3px solid #4fc3a1; background: color-mix(in srgb, #4fc3a1 12%, var(--panel-3)); }
+.msg.calc .cEspr { opacity: .85; }
+.msg.calc .cRis { font-size: 1.1em; color: #4fc3a1; }
+:root[data-theme="light"] .msg.calc .cRis { color: #1f7a5f; }
+.msg.calc.calcErr .cRis { color: #ff7a7a; }
+.msg.calc .cNota { font-size: .85em; opacity: .8; }
 .msg.rule b { display: block; margin-bottom: 2px; font-size: 12px; color: #ffd93d; }
 .msg.link { align-self: stretch; max-width: none; background: none; padding: 0; }
 .msg.link button { width: 100%; text-align: left; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--aura, #7c5cff); background: color-mix(in srgb, var(--aura, #7c5cff) 18%, var(--panel-3)); color: var(--text); font: inherit; cursor: pointer; }

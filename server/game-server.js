@@ -20,6 +20,7 @@
 const http = require('http'), net = require('net'), fs = require('fs'), path = require('path'), crypto = require('crypto');
 const LUCE = require('../condiviso/luce-calcolo.js');
 const VERS = require('../condiviso/versioni.js');
+const CALCOLO = require('../condiviso/calcolo.js');
 
 const MODE = (process.argv[2] || 'host').toLowerCase();
 const DEDICATO = MODE === 'host' && process.env.LIBRE_DEDICATO === '1';
@@ -695,6 +696,17 @@ function addChat(m) {
   panelPush({ t: 'chat', msg: m });                      // il pannello è di chi conduce
 }
 
+// «2+2=» in chat: subito sotto, il risultato. Lo vede chi vedeva il calcolo (un sussurro resta tra i due e chi conduce).
+function rispostaCalcolo(c, text, whisper) {
+  const r = CALCOLO.calcola(text);
+  if (!r) return;
+  const msg = { kind: 'calc', expr: r.expr, byId: c.token };
+  if (r.errore) { msg.errore = r.errore; msg.text = `🧮 ${r.expr} = ? (${r.errore})`; }
+  else { msg.risultato = r.risultato; msg.text = `🧮 ${r.expr} = ${r.risultato}`; }
+  if (whisper) msg.whisper = whisper;
+  addChat(msg);
+}
+
 // ======================= Le intenzioni dei clienti =======================
 function deny(c, op, why) {
   sendA(c, { t: 'denied', op, reason: why, q: c.qOra || undefined });
@@ -1017,10 +1029,13 @@ function handleIntent(c, m) {
         if (!voci.length) return deny(c, m.op, `nessuno si chiama «${str(m.to, 60)}»`);
         if (voci.length > 1 && !alMaster) return deny(c, m.op, `ci sono più persone che si chiamano «${str(m.to, 60)}»`);
         const [tok, rec] = voci[0];
-        addChat({ kind: 'text', text, by: c.name, byId: c.token, whisper: { to: tok, toName: rec.name || 'master' } });
+        const whisper = { to: tok, toName: rec.name || 'master' };
+        addChat({ kind: 'text', text, by: c.name, byId: c.token, whisper });
+        rispostaCalcolo(c, text, whisper);
         return;
       }
       addChat({ kind: 'text', text, by: c.name, byId: c.token });
+      rispostaCalcolo(c, text);
       return;
     }
     case 'chat.del': {
