@@ -166,6 +166,38 @@
     }
     return semplifica(pts);
   }
+  /**
+   * Come visuale(), ma per chi sta proprio sopra un muro o una porta chiusa (il centro del segnalino sulla linea):
+   * da lì i raggi passerebbero dai due lati e si vedrebbe anche la stanza di là. Si guarda da un pelo più in qua
+   * e da un pelo più in là, e vale il lato da cui si vede meno (meglio poco che la stanza dietro la porta).
+   */
+  function visuaSicura(ox, oy, segs, raggio) {
+    const normali = [];                                   // le direzioni per staccarsi dalle linee qui sotto
+    for (const s of segs) {
+      const dx = s[2] - s[0], dy = s[3] - s[1], L2 = dx * dx + dy * dy;
+      if (!(L2 > 0)) continue;
+      const t = Math.max(0, Math.min(1, ((ox - s[0]) * dx + (oy - s[1]) * dy) / L2));
+      if (Math.hypot(ox - s[0] - dx * t, oy - s[1] - dy * t) >= 0.5) continue;
+      const L = Math.sqrt(L2), nx = -dy / L, ny = dx / L;
+      if (!normali.some(([ax, ay]) => Math.abs(ax * ny - ay * nx) < 0.02)) normali.push([nx, ny]);   // le parallele valgono una
+      if (normali.length >= 3) break;
+    }
+    if (!normali.length) return visuale(ox, oy, segs, raggio);
+    // da un'unità più in qua e più in là di ogni linea (sopra un angolo: i quattro spicchi attorno)
+    let prove = [[ox, oy]];
+    for (const [nx, ny] of normali) prove = prove.flatMap(([x, y]) => [[x + nx, y + ny], [x - nx, y - ny]]);
+    let migliore = null, area0 = Infinity;
+    for (const [x, y] of prove) {
+      const poly = visuale(x, y, segs, raggio), a = area(poly);
+      if (poly.length >= 6 && a < area0) { area0 = a; migliore = poly; }
+    }
+    return migliore || visuale(ox, oy, segs, raggio);
+  }
+  function area(poly) {
+    let a = 0;
+    for (let i = 0, n = poly.length / 2, j = n - 1; i < n; j = i++) a += poly[j * 2] * poly[i * 2 + 1] - poly[i * 2] * poly[j * 2 + 1];
+    return Math.abs(a / 2);
+  }
   /** Toglie i punti che stanno in linea con i vicini (sono tanti, e non servono). */
   function semplifica(q) {
     const p = [];                                   // prima via i doppioni uno dopo l'altro
@@ -350,7 +382,7 @@
     };
     const conPassaggi = !!(luce.passaggi && luce.passaggi.length);
     for (const o of occhi) {
-      const poly = visuale(o.x, o.y, segs), scuro = arrot((o.scuro || 0) * cs);
+      const poly = visuaSicura(o.x, o.y, segs), scuro = arrot((o.scuro || 0) * cs);
       out.occhi.push({ x: arrot(o.x), y: arrot(o.y), scuro, poly, box: scatola(poly) });
       // attraverso i passaggi: un «occhio» in più dall'altra parte (v = non è un segnalino vero)
       if (conPassaggi) for (const q of attraverso(luce, o.x, o.y, poly, segs)) out.occhi.push({ x: q.x, y: q.y, scuro, poly: q.poly, box: scatola(q.poly), v: 1 });
@@ -361,7 +393,7 @@
       const R = (l.r + l.rf) * cs;
       if (!(R > 0)) continue;
       const luce1 = { r: arrot(l.r * cs), rf: arrot(l.rf * cs), col: l.col };
-      const poly = utile(l.x, l.y, R) || conPassaggi ? visuale(l.x, l.y, segs, R + 1) : null;
+      const poly = utile(l.x, l.y, R) || conPassaggi ? visuaSicura(l.x, l.y, segs, R + 1) : null;
       if (poly && utile(l.x, l.y, R)) out.luci.push({ x: arrot(l.x), y: arrot(l.y), ...luce1, poly });
       // la luce che passa per un passaggio illumina anche dall'altra parte
       if (poly && conPassaggi) for (const q of attraverso(luce, l.x, l.y, poly, segs, R)) if (utile(q.x, q.y, R)) out.luci.push({ x: q.x, y: q.y, ...luce1, poly: q.poly });

@@ -1119,10 +1119,30 @@ function confrontaVersioni(a, b) {
   for (let i = 0; i < 3; i++) { const d = (parseInt(pa[i], 10) || 0) - (parseInt(pb[i], 10) || 0); if (d) return d; }
   return 0;
 }
+/** Il processore vero del computer: un Node per Intel che gira con Rosetta (Mac) o in emulazione
+ *  (Windows ARM) dice «x64», ma l'aggiornamento giusto è quello nativo. */
+let archVera = null;
+function processoreVero() {
+  if (archVera) return archVera;
+  archVera = process.arch;
+  try {
+    if (MAC && archVera === 'x64') {
+      if (String(require('child_process').execFileSync('sysctl', ['-in', 'sysctl.proc_translated'], { encoding: 'utf8', timeout: 3000 })).trim() === '1') archVera = 'arm64';
+    } else if (WIN && archVera === 'x64') {
+      if (/ARM64/i.test(process.env.PROCESSOR_ARCHITEW6432 || '') || /ARM/i.test(process.env.PROCESSOR_IDENTIFIER || '')) archVera = 'arm64';
+    }
+  } catch {}
+  return archVera;
+}
 function fileAggiornamento(assets) {
+  // dopo la 3.8.2 c'è anche un file per processore, più leggero; quelli di sempre (con dentro tutti
+  // i processori) restano, e servono anche alle versioni di prima per aggiornarsi
+  const cpu = MOBILE ? process.arch : processoreVero();
   const nomi = MOBILE === 'android' ? (process.arch === 'arm64' ? ['LIBRE-VTT-Android-arm64.apk', 'LIBRE-VTT-Android.apk'] : ['LIBRE-VTT-Android.apk'])
     : MOBILE === 'ios' ? []
-    : WIN ? ['LIBRE-VTT-Setup.exe', 'Installa-LIBRE-VTT-Windows.cmd'] : MAC ? ['LIBRE-VTT.dmg'] : ['Installa-LIBRE-VTT-Linux.sh'];
+    : WIN ? [cpu === 'arm64' ? 'LIBRE-VTT-Setup-ARM64.exe' : 'LIBRE-VTT-Setup-x64.exe', 'LIBRE-VTT-Setup.exe', 'Installa-LIBRE-VTT-Windows.cmd']
+    : MAC ? [cpu === 'arm64' ? 'LIBRE-VTT-Mac-AppleSilicon.dmg' : 'LIBRE-VTT-Mac-Intel.dmg', 'LIBRE-VTT.dmg']
+    : [`Installa-LIBRE-VTT-Linux-${cpu}.sh`, 'Installa-LIBRE-VTT-Linux.sh'];
   for (const n of nomi) {
     const a = assets.find(x => x && x.name === n);
     // SHA256SUMS.txt: le impronte di tutti i file della release (dalla 3.7.9): il file scaricato deve tornare
