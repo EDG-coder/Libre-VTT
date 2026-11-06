@@ -49,11 +49,16 @@
     if (t && t !== ultimo) { ultimo = t; aggiorna(); }
   }, true);
   // ======================= Strumenti a sinistra sul telefono =======================
-  // Devono starci tutti senza scorrere (vedi mobile.css): se non entrano in una colonna si rimpiccioliscono
-  // fino a 44 px e poi vanno su più colonne.
+  // Devono starci tutti senza scorrere (vedi mobile.css), in una sola colonna: se non entrano si
+  // rimpiccioliscono (fino a 32 px; solo sotto si va su più colonne). Le caselle degli strumenti che chi
+  // gioca non può usare (penna, nebbia… nascosti dai permessi) spariscono anche loro, senza lasciare buchi.
   function dimensionaStrumenti() {
     const dr = document.getElementById('toolDrawer'), sl = dr && dr.querySelector('.slots');
     if (!sl) return;
+    for (const c of sl.children) {
+      const el = c.firstElementChild;
+      c.classList.toggle('spento', !c.classList.contains('hole') && !!el && getComputedStyle(el).display === 'none');
+    }
     if (!R.classList.contains('ui-tel')) { dr.style.removeProperty('--k'); dr.style.removeProperty('--righe'); return; }
     const n = Math.max(1, [...sl.children].filter(c => getComputedStyle(c).display !== 'none').length);
     const cs = getComputedStyle(dr), sotto = parseFloat(cs.bottom) || 76;
@@ -61,7 +66,7 @@
     const alto = innerHeight - sotto - sopra - 22;                  // 22: il bordo e il padding del menu
     const passo = k => 60 * k;                                      // casella 52 + spazio 8, in scala
     let k = Math.min(1, (alto + 8) / (n * 60)), righe = n;
-    if (k < 44 / 52) { k = 44 / 52; righe = Math.max(1, Math.floor((alto + 8 * k) / passo(k))); }
+    if (k < 32 / 52) { k = 32 / 52; righe = Math.max(1, Math.floor((alto + 8 * k) / passo(k))); }
     dr.style.setProperty('--k', k.toFixed(3));
     dr.style.setProperty('--righe', Math.ceil(n / Math.ceil(n / righe)));
   }
@@ -70,6 +75,10 @@
   document.addEventListener('DOMContentLoaded', () => {
     const sl = document.querySelector('#toolDrawer .slots');
     if (sl) new MutationObserver(dimensionaStrumenti).observe(sl, { childList: true });
+    // i permessi (classi «no-…») cambiano mentre si gioca: le caselle nascoste si ricontano
+    const mo = new MutationObserver(() => requestAnimationFrame(dimensionaStrumenti));
+    mo.observe(R, { attributes: true, attributeFilter: ['class'] });
+    if (document.body) mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
     dimensionaStrumenti();
   });
   requestAnimationFrame(dimensionaStrumenti);
