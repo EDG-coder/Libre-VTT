@@ -1972,6 +1972,8 @@ function boardState() {
   const ok = o => o && (o.shape || o.aid != null || !o.url.startsWith('blob:'));      // i link temporanei non sopravvivono al ricaricamento
   return {
     v: 2, active: cur.id, settings,
+    // la copia di un giocatore (quella che gli manda il server): riaprendola senza l'host resta una vista da giocatore
+    giocatore: typeof netAs === 'function' && netAs() && !isMaster() ? true : undefined,
     scenes: scenes.map(sc => ({ ...sc, bg: ok(sc.bg) ? sc.bg : null, photos: sc.photos.filter(ok) }))
   };
 }
@@ -2019,6 +2021,14 @@ async function loadBoard() {
   const st = await persist.load('board');
   let first;
   if (st && Array.isArray(st.scenes) && st.scenes.length) {
+    // la copia salvata da giocatore (anche quelle di prima, riconoscibili perché hanno le porte viste e non i muri):
+    // finché l'host non risponde si resta giocatore, con il buio e la nebbia piena
+    const daGiocatore = typeof NET !== 'undefined' && !!NET.port && (st.giocatore === true
+      || st.scenes.some(sc => sc && sc.luce && Array.isArray(sc.luce.porte) && !(Array.isArray(sc.luce.muri) && sc.luce.muri.length)));
+    if (daGiocatore) {
+      NET.giocatore = true;
+      if (typeof applyRole === 'function') applyRole();
+    }
     const s = st.settings || {};
     applicaImpostazioni(s);
     const okRect = r => r && [r.x, r.y, r.w, r.h].every(Number.isFinite) && r.w > 0 && r.h > 0;
@@ -2028,6 +2038,8 @@ async function loadBoard() {
       bg: sc.bg || null, grid: { ...DEFAULT_GRID, ...sc.grid }, photos: sc.photos || [], view: sc.view || null, draw: sc.draw || null,
       luce: sc.luce || undefined, cartella: typeof sc.cartella === 'string' ? sc.cartella : undefined,
       musica: sc.musica && typeof sc.musica === 'object' ? sc.musica : undefined,
+      // per chi gioca anche la nebbia e quello che vedeva: senza, finché l'host non risponde la mappa sarebbe tutta scoperta
+      ...(daGiocatore ? { fog: sc.fog || undefined, vista: sc.vista || undefined } : {}),
       // salvataggi precedenti: il rettangolo coincide con la mappa (o è quello di default)
       board: okRect(sc.board) ? pick(sc.board) : okRect(sc.bg) ? pick(sc.bg) : { ...DEFAULT_RECT }
     }));

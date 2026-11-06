@@ -44,13 +44,16 @@ const netName = () => { try { return localStorage.getItem('uffa-name') || ''; } 
 // Finché non si sa niente, vale la regola di prima: sei solo, quindi comandi tu.
 // Se però la sessione è solo caduta e ci si sta ricollegando, valgono ancora i tuoi permessi:
 // un giocatore non diventa master perché il filo si è staccato per un attimo.
-const netAs = () => NET.on || (NET.retrying && !!NET.me);
+// E chi era (o risulta, dalla copia della mappa salvata qui) un giocatore resta giocatore anche scollegato del
+// tutto: la sua copia è quella del server, e non deve vederla come la vedrebbe chi conduce (mappa intera, niente buio).
+NET.giocatore = false;
+const netAs = () => NET.on || (NET.retrying && !!NET.me) || NET.giocatore;
 // NET.adotta: un master entrato da fuori (server dedicato) sta prendendo il mondo dal server, come farebbe un
 // giocatore: per quel momento non comanda (altrimenti il suo mondo locale, vuoto, prenderebbe il posto di quello vero).
-function isMaster() { return !netAs() || (!NET.adotta && NET.me && NET.me.role === 'master'); }
+function isMaster() { return !netAs() || !!(!NET.adotta && NET.me && NET.me.role === 'master'); }
 /** Sei il master ma l'host è un'altra macchina (server dedicato): il mondo vero sta lì, non qui. */
 function masterRemoto() { return !!(NET.remoto && NET.me && NET.me.role === 'master'); }
-function can(p) { return !netAs() || !NET.me ? true : !!(NET.me.perms && NET.me.perms[p]); }
+function can(p) { return !netAs() ? true : NET.me ? !!(NET.me.perms && NET.me.perms[p]) : !NET.giocatore; }
 
 function netSend(o) { try { NET.ws && NET.ws.readyState === 1 && NET.ws.send(JSON.stringify(o)); } catch {} }   // una funzione (non una costante): i plugin la possono agganciare (net.send)
 // ---------- La coda: quello che si fa senza collegamento non si perde ----------
@@ -242,6 +245,7 @@ function netHandle(m) {
     case 'welcome': {
       const back = NET.retrying || NET.hostDown;
       NET.on = true; NET.everOn = true; NET.me = m.you;
+      NET.giocatore = m.you.role !== 'master';
       NET.retrying = false; NET.hostDown = false; NET.tries = 0; NET.pending = false;
       try { localStorage.setItem('uffa-token', m.you.token); if (m.you.firma) localStorage.setItem('uffa-firma', m.you.firma); } catch {}
       NET.conferme = Array.isArray(m.sa) && m.sa.includes('ok');   // l'host conferma gli intenti? (dalla 3.7)
@@ -279,7 +283,7 @@ function netHandle(m) {
     }
     case 'link':                                 // (giocatore) com'è il tubo verso l'host
       if (m.up) return;                          // quando torna su arriva il «welcome»: lì si avvisa
-      if (!NET.everOn || NET.manual || NET.stopped) return;
+      if ((!NET.everOn && !NET.giocatore) || NET.manual || NET.stopped) return;
       NET.hostDown = true;
       netSay('Il collegamento con chi conduce si è interrotto: mi ricollego da solo…', 'retry',
         { label: 'Smetti', fn: netDisconnect });
@@ -287,6 +291,7 @@ function netHandle(m) {
     case 'you': {
       const before = NET.me;
       NET.me = m.you;
+      NET.giocatore = m.you.role !== 'master';
       // diventato master su un server dedicato: finora vedeva il mondo da giocatore (solo una parte), quindi
       // prima di comandare prende quello intero, che il server gli manda subito dopo
       if (NET.remoto && m.you.role === 'master' && (!before || before.role !== 'master')) {
@@ -1091,6 +1096,8 @@ function netSyncForm() {
       ? 'Il collegamento con chi conduce si è interrotto: mi sto ricollegando da solo.'
       : NET.manual
         ? 'Ti sei scollegato a mano: non riprovo finché non premi «Collegati adesso».'
+        : !NET.on && NET.giocatore
+          ? 'Sei un giocatore: aspetto di potermi collegare a chi conduce.'
         : !NET.on
           ? (document.documentElement.classList.contains('ui-touch') ? 'Non collegato: stai giocando da solo su questo dispositivo.' : 'Non collegato: stai giocando da solo su questo computer.')
           : NET.me.role === 'master'
