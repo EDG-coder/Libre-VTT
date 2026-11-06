@@ -223,6 +223,68 @@
       sel('rarita', 'Rarità', valori(v => v.rarita));
     }
     if (C.pacchetti.length > 1) sel('pack', 'Fonte', C.pacchetti.map(p => [p.id, p.nome]));
+    menuOrdine(box);
+  }
+
+  // ---------- ordine dell'elenco ----------
+  // Per ogni tipo, i criteri che hanno senso (livello, GS, costo…). La scelta resta per tipo, anche al riavvio.
+  // Le voci senza quel dato vanno in fondo; a parità si ordina per nome.
+  const GSN = g => g === '1/8' ? 0.125 : g === '1/4' ? 0.25 : g === '1/2' ? 0.5 : (g === '' || g == null || isNaN(+g)) ? null : +g;
+  const numero = x => { if (typeof x === 'number') return isFinite(x) ? x : null; const m = /-?\d+(?:[.,]\d+)?/.exec(String(x ?? '')); return m ? +m[0].replace(',', '.') : null; };
+  const scala = (lista) => x => { const n = norm(x).trim(); if (!n) return null; const i = lista.findIndex(p => p.some(w => n === w || n.startsWith(w + ' '))); return i < 0 ? lista.length : i; };
+  const TAGLIA = scala([['minuscola', 'minuscolo', 'tiny'], ['piccola', 'piccolo', 'small'], ['media', 'medio', 'medium'], ['grande', 'large'], ['enorme', 'huge'], ['mastodontica', 'mastodontico', 'gargantuan']]);
+  const RARITA = scala([['comune', 'common'], ['non comune', 'uncommon'], ['raro', 'rara', 'rare'], ['molto raro', 'molto rara', 'very rare'], ['leggendario', 'leggendaria', 'legendary'], ['artefatto', 'artifact'], ['varia', 'varies']]);
+  // «15 mo», «1.500 mo», «2 ma», «5 gp» → in monete di rame, così 5 ma viene prima di 1 mo
+  const MONETA = { mr: 1, cp: 1, ma: 10, sp: 10, me: 50, ep: 50, mo: 100, gp: 100, mp: 1000, pp: 1000 };
+  function costo(c) {
+    if (typeof c === 'number') return c * 100;
+    const m = /(\d[\d.,]*)\s*([a-z]{2})?/i.exec(String(c ?? '')); if (!m) return null;
+    let n = m[1].replace(/[.,]$/, '');
+    n = /^\d{1,3}([.,]\d{3})+$/.test(n) ? n.replace(/[.,]/g, '') : n.replace(',', '.');
+    return +n * (MONETA[(m[2] || 'mo').toLowerCase()] || 100);
+  }
+  const nomePack = v => (C.pacchetti.find(p => p.id === v._p) || {}).nome || v._p || '';
+  // [chiave, etichetta, valore, testo?] — testo: si confronta come parole, non come numero
+  const ORDINI = {
+    '': [['tipo', 'Tipo', v => TIPI.findIndex(x => x[0] === v.tipo)]],
+    mostro: [['gs', 'GS', v => GSN(v.gs)], ['pf', 'Punti ferita', v => numero(v.pf)], ['ca', 'Classe armatura', v => numero(v.ca)],
+      ['taglia', 'Taglia', v => TAGLIA(v.taglia)], ['creatura', 'Tipo di creatura', v => v.tipoCreatura, 1]],
+    incantesimo: [['livello', 'Livello', v => numero(v.livello)], ['scuola', 'Scuola', v => v.scuola, 1]],
+    oggetto: [['costo', 'Costo', v => costo(v.costo)], ['peso', 'Peso', v => numero(v.peso)], ['rarita', 'Rarità', v => RARITA(v.rarita)], ['categoria', 'Categoria', v => v.categoria, 1]],
+    talento: [['categoria', 'Categoria', v => v.categoria, 1]],
+    classe: [['dado', 'Dado vita', v => numero(v.dadoVita)]],
+    sottoclasse: [['classe', 'Classe', v => v.classe, 1]],
+    specie: [['velocita', 'Velocità', v => numero(v.velocita)], ['taglia', 'Taglia', v => TAGLIA(v.taglia)]]
+  };
+  const criteri = () => [['nome', 'Nome', v => v.nome, 1], ...(ORDINI[F.tipo] || []), ...(C.pacchetti.length > 1 ? [['fonte', 'Fonte', nomePack, 1]] : [])];
+  const CH_ORDINE = 'libre-compendio-ordine';
+  let ORD = {}; try { ORD = JSON.parse(localStorage.getItem(CH_ORDINE) || '{}') || {}; } catch {}
+  const ordineAttuale = () => { const o = ORD[F.tipo || '*'] || {}; const c = criteri(); return { c: c.find(x => x[0] === o.k) || c[0], giu: !!o.giu }; };
+  function salvaOrdine(k, giu) { ORD[F.tipo || '*'] = { k, giu }; try { localStorage.setItem(CH_ORDINE, JSON.stringify(ORD)); } catch {} }
+  function menuOrdine(box) {
+    const { c, giu } = ordineAttuale();
+    const s = document.createElement('select'); s.className = 'compOrdina'; s.setAttribute('aria-label', tr('Ordina per'));
+    s.append(...criteri().map(([k, nome]) => new Option(tr('Ordina per') + ': ' + tr(nome), k)));
+    s.value = c[0];
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ghost compVerso';
+    const verso = g => { b.textContent = g ? '↓' : '↑'; b.title = g ? tr('Dal più alto al più basso (Z→A)') : tr('Dal più basso al più alto (A→Z)'); b.setAttribute('aria-label', b.title); b.setAttribute('aria-pressed', String(g)); };
+    verso(giu);
+    s.addEventListener('change', () => { salvaOrdine(s.value, false); verso(false); disegna(); });
+    b.addEventListener('click', () => { const g = !ordineAttuale().giu; salvaOrdine(s.value, g); verso(g); disegna(); });
+    const w = document.createElement('span'); w.className = 'compOrdine'; w.append(s, b);
+    box.prepend(w);
+  }
+  function ordina(voci) {
+    const { c: [, , val, testo], giu } = ordineAttuale(), segno = giu ? -1 : 1;
+    const perNome = (a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), undefined, { sensitivity: 'base', numeric: true });
+    const vuoto = x => x === null || x === undefined || x === '' || (typeof x === 'number' && isNaN(x));
+    const k = voci.map(v => [v, val(v)]);
+    k.sort(([a, x], [b, y]) => {
+      if (vuoto(x) || vuoto(y)) return vuoto(x) === vuoto(y) ? perNome(a, b) : vuoto(x) ? 1 : -1;   // senza dato: sempre in fondo
+      const d = testo ? String(x).localeCompare(String(y), undefined, { sensitivity: 'base', numeric: true }) : x - y;
+      return d ? d * segno : perNome(a, b);
+    });
+    return k.map(x => x[0]);
   }
   function filtra() {
     const q = norm(F.q).trim(), x = F.extra;
@@ -260,7 +322,7 @@
   function disegna() {
     const L = $('compLista'); if (!L) return;
     if (!C.pronto) { L.replaceChildren(); return; }
-    const tutte = filtra();
+    const tutte = ordina(filtra());
     const righe = tutte.slice(0, MAX).map(v => {
       const d = document.createElement('div');
       d.className = 'compVoce' + (conduco() && !visibileVoce(v) ? ' nascosta' : '');
