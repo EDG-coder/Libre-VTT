@@ -92,8 +92,10 @@
 
 /* strumenti a sinistra. Niente scorrimento dentro il menu: su iPhone/iPad (WebKit) un contenitore che
    scorre taglia tutto quello che c'è dentro, anche i pannelli aperti e la linguetta, che sono «fixed».
-   Se le icone non ci stanno in una colonna, mobile.js le rimpicciolisce un po' (--k) e le mette su
-   più colonne (--righe), una accanto all'altra. */
+   Sempre una sola colonna: se le icone non ci stanno, mobile.js le rimpicciolisce (--k); solo se
+   diventerebbero minuscole vanno su più colonne (--righe). Le caselle degli strumenti nascosti dai
+   permessi («spento») non occupano posto. */
+#toolDrawer .slot.spento { display: none; }
 .ui-tel #toolDrawer {
   top: auto; bottom: calc(var(--dock-h, 48px) + 30px + env(safe-area-inset-bottom)); transform: none; left: 0;
   /* niente effetti sul contenitore: altrimenti gli strumenti aperti non potrebbero uscirne */
