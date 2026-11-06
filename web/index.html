@@ -231,6 +231,24 @@
         <div id="gridScene" class="gridForm"></div>
       </div>
 
+      <div class="sect" data-sect="sceneMusic" id="scMusSect">
+        <h4>Musica di <span id="scMusNome">questa scena</span></h4>
+        <p class="note">Parte da sola quando mostri questa scena ai giocatori (📌).</p>
+        <label class="row">Canzone <select id="scMusBrano"></select></label>
+        <div class="row"><button id="scMusPc" type="button" class="btn ghost">📁 Canzone dal computer…</button>
+          <button id="scMusVia" type="button" class="btn ghost danger" title="Elimina la canzone dalla cartella della campagna" aria-label="Elimina la canzone dalla cartella della campagna" hidden>🗑</button></div>
+        <input id="scMusFile" type="file" accept="audio/*,.mp3,.ogg,.oga,.opus,.wav,.m4a,.aac,.flac" hidden>
+        <label class="check"><input id="scMusLoop" type="checkbox"> Ripeti la canzone (loop)</label>
+        <div class="scMusCambioRiga">Al cambio di scena
+          <div class="seg" id="scMusCambio">
+            <button type="button" data-v="stop">Stop immediato</button>
+            <button type="button" data-v="fade">Dissolvenza</button>
+          </div>
+        </div>
+        <button id="scMusOra" type="button" class="btn ghost">▶ Fai partire adesso</button>
+        <p class="note">Le canzoni dal computer si copiano nella cartella «musica» della campagna; in rete arrivano anche ai giocatori (al massimo 40 MB l'una).</p>
+      </div>
+
       <div class="sect" data-sect="gridDefault">
         <h4>Griglia predefinita</h4>
         <p class="note">Si applica alle nuove scene.</p>
@@ -365,7 +383,7 @@
     <li>La scheda <b>Standard</b> è la scheda italiana di D&amp;D 5e a tre pagine: clic sui valori tondi, sulle abilità, sui tiri salvezza e sulle armi (◎ colpire, ◆ danni) per tirare subito.</li>
     <li>Nello strumento <b>Segnalini</b>, «Immagine» apre l'editor di ritaglio: sposti e ingrandisci la foto sotto la maschera, togli lo sfondo con la bacchetta e rifinisci la sagoma con la gomma.</li>
     <li>La <b>cartella</b> nel menu a sinistra tiene da parte le finestre delle schede: trascinaci sopra la loro barra, e la manopola ne cambia la dimensione.</li>
-    <li>Con <b>Musica</b> incolli un link di YouTube per tutti; il volume però è tuo e non tocca quello degli altri.</li>
+    <li>Con <b>Musica</b> incolli un link di YouTube o scegli canzoni dal computer, per tutti; il volume però è tuo e non tocca quello degli altri. Ogni scena può avere la sua canzone (Impostazioni › Musica di questa scena).</li>
     <li>La <b>Visibilità</b> (l'occhio nel menu) decide come vedono i giocatori: tutto, solo quello che scopri con la <b>nebbia</b>, la <b>luce dinamica</b> o entrambe. Per i giocatori la parte coperta è nera e i segnalini che ci stanno sotto non gli arrivano nemmeno.</li>
     <li>La <b>luce dinamica</b> in tre passi: disegna i <b>muri</b> (anche una stanza intera trascinando; le porte con un clic su un muro), metti una <b>luce</b> o scegli Giorno/Penombra, spunta chi è del <b>party</b>. La lista in cima al pannello dice cosa manca; «Anteprima» ti fa vedere la mappa come la vedono loro.</li>
     <li>Il <b>📚 Compendio</b> (nel pannello di destra) ha mostri, incantesimi, oggetti, classi e regole dell'SRD: trascina un mostro sulla mappa per avere segnalino e scheda, un oggetto o un incantesimo su una scheda per aggiungerlo. In chat <b>@Palla di fuoco</b> diventa un link.</li>

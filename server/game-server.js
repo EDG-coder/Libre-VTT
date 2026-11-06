@@ -38,9 +38,14 @@ fs.mkdirSync(DATA, { recursive: true });
 // Il mondo la cita con «gs:<hash>», e il ponte del giocatore se la fa mandare dall'host.
 const ASSETS = path.join(DATA, 'assets');
 fs.mkdirSync(ASSETS, { recursive: true });
-const MIME_EXT = { 'application/json': '.json', 'image/webp': '.webp', 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/avif': '.avif', 'image/svg+xml': '.svg', 'image/bmp': '.bmp' };
+const MIME_EXT = { 'application/json': '.json', 'image/webp': '.webp', 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/avif': '.avif', 'image/svg+xml': '.svg', 'image/bmp': '.bmp',
+  // le canzoni che il master fa sentire a tutti (musica dal computer): solo il master le carica
+  'audio/mpeg': '.mp3', 'audio/ogg': '.ogg', 'audio/wav': '.wav', 'audio/mp4': '.m4a', 'audio/aac': '.aac', 'audio/flac': '.flac', 'audio/webm': '.weba' };
 const EXT_MIME = Object.fromEntries(Object.entries(MIME_EXT).map(([m, e]) => [e, m]));
 const MAX_ASSET = 12 * 1024 * 1024;
+const MAX_AUDIO = 40 * 1024 * 1024;           // una canzone può essere più grande di un'immagine
+const isAudio = m => /^audio\//.test(String(m || ''));
+const maxPer = m => isAudio(m) ? MAX_AUDIO : MAX_ASSET;
 const isHash = h => typeof h === 'string' && /^[a-f0-9]{64}$/.test(h);
 
 let assetIndex = {};
@@ -461,7 +466,7 @@ const outUrl = o => (o && o.gid) ? { ...o, url: 'gs:' + o.gid, aid: undefined } 
 function sceneFor(c, sc) {
   const p = permsFor(c);
   const out = { ...sc };
-  if (recOf(c.token).role !== 'master') delete out.cartella;     // come il master ordina le scene resta suo
+  if (recOf(c.token).role !== 'master') { delete out.cartella; delete out.musica; }    // come il master ordina le scene (e che musica ci mette) resta suo
   out.bg = outUrl(sc.bg);
   out.photos = (sc.photos || []).filter(ph => {
     if ((ph.layer || 'tokens') === 'hidden' && !p.seeHiddenLayer) return false;
@@ -1154,6 +1159,7 @@ function handleIntent(c, m) {
         const mime = mimeAmmesso(m.mime);
         if (!mime) return deny(c, m.op, 'tipo di file non ammesso');
         if (mime === 'application/json' && c.role !== 'master') return deny(c, m.op, 'solo il master carica dati');
+        if (isAudio(mime) && c.role !== 'master') return deny(c, m.op, 'solo il master carica la musica');
         job = { parts: [], got: 0, mime, name: str(m.name, 80) };
         box.set(id, job);
       }
@@ -1162,7 +1168,7 @@ function handleIntent(c, m) {
       // in tutto, un giocatore carica al massimo 300 MB per collegamento: il disco del master non è infinito
       c.caricati = (c.caricati || 0) + chunk.length;
       if (c.role !== 'master' && c.caricati > 300 * 1024 * 1024) { box.delete(id); return deny(c, m.op, 'hai caricato troppe immagini per questa sessione'); }
-      if (job.got > MAX_ASSET) { box.delete(id); return deny(c, m.op, 'immagine troppo grande (max 12 MB)'); }
+      if (job.got > maxPer(job.mime)) { box.delete(id); return deny(c, m.op, isAudio(job.mime) ? 'canzone troppo grande (max 40 MB)' : 'immagine troppo grande (max 12 MB)'); }
       job.parts.push(chunk);
       if (!m.last) return;
       box.delete(id);
@@ -1893,7 +1899,7 @@ function bridgeAsset(msg) {
   const part = Buffer.from(String(msg.data || ''), 'base64');
   w.parts.push(part); w.bytes += part.length;
   w.mime = w.mime || msg.mime; w.name = w.name || msg.name;
-  if (w.bytes > MAX_ASSET) { clearTimeout(w.timer); waiting.delete(msg.hash); w.done(null); return; }
+  if (w.bytes > maxPer(w.mime)) { clearTimeout(w.timer); waiting.delete(msg.hash); w.done(null); return; }
   if (!msg.last) return;
   clearTimeout(w.timer); waiting.delete(msg.hash);
   const buf = Buffer.concat(w.parts);
@@ -2114,12 +2120,18 @@ function httpHandler(req, res) {
     const serve = () => {
       fs.readFile(assetFile(hash), (e, d) => {
         if (e) return sendHttp(res, 404, 'Immagine non trovata');
-        res.writeHead(200, {
-          // un tipo registrato prima di questo controllo e non ammesso si dà come byte qualsiasi
-          'Content-Type': mimeAmmesso(assetIndex[hash] && assetIndex[hash].mime) || 'application/octet-stream',
-          'Cache-Control': 'public, max-age=31536000, immutable',
-          ...ASSET_HEADERS
-        });
+        // un tipo registrato prima di questo controllo e non ammesso si dà come byte qualsiasi
+        const tipo = mimeAmmesso(assetIndex[hash] && assetIndex[hash].mime) || 'application/octet-stream';
+        const testa = { 'Content-Type': tipo, 'Cache-Control': 'public, max-age=31536000, immutable', 'Accept-Ranges': 'bytes', ...ASSET_HEADERS };
+        // le canzoni si chiedono a pezzi (Range): Safari e iPhone senza non le suonano
+        const r = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range || ''));
+        if (r && (r[1] || r[2])) {
+          let da = r[1] ? +r[1] : Math.max(0, d.length - +r[2]), a = r[1] && r[2] ? Math.min(+r[2], d.length - 1) : d.length - 1;
+          if (da >= d.length || da > a) { res.writeHead(416, { 'Content-Range': 'bytes */' + d.length, ...ASSET_HEADERS }); return res.end(); }
+          res.writeHead(206, { ...testa, 'Content-Range': `bytes ${da}-${a}/${d.length}`, 'Content-Length': a - da + 1 });
+          return res.end(d.subarray(da, a + 1));
+        }
+        res.writeHead(200, testa);
         res.end(d);
       });
     };
