@@ -17,7 +17,12 @@ const IMG = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', 
 const TYPE_EXT = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp', 'image/avif': '.avif', 'image/bmp': '.bmp', 'image/svg+xml': '.svg' };
 const SVG = require('../condiviso/svg-pulito.js');
 const { intestazioniPagina, segretoOk } = require('./csp.js');
-const ASSET_MIME = new Set([...Object.keys(TYPE_EXT), 'application/json']);
+// ---------- Musica dal computer: le canzoni stanno nella cartella musica/ della campagna ----------
+const MUSICA = path.join(CAMP, 'musica');
+const MAX_MUSICA = 40 * 1024 * 1024;
+const AUDIO = { '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.oga': 'audio/ogg', '.opus': 'audio/ogg', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.aac': 'audio/aac', '.flac': 'audio/flac', '.weba': 'audio/webm' };
+const AUDIO_TYPE_EXT = { 'audio/mpeg': '.mp3', 'audio/mp3': '.mp3', 'audio/ogg': '.ogg', 'audio/wav': '.wav', 'audio/x-wav': '.wav', 'audio/wave': '.wav', 'audio/mp4': '.m4a', 'audio/x-m4a': '.m4a', 'audio/aac': '.aac', 'audio/flac': '.flac', 'audio/x-flac': '.flac', 'audio/webm': '.weba' };
+const ASSET_MIME = new Set([...Object.keys(TYPE_EXT), 'application/json', ...new Set(Object.values(AUDIO))]);
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
@@ -128,6 +133,69 @@ function saveUpload(req, res, q) {
       fs.writeFileSync(path.join(dir, final), dati, { flag: 'wx' });   // mai sovrascrivere
       json(res, 201, { name: final, folder, url: urlOf(folder, final) });
     } catch { send(res, 500, 'Errore di salvataggio'); }
+  });
+}
+
+// Le canzoni: elenco, caricamento (mai sovrascrivere), eliminazione, e il file a pezzi (Range) per il lettore.
+const okBrano = n => n && n === path.basename(n) && !n.startsWith('.') && !!AUDIO[path.extname(n).toLowerCase()];
+function elencoMusica(res) {
+  let brani = [];
+  try {
+    brani = fs.readdirSync(MUSICA, { withFileTypes: true }).filter(d => d.isFile() && okBrano(d.name))
+      .map(d => ({ name: d.name, bytes: fs.statSync(path.join(MUSICA, d.name)).size })).sort((a, b) => a.name.localeCompare(b.name));
+  } catch {}
+  json(res, 200, { brani });
+}
+function salvaBrano(req, res, q) {
+  let base = clean(q.get('name')) || 'canzone';
+  if (!AUDIO[path.extname(base).toLowerCase()]) {
+    const ext = AUDIO_TYPE_EXT[String(req.headers['content-type'] || '').toLowerCase().split(';')[0].trim()];
+    if (!ext) return send(res, 415, 'Formato non supportato (mp3, ogg, wav, m4a, aac, flac)');
+    base = path.basename(base, path.extname(base)) + ext;
+  }
+  const chunks = []; let size = 0, tooBig = false;
+  req.on('data', c => {
+    size += c.length;
+    if (size > MAX_MUSICA) { tooBig = true; send(res, 413, 'Canzone troppo grande (max 40 MB)'); req.destroy(); }
+    else chunks.push(c);
+  });
+  req.on('end', () => {
+    if (tooBig) return;
+    if (!size) return send(res, 400, 'File vuoto');
+    try { fs.mkdirSync(MUSICA, { recursive: true }); } catch {}
+    const dati = Buffer.concat(chunks);
+    // la stessa canzone caricata di nuovo non si copia due volte
+    const ext = path.extname(base), stem = path.basename(base, ext);
+    for (let i = 0; ; i++) {
+      const n = i ? `${stem}-${i}${ext}` : base, f = path.join(MUSICA, n);
+      if (fs.existsSync(f)) {
+        try { if (fs.statSync(f).size === dati.length && fs.readFileSync(f).equals(dati)) return json(res, 200, { name: n, bytes: dati.length }); } catch {}
+        continue;
+      }
+      try { fs.writeFileSync(f, dati, { flag: 'wx' }); return json(res, 201, { name: n, bytes: dati.length }); }
+      catch { return send(res, 500, 'Errore di salvataggio'); }
+    }
+  });
+}
+function eliminaBrano(res, q) {
+  const n = q.get('name');
+  if (!okBrano(n)) return send(res, 400, 'Richiesta non valida');
+  try { fs.unlinkSync(path.join(MUSICA, n)); json(res, 200, { ok: true }); } catch { send(res, 404, 'File non trovato'); }
+}
+/** Un file audio, intero o il pezzo chiesto con Range (Safari e iPhone senza non suonano). */
+function mandaAudio(req, res, file, tipo, testa = {}) {
+  fs.stat(file, (err, st) => {
+    if (err || !st.isFile()) return send(res, 404, 'Non trovato');
+    const base = { 'Content-Type': tipo, 'Accept-Ranges': 'bytes', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache', ...testa };
+    const r = /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range || ''));
+    if (r && (r[1] || r[2])) {
+      const da = r[1] ? +r[1] : Math.max(0, st.size - +r[2]), a = r[1] && r[2] ? Math.min(+r[2], st.size - 1) : st.size - 1;
+      if (da >= st.size || da > a) { res.writeHead(416, { 'Content-Range': 'bytes */' + st.size }); return res.end(); }
+      res.writeHead(206, { ...base, 'Content-Range': `bytes ${da}-${a}/${st.size}`, 'Content-Length': a - da + 1 });
+      return fs.createReadStream(file, { start: da, end: a }).pipe(res);
+    }
+    res.writeHead(200, { ...base, 'Content-Length': st.size });
+    fs.createReadStream(file).pipe(res);
   });
 }
 
@@ -523,6 +591,9 @@ function handle(req, res) {
     if (route === 'POST /api/assets') return saveUpload(req, res, q);
     if (route === 'DELETE /api/assets') return deleteAsset(res, q);
     if (route === 'POST /api/move') return moveAsset(res, q);
+    if (route === 'GET /api/musica') return elencoMusica(res);
+    if (route === 'POST /api/musica') return salvaBrano(req, res, q);
+    if (route === 'DELETE /api/musica') return eliminaBrano(res, q);
     if (route === 'POST /api/folders') return createFolder(res, q);
     if (route === 'DELETE /api/folders') return deleteFolder(res, q);
     if (route === 'GET /api/boot') return json(res, 200, { boot: BOOT });
@@ -563,6 +634,8 @@ function handle(req, res) {
     try { idx = JSON.parse(fs.readFileSync(path.join(DATA, 'assets.json'), 'utf8')) || {}; } catch {}
     const info = idx[dep[1]];
     if (!info) return send(res, 404, 'Non trovato');
+    const tipoDep = String(info.mime || '').toLowerCase();
+    if (/^audio\//.test(tipoDep) && ASSET_MIME.has(tipoDep)) return mandaAudio(req, res, path.join(DATA, 'assets', dep[1] + (info.ext || '')), tipoDep, { 'Content-Security-Policy': CSP_SVG });
     return fs.readFile(path.join(DATA, 'assets', dep[1] + (info.ext || '')), (err, d) => err ? send(res, 404, 'Non trovato')
       : (res.writeHead(200, {
         // solo i tipi di immagine (e il JSON del compendio): qualsiasi altro tipo si dà come byte qualsiasi
@@ -570,6 +643,12 @@ function handle(req, res) {
         'Cache-Control': 'public, max-age=31536000, immutable',
         'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': CSP_SVG
       }), res.end(d)));
+  }
+  // le canzoni della campagna (musica/): solo file audio, a pezzi se il lettore li chiede così
+  if (rel.startsWith('/musica/')) {
+    const n = rel.slice(8);
+    if (!okBrano(n)) return send(res, 404, 'Non trovato');
+    return mandaAudio(req, res, path.join(MUSICA, n), AUDIO[path.extname(n).toLowerCase()]);
   }
   // i file dei plugin applicati (solo quelli che la home ha acceso, e solo tipi innocui o il loro codice)
   if (rel.startsWith('/plugins/')) {

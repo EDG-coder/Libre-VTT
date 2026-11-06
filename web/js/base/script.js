@@ -2004,6 +2004,7 @@ async function loadBoard() {
       id: sc.id || uid(), name: sc.name || 'Scena', type: sc.type === 'cinematic' ? 'cinematic' : 'map',
       bg: sc.bg || null, grid: { ...DEFAULT_GRID, ...sc.grid }, photos: sc.photos || [], view: sc.view || null, draw: sc.draw || null,
       luce: sc.luce || undefined, cartella: typeof sc.cartella === 'string' ? sc.cartella : undefined,
+      musica: sc.musica && typeof sc.musica === 'object' ? sc.musica : undefined,
       // salvataggi precedenti: il rettangolo coincide con la mappa (o è quello di default)
       board: okRect(sc.board) ? pick(sc.board) : okRect(sc.bg) ? pick(sc.bg) : { ...DEFAULT_RECT }
     }));
