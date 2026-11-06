@@ -176,11 +176,15 @@ jobs:
           path: prova-cmd
       - name: Prova Installa-LIBRE-VTT-Windows.cmd (il programma attaccato in fondo, non più in base64)
         shell: pwsh
+        timeout-minutes: 10
         run: |
           $cmd = (Resolve-Path prova-cmd\Installa-LIBRE-VTT-Windows.cmd).Path
           Get-ChildItem $env:TEMP -Filter 'libre-vtt-installa-*.ps1' -ErrorAction SilentlyContinue | Remove-Item -Force
           # 1. cmd.exe apre il file vero (testo + .zip in fondo) e il preambolo tira fuori la parte PowerShell
-          $p = Start-Process cmd.exe -ArgumentList '/c', "`"$cmd`"" -Wait -PassThru -WindowStyle Hidden
+          # (non Start-Process -Wait: aspetterebbe anche la finestra dell'installazione che il .cmd
+          # lascia aperta, cioè per sempre; WaitForExit aspetta solo cmd.exe)
+          $p = Start-Process cmd.exe -ArgumentList '/c', "`"$cmd`"" -PassThru -WindowStyle Hidden
+          if (-not $p.WaitForExit(120000)) { throw 'il .cmd non ha finito in 2 minuti' }
           if ($p.ExitCode -ne 0) { throw "il .cmd è uscito con $($p.ExitCode)" }
           Start-Sleep -Seconds 3
           # (la finestra dell'installazione resta aperta ad aspettare un clic: la si chiude)
