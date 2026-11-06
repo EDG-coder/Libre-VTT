@@ -279,7 +279,12 @@ function rowFor(r) {
     const ch = chip(t, cls); ch.title = tip; head.append(ch);
   }
   const idc = chip('ID ' + String(r.token).slice(0, 6)); idc.title = 'Identità: ' + r.token; head.append(idc);
-  if (r.banned) head.append(chip('bandito', 'bad'));
+  if (r.banned) head.append(chip(r.account && r.account.bloccato ? 'account bloccato' : 'bandito', 'bad'));
+  if (r.account && !r.account.bloccato) {
+    const ac = chip('🔑 ' + r.account.codice + (r.account.password ? '' : ' · password da scegliere'), r.account.password ? 'ok' : 'warn');
+    ac.title = r.account.password ? 'Account dal sito: il giocatore entra con questo codice e la sua password' : 'Il giocatore non ha ancora scelto la password: la sceglie al primo ingresso dal sito con questo codice';
+    head.append(ac);
+  }
   if (r.muted) head.append(chip('silenziato', 'warn'));
   if (r.frozen) head.append(chip('congelato', 'warn'));
   row.append(head);
@@ -327,7 +332,22 @@ function rowFor(r) {
     if (r.online) acts.append(btn('Scollega', () => post('/api/kick', { token: r.token }).then(load)));
     // togliere qualcuno che non c'è: può rientrare solo col codice (bandire invece non lo fa rientrare)
     else acts.append(btn('Rimuovi', () => { if (confirm('Togliere ' + (r.name || 'questa persona') + ' dai partecipanti? Le sue schede restano a te. Potrà rientrare solo con il codice.')) post('/api/kick', { token: r.token, forget: true }).then(load); }));
-    acts.append(r.banned
+    // l'account dal sito: il master lo crea o lo blocca, nient'altro (la password non la vede e non la cambia)
+    if (!r.account && !r.banned) acts.append(btn('🔑 Crea account', async () => {
+      if (!confirm('Dare un account a ' + (r.name || 'questa persona') + '?\n\nRiceve un codice: con il codice e una password che sceglie lui rientra con questo profilo (nome, ruolo, schede) da qualsiasi browser, dal sito. Tu non vedrai mai la password: se la dimentica, puoi solo bloccare l\'account e fargliene uno nuovo.')) return;
+      const x = await post('/api/account', { token: r.token, azione: 'crea' }).then(async res => res.ok ? res.json() : { errore: await res.text() }).catch(() => null);
+      if (x && x.errore) alert(x.errore);
+      if (x && x.codice) { try { await navigator.clipboard.writeText(x.codice); } catch {} alert('Codice dell\'account di ' + (r.name || 'questa persona') + ':\n\n' + x.codice + '\n\nL\'ho copiato: mandaglielo. Se è collegato dal sito l\'ha già ricevuto.'); }
+      load();
+    }));
+    if (r.account && !r.account.bloccato) {
+      acts.append(btn('Copia codice', async e => { try { await navigator.clipboard.writeText(r.account.codice); e.target.textContent = 'Copiato'; } catch {} }));
+      acts.append(btn('⛔ Blocca account', () => {
+        if (confirm('Bloccare l\'account di ' + (r.name || 'questa persona') + ' (' + r.account.codice + ')?\n\nÈ per sempre: il codice non vale più e il profilo resta bandito. Serve se ha dimenticato la password: poi entra di nuovo dal sito, gli fai un account nuovo e gli ridai le schede da «Permessi e schede».')) post('/api/account', { token: r.token, azione: 'blocca' }).then(load);
+      }, 'bad'));
+    }
+    if (r.account && r.account.bloccato) { /* bloccato per sempre: niente «Riammetti» */ }
+    else acts.append(r.banned
       ? btn('Riammetti', () => mod(r.token, 'unban'), 'go')
       : btn('⛔ Bandisci', () => { if (confirm('Bandire ' + (r.name || 'questa persona') + '? Non potrà più entrare finché non la riammetti.')) mod(r.token, 'ban'); }, 'bad'));
   }

@@ -195,6 +195,7 @@ function chiaveMasterOk(x) {
  *  Il browser di questo computer (chi conduce) non passa dal tubo: di lui ci si fida come prima.
  *  Sul server dedicato no: lì nessuno conduce da questa macchina, e la firma la mostrano tutti. */
 function identitaDi(m, c) {
+  if (c && c.accountToken) { const t = c.accountToken; c.accountToken = null; return t; }   // entrato con codice e password
   const token = str(m.token, 64), firma = str(m.firma, 64);
   if (c && c.kind === 'ws' && !DEDICATO && /^[a-f0-9]{24}$/.test(token)) return token;
   if (/^[a-f0-9]{24}$/.test(token)) {
@@ -210,6 +211,55 @@ function identitaDi(m, c) {
   }
   return crypto.randomBytes(12).toString('hex');
 }
+// ---------- Account con codice (solo dal sito) ----------
+// Il master dà a un profilo un codice (per esempio «K7QM-2XPA-9RTD»), unico nella campagna. Chi gioca dal sito
+// scrive codice e password e rientra con quel profilo (nome, ruolo, schede) da qualsiasi browser. La password la
+// sceglie il giocatore la prima volta e la riscrive a ogni ingresso: qui non arriva mai così com'è. Il browser
+// ne fa un'impronta (PBKDF2-SHA256, 200.000 giri, con il codice come sale) e manda quella; noi ne teniamo
+// un'altra impronta, con un sale casuale (scrypt), in players.json. Il master non vede né l'una né l'altra:
+// può solo bloccare l'account (e il profilo), e darne uno nuovo a un altro profilo.
+const ALFABETO_ACCOUNT = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';           // senza I, L, O, 0, 1: si leggono male
+const codiceAccount = s => String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 24);
+const codiceLeggibile = k => (String(k).match(/.{1,4}/g) || []).join('-');
+const tokenDiCodice = k => Object.keys(roster).find(t => roster[t] && roster[t].account && roster[t].account.codice === k) || null;
+function nuovoCodiceAccount() {
+  for (;;) {
+    let k = '';
+    for (const b of crypto.randomBytes(12)) k += ALFABETO_ACCOUNT[b % ALFABETO_ACCOUNT.length];
+    if (!tokenDiCodice(k)) return k;
+  }
+}
+const improntaAccount = (chiave, sale) => new Promise((ok, no) =>
+  crypto.scrypt(chiave, Buffer.from(sale, 'hex'), 32, { N: 16384, r: 8, p: 1 }, (e, b) => e ? no(e) : ok(b.toString('hex'))));
+/** Quello che il pannello del master può sapere di un account: mai le impronte. */
+const accountPerPannello = a => a ? { codice: codiceLeggibile(a.codice), password: !!a.impronta, bloccato: !!a.bloccato, creato: a.creato || null } : undefined;
+const tentativiAccount = new Map();                                   // codice → { n, da }: le password sbagliate
+/** Codice e impronta della password di chi entra dal sito → { token } o { errore }. */
+async function verificaAccount(a) {
+  const k = codiceAccount(a && a.codice), chiave = str(a && a.chiave, 64);
+  if (k.length !== 12 || !/^[a-f0-9]{64}$/.test(chiave)) return { errore: 'Codice dell\'account o password non validi.' };
+  const token = tokenDiCodice(k), rec = token && roster[token];
+  if (!rec) return { errore: 'Questo codice dell\'account non c\'è in questa campagna: controlla di averlo scritto bene.' };
+  if (rec.account.bloccato || rec.banned) return { errore: 'Il master ha bloccato questo account. Se ti serve, chiedigliene uno nuovo.' };
+  const t = tentativiAccount.get(k);
+  if (t && t.n >= 5 && Date.now() - t.da < 15 * 60e3) return { errore: 'Troppe password sbagliate: riprova tra un quarto d\'ora.' };
+  if (!rec.account.impronta) {                                        // la prima volta: la password la sceglie chi entra
+    const sale = crypto.randomBytes(16).toString('hex'), impronta = await improntaAccount(chiave, sale);
+    if (roster[token] !== rec || rec.account.impronta) return { errore: 'Riprova tra un momento.' };
+    Object.assign(rec.account, { sale, impronta, passwordDa: Date.now() });
+    scheduleSave();
+    return { token, nuova: true };
+  }
+  const impronta = await improntaAccount(chiave, rec.account.sale);
+  if (crypto.timingSafeEqual(Buffer.from(impronta), Buffer.from(String(rec.account.impronta).padEnd(64, '0').slice(0, 64)))) {
+    tentativiAccount.delete(k);
+    return { token };
+  }
+  const n = t && Date.now() - t.da < 15 * 60e3 ? t.n + 1 : 1;
+  tentativiAccount.set(k, { n, da: n === 1 ? Date.now() : t.da });
+  return { errore: 'Password sbagliata.' + (n >= 3 && n < 5 ? ' Ancora ' + (5 - n) + ' tentativi, poi bisogna aspettare un quarto d\'ora.' : '') };
+}
+
 const CAMPAGNA_NOME = String(process.env.CAMPAGNA_NOME || '').slice(0, 80);
 // Le regole d'ingresso e la pausa generale: le decide chi conduce, dal pannello.
 let session = Object.assign({ locked: false, approval: false, maxPlayers: 0, paused: false }, readJson('session.json', null) || {});
@@ -1423,9 +1473,54 @@ function onMessage(c, raw) {
     return;
   }
 
+  // Dal sito con codice e password dell'account: prima si controlla la password (con calma: scrypt non è
+  // istantaneo), poi si entra con il profilo dell'account, come un saluto qualsiasi. Il nome è quello del profilo.
+  // Il codice vale solo dal sito: dall'app non lo si guarda nemmeno.
+  if (m.t === 'hello' && !m.canale && m.account) {
+    const a = m.account;
+    delete m.account;
+    if (c.web && typeof a === 'object') {
+      if (c.inVerifica) return;
+      c.inVerifica = true;
+      verificaAccount(a).catch(() => ({ errore: 'Non riesco a controllare la password: riprova.' })).then(esito => {
+        c.inVerifica = false;
+        if (!clients.has(c)) return;
+        if (esito.errore) { logAction({ name: codiceLeggibile(codiceAccount(a.codice)) || '?', token: '' }, 'account', false, esito.errore); return shutOut(c, esito.errore); }
+        c.accountToken = esito.token; c.viaAccount = true;
+        if (esito.nuova) logAction({ name: roster[esito.token].name || '?', token: esito.token }, 'account', true, 'password scelta');
+        onMessage(c, JSON.stringify({ ...m, name: '' }));
+        if (esito.nuova) c.send({ t: 'account', codice: codiceLeggibile(roster[esito.token].account.codice), password: true });
+      });
+      return;
+    }
+  }
+  if (m.t === 'account.password') {                                       // il giocatore sceglie la password del codice appena avuto
+    const rec = c.token && roster[c.token];
+    if (!c.web || !rec || !rec.account || rec.account.bloccato || rec.account.impronta) return;
+    const chiave = str(m.chiave, 64);
+    if (!/^[a-f0-9]{64}$/.test(chiave) || c.inVerifica) return;
+    c.inVerifica = true;
+    const sale = crypto.randomBytes(16).toString('hex');
+    improntaAccount(chiave, sale).then(impronta => {
+      c.inVerifica = false;
+      if (roster[c.token] !== rec || !rec.account || rec.account.impronta || rec.account.bloccato) return;
+      Object.assign(rec.account, { sale, impronta, passwordDa: Date.now() });
+      c.viaAccount = true;
+      logAction(c, 'account', true, 'password scelta');
+      scheduleSave(); sendPlayers();
+      c.send({ t: 'account', codice: codiceLeggibile(rec.account.codice), password: true });
+    }, () => { c.inVerifica = false; });
+    return;
+  }
+
   if (m.t === 'hello') {
     // Il gettone è l'identità: il browser se lo tiene e lo rimanda, con la firma. Se non è buono, gliene do uno.
     const token = identitaDi(m, c);
+    // Un profilo con l'account, dal sito, si prende solo con codice e password (ogni volta): non basta il gettone
+    // rimasto nel browser. (Il controllo è prima di tutto il resto: non deve buttare fuori chi c'è davvero.)
+    if (c.web && !c.viaAccount && roster[token] && roster[token].account && roster[token].account.impronta) {
+      return shutOut(c, 'Questo profilo ha un account: entra con il codice dell\'account e la password.');
+    }
     // chi arriva dal tubo da ora in poi si fa riconoscere solo con la firma (anche per il riquadro)
     if (c.kind === 'link') recOf(token).firmaRichiesta = true;
     // Rientra qualcuno che risulta ancora collegato: è la stessa persona che si è ricollegata
@@ -1485,6 +1580,8 @@ function onMessage(c, raw) {
     }
     rec.firstSeenDone = true;
     sendWelcome(c);
+    // ha un codice ma la password non l'ha ancora scelta: glielo si ricorda (dal sito)
+    if (c.web && rec.account && !rec.account.impronta && !rec.account.bloccato) c.send({ t: 'account', codice: codiceLeggibile(rec.account.codice), password: false });
     if (chiaveSbagliata) {
       logAction(c, 'master', false, 'chiave del master sbagliata');
       c.send({ t: 'notice', text: 'La chiave del master non è giusta: sei entrato come giocatore.', kind: 'warn' });
@@ -2011,7 +2108,7 @@ function leggiCorpo(req, res, max, fn) {
 // Le azioni del pannello (permessi, moderazione, regole della sessione...). Le stesse arrivano dall'http di
 // questa macchina (il master locale) o dal tubo (un master entrato da fuori, sul server dedicato).
 const API_PANNELLO = { '/api/state': 'GET', '/api/perm': 'POST', '/api/scene': 'POST', '/api/mod': 'POST', '/api/session': 'POST',
-  '/api/invito/cambia': 'POST', '/api/invito': 'POST', '/api/kick': 'POST', '/api/relay': 'POST' };
+  '/api/invito/cambia': 'POST', '/api/invito': 'POST', '/api/kick': 'POST', '/api/relay': 'POST', '/api/account': 'POST' };
 const NON_HOST = { codice: 409, dati: 'questo è un giocatore, non l\'host' };
 function statoPannello() {
   let sessionId = null;
@@ -2022,7 +2119,7 @@ function statoPannello() {
     players: playerList(),
     log: actionLog.slice(-120),
     roster: Object.entries(roster).map(([token, r]) => ({
-      token, ...r, perms: permsOf(r),
+      token, ...r, account: accountPerPannello(r.account), perms: permsOf(r),
       online: [...clients].some(c => c.token === token),
       live: playerList().find(p => p.token === token) || null
     })),
@@ -2064,7 +2161,7 @@ function apiPannello(p, m, chi) {
           rec.banned = true;
           for (const c of live()) shutOut(c, 'Il master ti ha bandito dalla sessione.');
           break;
-        case 'unban': rec.banned = false; break;
+        case 'unban': if (rec.account && rec.account.bloccato) return { codice: 409, dati: 'L\'account è bloccato per sempre: fanne uno nuovo.' }; rec.banned = false; break;
         case 'mute': rec.muted = !!m.value; break;
         case 'freeze': rec.frozen = !!m.value; break;
         case 'resetPerms': rec.overrides = {}; break;
@@ -2119,6 +2216,36 @@ function apiPannello(p, m, chi) {
       if (m.url) { if (!relay.avvia(String(m.url).slice(0, 300), RELAY_CHIAVE)) return { codice: 400, dati: relay.stato() }; }
       else relay.ferma();
       return { codice: 200, dati: relay.stato() };
+    }
+    // L'account di un profilo: il master lo crea (un codice nuovo) o lo blocca. Bloccato è per sempre: il codice
+    // non vale più e il profilo resta bandito. Per chi ha dimenticato la password si fa un account nuovo.
+    case '/api/account': {
+      const rec = roster[m.token];
+      if (!rec) return { codice: 404, dati: { ok: false } };
+      if (m.azione === 'crea') {
+        if (rec.role === 'master') return { codice: 409, dati: 'Il master non gioca dal sito: niente account.' };
+        if (rec.banned) return { codice: 409, dati: 'Questo profilo è bandito.' };
+        if (rec.account) return { codice: 409, dati: 'Questo profilo ha già un account.' };
+        rec.account = { codice: nuovoCodiceAccount(), creato: Date.now() };
+        const codice = codiceLeggibile(rec.account.codice);
+        logAction(io, 'account', true, (rec.name || '?') + ': codice creato');
+        // chi è dentro adesso dal sito lo riceve subito, e può scegliere la password da lì
+        for (const c of clients) if (c.token === m.token && c.web && !c.pending) c.send({ t: 'account', codice, password: false });
+        scheduleSave(); sendPlayers();
+        return { codice: 200, dati: { ok: true, codice } };
+      }
+      if (m.azione === 'blocca') {
+        if (!rec.account) return { codice: 409, dati: 'Questo profilo non ha un account.' };
+        if (chi && m.token === chi.token) return { codice: 409, dati: { ok: false } };
+        rec.account.bloccato = true; rec.account.bloccatoDa = Date.now();
+        delete rec.account.impronta; delete rec.account.sale;            // non servono più a niente
+        rec.banned = true;
+        for (const c of [...clients]) if (c.token === m.token) shutOut(c, 'Il master ha bloccato il tuo account.');
+        logAction(io, 'account', true, (rec.name || '?') + ': account bloccato');
+        scheduleSave(); sendPlayers(); pushWorldAll();
+        return { codice: 200, dati: { ok: true } };
+      }
+      return { codice: 400, dati: { ok: false } };
     }
     case '/api/kick':
       if (chi && m.token === chi.token) return { codice: 409, dati: { ok: false } };

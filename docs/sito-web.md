@@ -32,6 +32,28 @@ master, né facendosi dare il ruolo dal pannello). Per condurre serve l'app.
 I giocatori con l'app continuano a entrare come sempre (collegamento diretto con uffa-link); i due modi
 convivono nella stessa partita.
 
+### Account con codice (per giocare da più browser)
+
+Senza account il master riconosce un giocatore del sito solo dal browser (il gettone firmato salvato lì):
+cambiando dispositivo, o se il browser cancella i dati (Safari su iPhone lo fa dopo 7 giorni), si rientra
+come persona nuova. Con l'account no:
+
+1. Nel **pannello della sessione** il master preme **🔑 Crea account** sul profilo di un giocatore. Nasce
+   un codice di 12 caratteri (per esempio `K7QM-2XPA-9RTD`), unico nella campagna. Se il giocatore è
+   collegato dal sito lo riceve subito e può scegliere la password lì; altrimenti il master glielo manda.
+2. Il giocatore, nella schermata d'ingresso del sito, apre **Ho un account**, scrive codice e password ed
+   entra con quel profilo (nome, ruolo, schede) da qualsiasi browser. La prima volta la password la
+   sceglie lui; da lì in poi va scritta a ogni ingresso (ricaricando la pagina si riscrive). Dal sito,
+   un profilo con l'account non si prende più con il solo gettone del browser.
+3. Il master non vede la password e non la può cambiare. L'unica cosa che può fare è **⛔ Blocca account**:
+   per sempre, il codice non vale più e il profilo resta bandito. Se un giocatore dimentica la password,
+   rientra dal sito, il master gli crea un account nuovo e gli ridà le schede da «Permessi e schede».
+
+Il codice vale solo dal sito (dall'app si entra come sempre). Tutto sta nel computer del master, in
+`players.json` della campagna. La password non viaggia mai così com'è: il browser ne fa un'impronta
+(PBKDF2-SHA256, 200.000 giri, con il codice come sale) e manda quella; il master la ripassa con scrypt e
+un sale casuale e salva solo il risultato. Dopo 5 password sbagliate quel codice aspetta un quarto d'ora.
+
 Il codice: relay in `relay/`, lato master `server/relay-host.js` (+ `game-server.js`, `launcher.js`,
 `launcher.html`), lato giocatore `sviluppo/sito-web/gioca/` (+ `NET.relay` in `web/js/base/net.js`).
 
