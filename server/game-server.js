@@ -225,7 +225,7 @@ const tokenDiCodice = k => Object.keys(roster).find(t => roster[t] && roster[t].
 function nuovoCodiceAccount() {
   for (;;) {
     let k = '';
-    for (const b of crypto.randomBytes(12)) k += ALFABETO_ACCOUNT[b % ALFABETO_ACCOUNT.length];
+    for (let i = 0; i < 12; i++) k += ALFABETO_ACCOUNT[crypto.randomInt(ALFABETO_ACCOUNT.length)];   // (randomInt: senza sbilanciare le lettere)
     if (!tokenDiCodice(k)) return k;
   }
 }
