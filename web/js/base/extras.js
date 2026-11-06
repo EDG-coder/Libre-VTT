@@ -908,6 +908,11 @@ function setDock(open) {
   if (!open && typeof closeSceneMenu === 'function') closeSceneMenu();
 }
 $('dockHandle').addEventListener('click', () => { setDock(dockEl.classList.contains('collapsed')); scheduleBoardSave(); });
+// L'altezza vera della barra in basso: sul telefono in verticale va a capo (due o tre righe) e la
+// linguetta e il menu degli strumenti devono stare sopra, non in mezzo ai pulsanti (mobile.css).
+if (typeof ResizeObserver === 'function') {
+  new ResizeObserver(() => document.documentElement.style.setProperty('--dock-h', dockEl.offsetHeight + 'px')).observe(dockEl);
+}
 
 // ======================= Livello nascosto e altre impostazioni =======================
 function applyHidden() {

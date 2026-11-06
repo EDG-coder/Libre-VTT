@@ -313,7 +313,7 @@ $('sheetImport').addEventListener('click', async () => {
   let j;
   try { j = leggiScheda(scelto.testo); } catch (err) { alert(err.message); return; }
   daImportare = { j, e: scelto.e };
-  const c = contenutoDa(j), modello = { standard: 'Standard', dnd5e: 'Open D&D 5e', simple: 'Open semplice' }[c.tpl];
+  const c = contenutoDa(j), modello = { standard: 'Standard', dnd5e: 'Open 5e', simple: 'Open semplice' }[c.tpl];
   const quando = j.salvata ? new Date(j.salvata).toLocaleString(window.LIBRE_I18N ? LIBRE_I18N.lingua : 'it', { dateStyle: 'short', timeStyle: 'short' }) : '';
   $('importSheetInfo').textContent = `«${c.name}» · scheda ${modello}` + (c.f.class ? ` · ${c.f.class}${c.f.level ? ' ' + c.f.level : ''}` : '') + (quando ? ` · salvata il ${quando}` : '');
   const puo = !!scelto.e;

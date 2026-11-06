@@ -259,7 +259,7 @@ dalla pagina dell'esecuzione, senza pubblicare.
 | `web/js/schede/` | le schede dei personaggi, i PDF, Roll20, la creazione guidata, i tiri |
 | `web/js/regole/` | i sistemi di gioco e il compendio |
 | `web/lib/` | le librerie di altri (pdf-lib, pdf.js) |
-| `sistemi/` | i sistemi di gioco già pronti (D&D 5e 2014 e 2024, vuoto) con il loro compendio |
+| `sistemi/` | i sistemi di gioco già pronti (5e SRD 5.1 e 5.2, vuoto) con il loro compendio |
 | `examples/plugins/` | i modelli dei plugin (vuoto, tema, sandbox, accesso completo) usati da «＋ Crea» |
 | `docs/` | la guida per chi fa i plugin |
 | `assets/` | lo sfondo di benvenuto |

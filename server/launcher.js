@@ -1041,17 +1041,21 @@ async function scaricaPronto() {
 
 // ---------- aggiornamenti ----------
 // All'apertura si guarda su GitHub se c'è una versione più nuova (al massimo ogni 6 ore).
-// Sul computer si scarica l'installatore giusto e lo si avvia; su Android si scarica l'APK e
-// lo installa l'app (Android chiede sempre conferma); su iPhone si può solo avvisare.
+// Sul computer si scarica l'installatore giusto e lo si avvia. Nelle app per telefoni e tablet
+// (Android, iPhone, iPad) niente: gli aggiornamenti li dà lo store.
 const VERSIONE = String((leggiJson(path.join(ROOT, 'package.json')) || {}).version || '');
 
 // ---------- Plugins (the ⚙ in the home) ----------
-// The folder sits next to «Campagne» (Documents › LIBRE VTT › Plugins); on phones inside the app's own folder.
-const PLUGINS_DIR = MOBILE ? path.join(USERDIR, 'plugins') : path.join(path.dirname(CAMP_HOME), 'Plugins');
+// The folder sits next to «Campagne» (Documents › LIBRE VTT › Plugins).
+// Phone and tablet apps (store rules: no code downloaded or imported after review) only list the
+// plugins shipped inside the app, in plugins-inclusi/ (empty for now): they can be switched on and
+// off, but nothing can be imported, created or copied in.
+const PLUGINS_DIR = MOBILE ? path.join(ROOT, 'plugins-inclusi') : path.join(path.dirname(CAMP_HOME), 'Plugins');
 const PLUGINS_STATE = path.join(USERDIR, 'plugins.json');
 const PLUGIN_EXAMPLES = path.join(ROOT, 'examples', 'plugins');
 const PLUGINS = require('./plugins').createPlugins({ dir: PLUGINS_DIR, stateFile: PLUGINS_STATE, appVersion: VERSIONE });
 function pluginExamples() {
+  if (MOBILE) return [];
   try { return fs.readdirSync(PLUGIN_EXAMPLES, { withFileTypes: true }).filter(e => e.isDirectory() && fs.existsSync(path.join(PLUGIN_EXAMPLES, e.name, 'plugin.json'))).map(e => e.name); } catch { return []; }
 }
 function pluginsInfo() {
@@ -1112,7 +1116,8 @@ function versioniNuove(lista, attuale) {
 }
 let ultimoControllo = null;
 async function controllaAggiornamento(forza) {
-  if (amb('NO_AGGIORNAMENTI')) return { attuale: VERSIONE, nuova: null };
+  // nelle app per telefoni e tablet niente controllo su GitHub: gli aggiornamenti arrivano dallo store
+  if (MOBILE || amb('NO_AGGIORNAMENTI')) return { attuale: VERSIONE, nuova: null, mobile: MOBILE };
   // si ricorda per poco «non c'è niente di nuovo» (una versione può uscire mentre l'app è aperta)
   if (!forza && ultimoControllo && Date.now() - ultimoControllo.quando < (ultimoControllo.dati.nuova ? 6 * 3600e3 : 10 * 60e3)) return ultimoControllo.dati;
   const repo = repoGitHub();
@@ -1735,6 +1740,7 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/api/plugins' && req.method === 'GET') return ok(pluginsInfo());
   if (u.pathname.startsWith('/api/plugins/') && req.method === 'POST' && u.pathname !== '/api/plugins/installa') {
     const op = u.pathname.slice(13);
+    if (MOBILE && (op === 'crea' || op === 'cartella')) return ok({ errore: 'Nell\'app per telefoni e tablet ci sono solo i plugin inclusi.', ...pluginsInfo() });
     return corpo(m => {
       const id = String(m.id || '');
       try {
@@ -1759,6 +1765,7 @@ const server = http.createServer(async (req, res) => {
     });
   }
   if (u.pathname === '/api/plugins/installa' && req.method === 'POST') {
+    if (MOBILE) { req.resume(); return ok({ errore: 'Nell\'app per telefoni e tablet non si possono importare plugin: ci sono solo quelli inclusi.', ...pluginsInfo() }); }
     const parti = []; let n = 0, troppo = false;
     req.on('data', d => { n += d.length; if (n > 60 * 1024 * 1024) { troppo = true; req.destroy(); } else parti.push(d); });
     req.on('end', () => {

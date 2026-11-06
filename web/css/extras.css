@@ -214,7 +214,8 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 .sheetWin input:focus, .sheetWin textarea:focus { outline: 2px solid color-mix(in srgb, var(--sh-accent) 55%, transparent); }
 .sheetWin textarea { min-height: 84px; resize: vertical; }
 .sheetWin .lab { display: flex; flex-direction: column; gap: 2px; font-size: .78em; color: color-mix(in srgb, var(--sh-fg) 70%, transparent); }
-.sheetWin .hdr { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.sheetWin .sgrid > *, .sheetWin .box { min-width: 0; }   /* un campo largo non allarga la colonna oltre la finestra */
+.sheetWin .hdr { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr)); gap: 8px; }
 .sheetWin .abil { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }   /* finestra stretta: le caratteristiche vanno a capo */
 .sheetWin .ab { text-align: center; border: 1px solid var(--sh-line); border-radius: 10px; padding: 4px; min-width: 0; background: var(--sh-field, rgba(255, 255, 255, .3)); }
 .sheetWin .ab b { display: block; font-size: .72em; letter-spacing: .05em; }
@@ -524,7 +525,7 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 #fogShapes button.on { background: var(--accent); color: #fff; border-color: transparent; }
 #fogSizeRow[hidden] { display: none; }
 
-/* ======================= Scheda Open D&D 5e ======================= */
+/* ======================= Scheda Open 5e ======================= */
 .sheetWin .oInsp { display: flex; justify-content: center; gap: 4px; padding-top: 4px; }
 .sheetWin .oHint { margin: 8px 0 0; font-size: .82em; opacity: .75; }
 .sheetWin .oImg { height: 170px; margin-bottom: 6px; }
@@ -797,6 +798,9 @@ body.net-player #caselleSect { display: none; }
 /* ======================= Tiri della scheda (tiri-scheda.js) ======================= */
 .tiroBar { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 10px; position: sticky; top: 0; z-index: 5;
   background: color-mix(in srgb, var(--sh-bg, var(--panel)) 92%, transparent); border-bottom: 1px solid var(--sh-line, var(--line)); }
+/* con le linguette delle pagine (Scheda, Equipaggiamento…) resta ferma in alto solo la fila delle linguette:
+   prima stavano ferme tutte e due nello stesso punto e una copriva l'altra */
+.sheetWin:has(.stabs) .tiroBar { position: static; }
 .tiroSeg { display: flex; border: 1px solid var(--sh-line, var(--line)); border-radius: 9px; overflow: hidden; }
 .tiroSeg button { border: 0; background: none; color: var(--sh-fg, var(--text)); font: inherit; font-size: 12.5px; padding: 5px 10px; cursor: pointer; }
 .tiroSeg button + button { border-left: 1px solid var(--sh-line, var(--line)); }
@@ -837,6 +841,7 @@ body.net-player #caselleSect { display: none; }
 /* ---------- Illuminazione dinamica (luce.js) ---------- */
 #luceCanvas { position: absolute; pointer-events: none; z-index: 2147483000; }
 #luceTinta { position: absolute; pointer-events: none; z-index: 2; mix-blend-mode: soft-light; opacity: .85; }
+html.mappaSuTela #luceTinta { visibility: hidden; }   /* sui dispositivi touch la disegna il canvas della mappa (tintaSuTela) */
 #luceCanvas[hidden], #luceTinta[hidden], #luceSegni[hidden] { display: none; }
 #luceSegni { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; z-index: 2147483001; }
 #luceSegni .lMuro { stroke: #ff5d8f; stroke-linecap: round; filter: drop-shadow(0 0 2px rgba(0, 0, 0, .8)); }

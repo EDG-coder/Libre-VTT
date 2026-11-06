@@ -1,5 +1,5 @@
 // Importare una scheda da un PDF compilabile (quelli con i campi da riempire, come la scheda
-// ufficiale di D&D 5e). Si legge il valore di ogni campo e lo si mette nella scheda Open D&D 5e;
+// ufficiale della 5ª edizione). Si legge il valore di ogni campo e lo si mette nella scheda Open 5e;
 // quello che non si sa dove mettere finisce nelle Note, così non si perde niente.
 // I PDF «piatti» (stampati o fotografati) non hanno campi: si avvisa e basta.
 (function () {
@@ -366,7 +366,7 @@
   if (imp) {
     const b = document.createElement('button');
     b.type = 'button'; b.id = 'sheetImportPdf'; b.className = 'btn ghost';
-    b.title = 'Una scheda in PDF: compilabile (ufficiale 2014, D&D Beyond, MorePurpleMoreBetter, schede italiane e tedesche) o stampata (Roll20, D&D Beyond e altre)';
+    b.title = 'Una scheda in PDF: compilabile (ufficiale 2014, MorePurpleMoreBetter, schede italiane e tedesche e di altri siti) o stampata (Roll20 e altri)';
     b.textContent = '📄 Da un PDF…';
     imp.after(b);
     b.addEventListener('click', () => {
