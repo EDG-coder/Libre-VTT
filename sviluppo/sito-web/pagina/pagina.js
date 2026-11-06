@@ -87,7 +87,10 @@
     e.preventDefault();
     const m = $('codice').value.toLowerCase().match(/[a-f0-9]{64}/);
     if (!m) { $('codiceErr').textContent = t('Il codice non va bene: è lungo 64 caratteri, fatto di numeri e lettere da a a f.'); $('codice').focus(); return; }
-    location.href = 'gioca/#' + m[0];
+    // il codice rifatto carattere per carattere da un alfabeto fisso: nell'indirizzo finiscono solo cifre esadecimali
+    const HEX = '0123456789abcdef', codice = Array.from(m[0], ch => HEX[HEX.indexOf(ch)]).join('');
+    try { localStorage.setItem('libre-web-codice', codice); } catch {}
+    location.assign(new URL('gioca/#' + codice, location.href).href);
   });
 
   // il sistema di chi guarda per primo
