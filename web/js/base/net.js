@@ -351,6 +351,7 @@ function netHandle(m) {
     }
     case 'asset.need':
       for (const h of m.hashes || []) NET.assetKnown.delete(h);
+      if (typeof NET.onAssetNeed === 'function') NET.onAssetNeed(m.hashes || []);
       return;
     case 'pending':
       NET.pending = true;
@@ -515,7 +516,10 @@ async function applyWorld(w, toccati) {
       chat = w.chat;
       if (typeof renderChat === 'function') renderChat();
     }
+    const pubPrima = settings.publicScene;
     settings.publicScene = w.publicScene || null;
+    // la scena mostrata cambiata dal pannello (non da qui): parte la sua musica, come dal 📌
+    if (isMaster() && NET.mondoVisto && pubPrima !== settings.publicScene && settings.publicScene && typeof musicaDellaScena === 'function') musicaDellaScena(settings.publicScene, true);
     if (!isMaster()) settings.fogColor = w.fogColor || 'auto';     // il colore della nebbia lo decide chi conduce
     if (!isMaster() && t('turni') && typeof turniDaMondo === 'function') turniDaMondo(w.turni);
     // la musica cambiata mentre eri scollegato (o con la linea debole): arriva con il mondo
@@ -545,6 +549,7 @@ async function applyWorld(w, toccati) {
     if (typeof luceRidisegna === 'function') luceRidisegna();
   } finally {
     NET.applying = false;
+    NET.mondoVisto = true;
   }
 }
 

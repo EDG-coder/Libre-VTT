@@ -95,7 +95,7 @@
    Se le icone non ci stanno in una colonna, mobile.js le rimpicciolisce un po' (--k) e le mette su
    più colonne (--righe), una accanto all'altra. */
 .ui-tel #toolDrawer {
-  top: auto; bottom: calc(76px + env(safe-area-inset-bottom)); transform: none; left: 0;
+  top: auto; bottom: calc(var(--dock-h, 48px) + 30px + env(safe-area-inset-bottom)); transform: none; left: 0;
   /* niente effetti sul contenitore: altrimenti gli strumenti aperti non potrebbero uscirne */
   -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(18, 21, 28, .82);
   transition: transform .3s cubic-bezier(.22, .8, .3, 1);
@@ -131,11 +131,18 @@
 .ui-tel #dock > * { pointer-events: auto; }
 .ui-tel #toolDrawer::-webkit-scrollbar { display: none; }
 .ui-tel #dock.collapsed { transform: translateY(calc(100% + 24px)); }
-.ui-tel #dockZone { bottom: calc(56px + env(safe-area-inset-bottom)); }
+/* la linguetta sta subito sopra la barra, anche quando questa va a capo su più righe (--dock-h, extras.js);
+   la zona attorno non prende i tocchi, che arrivano ai pulsanti sotto */
+.ui-tel #dockZone { bottom: calc(var(--dock-h, 48px) + 8px + env(safe-area-inset-bottom)); width: 64px; pointer-events: none; }
+.ui-tel #dockZone #dockHandle { pointer-events: auto; }
 .ui-tel #dockZone.collapsed { bottom: env(safe-area-inset-bottom); }
 /* con il menu delle scene aperto la linguetta della barra non copre «Torna alla home» */
 body:has(#sceneMenu:not([hidden])) #dockZone { visibility: hidden; }
 .ui-tel #sceneBtn, .ui-tel #layerSwitch, .ui-tel #targetSwitch, .ui-tel #publicBadge, .ui-tel #selArea { height: 42px; flex: none; }
+/* i livelli con le dita: pulsanti alti 44 px dentro una pillola alta 48 (prima la pillola era più bassa dei
+   pulsanti e quello acceso usciva fuori, sopra gli altri) */
+.ui-touch #layerSwitch, .ui-touch #targetSwitch { height: 48px; padding: 2px; }
+.ui-touch #layerSwitch button, .ui-touch #targetSwitch button { min-height: 44px; height: 44px; }
 .ui-tel #sceneBtn { max-width: 34vw; padding: 0 10px; gap: 4px; }
 .ui-tel #sceneName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ui-tel #layerSwitch button, .ui-tel #targetSwitch button { padding: 0 8px; font-size: 12.5px; }
@@ -150,7 +157,12 @@ body:has(#sceneMenu:not([hidden])) #dockZone { visibility: hidden; }
 }
 .ui-tel .sheetWin .stitle { padding: 8px 12px; }
 .ui-tel .sheetWin .sbody { padding: 10px; }
-.ui-tel .sheetWin .sgrid, .ui-tel .sheetWin .invgrid { grid-template-columns: 1fr; }
+/* una colonna larga quanto lo schermo: «minmax(0, 1fr)» e non «1fr», che si allargava fino al riquadro più
+   largo e faceva uscire la scheda a destra (su iPhone si vedeva tagliata a sinistra) */
+.ui-tel .sheetWin .sgrid, .ui-tel .sheetWin .invgrid { grid-template-columns: minmax(0, 1fr); }
+.ui-tel .sheetWin .sbody { overflow-x: hidden; }
+.ui-tel .sheetWin .abil { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.ui-tel .sheetWin .ab b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* finestre di dialogo */
 .ui-tel dialog { max-width: calc(100vw - 16px) !important; max-height: 88vh; max-height: 88dvh; overflow-y: auto; box-sizing: border-box; padding: 16px !important; }
@@ -206,3 +218,5 @@ body:has(#sceneMenu:not([hidden])) #dock { z-index: 100008; }
 .ui-tel .tabs { gap: 4px; }
 .ui-tel .tab:not(.active) { flex: 0 0 40px; padding-inline: 0; }
 .ui-tel .tab.active { flex: 1 1 auto; padding-inline: 8px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* le linguette delle pagine della scheda con le dita (alte 44 px): il testo al centro, non in alto */
+.ui-touch .sheetWin .stabs > button { display: inline-flex; align-items: center; justify-content: center; }

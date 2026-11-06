@@ -93,7 +93,12 @@
     return c;
   }
 
+  // la mappa sul canvas dei dispositivi touch (script.js) ci copia sopra la tinta: va ridisegnata anche lei
   function disegna() {
+    disegnaLuce();
+    if (typeof ridisegnaTela === 'function') ridisegnaTela();
+  }
+  function disegnaLuce() {
     aggancia();
     const v = vistaOra();
     const fog = cur && cur.fog;
@@ -758,6 +763,9 @@
     showScene = async function () {                                 // eslint-disable-line no-global-assign
       const r = await prima.apply(this, arguments);
       stato.catena = null; aggancia(); disegna(); disegnaSegni(); sincronizza();
+      // i segnalini e lo sfondo della scena nuova possono arrivare un attimo dopo: senza un secondo
+      // disegno l'anteprima restava tutta buia (senza nessuno che vede) finché non si spostava la mappa
+      setTimeout(presto, 250); setTimeout(presto, 1000);
       return r;
     };
   }
@@ -773,6 +781,7 @@
     const prima = afterBoardLoad;
     afterBoardLoad = function () { const r = prima.apply(this, arguments); disegna(); disegnaSegni(); sincronizza(); return r; };   // eslint-disable-line no-global-assign
   }
+  if (typeof map !== 'undefined' && map) map.addEventListener('load', () => { if (luceDi(false)) presto(); });
   window.luceRidisegna = () => { disegna(); disegnaSegni(); };
 
   // ======================= Attraversare un passaggio =======================

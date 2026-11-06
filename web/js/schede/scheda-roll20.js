@@ -1,6 +1,6 @@
-// Le schede di Roll20 stampate in PDF (la «stampa» della scheda D&D 5e, in italiano o in inglese).
+// Le schede di Roll20 stampate in PDF (la «stampa» della scheda 5e, in italiano o in inglese).
 // Non hanno campi da leggere: si legge il testo con la sua posizione sulla pagina e lo si rimette
-// al suo posto nella scheda Open D&D 5e. Le etichette stampate («CLASSE E LIVELLO», «TIRI SALVEZZA»…)
+// al suo posto nella scheda Open 5e. Le etichette stampate («CLASSE E LIVELLO», «TIRI SALVEZZA»…)
 // fanno da punti di riferimento, così le caselle che Roll20 allunga col contenuto non confondono.
 // Se le etichette non ci sono, il PDF non è una stampa di Roll20: si restituisce null.
 //   pagine = [{ w, h, items: [{ s, x0, y0, x1, y1 }] }]   (coordinate in punti, y dall'alto)

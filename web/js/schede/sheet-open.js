@@ -1,4 +1,4 @@
-// ---------- Modello «Open D&D 5e»: tutto quello della scheda ufficiale, in un formato libero ----------
+// ---------- Modello «Open 5e»: tutto quello della scheda ufficiale, in un formato libero ----------
 // Ha gli stessi campi (le stesse chiavi data-f) della scheda Standard di sheet-std.js: quello che
 // scrivi in una lo ritrovi nell'altra (menu della finestra → «Vedi come scheda Standard/Open»).
 // In più gli incantesimi sono un elenco che si allunga quanto serve: ogni incantesimo ha il suo

@@ -1,4 +1,4 @@
-// ---------- Modello «Standard»: la scheda italiana di D&D 5e, 3 pagine ----------
+// ---------- Modello «Standard»: la scheda 5e in italiano, 3 pagine ----------
 // Ogni campo sta esattamente dove sta sulla scheda di carta: le coordinate sono quelle
 // del PDF originale (pagina A4 di 595.276 x 841.89 punti), con l'origine in alto a sinistra.
 // Le cornici, gli ornamenti e le intestazioni disegnate sono invece originali di questo file.

@@ -1,4 +1,4 @@
-LIBRE VTT, il tavolo da gioco virtuale per D&D 5e.
+LIBRE VTT, il tavolo da gioco virtuale per giochi di ruolo, compatibile con la 5ª edizione (SRD).
 
 ## Quale file scaricare
 

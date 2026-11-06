@@ -181,8 +181,8 @@ document.body.insertAdjacentHTML('beforeend', `
   <h3>Nuova scheda</h3>
   <label class="field">Nome <input id="sheetNameIn" type="text" maxlength="40" autocomplete="off"></label>
   <fieldset class="types"><legend>Modello</legend>
-    <label class="opt"><input type="radio" name="tpl" value="standard" checked> Standard · scheda italiana D&amp;D 5e (3 pagine)</label>
-    <label class="opt"><input type="radio" name="tpl" value="dnd5e"> Open · D&amp;D 5ª edizione</label>
+    <label class="opt"><input type="radio" name="tpl" value="standard" checked> Standard · scheda 5e a tre pagine (SRD)</label>
+    <label class="opt"><input type="radio" name="tpl" value="dnd5e"> Open · 5ª edizione (SRD)</label>
     <label class="opt"><input type="radio" name="tpl" value="simple"> Open · Semplice (solo testo)</label>
   </fieldset>
   <div class="dialogBtns"><button type="button" id="sheetImport" class="btn ghost" title="Una scheda salvata prima in un file (anche da un'altra partita)">📂 Importa da un file…</button><span style="flex:1"></span><button type="button" id="sheetCancel" class="btn ghost">Annulla</button><button type="submit" class="btn">Crea</button></div>
@@ -230,7 +230,7 @@ function renderSheetList() {
     const d = document.createElement('div'), im = new Image(), nm = document.createElement('span'), sm = document.createElement('small');
     d.className = 'sheetItem'; d.dataset.id = s.id; d.draggable = true; d.title = document.documentElement.classList.contains('ui-touch') ? 'Tocca per aprire, tieni premuto per le altre opzioni' : 'Doppio clic per aprire, trascina sulla mappa per il segnalino';
     im.className = 'sicon'; im.src = iconOf(s); im.alt = ''; im.draggable = false;
-    nm.className = 'nm'; nm.textContent = s.name; sm.textContent = { standard: 'Standard', dnd5e: 'Open D&D 5e', simple: 'Open semplice' }[s.tpl] || '';
+    nm.className = 'nm'; nm.textContent = s.name; sm.textContent = { standard: 'Standard', dnd5e: 'Open 5e', simple: 'Open semplice' }[s.tpl] || '';
     d.append(im, nm, sm);
     d.addEventListener('dblclick', () => openSheet(s.id));
     // copia = segnalino sulla mappa; sposta = in una cartella dell'elenco
@@ -485,7 +485,7 @@ addEventListener('keydown', e => {
   const sopra = aperte.sort((a, b) => (+b.style.zIndex || 0) - (+a.style.zIndex || 0))[0];
   closeWin(sopra);
 });
-// Standard e Open D&D 5e usano gli stessi campi: la stessa scheda si può vedere nei due formati.
+// Standard e Open 5e usano gli stessi campi: la stessa scheda si può vedere nei due formati.
 // La scelta vale per questo dispositivo e finché il programma resta aperto.
 const vistaScheda = new Map();
 function cambiaVista(w) {
@@ -711,14 +711,14 @@ function bindSheet(root, s) {
 // ---------- Modelli ----------
 const fld = (label, k, type = 'text') => `<label class="lab">${label}<input type="${type}" data-f="${k}"></label>`;
 const area = (label, k, ph = '') => `<div class="box"><h5>${label}<button type="button" class="sendRule" data-send="${k}" title="Invia questo testo in chat">💬</button></h5><textarea data-f="${k}" placeholder="${ph}"></textarea></div>`;
-// dndHtml(): il modello «Open D&D 5e» sta in sheet-open.js
+// dndHtml(): il modello «Open 5e» sta in sheet-open.js
 const simpleHtml = () => `<div class="sgrid">
   ${area('Descrizione', 'desc')}
   ${area('Tiri rapidi', 'quick', 'Scrivi [[1d20+5 | Attacco]] o [[2d6+3 | Danni]]: sotto compare un pulsante per tirare')}
   <div class="box full"><h5>Appunti</h5><textarea data-f="notes" style="min-height:160px"></textarea></div>
 </div>`;
 
-// ---------- Modello Standard: la scheda italiana D&D 5e (3 pagine) ----------
+// ---------- Modello Standard: la scheda 5e in italiano (3 pagine) ----------
 const STD_SKILLS = ['acro', 'anim', 'arca', 'athl', 'stea', 'inve', 'dece', 'inti', 'perf', 'insi', 'medi', 'natu', 'perception', 'pers', 'slei', 'reli', 'surv', 'hist'];
 const ck = (k, title) => `<input type="checkbox" data-f="${k}" title="${title || ''}">`;
 const rows = (n, fn) => Array.from({ length: n }, (_, i) => fn(i)).join('');
