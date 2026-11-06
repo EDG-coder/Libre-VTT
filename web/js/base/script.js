@@ -1594,6 +1594,15 @@ function msgEl(m) {
     h.textContent = m.title; t.textContent = m.text;
     if (who) d.append(who);
     d.append(h, t);
+  } else if (m.kind === 'calc') {                     // «2+2=» scritto in chat: il risultato, subito sotto
+    d.className = 'msg calc';
+    if (m.errore) d.classList.add('calcErr');
+    if (m.whisper) d.classList.add('whisper');
+    const e = document.createElement('span'); e.className = 'cEspr'; e.textContent = '🧮 ' + (m.expr || '') + ' =';
+    const r = document.createElement('b'); r.className = 'cRis';
+    r.textContent = m.errore ? '? ' : String(m.risultato);
+    d.append(e, ' ', r);
+    if (m.errore) { const x = document.createElement('span'); x.className = 'cNota'; x.textContent = tr(m.errore); d.append(' ', x); }
   } else if (m.kind === 'link') {
     d.className = 'msg link';
     const b = document.createElement('button');
@@ -1650,6 +1659,11 @@ function sendChat() {
   if (!text) return;
   if (typeof chatCommand === 'function' && chatCommand(text)) { chatInput.value = ''; return; }
   addChat({ kind: 'text', text });
+  // da soli (senza server) il conto lo fa questa pagina; in rete lo fa il server, per tutti
+  if (!(typeof netAs === 'function' && netAs()) && typeof CALCOLO === 'object') {
+    const r = CALCOLO.calcola(text);
+    if (r) addChat({ kind: 'calc', expr: r.expr, ...(r.errore ? { errore: r.errore } : { risultato: r.risultato }) });
+  }
   chatInput.value = ''; chatInput.style.height = '';
 }
 document.getElementById('chatSend').addEventListener('click', sendChat);
