@@ -512,6 +512,8 @@ viewport.addEventListener('pointermove', e => {
 function stop() {
   if (mode === 'marquee') finishMarquee();
   if (mode === 'photo' && !photoMoved && selection.length > 1) select(activeEl);     // clic semplice: resta solo questo
+  // passato per un passaggio (le scale fra due piani)? esce dall'altra parte (per i giocatori in rete decide il server)
+  if (mode === 'photo' && photoMoved && activeEl && typeof dopoSpostamento === 'function') dopoSpostamento([[activeEl, origX, origY], ...group.map(g => [g.el, g.x, g.y])]);
   group = [];
   const wasFrame = activeEl === bgBox || activeEl === board;
   clearTimeout(holdTimer); holdTimer = 0;
@@ -1594,6 +1596,15 @@ function msgEl(m) {
     h.textContent = m.title; t.textContent = m.text;
     if (who) d.append(who);
     d.append(h, t);
+  } else if (m.kind === 'calc') {                     // «2+2=» scritto in chat: il risultato, subito sotto
+    d.className = 'msg calc';
+    if (m.errore) d.classList.add('calcErr');
+    if (m.whisper) d.classList.add('whisper');
+    const e = document.createElement('span'); e.className = 'cEspr'; e.textContent = '🧮 ' + (m.expr || '') + ' =';
+    const r = document.createElement('b'); r.className = 'cRis';
+    r.textContent = m.errore ? '? ' : String(m.risultato);
+    d.append(e, ' ', r);
+    if (m.errore) { const x = document.createElement('span'); x.className = 'cNota'; x.textContent = tr(m.errore); d.append(' ', x); }
   } else if (m.kind === 'link') {
     d.className = 'msg link';
     const b = document.createElement('button');
@@ -1650,6 +1661,11 @@ function sendChat() {
   if (!text) return;
   if (typeof chatCommand === 'function' && chatCommand(text)) { chatInput.value = ''; return; }
   addChat({ kind: 'text', text });
+  // da soli (senza server) il conto lo fa questa pagina; in rete lo fa il server, per tutti
+  if (!(typeof netAs === 'function' && netAs()) && typeof CALCOLO === 'object') {
+    const r = CALCOLO.calcola(text);
+    if (r) addChat({ kind: 'calc', expr: r.expr, ...(r.errore ? { errore: r.errore } : { risultato: r.risultato }) });
+  }
   chatInput.value = ''; chatInput.style.height = '';
 }
 document.getElementById('chatSend').addEventListener('click', sendChat);
@@ -2158,7 +2174,9 @@ addEventListener('DOMContentLoaded', async () => {      // dopo che sheets.js ed
   try { primo = await serverStore.list(); online = true; modeMsg = 'Le foto vengono salvate nella cartella assets/.'; }
   catch {
     store = localStore;
-    modeMsg = 'Server spento: le foto restano solo in questo browser. Per salvarle nella cartella assets/ avvia "node server.js" e apri http://localhost:3000.';
+    modeMsg = window.LIBRE_WEB
+      ? tr('Versione web: tutto resta solo in questo browser (niente partite in rete). Per giocare con gli altri scarica il programma.')
+      : 'Server spento: le foto restano solo in questo browser. Per salvarle nella cartella assets/ avvia "node server.js" e apri http://localhost:3000.';
   }
   setStatus();
   await reload(primo);  // l'elenco degli assets (già letto qui sopra) serve per ritrovare le immagini delle scene

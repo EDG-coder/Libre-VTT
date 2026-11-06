@@ -13,6 +13,9 @@ Download dell'ultima versione:
 
 Tavolo da gioco virtuale che gira sul tuo computer.
 
+C'è anche una **versione sito web**: si prova nel browser senza installare niente (vedi
+[docs/sito-web.md](docs/sito-web.md)).
+
 ![Una sessione nel bosco: segnalini sulla griglia e dadi in chat](docs/immagini/bosco.webp)
 
 | La nebbia di guerra (il master vede attraverso il velo) | Le schede, collegate ai segnalini |

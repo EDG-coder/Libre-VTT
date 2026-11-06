@@ -20,6 +20,7 @@
 const http = require('http'), net = require('net'), fs = require('fs'), path = require('path'), crypto = require('crypto');
 const LUCE = require('../condiviso/luce-calcolo.js');
 const VERS = require('../condiviso/versioni.js');
+const CALCOLO = require('../condiviso/calcolo.js');
 
 const MODE = (process.argv[2] || 'host').toLowerCase();
 const DEDICATO = MODE === 'host' && process.env.LIBRE_DEDICATO === '1';
@@ -408,7 +409,7 @@ function lucePerGiocatore(c, sc) {
   const porte = porteVisibili(c, sc);
   const v = vistaDi(sc, c);
   if (!v) return { luce: sc.luce ? { on: false, porte } : undefined, vista: undefined };
-  const out = { amb: v.amb, ricordo: v.ricordo, occhi: v.occhi.map(o => ({ x: o.x, y: o.y, scuro: o.scuro, poly: o.poly })), luci: v.luci };
+  const out = { amb: v.amb, ricordo: v.ricordo, occhi: v.occhi.map(o => ({ x: o.x, y: o.y, scuro: o.scuro, poly: o.poly, v: o.v })), luci: v.luci };
   if (v.ricordo === 'scuro') { const g = visti.get(v.chi); if (g) out.visto = { x: g.x, y: g.y, q: g.q, cols: g.cols, rows: g.rows, rle: LUCE.comprimi(g.d) }; }
   return { luce: { on: true, ambiente: v.amb, ricordo: v.ricordo, porte }, vista: out };
 }
@@ -430,11 +431,22 @@ function velocitaCaselle(ph) {
   const r = LUCE.leggiDistanza(sh.f.speed, world.unita);
   return r.ok && r.caselle > 0 ? r.caselle : null;
 }
+/** Il movimento passa per un passaggio (scale, botola…)? → dove si esce, oppure null. */
+function saltoDi(sc, ph, pos) {
+  const pass = sc.luce && Array.isArray(sc.luce.passaggi) && sc.luce.passaggi.length ? { passaggi: LUCE.pulisci(sc.luce).passaggi } : null;
+  if (!pass) return null;
+  const [ax, ay] = centro(ph);
+  const w = pos.w > 0 ? +pos.w : ph.w, h = pos.h > 0 ? +pos.h : ph.h;
+  const s = LUCE.salto(pass, ax, ay, (+pos.l || 0) + w / 2, (+pos.t || 0) + h / 2);
+  return s && { ...s, l: s.x - w / 2, t: s.y - h / 2 };
+}
 function controllaMovimento(sc, ph, pos) {
   const [ax, ay] = centro(ph);
   const bx = (+pos.l || 0) + (pos.w > 0 ? +pos.w : ph.w) / 2, by = (+pos.t || 0) + (pos.h > 0 ? +pos.h : ph.h) / 2;
   if (Math.hypot(bx - ax, by - ay) < 1) return { ok: true, caselle: 0 };
   const muri = sc.luce && sc.luce.solidi ? LUCE.pulisci(sc.luce) : null;
+  // i tratti dei passaggi, per chi cammina, sono muri: ci si passa solo «saltando» dall'altra parte
+  if (muri) for (const q of muri.passaggi) for (const t of [q.a, q.b]) muri.muri.push({ x1: t[0], y1: t[1], x2: t[2], y2: t[3] });
   const battaglia = (sc.type || 'map') !== 'cinematic' && !(sc.luce && sc.luce.velocita === false);
   const vel = battaglia ? velocitaCaselle(ph) : null;
   const turno = vel ? turnoDi(sc, ph) : null;
@@ -445,14 +457,28 @@ function controllaMovimento(sc, ph, pos) {
   const totale = vel ? vel * (scatto ? 2 : 1) : Infinity, resto = Math.max(0, totale - usate);
   const cella = (sc.grid && +sc.grid.size) || 50;
   const campo = LUCE.rettangoloGriglia(sc.board, sc.grid);
-  const strada = LUCE.percorso(muri || { muri: [] }, campo, cella, ax, ay, bx, by, resto + 0.01);
+  // con un passaggio di mezzo il percorso è in due pezzi: fino al passaggio, e dall'altra parte fino all'arrivo
+  const sl = saltoDi(sc, ph, pos);
+  const strada = sl ? dueTratti(muri, campo, cella, ax, ay, sl, resto + 0.01) : LUCE.percorso(muri || { muri: [] }, campo, cella, ax, ay, bx, by, resto + 0.01);
   if (!strada) {
     // non trovato: o c'è un muro di mezzo, o è troppo lontano
-    const senzaLimite = muri ? LUCE.percorso(muri, campo, cella, ax, ay, bx, by) : { caselle: Infinity };
+    const senzaLimite = !muri ? { caselle: Infinity } : sl ? dueTratti(muri, campo, cella, ax, ay, sl) : LUCE.percorso(muri, campo, cella, ax, ay, bx, by);
     if (!senzaLimite) return { ok: false, perche: 'di là non ci arrivi: c\'è un muro' };
     return { ok: false, perche: `troppo lontano: ti restano ${+resto.toFixed(1)} caselle` };
   }
   return { ok: true, caselle: strada.caselle, turno };
+}
+
+/** Da (ax, ay) al passaggio, poi dall'altra parte fino all'arrivo: le caselle si sommano. */
+function dueTratti(muri, campo, cella, ax, ay, sl, max) {
+  const lim = max >= 0 ? max : Infinity, m = muri || { muri: [] };
+  const verso = (p, q, d) => { const L = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1; return [p[0] + (q[0] - p[0]) / L * d, p[1] + (q[1] - p[1]) / L * d]; };
+  const [px, py] = verso(sl.prima, [ax, ay], 1);                       // appena prima del passaggio
+  const uno = LUCE.percorso(m, campo, cella, ax, ay, px, py, lim);
+  if (!uno) return null;
+  const [qx, qy] = verso(sl.dopo, [sl.x, sl.y], 1);                     // appena dopo, dall'altra parte
+  const due = LUCE.percorso(m, campo, cella, qx, qy, sl.x, sl.y, lim - uno.caselle);
+  return due ? { caselle: uno.caselle + due.caselle } : null;
 }
 
 /** Il percorso locale del master non vale per gli altri: fuori va «gs:<hash>». */
@@ -695,6 +721,17 @@ function addChat(m) {
   panelPush({ t: 'chat', msg: m });                      // il pannello è di chi conduce
 }
 
+// «2+2=» in chat: subito sotto, il risultato. Lo vede chi vedeva il calcolo (un sussurro resta tra i due e chi conduce).
+function rispostaCalcolo(c, text, whisper) {
+  const r = CALCOLO.calcola(text);
+  if (!r) return;
+  const msg = { kind: 'calc', expr: r.expr, byId: c.token };
+  if (r.errore) { msg.errore = r.errore; msg.text = `🧮 ${r.expr} = ? (${r.errore})`; }
+  else { msg.risultato = r.risultato; msg.text = `🧮 ${r.expr} = ${r.risultato}`; }
+  if (whisper) msg.whisper = whisper;
+  addChat(msg);
+}
+
 // ======================= Le intenzioni dei clienti =======================
 function deny(c, op, why) {
   sendA(c, { t: 'denied', op, reason: why, q: c.qOra || undefined });
@@ -828,9 +865,12 @@ function handleIntent(c, m) {
       if (!mov.ok) { schedulePush(); return deny(c, m.op, mov.perche); }
       if (mov.turno) { ph.mosso = (ph.mossoTurno === mov.turno ? +ph.mosso || 0 : 0) + mov.caselle; ph.mossoTurno = mov.turno; }
       else if (mov.caselle > 0 && ph.scatta === true) delete ph.scatta;                 // senza turni lo scatto vale per un movimento
-      ph.l = +pos.l || 0; ph.t = +pos.t || 0;
+      // passato per un passaggio (le scale fra due piani): esce dall'altra parte
+      const sl = saltoDi(sc, ph, pos);
+      ph.l = sl ? sl.l : +pos.l || 0; ph.t = sl ? sl.t : +pos.t || 0;
       if (pos.w > 0) ph.w = +pos.w;
       if (pos.h > 0) ph.h = +pos.h;
+      if (sl) c.send({ t: 'salto', id: ph.id, x: sl.x, y: sl.y });
       changed();
       return;
     }
@@ -1017,10 +1057,13 @@ function handleIntent(c, m) {
         if (!voci.length) return deny(c, m.op, `nessuno si chiama «${str(m.to, 60)}»`);
         if (voci.length > 1 && !alMaster) return deny(c, m.op, `ci sono più persone che si chiamano «${str(m.to, 60)}»`);
         const [tok, rec] = voci[0];
-        addChat({ kind: 'text', text, by: c.name, byId: c.token, whisper: { to: tok, toName: rec.name || 'master' } });
+        const whisper = { to: tok, toName: rec.name || 'master' };
+        addChat({ kind: 'text', text, by: c.name, byId: c.token, whisper });
+        rispostaCalcolo(c, text, whisper);
         return;
       }
       addChat({ kind: 'text', text, by: c.name, byId: c.token });
+      rispostaCalcolo(c, text);
       return;
     }
     case 'chat.del': {

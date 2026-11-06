@@ -300,6 +300,12 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 #chatTabs button.dot::after { content: ""; position: absolute; top: 5px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #ff5f57; }
 .msg { white-space: pre-wrap; }
 .msg.rule { align-self: stretch; max-width: none; background: color-mix(in srgb, #ffd93d 12%, var(--panel-3)); border: 1px solid rgba(255, 217, 61, .45); border-radius: 12px; }
+.msg.calc { border-left: 3px solid #4fc3a1; background: color-mix(in srgb, #4fc3a1 12%, var(--panel-3)); }
+.msg.calc .cEspr { opacity: .85; }
+.msg.calc .cRis { font-size: 1.1em; color: #4fc3a1; }
+:root[data-theme="light"] .msg.calc .cRis { color: #1f7a5f; }
+.msg.calc.calcErr .cRis { color: #ff7a7a; }
+.msg.calc .cNota { font-size: .85em; opacity: .8; }
 .msg.rule b { display: block; margin-bottom: 2px; font-size: 12px; color: #ffd93d; }
 .msg.link { align-self: stretch; max-width: none; background: none; padding: 0; }
 .msg.link button { width: 100%; text-align: left; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--aura, #7c5cff); background: color-mix(in srgb, var(--aura, #7c5cff) 18%, var(--panel-3)); color: var(--text); font: inherit; cursor: pointer; }
@@ -733,6 +739,9 @@ body.net-player #caselleSect { display: none; }
 .compCerca input, .compCerca select, .compFiltri select { font: inherit; font-size: 13px; padding: 7px 9px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); }
 .compFiltri { display: flex; flex-wrap: wrap; gap: 6px; }
 .compFiltri select { flex: 1 1 120px; min-width: 0; }
+.compOrdine { display: flex; gap: 4px; flex: 1 1 100%; min-width: 0; }
+.compOrdine select { flex: 1 1 auto; }
+.compVerso { flex: none; padding: 4px 10px; font-size: 15px; }
 .compAzioni { flex-wrap: wrap; gap: 6px; }
 .compAzioni .btn { padding: 6px 9px; font-size: 13px; }
 .compAzioni .btn[hidden] { display: none; }
@@ -852,6 +861,11 @@ body.net-player #caselleSect { display: none; }
 #luceSegni .lPorta circle.aperta { stroke: #2ee6a6; }
 #luceSegni .lPorta text { fill: #fff; font: 600 14px system-ui, sans-serif; pointer-events: none; }
 #luceSegni:not(.modifica) .lPortaL { opacity: .55; }
+/* passaggi (scale fra due piani): due tratti collegati, col numero in mezzo */
+#luceSegni .lPassaggio, #luceSegni .lAnteprima.passaggio { stroke: #b07cff; stroke-linecap: round; }
+#luceSegni .lPassoNum { pointer-events: auto; cursor: pointer; }
+#luceSegni .lPassoNum circle { fill: rgba(18, 21, 28, .85); stroke: #b07cff; stroke-width: 2; }
+#luceSegni .lPassoNum text { fill: #fff; font: 600 12px system-ui, sans-serif; pointer-events: none; }
 #viewport.layer-luce { cursor: crosshair; }
 #viewport.layer-luce .photo { pointer-events: none; opacity: .75; }
 #layerSwitch button[data-layer="luce"].active { background: rgba(255, 176, 0, .55); box-shadow: 0 0 12px rgba(255, 176, 0, .8); }

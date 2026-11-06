@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LIBRE VTT · tavolo da gioco virtuale libero e gratuito</title>
+<meta name="description" content="LIBRE VTT è un tavolo da gioco virtuale libero e gratuito per giochi di ruolo: mappe, segnalini, nebbia di guerra, luce dinamica, schede e dadi. Provalo nel browser o scarica l'app per Windows, Mac, Linux e Android.">
+<meta name="keywords" content="tavolo virtuale, virtual tabletop, VTT, giochi di ruolo, TTRPG, 5e, SRD, nebbia di guerra, luce dinamica, gratis, open source">
+<meta name="theme-color" content="#12151c">
+<meta property="og:type" content="website">
+<meta property="og:title" content="LIBRE VTT · tavolo da gioco virtuale libero">
+<meta property="og:description" content="Mappe, segnalini, nebbia, luce dinamica, schede e dadi. Gratis, senza account, anche nel browser.">
+<meta property="og:image" content="immagini/bosco.webp">
+<meta name="twitter:card" content="summary_large_image">
+<!--SITO_URL-->
+<link rel="icon" type="image/svg+xml" href="gioca/favicon.svg">
+<link rel="stylesheet" href="pagina.css">
+</head>
+<body>
+<header class="testa">
+  <a class="marchio" href="./"><img src="gioca/favicon.svg" alt="" width="28" height="28"> LIBRE VTT</a>
+  <nav>
+    <a href="#modi" data-t="Come si gioca">Come si gioca</a>
+    <a href="#scarica" data-t="Scarica">Scarica</a>
+    <a href="https://github.com/EDG-coder/Libre-VTT" rel="noopener">GitHub</a>
+    <button id="lingua" type="button" aria-label="English">EN</button>
+  </nav>
+</header>
+
+<main>
+  <section class="eroe">
+    <div class="eroe-testo">
+      <h1 data-t="Il tavolo da gioco virtuale libero, sul tuo computer o nel browser.">Il tavolo da gioco virtuale libero, sul tuo computer o nel browser.</h1>
+      <p class="sotto" data-t="Mappe, segnalini, nebbia di guerra, luce dinamica, schede collegate ai segnalini e dadi in chat. Gratis, senza account, senza pubblicità.">Mappe, segnalini, nebbia di guerra, luce dinamica, schede collegate ai segnalini e dadi in chat. Gratis, senza account, senza pubblicità.</p>
+      <div class="bottoni">
+        <a class="btn primo" href="gioca/" data-t="Gioca ora nel browser">Gioca ora nel browser</a>
+        <a class="btn" href="#scarica" id="scaricaSu" data-t="Scarica l'app">Scarica l'app</a>
+      </div>
+      <p class="nota" data-t="Nel browser si prova tutto da soli, senza installare niente. Per le partite in rete con gli amici serve l'app (presto anche dal browser).">Nel browser si prova tutto da soli, senza installare niente. Per le partite in rete con gli amici serve l'app (presto anche dal browser).</p>
+    </div>
+    <figure class="eroe-foto">
+      <img src="immagini/bosco.webp" width="1600" height="1000" alt="Una sessione nel bosco: segnalini sulla griglia e dadi in chat" data-ta="Una sessione nel bosco: segnalini sulla griglia e dadi in chat">
+    </figure>
+  </section>
+
+  <section class="griglia">
+    <article>
+      <h2 data-t="Nebbia e luce dinamica">Nebbia e luce dinamica</h2>
+      <p data-t="Muri, porte e finestre bloccano la vista: ogni giocatore vede solo quello che vede il suo personaggio, il master vede attraverso il velo.">Muri, porte e finestre bloccano la vista: ogni giocatore vede solo quello che vede il suo personaggio, il master vede attraverso il velo.</p>
+    </article>
+    <article>
+      <h2 data-t="Schede e compendio">Schede e compendio</h2>
+      <p data-t="Schede collegate ai segnalini, tiri con un clic e un compendio con le regole SRD 5.1 e 5.2 (licenza Creative Commons), con segnalini già pronti.">Schede collegate ai segnalini, tiri con un clic e un compendio con le regole SRD 5.1 e 5.2 (licenza Creative Commons), con segnalini già pronti.</p>
+    </article>
+    <article>
+      <h2 data-t="I tuoi file restano tuoi">I tuoi file restano tuoi</h2>
+      <p data-t="Le campagne stanno sul tuo computer, non su un server di qualcun altro. Puoi esportarle, copiarle e portarle dove vuoi.">Le campagne stanno sul tuo computer, non su un server di qualcun altro. Puoi esportarle, copiarle e portarle dove vuoi.</p>
+    </article>
+    <article>
+      <h2 data-t="Libero e aperto">Libero e aperto</h2>
+      <p data-t="Il codice è pubblico con licenza AGPL: chiunque può leggerlo, migliorarlo e aggiungere plugin.">Il codice è pubblico con licenza AGPL: chiunque può leggerlo, migliorarlo e aggiungere plugin.</p>
+    </article>
+  </section>
+
+  <section class="foto-doppie">
+    <figure><img src="immagini/cripta.webp" loading="lazy" alt="La cripta con la nebbia di guerra" data-ta="La cripta con la nebbia di guerra"><figcaption data-t="La nebbia di guerra: il master vede attraverso il velo.">La nebbia di guerra: il master vede attraverso il velo.</figcaption></figure>
+    <figure><img src="immagini/scheda.webp" loading="lazy" alt="La scheda di un goblin" data-ta="La scheda di un goblin"><figcaption data-t="Le schede, collegate ai segnalini.">Le schede, collegate ai segnalini.</figcaption></figure>
+  </section>
+
+  <section id="modi" class="modi">
+    <h2 data-t="Tre modi di giocare">Tre modi di giocare</h2>
+    <div class="tre">
+      <article>
+        <h3 data-t="Nel browser">Nel browser</h3>
+        <p data-t="Apri la pagina e giochi. Ottimo per provare, preparare mappe o giocare tutti allo stesso schermo. Tutto resta salvato solo in quel browser.">Apri la pagina e giochi. Ottimo per provare, preparare mappe o giocare tutti allo stesso schermo. Tutto resta salvato solo in quel browser.</p>
+        <a class="btn primo" href="gioca/" data-t="Gioca ora">Gioca ora</a>
+      </article>
+      <article>
+        <h3 data-t="Con l'app">Con l'app</h3>
+        <p data-t="Il master conduce dal suo computer e i giocatori si uniscono da casa con un codice, anche dal telefono. Le campagne vanno nella cartella Documenti.">Il master conduce dal suo computer e i giocatori si uniscono da casa con un codice, anche dal telefono. Le campagne vanno nella cartella Documenti.</p>
+        <a class="btn" href="#scarica" data-t="Scarica">Scarica</a>
+      </article>
+      <article>
+        <h3 data-t="Con un server dedicato">Con un server dedicato</h3>
+        <p data-t="Per chi ha un computer sempre acceso o un piccolo server Linux: la partita resta aperta anche quando il master spegne il suo.">Per chi ha un computer sempre acceso o un piccolo server Linux: la partita resta aperta anche quando il master spegne il suo.</p>
+        <a class="btn" href="https://github.com/EDG-coder/Libre-VTT#readme" rel="noopener" data-t="Come si fa">Come si fa</a>
+      </article>
+    </div>
+  </section>
+
+  <section id="scarica" class="scarica">
+    <h2 data-t="Scarica l'app">Scarica l'app</h2>
+    <p class="sotto"><span data-t="Ultima versione:">Ultima versione:</span> <strong id="versione"><!--VERSIONE--></strong></p>
+    <div class="file">
+      <a class="btn" data-so="windows" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Setup.exe">Windows</a>
+      <a class="btn" data-so="mac" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT.dmg">Mac</a>
+      <a class="btn" data-so="linux" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/Installa-LIBRE-VTT-Linux.sh">Linux</a>
+      <a class="btn" data-so="android" href="https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Android.apk">Android</a>
+    </div>
+    <p class="nota"><a href="https://github.com/EDG-coder/Libre-VTT/releases/latest" rel="noopener" data-t="Tutti i file e le novità della versione">Tutti i file e le novità della versione</a></p>
+  </section>
+</main>
+
+<footer class="piede">
+  <p><span data-t="LIBRE VTT è software libero (AGPL-3.0).">LIBRE VTT è software libero (AGPL-3.0).</span> <a href="https://github.com/EDG-coder/Libre-VTT" rel="noopener" data-t="Codice e segnalazioni">Codice e segnalazioni</a></p>
+  <p class="piccolo">This work includes material taken from the System Reference Document 5.1 ("SRD 5.1") and the System Reference Document 5.2 ("SRD 5.2") by Wizards of the Coast LLC, available at https://dnd.wizards.com/resources/systems-reference-document. The SRD 5.1 and SRD 5.2 are licensed under the Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/legalcode). LIBRE VTT is not affiliated with or endorsed by Wizards of the Coast.</p>
+</footer>
+<script src="pagina.js"></script>
+</body>
+</html>

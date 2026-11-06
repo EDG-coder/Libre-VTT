@@ -337,6 +337,9 @@ function netHandle(m) {
       }
       if (NET.world) applyWorld(NET.world);      // rimetti le cose come stanno davvero
       return;
+    case 'salto':                                // il segnalino è passato per un passaggio: la vista lo segue
+      if (typeof seguiSalto === 'function') seguiSalto(m.x, m.y);
+      return;
     case 'percorso':                             // risposta alla prova durante il trascinamento
       if (typeof percorsoRisposta === 'function') percorsoRisposta(m);
       return;
@@ -1114,7 +1117,7 @@ function netSyncForm() {
 }
 // Il collegamento «torna all'avvio» ha senso solo se sei partito dall'app.
 // Sta anche nel menu delle scene, dove si trova subito.
-if ($('netHome')) {
+if ($('netHome') && !window.LIBRE_WEB) {   // nella versione web non c'è nessun avviatore da cercare
   const home = [$('netHome'), $('sceneHome')].filter(Boolean);
   for (const a of home) {
     a.hidden = true; a.href = 'http://127.0.0.1:' + NET.uiPort + '/';

@@ -1,0 +1,93 @@
+# La versione sito web di LIBRE VTT: una pagina di presentazione e il tavolo che gira tutto nel
+# browser, gratis, senza installare niente (sviluppo/sito-web/costruisci.mjs).
+#
+# Dove va, lo decide la variabile del repository SITO_WEB (Settings → Secrets and variables →
+# Actions → Variables): «cloudflare», «github» o «cloudflare,github». Senza variabile si costruisce
+# soltanto, e il sito resta scaricabile dalla pagina dell'esecuzione.
+#
+#   Cloudflare Pages (indirizzo https://libre-vtt.pages.dev, o il nome scelto in SITO_CLOUDFLARE_NOME):
+#     segreti CLOUDFLARE_API_TOKEN (permesso «Cloudflare Pages: Edit») e CLOUDFLARE_ACCOUNT_ID.
+#     Il progetto Pages lo crea lui la prima volta.
+#   GitHub Pages (https://edg-coder.github.io/Libre-VTT/):
+#     Settings → Pages → Build and deployment → Source: «GitHub Actions».
+#
+# Parte da sola alla fine di «Rilascio» (solo quando pubblica una versione), oppure a mano da
+# Actions → Sito web → Run workflow. Sul sito si gioca da soli: le partite in rete dal browser
+# arriveranno con il relay.
+name: Sito web
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sito-web
+  cancel-in-progress: false
+
+jobs:
+  costruisci:
+    runs-on: ubuntu-latest
+    outputs:
+      cloudflare: ${{ contains(vars.SITO_WEB, 'cloudflare') }}
+      github: ${{ contains(vars.SITO_WEB, 'github') }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Costruisci il sito
+        env:
+          SITO_URL: ${{ vars.SITO_URL }}
+        run: node sviluppo/sito-web/costruisci.mjs _site
+      - name: Il sito, scaricabile dalla pagina dell'esecuzione
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sito-web
+          path: _site
+          include-hidden-files: true
+          retention-days: 14
+      - name: Il pacchetto per GitHub Pages
+        if: contains(vars.SITO_WEB, 'github')
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: _site
+
+  cloudflare:
+    needs: costruisci
+    if: needs.costruisci.outputs.cloudflare == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sito-web
+          path: _site
+      - name: Pubblica su Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NOME: ${{ vars.SITO_CLOUDFLARE_NOME || 'libre-vtt' }}
+        run: |
+          set -e
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Mancano i segreti CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID (vedi in cima a sito-web.yml)."
+            exit 1
+          fi
+          W="npx --yes wrangler@4.149.0"
+          # la prima volta il progetto non c'è ancora: lo crea (se c'è già, va avanti)
+          $W pages project create "$NOME" --production-branch=main 2>/dev/null || true
+          $W pages deploy _site --project-name="$NOME" --branch=main --commit-dirty=true
+
+  github:
+    needs: costruisci
+    if: needs.costruisci.outputs.github == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.pubblica.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - id: pubblica
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
