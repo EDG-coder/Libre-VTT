@@ -374,7 +374,17 @@ function hiddenByFog(sc, p) {
 // La visuale del party la calcola qui il server: ai giocatori arrivano solo i poligoni di quello che
 // vedono (e il «già visto»), mai i muri e le luci della scena. Dove la luce non arriva, i segnalini
 // degli altri non vengono nemmeno mandati.
-const luceDi = sc => sc && sc.luce && sc.luce.on ? LUCE.pulisci(sc.luce) : null;
+// Dentro un giro di invii (ogni giocatore, uno dopo l'altro) il mondo non cambia: la luce ripulita e la vista del party
+// si calcolano una volta sola per scena, non una per segnalino e per giocatore (con 4000 muri, 40 segnalini e 6 giocatori
+// erano ~0,6 secondi di server fermo a ogni mossa). Fuori da un giro non si ricorda niente, come prima.
+let passata = null;
+function conPassata(fn) { if (passata) return fn(); passata = new Map(); try { return fn(); } finally { passata = null; } }
+function ricorda(chiave, calcola) {
+  if (!passata) return calcola();
+  if (passata.has(chiave)) return passata.get(chiave);
+  const v = calcola(); passata.set(chiave, v); return v;
+}
+const luceDi = sc => sc && sc.luce && sc.luce.on ? ricorda('L|' + sc.id, () => LUCE.pulisci(sc.luce)) : null;
 /** Una casella della nebbia è «zona di luce dinamica»? Se il master non ne ha segnata nessuna, vale tutta la mappa. */
 function inZona(sc, x, y) {
   const f = fogOf(sc.id);
@@ -411,6 +421,9 @@ function grigliaVisto(sc, board, cella) {
 function vistaDi(sc, c) {
   const luce = luceDi(sc);
   if (!luce) return null;
+  return ricorda('V|' + sc.id + '|' + (luce.condivisa || !c ? '' : (c.token || c.id)), () => calcolaVista(sc, c, luce));
+}
+function calcolaVista(sc, c, luce) {
   const board = sc.board || { x: 0, y: 0, w: 1000, h: 1000 };
   const cella = (sc.grid && +sc.grid.size) || 50;
   const occhi = [], luciT = [];
@@ -438,7 +451,7 @@ function vistaDi(sc, c) {
 }
 /** Le porte che questo giocatore vede (fuori dalla nebbia e nella sua visuale): solo quelle gli arrivano, e solo quelle può aprire. */
 function porteVisibili(c, sc) {
-  const luce = sc.luce && (sc.luce.on || sc.luce.solidi) ? LUCE.pulisci(sc.luce) : null;
+  const luce = sc.luce && (sc.luce.on || sc.luce.solidi) ? ricorda('P|' + sc.id, () => LUCE.pulisci(sc.luce)) : null;
   if (!luce) return [];
   const v = luce.on ? vistaDi(sc, c) : null;
   return luce.muri.filter(w => {
@@ -641,7 +654,8 @@ function testoDi(v) {
   return JSON.stringify(v === undefined ? null : v);
 }
 testoDi.cache = new WeakMap();
-function pushWorld(c, piena) {
+function pushWorld(c, piena) { return conPassata(() => pushWorldDi(c, piena)); }
+function pushWorldDi(c, piena) {
   if (!c.token || c.pending) return;                                      // chi non è (ancora) entrato non riceve il mondo
   const v = viewFor(c);
   if (!c.delta) { c.send({ t: 'world', world: v }); return; }
@@ -691,7 +705,7 @@ function corsiaDi(k, tp) {
   if (tp && !tp.v.length && k.startsWith('sc:') && tp.p.every(([pp]) => ['vista', 'luce', 'fog'].includes(pp[0]))) return 'A';
   return 'B';
 }
-function pushWorldAll() { for (const c of clients) pushWorld(c); }
+function pushWorldAll() { conPassata(() => { for (const c of clients) pushWorld(c); }); }
 
 let pushTimer = 0;
 const schedulePush = () => { clearTimeout(pushTimer); pushTimer = setTimeout(pushWorldAll, 60); };
@@ -1348,7 +1362,7 @@ function applyPerm(m) {
     c.send({ t: 'you', you: { id: c.id, token: c.token, name: c.name, role: c.role, perms: permsFor(c) } });
   }
   // a lui il mondo intero: con i permessi cambia anche la chat che può vedere
-  scheduleSave(); sendPlayers(); for (const c of clients) pushWorld(c, c.token === m.token);
+  scheduleSave(); sendPlayers(); conPassata(() => { for (const c of clients) pushWorld(c, c.token === m.token); });
   return true;
 }
 
