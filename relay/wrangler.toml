@@ -17,3 +17,8 @@ new_sqlite_classes = ["Stanza"]
 # Facoltativo: da quali siti si può entrare, separati da virgole (es. "https://libre-vtt.pages.dev").
 # Vuoto = da qualsiasi sito (anche chi si fa una copia del sito).
 ORIGINI = ""
+
+# Facoltativi: giocatori al massimo per stanza (1-200, predefinito 40) e messaggi al massimo ogni 10 secondi per
+# giocatore (10-5000, predefinito 300). Abbassarli riduce i consumi del piano gratuito.
+# MAX_GIOCATORI = "40"
+# RAFFICA_N = "300"
