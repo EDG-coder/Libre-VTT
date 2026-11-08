@@ -1,42 +1,41 @@
-# Contribuire a LIBRE VTT
+# Contributing to LIBRE VTT
 
-Grazie dell'interesse! Ogni aiuto conta: segnalazioni, idee, traduzioni, codice, plugin.
+Thanks for your interest! Every bit of help counts: bug reports, ideas, translations, code, plugins.
 
-## Segnalare un problema o proporre un'idea
+## Reporting a problem or suggesting an idea
 
-Apri una [segnalazione](https://github.com/EDG-coder/Libre-VTT/issues/new/choose) e scegli il modulo
-giusto. Per un bug servono versione, sistema e passi per farlo succedere di nuovo: con questi si
-corregge molto prima. Per i problemi di sicurezza segui invece [SECURITY.md](SECURITY.md).
+Open an [issue](https://github.com/EDG-coder/Libre-VTT/issues/new/choose) and pick the right form. For a bug we
+need the version, the system and the steps to make it happen again: with these it gets fixed much sooner. For
+security problems follow [SECURITY.md](SECURITY.md) instead.
 
-## Avviare il programma dal codice
+## Running the program from the source code
 
-Serve solo [Node.js](https://nodejs.org) 22 o più recente: niente `npm install`, il progetto non ha
-dipendenze.
+You only need [Node.js](https://nodejs.org) 22 or newer: no `npm install`, the project has no dependencies.
 
-    npm start          # http://localhost:3000, nel browser
-    npm run app        # come l'app installata (home con «Gioco da solo», «Conduco io», «Mi unisco»)
-    npm run server     # server dedicato, senza finestre
+    npm start          # http://localhost:3000, in the browser
+    npm run app        # like the installed app (home with «Play alone», «I'm the GM», «Join a game»)
+    npm run server     # dedicated server, no windows
 
-Le cartelle del progetto sono descritte nel [README](README.md#le-cartelle-del-progetto).
+The project folders are described in the [README](README.md#the-project-folders).
 
-## Le regole del progetto
+## Project rules
 
-- **Niente testo dei manuali ufficiali di D&D** nel repository: né incantesimi, né mostri, né
-  descrizioni copiate. Va bene il materiale dell'SRD (con la sua attribuzione) e vanno bene gli
-  strumenti che leggono sul computer di chi li usa i PDF che possiede.
-- **Lingue**: il codice e i commenti nuovi in inglese o in italiano; i testi dell'interfaccia passano
-  da `tr('Frase in italiano')` e la traduzione inglese va in `web/js/base/lingua-en.js`.
-- **Niente dipendenze nuove** senza parlarne prima: il programma deve continuare a funzionare con
-  il solo Node.js, anche senza internet.
-- Una pull request per un argomento, con una descrizione di cosa cambia e come l'hai provata
-  (sistema, browser, da solo o in rete).
+- **No text from the official D&D books** in the repository: no spells, no monsters, no copied descriptions. SRD
+  material (with its attribution) is fine, and so are tools that read, on the user's own computer, the PDFs they
+  own.
+- **Languages**: new code and comments in English or Italian. Interface texts go through
+  `tr('Italian sentence')` and the English translation goes in `web/js/base/lingua-en.js`.
+- **No new dependencies** without discussing it first: the program must keep working with Node.js alone, even
+  offline.
+- One pull request per topic, with a description of what changes and how you tested it (system, browser, alone or
+  over the network).
 
-## Plugin
+## Plugins
 
-Per estendere il programma senza toccarlo, leggi la guida [docs/plugins.md](docs/plugins.md) e
-parti da uno dei modelli in `examples/plugins/`.
+To extend the program without touching it, read the guide [docs/plugins.md](docs/plugins.md) and start from one
+of the templates in `examples/plugins/`.
 
-## Licenza
+## License
 
-Contribuendo accetti che il tuo lavoro sia distribuito con la stessa licenza del progetto,
-[AGPL-3.0](LICENSE). Chi partecipa segue il [codice di condotta](CODE_OF_CONDUCT.md).
+By contributing you agree that your work is distributed under the same license as the project,
+[AGPL-3.0](LICENSE). Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).

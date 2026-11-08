@@ -1,57 +1,59 @@
 # uffa-link
 
-Il tubo P2P fra la macchina del master e quelle dei giocatori. Usa
-[iroh](https://iroh.computer) (v1.3), esattamente come `iroh-ping`: relay e discovery di n0,
-quindi funziona anche dietro NAT, senza aprire porte sul router.
+The P2P pipe between the master's machine and the players' ones. It uses [iroh](https://iroh.computer) (v1.3),
+exactly like `iroh-ping`: n0's relay and discovery, so it also works behind NAT, without opening ports on the
+router.
 
-Questo programma **non sa niente del gioco**: sposta byte e basta. Le regole, i permessi e i
-tiri di dado stanno nel server di gioco (`game-server.js`).
+This program **knows nothing about the game**: it just moves bytes. Rules, permissions and dice rolls live in the
+game server (`game-server.js`).
 
-## Compilare (Mac e Crostini, stesso procedimento)
+## Building (Mac and Crostini, same steps)
 
-Serve Rust >= 1.91:
+You need Rust >= 1.91:
 
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     rustup update stable
 
-Su Crostini (Debian) servono anche i tool di compilazione:
+On Crostini (Debian) you also need the build tools:
 
     sudo apt update && sudo apt install -y build-essential curl
 
-Poi, in questa cartella, su ogni macchina che partecipa:
+Then, in this folder, on every machine taking part:
 
     cargo build --release
 
-Il binario esce in `target/release/uffa-link`.
+The binary ends up in `target/release/uffa-link`.
 
-## Usare
+## Using it
 
-**Master**, dopo aver avviato il server di gioco:
+**Master**, after starting the game server:
 
     ./target/release/uffa-link host
 
-Stampa un ID lungo: è la chiave della sessione, passala ai giocatori (chat, messaggio, come vuoi).
+It prints a long ID: that is the session key, give it to the players (chat, message, however you like).
 
-**Giocatore**:
+**Player**:
 
     ./target/release/uffa-link join <ID>
 
-Poi apre il VTT nel browser come al solito.
+Then open the VTT in the browser as usual.
 
-## Come sono messe le porte
+## How the ports are arranged
 
-                 macchina del master                      macchina del giocatore
-    browser ─ws→ game-server.js :4000                     browser ─ws→ game-server.js :4000 (modo «join»)
+                 master's machine                          player's machine
+    browser ─ws→ game-server.js :4000                     browser ─ws→ game-server.js :4000 («join» mode)
                  game-server.js :4010 (TCP) ←─ uffa-link host                     │
                                                  ↑                                 ↓
                                               iroh  ←───────────────→  uffa-link join :4010
 
-Il browser parla sempre e solo con `127.0.0.1:4000`, sia dal lato master sia dal lato giocatore.
+The browser only ever talks to `127.0.0.1:4000`, on both the master's and the player's side.
 
-## Note
+## Notes
 
-- Serve internet da tutte e due le parti (relay e discovery di n0 per l'hole punching).
-- **L'ID cambia a ogni avvio di `host`**: è normale, va ridato ai giocatori a ogni sessione.
-  I permessi però restano, perché il server di gioco riconosce i giocatori dal gettone che
-  ha dato loro la prima volta, non dall'ID di iroh.
-- Se il server di gioco è spento, `uffa-link host` lo dice e rifiuta il collegamento.
+- Both sides need internet (n0's relay and discovery for hole punching).
+- **The ID changes at every `host` start**: that is normal, give it to the players again at every session.
+  Permissions stay, though, because the game server recognises players by the token it gave them the first time,
+  not by the iroh ID.
+- If the game server is off, `uffa-link host` says so and refuses the connection.
+- If iroh cannot get through a network, the apps can use the relay instead (⚙ Settings › Advanced settings ›
+  «Connection between apps», see [docs/sito-web.md](../../docs/sito-web.md)).

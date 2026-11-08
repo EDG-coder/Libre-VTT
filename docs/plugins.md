@@ -1,39 +1,37 @@
-# Plugin di LIBRE VTT
+# LIBRE VTT plugins
 
-Un plugin aggiunge o cambia qualcosa del tavolo: i colori, i pacchetti del compendio, comandi in chat,
-pulsanti, regole. Si gestiscono dalla rotellina ⚙ della home: *Impostazioni › Plugin › Gestisci i plugin*.
+A plugin adds or changes something on the table: colours, compendium packs, chat commands, buttons, rules. They
+are managed from the ⚙ gear on the home screen: *Settings › Plugin › 🧩 Manage plugins*.
 
-*English summary at the end.*
+## Your first plugin in 2 minutes
 
-## Il tuo primo plugin in 2 minuti
+1. Home › ⚙ › *Manage plugins* › pick the `empty-plugin` template › **＋ Create**. The new folder opens.
+2. Tick the plugin in the list. Open the table and type `/hello` in chat.
+3. Change `client.js` or `locales/en.json`, then untick and tick it again: the table takes the new version.
 
-1. Home › ⚙ › *Gestisci i plugin* › scegli il modello `empty-plugin` › **＋ Crea**. Si apre la cartella nuova.
-2. Spunta il plugin nell'elenco. Apri il tavolo e scrivi `/hello` in chat.
-3. Cambia `client.js` o `locales/it.json`, poi togli e rimetti la spunta: il tavolo prende la versione nuova.
+## The folder
 
-## La cartella
-
-Un plugin è una cartella dentro *Documenti › LIBRE VTT › Plugins* (sui telefoni, dentro l'app). Tutto è
-facoltativo tranne `plugin.json`:
+A plugin is a folder inside *Documents › LIBRE VTT › Plugins* (on phones, inside the app). Everything is optional
+except `plugin.json`:
 
 ```
 my-plugin/
-  plugin.json          obbligatorio
-  style.css            un tema
-  client.js            il codice (sandbox o accesso completo)
-  locales/it.json      i testi che vede chi gioca, una lingua per file
+  plugin.json          required
+  style.css            a theme
+  client.js            the code (sandbox or full access)
+  locales/it.json      the texts players see, one language per file
   locales/en.json
-  data/compendium/<pacchetto>/pacchetto.json   pacchetti del compendio, nello stesso formato di quelli delle campagne
-  images/              immagini usate dal tema
+  data/compendium/<pack>/pacchetto.json   compendium packs, in the same format as the campaigns' ones
+  images/              images used by the theme
   README.md
 ```
 
-Si condivide come cartella o come `.zip` (*Installa da .zip…*: se c'è già un plugin con lo stesso `id`, quello
-vecchio va in `Plugins/.cestino`).
+It is shared as a folder or as a `.zip` (*Install from .zip…*: if there is already a plugin with the same `id`,
+the old one goes into `Plugins/.cestino`, the bin).
 
 ## plugin.json
 
-Il codice, i nomi dei campi e delle funzioni sono in inglese; i testi per chi gioca possono avere una versione per lingua.
+Code, field names and function names are in English; the texts players see can have one version per language.
 
 ```json
 {
@@ -49,26 +47,26 @@ Il codice, i nomi dei campi e delle funzioni sono in inglese; i testi per chi gi
 }
 ```
 
-| Campo | Che cos'è |
+| Field | What it is |
 | --- | --- |
-| `id` | Minuscolo, senza spazi: `a-z`, `0-9`, `.`, `_`, `-` |
-| `name`, `description` | Un testo, oppure un testo per lingua |
+| `id` | Lowercase, no spaces: `a-z`, `0-9`, `.`, `_`, `-` |
+| `name`, `description` | A text, or one text per language |
 | `version` | `1.0.0` |
-| `libreVtt` | Le versioni di LIBRE VTT con cui funziona: `>=3.8`, `>=3.8 <4`, `^3.8` |
-| `api` | La versione dell'API dei plugin (oggi `1`) |
-| `access` | `sandbox` (normale) oppure `full` (accesso completo, con i due avvisi) |
-| `permissions` | Solo per `sandbox`: `chat.read`, `chat.write`, `chat.commands`, `ui.buttons`, `ui.notify` |
-| `requires` | Altri plugin necessari: `{ "calendar": ">=1.2" }` |
-| `after` | Plugin da applicare prima di questo: `["parchment-theme"]` |
-| `conflicts` | Plugin che non possono stare applicati insieme a questo |
-| `style`, `client` | Se i file non si chiamano `style.css` e `client.js` |
-| `scope` | `client` (normale) oppure `network` se il plugin cambia cosa o come il tavolo comunica |
+| `libreVtt` | The LIBRE VTT versions it works with: `>=3.8`, `>=3.8 <4`, `^3.8` |
+| `api` | The plugin API version (today `1`) |
+| `access` | `sandbox` (normal) or `full` (full access, with the two warnings) |
+| `permissions` | Only for `sandbox`: `chat.read`, `chat.write`, `chat.commands`, `ui.buttons`, `ui.notify` |
+| `requires` | Other plugins needed: `{ "calendar": ">=1.2" }` |
+| `after` | Plugins to apply before this one: `["parchment-theme"]` |
+| `conflicts` | Plugins that cannot be applied together with this one |
+| `style`, `client` | If the files are not called `style.css` and `client.js` |
+| `scope` | `client` (normal) or `network` if the plugin changes what or how the table communicates |
 
-Se qualcosa non va (manca un file, una dipendenza, il consenso), il gestore lo scrive sotto il plugin.
+If something is wrong (a missing file, a dependency, the consent), the manager writes it under the plugin.
 
-## Un tema (style.css)
+## A theme (style.css)
 
-Il modo stabile di cambiare la grafica sono le variabili del tavolo:
+The stable way to change the look is the table's variables:
 
 ```css
 :root, :root[data-theme="dark"], :root[data-theme="light"] {
@@ -80,106 +78,91 @@ Il modo stabile di cambiare la grafica sono le variabili del tavolo:
 }
 ```
 
-Si possono usare anche le classi del tavolo, ma possono cambiare da una versione all'altra. Il CSS non può
-caricare niente da internet: `@import` e `url(https://…)` vengono tolti. Le immagini vanno nella cartella del
-plugin (`url("images/carta.webp")`). I temi dei plugin vengono dopo gli stili del tavolo, nell'ordine dell'elenco.
+You can also use the table's classes, but they can change from one version to the next. The CSS cannot load
+anything from the internet: `@import` and `url(https://…)` are removed. Images go in the plugin folder
+(`url("images/paper.webp")`). Plugin themes come after the table's styles, in the order of the list.
 
-## Il codice (client.js)
+## The code (client.js)
 
-`client.js` è un modulo JavaScript che esporta `activate(vtt)` e, se serve, `deactivate(vtt)`.
+`client.js` is a JavaScript module that exports `activate(vtt)` and, if needed, `deactivate(vtt)`.
 
 ```js
 export function activate(vtt) {
-  vtt.on('chat.message', msg => { /* ogni messaggio nuovo, tiri compresi */ });
+  vtt.on('chat.message', msg => { /* every new message, rolls included */ });
   vtt.commands.add('coin', args => vtt.chat.write(vtt.t('coin', { side: 'heads' })));
   vtt.ui.button({ label: '🪙', title: vtt.t('coin.button'), onClick: () => vtt.chat.write('…') });
   vtt.ui.notify(vtt.t('hello'));
-  vtt.storage.set('count', 1);           // dati del plugin, restano su questo computer
+  vtt.storage.set('count', 1);           // plugin data, stays on this computer
 }
 export function deactivate(vtt) {}
 ```
 
-| | Sandbox | Accesso completo |
+| | Sandbox | Full access |
 | --- | --- | --- |
-| Dove gira | Una cornice invisibile, senza origine, senza internet | Dentro la pagina del tavolo |
-| Che cosa può fare | Solo l'API qui sotto, con i permessi dichiarati | Tutto: l'API, `vtt.hook(...)` e qualsiasi cosa della pagina |
-| Chiamate | Asincrone (restituiscono una Promise) | Sincrone |
-| Prima di applicarlo | Si vedono i permessi | Due avvisi, va scritto il nome del plugin |
-| File | Uno solo (`client.js`, niente `import`) | Può importare altri file della sua cartella |
+| Where it runs | An invisible frame, with no origin and no internet | Inside the table page |
+| What it can do | Only the API below, with the declared permissions | Everything: the API, `vtt.hook(...)` and anything in the page |
+| Calls | Asynchronous (they return a Promise) | Synchronous |
+| Before applying it | The permissions are shown | Two warnings, the plugin's name must be typed |
+| Files | Just one (`client.js`, no `import`) | It can import other files from its folder |
 
-### L'API (`vtt`)
+### The API (`vtt`)
 
-| Funzione | Permesso (sandbox) | Che cosa fa |
+| Function | Permission (sandbox) | What it does |
 | --- | --- | --- |
-| `vtt.id`, `vtt.lang` | — | L'id del plugin, la lingua del tavolo (`it`, `en`) |
-| `vtt.t(chiave, {valori})` | — | Il testo da `locales/<lingua>.json` (se manca: inglese, poi la chiave stessa). `{nome}` diventa il valore |
-| `vtt.on('chat.message', fn)` | `chat.read` | Ogni messaggio nuovo: `{ kind, text, label, total, rolls, sides, mod, by, secret, provisional, id }` |
-| `vtt.on('scene.changed', fn)` | — | La scena è cambiata: `{ id }` |
-| `vtt.chat.write(testo)` | `chat.write` | Scrive in chat a nome di chi usa il plugin |
-| `vtt.commands.add(nome, fn)` | `chat.commands` | `/nome argomenti` in chat chiama `fn(argomenti, testo)` invece di mandare il messaggio |
-| `vtt.ui.button({ label, title, onClick })` | `ui.buttons` | Un pulsante in alto al centro del tavolo |
-| `vtt.ui.notify(testo)` | `ui.notify` | Un avviso che sparisce dopo 5 secondi |
-| `vtt.storage.get(k)`, `vtt.storage.set(k, v)` | — | Dati del plugin su questo computer |
-| `vtt.hook(nome, { before, replace, after })` | solo accesso completo | Si aggancia a una funzione del tavolo (vedi sotto) |
-| `vtt.registry.list()` | solo accesso completo | Tutte le funzioni a cui ci si può agganciare |
-| `vtt.onCleanup(fn)` | solo accesso completo | `fn` viene chiamata quando il plugin viene tolto |
+| `vtt.id`, `vtt.lang` | — | The plugin's id, the table's language (`it`, `en`) |
+| `vtt.t(key, {values})` | — | The text from `locales/<language>.json` (if missing: English, then the key itself). `{name}` becomes the value |
+| `vtt.on('chat.message', fn)` | `chat.read` | Every new message: `{ kind, text, label, total, rolls, sides, mod, by, secret, provisional, id }` |
+| `vtt.on('scene.changed', fn)` | — | The scene changed: `{ id }` |
+| `vtt.chat.write(text)` | `chat.write` | Writes in chat on behalf of whoever uses the plugin |
+| `vtt.commands.add(name, fn)` | `chat.commands` | `/name arguments` in chat calls `fn(arguments, text)` instead of sending the message |
+| `vtt.ui.button({ label, title, onClick })` | `ui.buttons` | A button at the top centre of the table |
+| `vtt.ui.notify(text)` | `ui.notify` | A notice that disappears after 5 seconds |
+| `vtt.storage.get(k)`, `vtt.storage.set(k, v)` | — | Plugin data on this computer |
+| `vtt.hook(name, { before, replace, after })` | full access only | Hooks into a table function (see below) |
+| `vtt.registry.list()` | full access only | All the functions you can hook into |
+| `vtt.onCleanup(fn)` | full access only | `fn` is called when the plugin is removed |
 
-### Agganci (solo accesso completo)
+### Hooks (full access only)
 
-Ogni funzione del tavolo dichiarata con `function nome()` (circa 400) si può agganciare:
+Every table function declared with `function name()` (about 400) can be hooked:
 
 ```js
 vtt.hook('dice.roll', {
-  before: (sides) => { if (sides === 20) return [20]; },               // nuovi argomenti, o { cancel: true, value }
-  replace: (original, sides) => original(sides),                       // al posto della funzione
-  after: (result, args) => { console.log('rolled', args[0]); }          // un altro risultato, o niente
+  before: (sides) => { if (sides === 20) return [20]; },               // new arguments, or { cancel: true, value }
+  replace: (original, sides) => original(sides),                       // instead of the function
+  after: (result, args) => { console.log('rolled', args[0]); }          // another result, or nothing
 });
 ```
 
-I nomi stabili, da preferire perché non cambieranno: `chat.add`, `chat.send`, `chat.command`, `chat.render`,
+The stable names, to prefer because they will not change: `chat.add`, `chat.send`, `chat.command`, `chat.render`,
 `dice.roll`, `dice.rollExpression`, `net.send`, `net.receive`, `net.applyRole`, `scene.show`, `scene.switch`,
-`scene.renderList`, `board.render`, `sheet.open`, `sheet.renderList`. Le altre funzioni si agganciano con il
-loro nome interno (`vtt.registry.list().functions`), che può cambiare da una versione all'altra.
+`scene.renderList`, `board.render`, `sheet.open`, `sheet.renderList`. Other functions are hooked by their internal
+name (`vtt.registry.list().functions`), which can change from one version to the next.
 
-Quando il plugin viene tolto, LIBRE VTT toglie da solo agganci, comandi, pulsanti e ascoltatori. Quello che hai
-cambiato a mano nella pagina va rimesso a posto in `deactivate()` (o con `vtt.onCleanup`).
+When the plugin is removed, LIBRE VTT removes hooks, commands, buttons and listeners by itself. Whatever you changed
+by hand in the page must be put back in `deactivate()` (or with `vtt.onCleanup`).
 
-## Tre stati
+## Three states
 
-*Scaricato* (la cartella c'è), *caricato* (il tavolo ha già letto i file e li tiene in memoria), *applicato*. Il
-tavolo controlla ogni 4 secondi che cosa è spuntato nella home: togliere la spunta riporta il plugin a *caricato*
-e rimetterla lo riapplica all'istante. Se cambi i file, il plugin si ricarica da solo (l'impronta dei file è cambiata).
+*Downloaded* (the folder is there), *loaded* (the table has already read the files and keeps them in memory),
+*applied*. Every 4 seconds the table checks what is ticked on the home screen: unticking brings the plugin back to
+*loaded* and ticking it again re-applies it instantly. If you change the files, the plugin reloads by itself (the
+files' fingerprint changed).
 
-## Sicurezza
+## Security
 
-- I plugin in sandbox non vedono la pagina, i dati salvati nel browser (dove c'è la tua identità di gioco) e non
-  possono usare internet.
-- I plugin ad accesso completo possono fare tutto quello che fa LIBRE VTT. Per questo il consenso è legato
-  all'impronta SHA-256 di tutti i file del plugin: se ne cambia anche uno solo, va dato di nuovo. Finché è
-  applicato, in alto a sinistra sul tavolo c'è un pallino rosso di pochi pixel (passandoci sopra dice quali
-  plugin sono). Si nasconde scrivendo `/plugin pallino` in chat e confermando con un clic; lo stesso comando
-  lo rimette. Comando e clic devono essere veri (tastiera e mouse): un plugin non può nasconderlo così.
-- In ogni caso, in una partita in rete decide il server del master: un plugin sul computer di un giocatore non
-  gli dà poteri che il master non gli ha dato.
-- Se un plugin rompe il tavolo, togli la spunta dalla home (*Togli tutti* li toglie tutti).
+- Sandboxed plugins cannot see the page or the data saved in the browser (where your game identity is), and cannot
+  use the internet.
+- Full-access plugins can do everything LIBRE VTT does. That is why consent is tied to the SHA-256 fingerprint of
+  all the plugin's files: if even one changes, consent must be given again. While one is applied, there is a red
+  dot a few pixels wide at the top left of the table (hovering it says which plugins they are). You hide it by
+  typing `/plugin pallino` in chat and confirming with a click; the same command brings it back. Command and click
+  must be real (keyboard and mouse): a plugin cannot hide it this way.
+- In any case, in a network game the master's server decides: a plugin on a player's computer does not give them
+  powers the master did not give them.
+- If a plugin breaks the table, untick it on the home screen (*Remove all* removes them all).
 
-## Licenze
+## Licenses
 
-I plugin sono di chi li fa. Non mettere nei plugin che pubblichi testi dei manuali ufficiali che non hai il
-diritto di distribuire.
-
----
-
-## English summary
-
-A plugin is a folder in *Documents › LIBRE VTT › Plugins* with a `plugin.json` (`id`, `name`, `version`,
-`libreVtt`) and optionally `style.css` (a theme: override the CSS variables above), `client.js` (an ES module
-exporting `activate(vtt)` / `deactivate(vtt)`), `locales/<lang>.json` (the texts users see, read with `vtt.t`)
-and `data/compendium/<pack>/` (compendium packs). Manage plugins from the gear in the home screen: tick to apply,
-arrows to reorder, *＋ Create* to start from a template, *Install from .zip…*.
-
-Code runs either in a **sandbox** (default: an origin-less iframe with no network; only the API above, gated by
-`permissions`) or with **full access** (`"access": "full"`: runs in the table page, can `vtt.hook()` any of the
-~400 table functions with `before` / `replace` / `after`). Full access is applied only after two warnings, and the
-consent is bound to the SHA-256 of the plugin's files. Plugins switched off stay loaded in memory and come back
-instantly.
+Plugins belong to whoever makes them. Do not put in the plugins you publish texts from official books you do not
+have the right to distribute.

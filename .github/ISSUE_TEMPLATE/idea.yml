@@ -1,21 +1,21 @@
 name: Idea
-description: Una funzione nuova o un miglioramento
+description: A new feature or an improvement
 labels: [idea]
 body:
   - type: textarea
     id: bisogno
     attributes:
-      label: Che cosa ti serve al tavolo
-      description: Racconta la situazione di gioco, non solo la soluzione.
+      label: What you need at the table
+      description: Describe the game situation, not only the solution.
     validations:
       required: true
   - type: textarea
     id: proposta
     attributes:
-      label: Come te lo immagini
+      label: How you picture it
   - type: dropdown
     id: chi
     attributes:
-      label: Per chi
+      label: Who it is for
       multiple: true
-      options: [Master, Giocatori, Chi scrive plugin]
+      options: [Master, Players, Plugin authors]

@@ -1,10 +1,10 @@
-# Plugin inclusi nelle app per telefoni e tablet
+# Plugins built into the phone and tablet apps
 
-Le app per Android, iPhone e iPad non importano plugin: gli store non accettano codice scaricato o
-aggiunto dopo la revisione. Usano solo i plugin messi in questa cartella, che finiscono dentro l'app
-a ogni compilazione. Ognuno resta spento finché chi usa l'app non lo accende da ⚙ › Plugin.
+The Android, iPhone and iPad apps do not import plugins: the stores do not accept code downloaded or added after
+review. They only use the plugins placed in this folder, which go inside the app at every build. Each one stays
+off until the person using the app turns it on from ⚙ › Plugin.
 
-Per ora la cartella è vuota. Un plugin si aggiunge come cartella con il suo `plugin.json`
-(vedi `docs/plugins.md`), e arriva agli utenti con l'aggiornamento successivo dell'app.
+For now the folder is empty. A plugin is added as a folder with its `plugin.json` (see `docs/plugins.md`), and
+reaches users with the next app update.
 
-Sul computer questa cartella non si usa: lì i plugin si importano da ⚙ › Plugin.
+On the computer this folder is not used: there plugins are imported from ⚙ › Plugin.

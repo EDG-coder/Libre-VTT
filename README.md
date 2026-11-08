@@ -1,377 +1,396 @@
 # LIBRE VTT
 
-[![Download totali](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/total?label=download%20totali)](https://github.com/EDG-coder/Libre-VTT/releases)
-[![Ultima versione](https://img.shields.io/github/v/release/EDG-coder/Libre-VTT?label=ultima%20versione)](https://github.com/EDG-coder/Libre-VTT/releases/latest)
+**English** · [Italiano](README.it.md)
 
-Download dell'ultima versione:
-![Windows](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Setup.exe?label=Windows)
-![Mac](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT.dmg?label=Mac)
-![Linux](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/Installa-LIBRE-VTT-Linux.sh?label=Linux)
-![Android](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Android.apk?label=Android)
-![Android arm64](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Android-arm64.apk?label=Android%20arm64)
-![iPhone](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-iOS.ipa?label=iPhone%20(IPA))
+[![Total downloads](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/total?label=total%20downloads)](https://github.com/EDG-coder/Libre-VTT/releases)
+[![Latest version downloads](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/total?label=latest%20version%20downloads)](https://github.com/EDG-coder/Libre-VTT/releases/latest)
+[![Latest version](https://img.shields.io/github/v/release/EDG-coder/Libre-VTT?label=latest%20version)](https://github.com/EDG-coder/Libre-VTT/releases/latest)
 
-Tavolo da gioco virtuale che gira sul tuo computer.
+## Download
 
-C'è anche una **versione sito web**: con «Partita pubblica» accesa nell'app del master, i giocatori entrano
-dal browser con il suo codice, senza installare niente (vedi [docs/sito-web.md](docs/sito-web.md)).
+Click a button to download that file from the latest version. The number is how many times it has been
+downloaded.
 
-![Una sessione nel bosco: segnalini sulla griglia e dadi in chat](docs/immagini/bosco.webp)
+| System | Pick this one | Works everywhere (bigger) |
+|---|---|---|
+| **Windows 10/11** | [![Windows x64](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Setup-x64.exe?label=Windows%20x64&color=0078d4)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Setup-x64.exe) [![Windows ARM64](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Setup-ARM64.exe?label=Windows%20ARM64&color=0078d4)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Setup-ARM64.exe) | [![Windows Setup](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Setup.exe?label=Setup.exe&color=555)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Setup.exe) [![Windows .cmd](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/Installa-LIBRE-VTT-Windows.cmd?label=.cmd&color=555)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/Installa-LIBRE-VTT-Windows.cmd) |
+| **Mac** (macOS 11+) | [![Mac Apple Silicon](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Mac-AppleSilicon.dmg?label=Mac%20Apple%20Silicon&color=000)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Mac-AppleSilicon.dmg) [![Mac Intel](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Mac-Intel.dmg?label=Mac%20Intel&color=000)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Mac-Intel.dmg) | [![Mac universal](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT.dmg?label=.dmg&color=555)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT.dmg) |
+| **Linux** | [![Linux x64](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/Installa-LIBRE-VTT-Linux-x64.sh?label=Linux%20x64&color=e95420)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/Installa-LIBRE-VTT-Linux-x64.sh) [![Linux arm64](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/Installa-LIBRE-VTT-Linux-arm64.sh?label=Linux%20arm64&color=e95420)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/Installa-LIBRE-VTT-Linux-arm64.sh) [![Linux RISC-V](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/Installa-LIBRE-VTT-Linux-riscv64.sh?label=Linux%20RISC-V&color=e95420)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/Installa-LIBRE-VTT-Linux-riscv64.sh) | [![Linux all](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/Installa-LIBRE-VTT-Linux.sh?label=.sh&color=555)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/Installa-LIBRE-VTT-Linux.sh) |
+| **Android** 7+ | [![Android arm64](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Android-arm64.apk?label=Android%20arm64&color=3ddc84)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Android-arm64.apk) | [![Android universal](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Android.apk?label=.apk&color=555)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Android.apk) |
+| **iPhone and iPad** (iOS 15+) | [![iPhone Xcode](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-Xcode.zip?label=Xcode%20project&color=147efb)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-Xcode.zip) [![iPhone IPA](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/LIBRE-VTT-iOS.ipa?label=IPA&color=147efb)](https://github.com/EDG-coder/Libre-VTT/releases/latest/download/LIBRE-VTT-iOS.ipa) | |
 
-| La nebbia di guerra (il master vede attraverso il velo) | Le schede, collegate ai segnalini |
+Not sure which one? On Windows almost every PC is **x64** (ARM64 is for Snapdragon PCs). On a Mac, Apple menu ›
+*About This Mac*: «Chip» means **Apple Silicon**, «Processor» means **Intel**. On Linux, `uname -m` tells you.
+Almost every phone today is **arm64**. The other release files (`uffa-link-…`, `.sha256`, `SHA256SUMS.txt`)
+are used by the app on its own: you never need to download them.
+
+A virtual tabletop that runs on your own computer.
+
+There is also a **website version**: when the master switches on «🌐 Public game» in their app, players join
+from the browser with the game code, without installing anything (see [docs/sito-web.md](docs/sito-web.md)).
+
+![A session in the woods: tokens on the grid and dice in the chat](docs/immagini/bosco.webp)
+
+| Fog of war (the master sees through the veil) | Sheets, linked to the tokens |
 |---|---|
-| ![La cripta con la nebbia](docs/immagini/cripta.webp) | ![La scheda di un goblin](docs/immagini/scheda.webp) |
+| ![The crypt with fog](docs/immagini/cripta.webp) | ![A goblin's sheet](docs/immagini/scheda.webp) |
 
-<sub>Mappe disegnate per queste immagini; segnalini dell'SRD inclusi nel programma.</sub>
+<sub>Maps drawn for these pictures; the SRD tokens are included in the program.</sub>
 
-**Segnalazioni e idee**: apri una [segnalazione](https://github.com/EDG-coder/Libre-VTT/issues/new/choose).
-Per contribuire leggi [CONTRIBUTING.md](CONTRIBUTING.md); per un problema di sicurezza
-[SECURITY.md](SECURITY.md); per l'accessibilità [ACCESSIBILITY.md](ACCESSIBILITY.md).
+**Bugs and ideas**: open an [issue](https://github.com/EDG-coder/Libre-VTT/issues/new/choose).
+To contribute read [CONTRIBUTING.md](CONTRIBUTING.md); for a security problem
+[SECURITY.md](SECURITY.md); for accessibility [ACCESSIBILITY.md](ACCESSIBILITY.md).
 
-## Come si avvia
+The app itself is in Italian and English.
 
-### macOS: `LIBRE-VTT-Mac-AppleSilicon.dmg` o `LIBRE-VTT-Mac-Intel.dmg`
+## How to start it
 
-Il primo per i Mac con chip Apple (M1, M2…), il secondo per quelli Intel. Se non sai quale hai
-(menu Mela › *Informazioni su questo Mac*, voce «Chip» o «Processore»), `LIBRE-VTT.dmg` va su tutti e due
-ma pesa di più.
+### macOS: `LIBRE-VTT-Mac-AppleSilicon.dmg` or `LIBRE-VTT-Mac-Intel.dmg`
 
-1. Apri il **.dmg** e trascina **LIBRE VTT** su **Applicazioni**. Fine: dentro c'è tutto,
-   niente cartelle sparse.
-2. La prima volta macOS dice che l'app viene da uno sviluppatore che non conosce (non è firmata
-   da Apple). Vai in **Impostazioni di Sistema → Privacy e sicurezza**, in fondo, e premi
-   **Apri comunque**. Si fa una volta sola.
-3. Se sul Mac non c'è Node.js, LIBRE VTT ti chiede il permesso e lo scarica da solo dal sito
-   ufficiale (circa 45 MB, controllandone l'integrità). Se c'è già, lo usa e basta.
+The first is for Macs with an Apple chip (M1, M2…), the second for Intel ones. If you don't know which one you
+have (Apple menu › *About This Mac*, «Chip» or «Processor»), `LIBRE-VTT.dmg` works on both but is bigger.
 
-Le campagne vanno in **Documenti › LIBRE VTT › Campagne**; il resto in
-`~/Library/Application Support/LIBRE VTT` e il registro dell'avvio in `~/Library/Logs/LIBRE VTT`.
-Dentro l'app non si scrive mai, quindi funziona anche lanciata direttamente dal disco del .dmg.
+1. Open the **.dmg** and drag **LIBRE VTT** onto **Applications**. Done: everything is inside, no loose folders.
+2. The first time, macOS says the app comes from an unknown developer (it is not signed by Apple). Go to
+   **System Settings → Privacy & Security**, at the bottom, and press **Open Anyway**. You only do this once.
+3. If the Mac has no Node.js, LIBRE VTT asks for permission and downloads it by itself from the official
+   site (about 45 MB, checking its integrity). If it is already there, it just uses it.
 
-### Windows: `LIBRE-VTT-Setup-x64.exe` (o `Installa LIBRE VTT.cmd`)
+Campaigns go in **Documents › LIBRE VTT › Campagne**; everything else in
+`~/Library/Application Support/LIBRE VTT` and the startup log in `~/Library/Logs/LIBRE VTT`.
+Nothing is ever written inside the app, so it also works when launched straight from the .dmg.
 
-`LIBRE-VTT-Setup-x64.exe` per quasi tutti i PC; `LIBRE-VTT-Setup-ARM64.exe` per i PC ARM
-(Snapdragon). `LIBRE-VTT-Setup.exe` va su tutti e due ma pesa di più.
+### Windows: `LIBRE-VTT-Setup-x64.exe` (or `Installa-LIBRE-VTT-Windows.cmd`)
 
-Doppio clic e **Installa**. Non servono permessi da amministratore e non serve avere già niente:
-funziona su un Windows appena installato. Alla fine trovi LIBRE VTT nel menu Start e sul desktop; si
-toglie da *Impostazioni › App › App installate*. Windows la prima volta può avvisare che il file
-viene da internet: «Esegui comunque» / «Ulteriori informazioni › Esegui».
+`LIBRE-VTT-Setup-x64.exe` for almost every PC; `LIBRE-VTT-Setup-ARM64.exe` for ARM PCs (Snapdragon).
+`LIBRE-VTT-Setup.exe` works on both but is bigger.
 
-### Linux: `Installa-LIBRE-VTT-Linux-x64.sh` (o `-arm64.sh`, `-riscv64.sh`)
+Double-click and **Install**. No administrator rights needed, and nothing needs to be installed first: it works
+on a freshly installed Windows. At the end you find LIBRE VTT in the Start menu and on the desktop; you remove it
+from *Settings › Apps › Installed apps*. The first time Windows may warn that the file comes from the internet:
+«Run anyway» / «More info › Run anyway».
 
-Uno per processore: `x64` per i PC Intel/AMD, `arm64` per ARM (es. Raspberry Pi a 64 bit),
-`riscv64` per RISC-V (`uname -m` te lo dice). `Installa-LIBRE-VTT-Linux.sh` li ha dentro tutti.
-Serve `xz` per estrarlo, che c'è in quasi tutte le distribuzioni (altrimenti basta python3).
+### Linux: `Installa-LIBRE-VTT-Linux-x64.sh` (or `-arm64.sh`, `-riscv64.sh`)
 
-Tasto destro › *Esegui come programma* (o `bash Installa-LIBRE-VTT-Linux.sh`). Niente password,
-niente pacchetti di sistema: alla fine LIBRE VTT è nel menu delle applicazioni e sulla Scrivania; si
-toglie dal menu (tasto destro sull'icona › *Disinstalla LIBRE VTT*). Con zenity o kdialog (GNOME,
-KDE…) usa le finestre grafiche, altrimenti fa tutto nel terminale.
+One per processor: `x64` for Intel/AMD PCs, `arm64` for ARM (e.g. 64-bit Raspberry Pi), `riscv64` for RISC-V
+(`uname -m` tells you). `Installa-LIBRE-VTT-Linux.sh` contains all of them. It needs `xz` to unpack, which almost
+every distribution has (otherwise python3 is enough).
 
-Per una macchina senza schermo che fa solo da **server dedicato** (vedi più giù):
+Right-click › *Run as a program* (or `bash Installa-LIBRE-VTT-Linux.sh`). No password, no system packages: at
+the end LIBRE VTT is in the applications menu and on the desktop; you remove it from the menu (right-click the
+icon › *Disinstalla LIBRE VTT*). With zenity or kdialog (GNOME, KDE…) it uses graphical dialogs, otherwise it
+does everything in the terminal.
+
+For a headless machine that only acts as a **dedicated server** (see below):
 `bash Installa-LIBRE-VTT-Linux.sh --server`.
 
-### Dove si installa, e perché non dà fastidio al resto
+### Android and iPhone
 
-Su Windows e Linux tutto finisce in **una sola cartella privata**:
-`%LOCALAPPDATA%\LIBRE VTT` su Windows, `~/.local/share/libre-vtt` su Linux.
+- **Android**: open the `.apk` on the phone and allow the installation.
+- **iPhone and iPad**: `LIBRE-VTT-Xcode.zip` is a ready Xcode project to open on a Mac (instructions in the
+  LEGGIMI.txt inside it). Or install `LIBRE-VTT-iOS.ipa` with Sideloadly or AltStore.
 
-    app/        il programma
-    runtime/    il suo Node.js, scaricato da nodejs.org e controllato (o già dentro l'installatore)
-    utente/     impostazioni, collegamento a distanza e, se servono, gli strumenti per costruirlo
+The phone apps are the same program as the computer one: you can host a game, join someone else's or play alone.
+With a mouse (or in Samsung DeX, or on an iPad with mouse and keyboard) they work like on a computer; with fingers
+they have touch controls.
 
-LIBRE VTT usa solo quello che c'è lì dentro: non guarda e non tocca Node, Rust, Python o altro
-installato sul computer, non cambia il PATH, ignora variabili come `NODE_OPTIONS` o `RUSTFLAGS`
-lasciate da altri programmi, e se le porte di sempre (3000, 4000, 4100) sono occupate da altri
-programmi ne usa altre e se le ricorda. Disinstallando si toglie tutta la cartella; **le campagne
-in Documenti › LIBRE VTT restano**.
+### Where it installs, and why it does not bother anything else
 
-### Il collegamento a distanza
+On Windows and Linux everything goes into **one private folder**:
+`%LOCALAPPDATA%\LIBRE VTT` on Windows, `~/.local/share/libre-vtt` on Linux.
 
-Serve per «Conduco io» e «Mi unisco». LIBRE VTT lo prende così, al primo bisogno e dopo averlo
-chiesto:
+    app/        the program
+    runtime/    its own Node.js, downloaded from nodejs.org and verified (or already in the installer)
+    utente/     settings, the remote link and, if needed, the tools to build it
 
-1. se è già dentro l'installatore (quelli fatti da GitHub ce l'hanno), è subito pronto;
-2. altrimenti lo **scarica già pronto** dalla pagina «Releases» del progetto su GitHub
-   (`rilascio.json` dice quale), controllandone l'impronta SHA-256: pochi MB;
-3. se non c'è, lo **costruisce sul posto** con strumenti privati: Rust e Zig (che fa da
-   compilatore C, così non servono né Visual Studio né build-essential) scaricati nella cartella
-   di LIBRE VTT. Circa 200 MB da scaricare e 5-15 minuti, una volta sola.
+LIBRE VTT only uses what is in there: it does not look at or touch Node, Rust, Python or anything else installed
+on the computer, does not change the PATH, ignores variables like `NODE_OPTIONS` or `RUSTFLAGS` left by other
+programs, and if the usual ports (3000, 4000, 4100) are taken by other programs it uses others and remembers
+them. Uninstalling removes the whole folder; **the campaigns in Documents › LIBRE VTT stay**.
 
-### Altri modi (cartella del progetto)
+### The remote link
 
-| sistema | che cosa apri |
+It is needed for «I'm the GM» and «Join a game». LIBRE VTT gets it like this, the
+first time it is needed and after asking:
+
+1. if it is already in the installer (the ones built by GitHub have it), it is ready right away;
+2. otherwise it **downloads it ready-made** from the project's «Releases» page on GitHub (`rilascio.json` says
+   which one), checking its SHA-256 fingerprint: a few MB;
+3. if that is not available, it **builds it on the spot** with private tools: Rust and Zig (which acts as the C
+   compiler, so neither Visual Studio nor build-essential is needed) downloaded into the LIBRE VTT folder. About
+   200 MB to download and 5-15 minutes, only once.
+
+Apps normally talk to each other directly (iroh). If the network or router blocks that, ⚙ Settings › Advanced
+settings › «Connection between apps» lets them go through the relay instead (see [docs/sito-web.md](docs/sito-web.md)).
+
+### Other ways (project folder)
+
+| system | what to open |
 |---|---|
-| Windows | `avvio/LIBRE VTT.vbs` (la prima volta crea nella cartella principale `LIBRE VTT.lnk` con l'icona: poi usa quello) |
-| Linux | `avvio/LIBRE VTT.desktop` (o `avvio/avvia-app.sh`) |
-| macOS | `avvio/LIBRE VTT.app` (versione «ponte», vedi sotto) |
+| Windows | `avvio/LIBRE VTT.vbs` (the first time it creates `LIBRE VTT.lnk` with the icon in the main folder: then use that) |
+| Linux | `avvio/LIBRE VTT.desktop` (or `avvio/avvia-app.sh`) |
+| macOS | `avvio/LIBRE VTT.app` (the «bridge» version, see below) |
 
-Così serve **Node** già installato ([nodejs.org](https://nodejs.org), versione LTS).
+This way you need **Node** already installed ([nodejs.org](https://nodejs.org), LTS version).
 
-### Che cosa succede quando si apre
+### What happens when it opens
 
-Una finestra senza barre del browser con tre scelte:
+A window without browser bars, with three choices:
 
-- **Gioco da solo** — solo questo computer.
-- **Conduco io** — apre la partita e ti dà il codice da mandare agli altri.
-- **Mi unisco** — incolli il codice e sei dentro.
+- **Play alone** — only this computer.
+- **I'm the GM** — opens the game and gives you the code to send to the others.
+- **Join a game** — paste the code and you are in.
 
-Per «Gioco da solo» e «Conduco io» ti chiede prima **quale campagna** (vedi sotto).
+For «Play alone» and «I'm the GM» it first asks **which campaign** (see below).
 
-La prima volta che scegli «Conduco io» o «Mi unisco», serve un pezzo in più per far parlare i
-computer fra loro. L'app te lo dice, ti chiede il permesso (ti dice anche quanto occupa) e poi
-fa tutto da sola: scarica Rust se manca, compila, e riprende da dove eri. Ci vogliono alcuni
-minuti, **una volta sola per computer**. Nessun terminale, nessun comando.
+The first time you choose «I'm the GM» or «Join a game», one more piece is needed to make the computers talk to
+each other. The app tells you, asks for permission (it also tells you how much space it takes) and then does
+everything by itself: downloads Rust if missing, compiles, and picks up where you were. It takes a few minutes,
+**only once per computer**. No terminal, no commands.
 
-> Su Windows, se la compilazione si ferma, di solito mancano i *Visual Studio C++ Build Tools*:
-> la finestra te lo scrive con il link. Si installano una volta e basta.
+> On Windows, if compiling stops, the *Visual Studio C++ Build Tools* are usually missing: the window tells you,
+> with the link. You install them once and that's it.
 
-Chiudendo la finestra si spegne tutto. Se riapri LIBRE VTT quando è già aperto, ti mostra la
-finestra che c'è già invece di accenderne un'altra.
+Closing the window shuts everything down. If you open LIBRE VTT again while it is already open, it shows the
+existing window instead of starting another one.
 
-### `LIBRE VTT.app` nella cartella: un «ponte» (macOS)
+### `LIBRE VTT.app` in the folder: a «bridge» (macOS)
 
-Se usi la cartella invece del .dmg: puoi tenere `LIBRE VTT.app` dov'è oppure trascinarla in
-**Applicazioni**. Se la sposti, **la prima volta** ti chiede dov'è la cartella del gioco e se la
-ricorda. Se poi scompatti una versione nuova, **«avvio/Cambia cartella collegata (macOS).command»** le
-fa dimenticare quella vecchia. Se cliccandola non succede proprio niente, lo zip ha perso il
-permesso di esecuzione: in Terminale `chmod +x ` + trascina `LIBRE VTT.app` + `/Contents/MacOS/libre-vtt`,
-Invio, una volta sola. Il registro è in `libre-vtt-avvio.log` nella cartella del gioco.
+If you use the folder instead of the .dmg: you can keep `LIBRE VTT.app` where it is or drag it into
+**Applications**. If you move it, **the first time** it asks where the game folder is and remembers it. If you
+then unpack a new version, **«avvio/Cambia cartella collegata (macOS).command»** makes it forget the old one. If
+clicking it does nothing at all, the zip lost the execute permission: in Terminal type `chmod +x ` + drag
+`LIBRE VTT.app` + `/Contents/MacOS/libre-vtt`, Enter, only once. The log is `libre-vtt-avvio.log` in the game
+folder.
 
-### Se preferisci fare a mano
+### If you prefer doing it by hand
 
-Gli avviatori di prima ci sono ancora, in `avvio/`: `start.command` / `start.bat` (da solo),
-`avvia-master.*` e `avvia-giocatore.*` (a distanza), e il classico `node server/server.js`
-(`CAMPAIGN_DIR=/percorso/campagna node server/server.js` per usare una campagna).
-Con npm: `npm start` (il tavolo da solo, come `start.*`), `npm run app` (la finestra di avvio) e
-`npm run server` (il server dedicato).
+The older launchers are still in `avvio/`: `start.command` / `start.bat` (alone), `avvia-master.*` and
+`avvia-giocatore.*` (remote), and the classic `node server/server.js`
+(`CAMPAIGN_DIR=/path/to/campaign node server/server.js` to use a campaign).
+With npm: `npm start` (the table alone, like `start.*`), `npm run app` (the start window) and `npm run server`
+(the dedicated server).
 
-## Le campagne
+## Campaigns
 
-Una campagna è **una cartella**: dentro ci sono `data/` (scene, schede, chat, giocatori e
-permessi) e `assets/` (le immagini). Quando accendi «Gioco da solo» o «Conduco io» scegli:
+A campaign is **a folder**: inside there are `data/` (scenes, sheets, chat, players and permissions) and
+`assets/` (the images). When you start «Play alone» or «I'm the GM» you pick:
 
-- una delle **recenti** (in cima l'ultima usata, con quante scene, schede e immagini ha);
-- **＋ Nuova campagna**: le dai un nome e finisce in *Documenti › LIBRE VTT › Campagne*;
-- **📂 Apri una cartella…**: qualsiasi cartella, per esempio la campagna che ti ha dato un
-  amico su una chiavetta. Chi la apre **la conduce lui**; i giocatori di prima, se rientrano,
-  ritrovano le loro schede (sono riconosciuti dal loro computer, non dal nome).
+- one of the **recent** ones (the last used at the top, with how many scenes, sheets and images it has);
+- **＋ New campaign**: give it a name and it goes into *Documents › LIBRE VTT › Campagne*;
+- **📂 Open a folder…**: any folder, for example a campaign a friend gave you on a USB
+  stick. Whoever opens it **is its master**; the previous players, if they come back, find their sheets again
+  (they are recognised by their computer, not by their name).
 
-Per passare una campagna a qualcuno basta copiargli la cartella (📂 nell'elenco la apre nel
-Finder o in Esplora risorse). «✕» la toglie solo dall'elenco: la cartella resta dov'è.
-Se scegli una cartella che non è una campagna te lo chiede prima, e ci aggiunge solo `data/` e
-`assets/` senza toccare il resto. La campagna che avevi prima delle campagne (dentro la cartella
-del gioco) compare nell'elenco come «La campagna di prima».
+To hand a campaign to someone, just copy the folder (📂 in the list opens it in Finder or Explorer). «✕» only
+removes it from the list: the folder stays where it is. If you pick a folder that is not a campaign it asks
+first, and only adds `data/` and `assets/` without touching anything else. The campaign you had before campaigns
+existed (inside the game folder) shows up in the list as «The previous campaign».
 
-## I plugin
+## Plugins
 
-Temi, pacchetti del compendio e funzioni nuove fatti da chiunque. Stanno in **Documenti › LIBRE VTT › Plugins**
-(una cartella per plugin, con dentro un `plugin.json`) e si gestiscono dalla rotellina ⚙ della home:
-*Impostazioni › Plugin › Gestisci i plugin*. Una spunta li applica al tavolo, anche già aperto; le frecce
-decidono l'ordine; *＋ Crea* parte da un modello pronto. Il codice gira in una sandbox senza internet, a meno che il
-plugin chieda l'accesso completo: in quel caso LIBRE VTT lo applica solo dopo due avvisi. Come si fanno: [docs/plugins.md](docs/plugins.md).
+Themes, compendium packs and new features made by anyone. They live in **Documents › LIBRE VTT › Plugins** (one
+folder per plugin, with a `plugin.json` inside) and are managed from the ⚙ gear on the home screen:
+*Settings › Plugin › Manage plugins*. A tick applies them to the table, even while it is open; the arrows set the
+order; *＋ Create* starts from a ready template. The code runs in a sandbox without internet, unless the plugin
+asks for full access: in that case LIBRE VTT applies it only after two warnings. How to make one:
+[docs/plugins.md](docs/plugins.md).
 
-## Se cade la connessione
+## If the connection drops
 
-Se il collegamento cade mentre l'app è aperta (wifi, portatile in pausa, il master che riavvia),
-in alto compare «mi ricollego da solo…» e LIBRE VTT continua a provare **finché non torna**, senza
-limite di tentativi. Quando rientri hai lo stesso nome, gli stessi permessi e le stesse schede.
-Nel frattempo resti giocatore: non diventi master per sbaglio, e la chat ti avvisa invece di
-perdere i messaggi.
+If the link drops while the app is open (wifi, laptop asleep, the master restarting), a «reconnecting» notice appears at the top and LIBRE VTT keeps trying **until it comes back**, with no limit on
+attempts. When you are back you have the same name, the same permissions and the same sheets. Meanwhile you stay
+a player: you do not become master by mistake, and the chat warns you instead of losing messages.
 
-Non riprova solo se ti sei **scollegato tu** (Impostazioni → Sessione → *Scollegati*, o *Smetti*
-nell'avviso) o se il master ti ha allontanato. *Collegati adesso* ti rimette dentro.
-Anche i pezzi dietro le quinte (server, collegamento) si riaccendono da soli se si fermano.
+It only stops retrying if **you disconnected yourself** (Settings → Session → *Disconnect*, or *Stop* in the
+notice) or if the master removed you. *Connect now* puts you back in. The pieces behind the scenes (server, link)
+also restart by themselves if they stop.
 
-## Server dedicato (una macchina sempre accesa, senza schermo)
+## Dedicated server (an always-on machine, no screen)
 
-Per avere la partita sempre aperta, come su un sito, ma a casa propria: una schedina che consuma
-pochi watt (ARM a 64 bit o RISC-V, per esempio un Raspberry Pi o una Orange Pi), un vecchio
-portatile o un server. Lì gira solo la parte che **collega**: la campagna, il server di gioco e il
-collegamento a distanza. Nessuno gioca da lì: **tutti**, master compreso, entrano dal proprio
-LIBRE VTT con «Mi unisco» e il codice della partita.
+To keep the game always open, like a website, but at home: a small board that uses a few watts (64-bit ARM or
+RISC-V, for example a Raspberry Pi or an Orange Pi), an old laptop or a server. Only the part that **connects**
+runs there: the campaign, the game server and the remote link. Nobody plays from there: **everyone**, master
+included, joins from their own LIBRE VTT with «Join a game» and the game code.
 
-    bash Installa-LIBRE-VTT-Linux.sh --server      # oppure, dalla cartella del progetto:
+    bash Installa-LIBRE-VTT-Linux.sh --server      # or, from the project folder:
     node server/server-dedicato.js                 # (npm run server)
 
-All'avvio scrive due cose: il **codice della partita** (da mandare a tutti) e la **chiave del
-master**. Chi conduce, la prima volta, in «Mi unisco» apre *Conduco io su un server dedicato* e
-scrive la chiave sotto il codice: il server lo fa master e da lì in poi lo riconosce dalla sua
-identità firmata, senza chiave. Dal suo **pannello della sessione** il master può dare il ruolo di
-master anche ad altri (il server tiene sempre almeno un master). Senza la chiave, o con quella
-sbagliata, si entra da giocatore. Chi si siede alla macchina del server non diventa master.
+At startup it prints two things: the **game code** (to send to everyone) and the **master key**. The master, the
+first time, opens *I'm the GM on a dedicated server* in «Join a game» and types the key under the code: the server makes them master and from then on recognises them by their signed
+identity, without the key. From their **session panel** the master can also give the master role to others (the
+server always keeps at least one master). Without the key, or with a wrong one, you join as a player. Whoever sits
+at the server machine does not become master.
 
-Il master entrato da fuori prende **il mondo del server** (scene, schede, note, turni, sistema di
-gioco) e lo modifica da lì; il compendio è quello della campagna sul server, che vede come lo
-vedono i giocatori. Per portare sul server una campagna già giocata, se ne copia la cartella
-(*Documenti › LIBRE VTT › Campagne › nome*) e si avvia con `--campagna <cartella>`: le immagini
-che il mondo cita vengono messe nel deposito all'avvio.
+The master joining from outside takes **the server's world** (scenes, sheets, notes, turns, game system) and edits
+it from there; the compendium is the one of the campaign on the server, seen the way players see it. To bring a
+campaign you already played onto the server, copy its folder (*Documents › LIBRE VTT › Campagne › name*) and
+start with `--campagna <folder>`: the images the world refers to are put in the store at startup.
 
-Comandi utili (con l'installatore: `~/.local/share/libre-vtt/avvia-server <comando>`):
+Useful commands (with the installer: `~/.local/share/libre-vtt/avvia-server <command>`):
 
-| comando | che cosa fa |
+| command | what it does |
 |---|---|
-| `codice` | il codice della partita |
-| `chiave` / `nuova-chiave` | la chiave del master / una nuova (la vecchia non vale più; chi è già master lo resta) |
-| `giocatori` | chi c'è nel registro, con il ruolo e chi è collegato |
-| `master <nome>` / `giocatore <nome>` | dà o toglie il ruolo di master (anche a server acceso) |
+| `codice` | the game code |
+| `chiave` / `nuova-chiave` | the master key / a new one (the old one stops working; whoever is already master stays master) |
+| `giocatori` | who is in the register, with their role and who is connected |
+| `master <name>` / `giocatore <name>` | gives or removes the master role (even while the server is running) |
 
-Opzioni: `--campagna <cartella>` (predefinita `~/libre-vtt-server`), `--porta`, `--porta-link`,
-`--collegamento <uffa-link>`. Il collegamento lo trova nell'installazione, oppure lo scarica dalla
-pagina delle release controllandone l'impronta. Con l'installatore parte da solo come servizio
-dell'utente (`systemctl --user status libre-vtt-server`); perché parta all'accensione anche senza
-entrare con l'utente: `sudo loginctl enable-linger $USER`, una volta sola.
+Options: `--campagna <folder>` (default `~/libre-vtt-server`), `--porta`, `--porta-link`,
+`--collegamento <uffa-link>`. It finds the link in the installation, or downloads it from the releases page,
+checking its fingerprint. With the installer it starts by itself as a user service
+(`systemctl --user status libre-vtt-server`); to make it start at boot even without logging in:
+`sudo loginctl enable-linger $USER`, only once.
 
-## Creare gli installatori
+## Building the installers
 
-### Con GitHub (consigliato): tutto dentro, niente da scaricare per chi installa
+### With GitHub (recommended): everything inside, nothing to download for whoever installs
 
-1. Metti la cartella del progetto su GitHub (il file `.gitignore` tiene fuori campagne e immagini
-   tue).
-2. Su GitHub: *Releases › Draft a new release*, scrivi un tag che comincia con «v» (es. `v3.0`) e
-   premi *Publish*.
-3. *Actions* fa il resto (circa 15 minuti): compila il collegamento a distanza per Windows (x64 e
-   ARM), Linux (x64, ARM e RISC-V) e Mac, e mette nella release `LIBRE-VTT-Setup.exe`, `Installa-LIBRE-VTT-Linux.sh`,
-   `Installa-LIBRE-VTT-Windows.cmd` e `LIBRE-VTT.dmg`, ognuno con dentro Node e il collegamento,
-   più una versione più leggera per ogni processore (`LIBRE-VTT-Setup-x64.exe`, `LIBRE-VTT-Mac-AppleSilicon.dmg`,
-   `Installa-LIBRE-VTT-Linux-arm64.sh`…).
-   Da lì in poi le app scaricano il collegamento da questa release.
+1. Put the project folder on GitHub (the `.gitignore` file keeps your campaigns and images out).
+2. On GitHub: *Releases › Draft a new release*, type a tag starting with «v» (e.g. `v3.0`) and press *Publish*.
+3. *Actions* does the rest (about 15 minutes): it compiles the remote link for Windows (x64 and ARM), Linux (x64,
+   ARM and RISC-V) and Mac, and puts in the release `LIBRE-VTT-Setup.exe`, `Installa-LIBRE-VTT-Linux.sh`,
+   `Installa-LIBRE-VTT-Windows.cmd` and `LIBRE-VTT.dmg`, each with Node and the link inside, plus a lighter version
+   for each processor (`LIBRE-VTT-Setup-x64.exe`, `LIBRE-VTT-Mac-AppleSilicon.dmg`,
+   `Installa-LIBRE-VTT-Linux-arm64.sh`…). From then on the apps download the link from this release.
 
-Senza tag (*Actions › Rilascio › Run workflow*) costruisce tutto lo stesso e lo lascia scaricabile
-dalla pagina dell'esecuzione, senza pubblicare.
+Without a tag (*Actions › Rilascio › Run workflow*) it builds everything anyway and leaves it downloadable from
+the run's page, without publishing.
 
-### A mano
+### By hand
 
-- `python3 pacchetti/installer/crea-installer.py` → `installatori/` con l'installatore per Linux e quello
-  per Windows (`.cmd`). Questi scaricano Node durante l'installazione.
-- **Mac, su un Mac**: doppio clic su `pacchetti/mac/Crea il DMG.command` (dmg compresso, con Node e, se c'è
-  Rust, il collegamento già compilato).
-- **Mac, senza un Mac**: `python3 pacchetti/mac/crea-dmg-senza-mac.py` (immagine ISO 9660 con Rock Ridge,
-  che macOS apre come un .dmg).
+- `python3 pacchetti/installer/crea-installer.py` → `installatori/` with the Linux installer and the Windows one
+  (`.cmd`). These download Node during installation.
+- **Mac, on a Mac**: double-click `pacchetti/mac/Crea il DMG.command` (compressed dmg, with Node and, if Rust is
+  there, the link already compiled).
+- **Mac, without a Mac**: `python3 pacchetti/mac/crea-dmg-senza-mac.py` (ISO 9660 image with Rock Ridge, which
+  macOS opens like a .dmg).
 
-## Com'è fatto dentro
+## How it is built inside
 
-| pezzo | che cosa fa | dove |
+| piece | what it does | where |
 |---|---|---|
-| `server/launcher.js` | la finestra di avvio, accende e spegne il resto | `127.0.0.1:4100` |
-| `server/server.js` | serve i file del VTT e le immagini | `127.0.0.1:3000` |
-| `server/game-server.js` | **decide**: permessi, tiri di dado, chi vede cosa | `127.0.0.1:4000` |
-| `server/server-dedicato.js` | il server dedicato: server di gioco e collegamento, senza finestre | — |
-| `pacchetti/uffa-link` | porta i byte da una macchina all'altra con iroh | `127.0.0.1:4010` |
+| `server/launcher.js` | the start window, turns the rest on and off | `127.0.0.1:4100` |
+| `server/server.js` | serves the VTT files and the images | `127.0.0.1:3000` |
+| `server/game-server.js` | **decides**: permissions, dice rolls, who sees what | `127.0.0.1:4000` |
+| `server/server-dedicato.js` | the dedicated server: game server and link, no windows | — |
+| `pacchetti/uffa-link` | carries bytes from one machine to another with iroh | `127.0.0.1:4010` |
+| `relay/` | the relay for the website version (Cloudflare Workers) | — |
 
-### Le cartelle del progetto
+### The project folders
 
-| cartella | che cosa c'è |
+| folder | what is inside |
 |---|---|
-| `avvio/` | gli avviatori per usare il progetto così com'è (`.vbs`, `.desktop`, `.app`, `start.*`, `avvia-*`) |
-| `server/` | i programmi che girano con Node: avviatore, tavolo, server di gioco |
-| `condiviso/` | il codice usato sia dal server sia dal browser (luce dinamica, pulizia degli SVG, versioni del mondo) e, in `token-srd/`, i segnalini dei mostri dell'SRD: restano qui perché le campagne salvate li citano con questo percorso |
-| `web/` | le pagine: `index.html` (il tavolo), `launcher.html`, `panel.html`, le icone |
-| `web/css/` | gli stili |
-| `web/js/base/` | il cuore del tavolo: mappa, strumenti, rete, telefono, lingue |
-| `web/js/mappa/` | nebbia, luce dinamica, miniature delle scene, segnalini |
-| `web/js/strumenti/` | musica, note, ordine dei turni |
-| `web/js/schede/` | le schede dei personaggi, i PDF, Roll20, la creazione guidata, i tiri |
-| `web/js/regole/` | i sistemi di gioco e il compendio |
-| `web/lib/` | le librerie di altri (pdf-lib, pdf.js) |
-| `sistemi/` | i sistemi di gioco già pronti (5e SRD 5.1 e 5.2, vuoto) con il loro compendio |
-| `examples/plugins/` | i modelli dei plugin (vuoto, tema, sandbox, accesso completo) usati da «＋ Crea» |
-| `docs/` | la guida per chi fa i plugin |
-| `assets/` | lo sfondo di benvenuto |
-| `pacchetti/` | quello che serve per costruire le versioni da installare: `installer/`, `mac/`, `mobile/`, e il collegamento `uffa-link/` |
-| `sviluppo/` | gli strumenti per chi sviluppa (il convertitore delle regole SRD) |
+| `avvio/` | the launchers to use the project as it is (`.vbs`, `.desktop`, `.app`, `start.*`, `avvia-*`) |
+| `server/` | the programs that run with Node: launcher, table, game server |
+| `condiviso/` | code used by both the server and the browser (dynamic light, SVG cleaning, world versions) and, in `token-srd/`, the SRD monster tokens: they stay here because saved campaigns refer to them with this path |
+| `web/` | the pages: `index.html` (the table), `launcher.html`, `panel.html`, the icons |
+| `web/css/` | the styles |
+| `web/js/base/` | the heart of the table: map, tools, network, phone, languages |
+| `web/js/mappa/` | fog, dynamic light, scene thumbnails, tokens |
+| `web/js/strumenti/` | music, notes, turn order |
+| `web/js/schede/` | character sheets, PDFs, Roll20, guided creation, rolls |
+| `web/js/regole/` | the game systems and the compendium |
+| `web/lib/` | third-party libraries (pdf-lib, pdf.js) |
+| `sistemi/` | the ready game systems (5e SRD 5.1 and 5.2, empty) with their compendium |
+| `examples/plugins/` | the plugin templates (empty, theme, sandbox, full access) used by «＋ Create» |
+| `plugins-inclusi/` | the plugins built into the phone apps (empty for now) |
+| `docs/` | the plugin guide, the website version, the README images |
+| `relay/` | the relay of the website version |
+| `assets/` | the welcome background |
+| `pacchetti/` | what is needed to build the installable versions: `installer/`, `mac/`, `mobile/`, and the `uffa-link/` link |
+| `sviluppo/` | tools for developers (the SRD rules converter, the website) |
 
-**I nomi.** Il programma si chiama LIBRE VTT; prima si chiamava «MY VTT». Le variabili d'ambiente
-ora si chiamano `LIBRE_*`: quelle di prima, `MYVTT_*`, valgono ancora, così gli script e le app già
-installati continuano a funzionare. Restano volutamente col nome vecchio gli identificativi che, se
-cambiassero, farebbero perdere qualcosa a chi aggiorna: gli identificativi delle app per Mac
-(`local.myvtt.*`: macOS chiederebbe di nuovo i permessi), le cartelle «MY VTT» che l'installatore
-sposta una volta sola. Il collegamento a distanza si chiama `uffa-link` e parla il protocollo
-`uffa-vtt/1`: con un nome nuovo le versioni di prima non troverebbero più il file da scaricare e
-non potrebbero giocare con quelle nuove, quindi resta così.
+**The names.** The program is called LIBRE VTT; it used to be called «MY VTT». Environment variables are now
+called `LIBRE_*`: the old ones, `MYVTT_*`, still work, so scripts and apps already installed keep working. Some
+identifiers keep the old name on purpose, because changing them would make updating users lose something: the Mac
+app identifiers (`local.myvtt.*`: macOS would ask for permissions again), and the «MY VTT» folders that the
+installer moves only once. The remote link is called `uffa-link` and speaks the `uffa-vtt/1` protocol: with a new
+name older versions would no longer find the file to download and could not play with new ones, so it stays.
 
-Il browser parla sempre e solo con il proprio computer. Il server di gioco è l'unica fonte vera
-dei dati: il browser **chiede**, il server **decide**. Se un giocatore manomettesse la sua
-pagina non otterrebbe niente, perché quello che non deve vedere non gli viene proprio mandato.
+Most names in the code and in the folders are Italian; the interface is translated with `tr()` (see
+[CONTRIBUTING.md](CONTRIBUTING.md)).
 
-Le immagini (mappe, segnalini) stanno in un deposito indirizzato per contenuto: il master la
-carica una volta sola, il mondo la cita con il suo hash, e il computer del giocatore se la fa
-mandare dall'host e se la tiene. La volta dopo è già lì.
+The browser only ever talks to its own computer. The game server is the only true source of the data: the browser
+**asks**, the server **decides**. If a player tampered with their page they would get nothing, because what they
+must not see is simply never sent to them.
 
-## Il pannello della sessione (di solito porta 4000)
+Images (maps, tokens) live in a content-addressed store: the master uploads one only once, the world refers to it
+by its hash, and the player's computer gets it from the host and keeps it. Next time it is already there.
 
-Si apre solo dal computer su cui gira. Da lì il master:
+## The session panel (usually port 4000)
 
-- copia l'**ID** della sessione;
-- sceglie **quale scena vedono i giocatori**;
-- decide le **regole d'ingresso**: sessione chiusa a chiave, approvazione prima di far entrare,
-  numero massimo di giocatori, tutto in pausa;
-- per ciascuno vede **ritardo, da quanto è collegato, che scena guarda, dove ha la vista,
-  ultima azione, quante richieste ha fatto, con che programma è entrato**;
-- per ciascuno decide ruolo, **ogni singolo permesso**, e quali **schede** può leggere o modificare;
-- prende provvedimenti: **silenzia** (niente chat), **congela** (vede ma non tocca), **bandisce**
-  (non rientra più), gli **impone un nome**, gli manda un **messaggio privato**, gli rimette i
-  permessi del ruolo, o lo scollega;
-- legge il **registro**: tutto quello che ciascuno ha chiesto al server, comprese le cose
-  rifiutate, con il motivo.
+It only opens from the computer it runs on. From there the master:
 
-I permessi restano salvati anche spegnendo tutto: ogni persona è riconosciuta da un gettone che
-il server le dà la prima volta, non dall'ID di iroh (che cambia a ogni avvio).
+- copies the session **ID**;
+- chooses **which scene the players see**;
+- sets the **entry rules**: session locked, approval before letting someone in, maximum number of players,
+  everything paused;
+- for each player sees **latency, how long they have been connected, which scene they are looking at, where
+  their view is, last action, how many requests they made, which program they joined with**;
+- for each player decides the role, **every single permission**, and which **sheets** they can read or edit;
+- takes action: **mute** (no chat), **freeze** (sees but cannot touch), **ban** (cannot come back), **force a
+  name**, send a **private message**, reset the role's permissions, or disconnect them;
+- reads the **log**: everything each person asked the server, including refused requests, with the reason.
 
-## Che cosa può fare un giocatore
+Permissions stay saved even after turning everything off: each person is recognised by a token the server gives
+them the first time, not by the iroh ID (which changes at every start).
 
-Di suo: scrivere in chat, tirare i dadi, fare ping, spostare **i propri** segnalini, creare un
-segnalino per un **proprio** personaggio, e usare una foto del proprio computer **solo** come
-segnalino (viaggia dentro al dato, non finisce negli assets di nessuno).
+## What a player can do
 
-Di suo **non** può: vedere le altre scene, vedere il livello nascosto, guardare sotto la nebbia
-(per lui è nera piena, e i segnalini coperti non gli vengono nemmeno mandati), caricare immagini
-negli assets condivisi, cambiare scena o griglia, aprire le schede altrui, scegliere la musica,
-toccare qualsiasi impostazione che riguardi gli altri.
+On their own: write in chat, roll dice, ping, move **their own** tokens, create a token for **their own**
+character, and use a picture from their own computer **only** as a token (it travels inside the data, it does not
+end up in anyone's assets).
 
-Tutto questo il master può concederlo a chi vuole, voce per voce, dal pannello.
+On their own they **cannot**: see the other scenes, see the hidden layer, look under the fog (for them it is solid
+black, and covered tokens are not even sent to them), upload images to the shared assets, change scene or grid,
+open other people's sheets, choose the music, or touch any setting that affects others.
 
-## Dadi
+The master can grant any of this to anyone, item by item, from the panel.
 
-Li tira il server con un generatore crittografico, non il browser. Le espressioni assurde
-(`500d20`, modificatori enormi) vengono rifiutate.
+## Dice
 
-- **Vantaggio / Svantaggio** (nel vassoio dei dadi): il d20 di qualsiasi tiro — i pulsanti dei
-  dadi, i tiri rapidi delle schede, `/r` in chat — diventa due d20 e si tiene il più alto o il
-  più basso. I danni non cambiano. Solo per un tiro: **Maiusc+clic** = vantaggio,
-  **Alt+clic** = svantaggio. Quando è acceso, sull'icona dei dadi compare «V» o «S».
-- **🔒 Solo io e il master**: il risultato lo vedete solo tu e chi conduce; agli altri arriva
-  soltanto «tiro segreto», senza numeri né nome del tiro (non lasciano proprio il computer
-  dell'host). Utile anche al master per le prove nascoste.
-- Si può anche scrivere: `2d20kh1+5` (tieni il più alto), `2d20kl1` (il più basso), `4d6kh3`.
+The server rolls them with a cryptographic generator, not the browser. Absurd expressions (`500d20`, huge
+modifiers) are refused.
 
-## Musica
+- **Advantage / Disadvantage** (in the dice tray): the d20 of any roll — the dice buttons, the sheets' quick rolls,
+  `/r` in chat — becomes two d20s and keeps the higher or the lower. Damage does not change. For one roll only:
+  **Shift+click** = advantage, **Alt+click** = disadvantage. When it is on, «V» or «S» appears on the dice icon.
+- **🔒 Only me and the GM**: only you and the master see the result; the others just get «secret roll», with
+  no numbers and no roll name (they never even leave the host's computer). Also useful to the master for hidden
+  checks.
+- You can also type: `2d20kh1+5` (keep the highest), `2d20kl1` (the lowest), `4d6kh3`.
 
-Il master incolla un link di YouTube e vale per tutti. Il **volume è di ciascuno**: resta nel
-proprio browser e non viaggia.
+## Music
 
-## La vista
+The master pastes a YouTube link, or picks songs from their computer, and it plays for everyone. The **volume is
+each person's own**: it stays in their browser and does not travel.
 
-Ognuno sposta e ingrandisce **la propria** mappa (tasto destro e trascina, rotella per lo zoom)
-senza toccare quella degli altri: quando il master sposta qualcosa, a te arrivano i segnalini ma
-la tua inquadratura resta dove l'hai messa. Se ricarichi la pagina la ritrovi uguale.
+## The view
 
-## Dove finiscono i dati
+Everyone pans and zooms **their own** map (right-click and drag, wheel to zoom) without touching anyone else's:
+when the master moves something, you get the tokens but your framing stays where you put it. If you reload the
+page you find it the same.
 
-Tutto dentro la cartella della campagna:
+## Where the data goes
 
-    data/board.json     le scene (quelle del master)
-    data/sheets.json    le schede
-    data/world.json     il mondo autoritativo del server di gioco
-    data/players.json   ruoli, permessi e schede affidate
-    data/assets/        le immagini mandate ai giocatori (per hash)
-    assets/             la libreria delle immagini
-    campagna.json       il nome della campagna
+Everything inside the campaign folder:
 
-## Porte
+    data/board.json     the scenes (the master's)
+    data/sheets.json    the sheets
+    data/world.json     the game server's authoritative world
+    data/players.json   roles, permissions and assigned sheets
+    data/assets/        the images sent to the players (by hash)
+    assets/             the image library
+    campagna.json       the campaign name
 
-Di solito: 4100 la finestra di avvio, 3000 il tavolo, 4000 il server di gioco e il pannello, 4010
-il collegamento. Se una è occupata da un altro programma, l'avviatore ne sceglie un'altra libera,
-lo scrive nel registro e se la ricorda per le volte dopo (così il browser non perde chi sei).
-A mano: `PORT=4001 node server/game-server.js host`, e nel VTT cambia la porta in Impostazioni → Sessione.
+## Ports
+
+Usually: 4100 the start window, 3000 the table, 4000 the game server and the panel, 4010 the link. If one is taken
+by another program, the launcher picks another free one, writes it in the log and remembers it for next time (so
+the browser does not forget who you are). By hand: `PORT=4001 node server/game-server.js host`, and in the VTT
+change the port in Settings → Session.
+
+## License
+
+[AGPL-3.0](LICENSE). The SRD content is used under its license (see `condiviso/token-srd/SRD_ATTRIBUTION.txt`).
