@@ -718,8 +718,9 @@ function fermaVideo() {
   mapVideo.pause(); mapVideo.removeAttribute('src'); mapVideo.dataset.url = '';
   try { mapVideo.load(); } catch {}
 }
-function mostraSfondo(url) {
-  const anim = bgBox.dataset.anim;
+function mostraSfondo(indirizzo) {
+  const anim = bgBox.dataset.anim, url = SFONDO_ANIM.urlMedia(indirizzo);
+  if (!url) { map.removeAttribute('src'); fermaVideo(); return; }
   map.dataset.nw = map.dataset.nh = '';
   if (anim === 'video') {
     map.removeAttribute('src'); map.hidden = true;
@@ -732,11 +733,11 @@ function mostraSfondo(url) {
   fermaVideo(); map.hidden = false;
   if (anim === 'img') {                         // né copia ridotta né canvas: perderebbero il movimento
     map.src = url;
-    if (!SFONDO_ANIM.attivo) SFONDO_ANIM.fermaImmagine(url).then(f => { if (bgBox.dataset.url === url && bgBox.dataset.anim === 'img' && !SFONDO_ANIM.attivo) map.src = f; }, () => {});
+    if (!SFONDO_ANIM.attivo) SFONDO_ANIM.fermaImmagine(url).then(f => { if (bgBox.dataset.url === indirizzo && bgBox.dataset.anim === 'img' && !SFONDO_ANIM.attivo) map.src = f; }, () => {});
     return;
   }
   map.src = url;
-  riduciSulTelefono(url);
+  riduciSulTelefono(indirizzo);
 }
 // il video gira solo se il movimento è acceso e la pagina si vede (in un'altra scheda consumerebbe per niente)
 function muoviVideo() {

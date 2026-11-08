@@ -12,6 +12,16 @@ const SFONDO_ANIM = (() => {
   const eVideoFile = f => !!f && (VIDEO_MIME.test(f.type || '') || /\.(mp4|m4v|webm)$/i.test(f.name || ''));
   const eVideoNome = n => /\.(mp4|m4v|webm)(?:[?#]|$)/i.test(String(n || ''));
 
+  // ---------- indirizzi ammessi per uno sfondo ----------
+  // Solo indirizzi di immagini e video: http(s) (server locale, deposito, sito), blob: (browser) e data: di
+  // un'immagine o di un video. Un «javascript:» o simili non arriva mai a un src.
+  function urlMedia(u) {
+    let x; try { x = new URL(String(u || ''), location.href); } catch { return ''; }
+    if (x.protocol === 'http:' || x.protocol === 'https:' || x.protocol === 'blob:' || x.protocol === 'file:') return x.href;   // file: = index.html aperto con doppio clic
+    if (x.protocol === 'data:' && /^data:(image|video)\//i.test(x.href)) return x.href;
+    return '';
+  }
+
   // ---------- un'immagine è animata? (si leggono solo le intestazioni, niente si decodifica) ----------
   const ascii = (b, i, n) => String.fromCharCode(...b.subarray(i, i + n));
   function gifAnimata(b) {
@@ -56,7 +66,9 @@ const SFONDO_ANIM = (() => {
   async function tipoDaUrl(url, nome) {
     if (eVideoNome(nome) || eVideoNome(url)) return 'video';
     if (/\.svg(?:[?#]|$)|^data:image\/svg/i.test(String(url || '')) || /\.(jpe?g|svg|avif|bmp)$/i.test(nome || '')) return '';
-    try { const r = await fetch(url); return r.ok ? await tipo(await r.blob(), nome) : ''; } catch { return ''; }
+    const u = urlMedia(url);
+    if (!u) return '';
+    try { const r = await fetch(u); return r.ok ? await tipo(await r.blob(), nome) : ''; } catch { return ''; }
   }
 
   // ---------- misure e primo fotogramma di un video ----------
@@ -68,7 +80,9 @@ const SFONDO_ANIM = (() => {
     v.muted = true; v.preload = 'metadata'; v.playsInline = true;
     v.onloadedmetadata = () => fine(v.videoWidth > 0 ? { w: v.videoWidth, h: v.videoHeight } : null);
     v.onerror = () => fine(null);
-    v.src = url;
+    const u = urlMedia(url);
+    if (!u) return fine(null);
+    v.src = u;
   });
   /** Un fotogramma del video, già copiato su un canvas (miniature delle scene, colore della pagina):
    *  il video si chiude subito, così non tiene occupato il decodificatore del telefono. */
@@ -93,13 +107,17 @@ const SFONDO_ANIM = (() => {
       v.currentTime = Math.min(0.1, v.duration / 2);                       // il primo fotogramma a volte è nero
     };
     v.onerror = () => fine(false);
-    v.src = url;
+    const u = urlMedia(url);
+    if (!u) return fine(false);
+    v.src = u;
   });
   /** Il primo fotogramma di un'immagine animata, come immagine ferma (blob: in memoria). */
   const ferme = new Map();
   function fermaImmagine(url) {
     if (!ferme.has(url)) ferme.set(url, (async () => {
-      const im = new Image(); im.src = url; await im.decode();
+      const u = urlMedia(url);
+      if (!u) throw new Error('no');
+      const im = new Image(); im.src = u; await im.decode();
       const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
       c.getContext('2d').drawImage(im, 0, 0);
       const b = await new Promise(r => c.toBlob(r, 'image/png'));
@@ -116,7 +134,7 @@ const SFONDO_ANIM = (() => {
   try { const v = localStorage.getItem(CHIAVE); if (v === '0' || v === '1') attivo = v === '1'; } catch {}
   const ascolta = new Set();
   return {
-    MAX_VIDEO, MAX_ANIMATA, eVideoFile, eVideoNome, tipo, tipoDaUrl, misureVideo, fotogramma, fermaImmagine,
+    MAX_VIDEO, MAX_ANIMATA, urlMedia, eVideoFile, eVideoNome, tipo, tipoDaUrl, misureVideo, fotogramma, fermaImmagine,
     get attivo() { return attivo; },
     set attivo(v) {
       attivo = !!v;
