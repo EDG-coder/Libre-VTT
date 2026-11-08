@@ -120,7 +120,7 @@ GitHub Pages non può far girare il relay: va bene solo insieme a un relay pubbl
 - Chi vuole cambiare il sito o il relay lo pubblica **sul suo account** (stessi passi): i segreti di
   questo repository non arrivano alle copie (fork) né alle loro richieste di modifica.
 - Chi vuole può pubblicare **un relay suo** (stessi passi, sul suo account) e scriverne l'indirizzo
-  nell'app, in «Partita pubblica → Un relay tuo».
+  nell'app, in ⚙ Impostazioni › Impostazioni avanzate › Relay per il collegamento (Cloudflare tuo, server tuo o di terzi). Il tasto «Prova» controlla che risponda; il link da dare ai giocatori del sito porta già l'indirizzo (`?relay=`). Il relay vede tutto quello che passa verso i giocatori del sito: usane solo di cui ti fidi.
 
 ## Per farlo trovare su Google
 

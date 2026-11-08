@@ -383,7 +383,25 @@ function ricordaUnita(codice, dati) {
 // installare niente. Il server di gioco si collega al relay (server/relay-host.js) e si fa riconoscere con la
 // chiave del codice. L'indirizzo del relay lo dice il sito (relay.json), oppure lo scrive il master (un suo relay).
 const SITO_WEB = String(amb('SITO') || 'https://libre-vtt.pages.dev').replace(/\/+$/, '');
-function relayConf() { const r = conf.relay || {}; return { attiva: !!r.attiva, indirizzo: typeof r.indirizzo === 'string' ? r.indirizzo : '' }; }
+function relayConf() { const r = conf.relay || {}; return { attiva: !!r.attiva, indirizzo: typeof r.indirizzo === 'string' ? r.indirizzo : '', tipo: ['sito', 'cloudflare', 'proprio', 'terzi'].includes(r.tipo) ? r.tipo : 'sito' }; }
+/** L'indirizzo di un relay scritto dall'utente: https:// diventa wss://; vale wss:// (o ws:// solo per questo computer, per le prove). Vuoto = quello del sito. */
+function relayIndirizzoPulito(testo) {
+  let x = String(testo == null ? '' : testo).trim().replace(/^https:/i, 'wss:').replace(/^http:\/\/(localhost|127\.0\.0\.1)/i, 'ws://$1').replace(/\/+$/, '').replace(/\/v1(\/stanza)?$/i, '');
+  if (!x) return { ok: true, valore: '' };
+  if (/^wss:\/\/[\w.-]+(:\d+)?(\/[\w./-]*)?$/i.test(x) || /^ws:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/[\w./-]*)?$/i.test(x)) return { ok: true, valore: x };
+  return { ok: false, errore: 'L\'indirizzo del relay deve cominciare con wss:// (o https://).' };
+}
+/** Prova un relay: la pagina di cortesia all'indirizzo (https://…/) dice «Relay di LIBRE VTT (v1)». */
+async function provaRelay(url) {
+  try {
+    const r = await fetch(url.replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:') + '/', { signal: AbortSignal.timeout(10000), redirect: 'error' });
+    const t = (await r.text()).slice(0, 300);
+    if (/Relay di LIBRE VTT \(v1\)/.test(t)) return { ok: true };
+    return { ok: false, errore: r.ok ? 'Risponde, ma non sembra un relay di LIBRE VTT (versione 1).' : 'Il server risponde con un errore (' + r.status + ').' };
+  } catch (e) {
+    return { ok: false, errore: e && e.name === 'TimeoutError' ? 'Il relay non risponde (10 secondi).' : 'Non riesco a collegarmi a questo indirizzo.' };
+  }
+}
 let relayDalSito = { url: null, t: 0 };
 async function indirizzoRelay() {
   const r = relayConf();
@@ -1787,14 +1805,24 @@ const server = http.createServer(async (req, res) => {
     const r = relayConf();
     if (typeof m.attiva === 'boolean') r.attiva = m.attiva;
     if (typeof m.indirizzo === 'string') {
-      const x = m.indirizzo.trim().replace(/^https:/i, 'wss:').replace(/\/+$/, '');
-      if (x && !/^wss:\/\/[\w.-]+(:\d+)?(\/[\w./-]*)?$/i.test(x)) return ok({ errore: 'L\'indirizzo del relay deve cominciare con wss://' });
-      r.indirizzo = x;
+      const x = relayIndirizzoPulito(m.indirizzo);
+      if (!x.ok) return ok({ errore: x.errore });
+      r.indirizzo = x.valore;
+      if (!x.valore) r.tipo = 'sito';
     }
+    if (typeof m.tipo === 'string' && ['sito', 'cloudflare', 'proprio', 'terzi'].includes(m.tipo)) { r.tipo = m.tipo; if (m.tipo === 'sito') r.indirizzo = ''; }
     conf.relay = r; salvaConf();
     if (!r.attiva) state.relay = null;
     await applicaRelay(); push();
     ok({ ok: true, pubblica: r });
+  });
+  // Prova di un relay (quello scritto nel campo, o quello in uso): { indirizzo? } → { ok } o { ok: false, errore }
+  if (u.pathname === '/api/relay/prova' && req.method === 'POST') return corpo(async m => {
+    const x = relayIndirizzoPulito((m || {}).indirizzo);
+    if (!x.ok) return ok({ ok: false, errore: x.errore });
+    const url = x.valore || await indirizzoRelay();
+    if (!url) return ok({ ok: false, errore: 'Non trovo l\'indirizzo del relay del sito.' });
+    ok(await provaRelay(url));
   });
   if (u.pathname === '/api/sfoglia') return ok(sfoglia(u.searchParams.get('path') || ''));
   if (u.pathname === '/api/campagna/info') return ok(infoCampagna(u.searchParams.get('path') || ''));
