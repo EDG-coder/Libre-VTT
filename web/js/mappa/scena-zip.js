@@ -62,7 +62,7 @@
   // ---------- esportare ----------
   const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
   const pulisciNome = s => String(s || 'immagine').replace(/[\\/:*?"<>|#%]+/g, '_').replace(/^\.+/, '').slice(0, 40) || 'immagine';
-  const ESTENSIONI = { 'image/webp': '.webp', 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/svg+xml': '.svg', 'image/avif': '.avif' };
+  const ESTENSIONI = { 'image/webp': '.webp', 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/svg+xml': '.svg', 'image/avif': '.avif', 'video/mp4': '.mp4', 'video/webm': '.webm' };
 
   async function esportaScena(sc) {
     if (sc === cur) captureScene();
@@ -116,7 +116,7 @@
   }
 
   // ---------- importare ----------
-  const MIME = { '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.svg': 'image/svg+xml', '.avif': 'image/avif' };
+  const MIME = { '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.svg': 'image/svg+xml', '.avif': 'image/avif', '.mp4': 'video/mp4', '.webm': 'video/webm' };
   async function importaScena(file) {
     if (file.size > MAX) throw new Error(tr('Lo zip supera i 300 MB.'));
     const z = await leggiZip(await file.arrayBuffer());
@@ -143,7 +143,7 @@
         const dati = z.get(nome);
         if (!dati || !/^immagini\/[^/]+$/.test(nome)) return null;
         const base = nome.slice(9), ext = (/\.[a-z0-9]+$/i.exec(base) || [''])[0].toLowerCase();
-        if (!MIME[ext]) return null;                                   // solo immagini
+        if (!MIME[ext]) return null;                                   // solo immagini (e i video degli sfondi animati)
         const gia = (elenco.items || []).find(i => i.folder === nomeCartella && i.name === base);
         if (gia) return { url: gia.url, aid: gia.id };
         let blob = new Blob([dati], { type: MIME[ext] });

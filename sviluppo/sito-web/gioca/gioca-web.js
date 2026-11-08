@@ -9,7 +9,9 @@
   const tr = window.tr || (s => s);
   const $ = id => document.getElementById(id);
   const CACHE = 'libre-asset-v1', K_CODICE = 'libre-web-codice', K_ACCOUNT = 'libre-web-account';
-  const MIME_OK = /^(image\/(webp|png|jpeg|gif|avif|bmp|svg\+xml)|application\/json)$/;
+  const MIME_OK = /^(image\/(webp|png|jpeg|gif|avif|bmp|svg\+xml)|video\/(mp4|webm)|application\/json)$/;
+  // gli sfondi animati (video) possono essere più grandi delle immagini: come nel deposito del master
+  const massimo = mime => (/^video\//.test(mime) ? 25 : 12) * 1024 * 1024;
   const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
   const ls = { get(k) { try { return localStorage.getItem(k) || ''; } catch { return ''; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
   NET.port = 0;                                  // sul sito non c'è nessun programma su questo computer
@@ -57,7 +59,7 @@
     try { bin = Uint8Array.from(atob(String(m.data || '')), c => c.charCodeAt(0)); } catch { return fine(m.hash, w, false); }
     w.parti.push(bin); w.byte += bin.length; w.mime = w.mime || String(m.mime || '').toLowerCase();
     w.prove = 0; clearTimeout(w.timer); w.timer = setTimeout(() => chiedi(m.hash, w), 30000);
-    if (w.byte > 12 * 1024 * 1024 || (w.mime && !MIME_OK.test(w.mime))) return fine(m.hash, w, false);
+    if (w.byte > massimo(w.mime) || (w.mime && !MIME_OK.test(w.mime))) return fine(m.hash, w, false);
     if (!m.last) return;
     clearTimeout(w.timer);
     const blob = new Blob(w.parti, { type: w.mime });

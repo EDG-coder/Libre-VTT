@@ -13,8 +13,11 @@ const ASSETS = path.join(CAMP, 'assets');
 const PORT = process.env.PORT || 3000;
 const MAP_FILE = 'foto.webp';            // la mappa di base: non compare tra gli assets e non si tocca
 const MAX_BYTES = 30 * 1024 * 1024;
-const IMG = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.svg']);
-const TYPE_EXT = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp', 'image/avif': '.avif', 'image/bmp': '.bmp', 'image/svg+xml': '.svg' };
+// le immagini degli assets, e i video in loop degli sfondi animati (mp4, webm)
+const IMG = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.avif', '.bmp', '.svg', '.mp4', '.webm']);
+const TYPE_EXT = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/webp': '.webp', 'image/avif': '.avif', 'image/bmp': '.bmp', 'image/svg+xml': '.svg',
+  'video/mp4': '.mp4', 'video/webm': '.webm' };
+const eVideo = f => /\.(mp4|webm)$/i.test(f);
 const SVG = require('../condiviso/svg-pulito.js');
 const { intestazioniPagina, segretoOk } = require('./csp.js');
 // ---------- Musica dal computer: le canzoni stanno nella cartella musica/ della campagna ----------
@@ -26,7 +29,7 @@ const ASSET_MIME = new Set([...Object.keys(TYPE_EXT), 'application/json', ...new
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif', '.bmp': 'image/bmp'
+  '.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif', '.bmp': 'image/bmp', '.mp4': 'video/mp4', '.webm': 'video/webm'
 };
 
 const DATA = path.join(CAMP, 'data');           // chat e stato della mappa (restano anche se spegni il server)
@@ -182,7 +185,7 @@ function eliminaBrano(res, q) {
   if (!okBrano(n)) return send(res, 400, 'Richiesta non valida');
   try { fs.unlinkSync(path.join(MUSICA, n)); json(res, 200, { ok: true }); } catch { send(res, 404, 'File non trovato'); }
 }
-/** Un file audio, intero o il pezzo chiesto con Range (Safari e iPhone senza non suonano). */
+/** Un file audio o video, intero o il pezzo chiesto con Range (Safari e iPhone senza non lo suonano). */
 function mandaAudio(req, res, file, tipo, testa = {}) {
   fs.stat(file, (err, st) => {
     if (err || !st.isFile()) return send(res, 404, 'Non trovato');
@@ -635,7 +638,7 @@ function handle(req, res) {
     const info = idx[dep[1]];
     if (!info) return send(res, 404, 'Non trovato');
     const tipoDep = String(info.mime || '').toLowerCase();
-    if (/^audio\//.test(tipoDep) && ASSET_MIME.has(tipoDep)) return mandaAudio(req, res, path.join(DATA, 'assets', dep[1] + (info.ext || '')), tipoDep, { 'Content-Security-Policy': CSP_SVG });
+    if (/^(audio|video)\//.test(tipoDep) && ASSET_MIME.has(tipoDep)) return mandaAudio(req, res, path.join(DATA, 'assets', dep[1] + (info.ext || '')), tipoDep, { 'Content-Security-Policy': CSP_SVG });
     return fs.readFile(path.join(DATA, 'assets', dep[1] + (info.ext || '')), (err, d) => err ? send(res, 404, 'Non trovato')
       : (res.writeHead(200, {
         // solo i tipi di immagine (e il JSON del compendio): qualsiasi altro tipo si dà come byte qualsiasi
@@ -696,6 +699,7 @@ function handle(req, res) {
   // dalla cartella delle immagini della campagna escono solo immagini (una campagna arrivata da fuori
   // potrebbe avere dentro una pagina .html o uno script)
   if (base === CAMP && !IMG.has(path.extname(file).toLowerCase())) return send(res, 404, 'Non trovato');
+  if (base === CAMP && eVideo(file)) return mandaAudio(req, res, file, type, { 'Content-Security-Policy': CSP_SVG });
   fs.readFile(file, (err, data) => err ? send(res, 404, 'Non trovato') : send(res, 200, data, type));
 }
 

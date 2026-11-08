@@ -782,6 +782,7 @@
     afterBoardLoad = function () { const r = prima.apply(this, arguments); disegna(); disegnaSegni(); sincronizza(); return r; };   // eslint-disable-line no-global-assign
   }
   if (typeof map !== 'undefined' && map) map.addEventListener('load', () => { if (luceDi(false)) presto(); });
+  if (typeof mapVideo !== 'undefined' && mapVideo) mapVideo.addEventListener('loadedmetadata', () => { if (luceDi(false)) presto(); });
   window.luceRidisegna = () => { disegna(); disegnaSegni(); };
 
   // ======================= Attraversare un passaggio =======================

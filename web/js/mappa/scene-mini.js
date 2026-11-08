@@ -17,8 +17,10 @@
 
   // ---------- disegno ----------
   const immagini = new Map();
-  function carica(url) {
+  function carica(url, anim) {
     if (!url) return Promise.resolve(null);
+    // uno sfondo video: nella miniatura va un suo fotogramma
+    if (anim === 'video' && !immagini.has(url)) immagini.set(url, SFONDO_ANIM.fotogramma(url).then(v => { if (!v) immagini.delete(url); return v; }));
     if (!immagini.has(url)) immagini.set(url, new Promise(ok => {
       const im = new Image();
       if (/^https?:/.test(url) && !url.startsWith(location.origin)) im.crossOrigin = 'anonymous';
@@ -49,7 +51,7 @@
     const k = Math.min(W / r.w, H / r.h) * 0.98, ox = (W - r.w * k) / 2 - r.x * k, oy = (H - r.h * k) / 2 - r.y * k;
     const rett = (x, y, w, h) => [ox + x * k, oy + y * k, w * k, h * k];
     if (sc.bg) {
-      const im = await carica(resolveUrl(sc.bg));
+      const im = await carica(resolveUrl(sc.bg), sc.bg.anim);
       if (im) try { g.drawImage(im, ...rett(sc.bg.x, sc.bg.y, sc.bg.w, sc.bg.h)); } catch { completa = false; }
       else completa = false;
     }
