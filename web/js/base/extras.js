@@ -802,7 +802,7 @@ function assetMenu(a) {
   return [
     // un video può essere solo lo sfondo della scena
     { label: 'Aggiungi alla mappa', off: SFONDO_ANIM.eVideoNome(a.name), fn: () => addPhotoToMap(a.url, null, a.id) },
-    { label: '🖼 Usa come sfondo della scena', fn: () => setBackground(a.url, a.id, { nome: a.name }) },
+    { label: '🖼 Usa come sfondo della scena', fn: () => setBackground(a.url, a.id, { anim: a.anim, nome: a.name }) },
     { label: 'Sposta in', items: folders.map(f => ({ label: f.name || 'Principale', fn: () => act(() => store.move(a, f.name)) })) },
     '-', { label: 'Elimina', danger: true, fn: () => confirm(`Eliminare «${a.name}» dagli assets?`) && act(() => store.remove(a)) }
   ];

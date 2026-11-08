@@ -95,13 +95,33 @@ function freeName(dir, folder, name) {
   }
 }
 
+// Sfondi animati: 'video' (mp4, webm) o 'img' (GIF, WebP, PNG animati), così il browser non deve riscaricare
+// il file per saperlo. Si legge una volta per file (finché non cambia).
+const ANIM = require('../condiviso/animazione.js');
+const animCache = new Map();
+function tipoAnim(file, st) {
+  if (eVideo(file)) return 'video';
+  if (!/\.(gif|webp|png)$/i.test(file)) return '';
+  const chiave = file + '|' + st.mtimeMs + '|' + st.size;
+  if (!animCache.has(chiave)) {
+    let a = ''; try { a = ANIM.animata(fs.readFileSync(file)) ? 'img' : ''; } catch {}
+    if (animCache.size > 2000) animCache.clear();
+    animCache.set(chiave, a);
+  }
+  return animCache.get(chiave);
+}
+
 function listAll() {
   const folders = [], items = [];
   const scan = (dir, folder) => {
     for (const n of fs.readdirSync(dir)) {
       const st = fs.statSync(path.join(dir, n));
       if (st.isDirectory() && !folder && !n.startsWith('.')) { folders.push({ name: n, count: 0 }); scan(path.join(dir, n), n); }
-      else if (st.isFile() && okFile(n) && !isMap(folder, n)) items.push({ name: n, folder, url: urlOf(folder, n), t: st.mtimeMs });
+      else if (st.isFile() && okFile(n) && !isMap(folder, n)) {
+        const it = { name: n, folder, url: urlOf(folder, n), t: st.mtimeMs }, anim = tipoAnim(path.join(dir, n), st);
+        if (anim) it.anim = anim;
+        items.push(it);
+      }
     }
   };
   scan(ASSETS, '');

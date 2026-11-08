@@ -22,36 +22,7 @@ const SFONDO_ANIM = (() => {
     return '';
   }
 
-  // ---------- un'immagine è animata? (si leggono solo le intestazioni, niente si decodifica) ----------
-  const ascii = (b, i, n) => String.fromCharCode(...b.subarray(i, i + n));
-  function gifAnimata(b) {
-    if (b.length < 13 || ascii(b, 0, 3) !== 'GIF') return false;
-    let i = 13, quadri = 0;
-    if (b[10] & 0x80) i += 3 * (1 << ((b[10] & 7) + 1));                  // tavolozza globale
-    const salta = () => { while (i < b.length && b[i]) i += b[i] + 1; i++; };   // i sotto-blocchi fino allo 0
-    while (i < b.length) {
-      const t = b[i++];
-      if (t === 0x21) { i++; salta(); }                                    // estensione
-      else if (t === 0x2C) {                                               // un fotogramma
-        if (++quadri > 1) return true;
-        const f = b[i + 8]; i += 9;
-        if (f & 0x80) i += 3 * (1 << ((f & 7) + 1));                       // tavolozza locale
-        i++; salta();                                                      // dimensione del codice LZW, poi i dati
-      } else break;                                                        // 0x3B = fine (o file rotto)
-    }
-    return false;
-  }
-  const webpAnimata = b => b.length >= 21 && ascii(b, 0, 4) === 'RIFF' && ascii(b, 8, 4) === 'WEBP' && ascii(b, 12, 4) === 'VP8X' && !!(b[20] & 0x02);
-  function pngAnimata(b) {
-    if (b.length < 16 || b[0] !== 0x89 || ascii(b, 1, 3) !== 'PNG') return false;
-    for (let i = 8; i + 8 <= b.length;) {
-      const n = (b[i] << 24 | b[i + 1] << 16 | b[i + 2] << 8 | b[i + 3]) >>> 0, tipo = ascii(b, i + 4, 4);
-      if (tipo === 'acTL') return true;                                    // APNG: il blocco viene prima delle immagini
-      if (tipo === 'IDAT') return false;
-      i += 12 + n;
-    }
-    return false;
-  }
+  // ---------- un'immagine è animata? (condiviso/animazione.js: si leggono solo le intestazioni) ----------
   /** 'video', 'img' (immagine animata) o '' (un'immagine ferma). */
   async function tipo(blob, nome) {
     if (!blob) return '';
@@ -59,19 +30,16 @@ const SFONDO_ANIM = (() => {
     if (!/^image\/(gif|webp|a?png)$/i.test(blob.type || '') && !/\.(gif|webp|png|apng)$/i.test(nome || '')) return '';
     try {
       const b = new Uint8Array(await blob.arrayBuffer());
-      return gifAnimata(b) || webpAnimata(b) || pngAnimata(b) ? 'img' : '';
+      return typeof ANIMAZIONE !== 'undefined' && ANIMAZIONE.animata(b) ? 'img' : '';
     } catch { return ''; }
   }
-  /** Come tipo(), ma da un indirizzo (un asset già caricato): si scarica dal server locale o dal browser. */
+  /** Come tipo(), ma da un indirizzo di un asset già caricato. */
   async function tipoDaUrl(url, nome) {
     if (eVideoNome(nome) || eVideoNome(url)) return 'video';
     if (/\.svg(?:[?#]|$)|^data:image\/svg/i.test(String(url || '')) || /\.(jpe?g|svg|avif|bmp)$/i.test(nome || '')) return '';
-    // un asset di questo browser (IndexedDB): il file c'è già in memoria
-    if (blobs.has(url)) return tipo(blobs.get(url), nome);
-    // altrimenti solo dal server da cui arriva la pagina (assets della campagna, deposito della partita)
-    let x; try { x = new URL(String(url || ''), location.href); } catch { return ''; }
-    if (x.origin !== location.origin || !/^https?:$/.test(x.protocol)) return '';
-    try { const r = await fetch(location.origin + '/' + x.pathname.replace(/^\/+/, '') + x.search); return r.ok ? await tipo(await r.blob(), nome) : ''; } catch { return ''; }
+    // un asset di questo browser (IndexedDB): il file c'è già in memoria. Quelli del server arrivano
+    // con «anim» già scritto nell'elenco (server/server.js), quindi qui non si scarica niente.
+    return blobs.has(url) ? tipo(blobs.get(url), nome) : '';
   }
   const blobs = new Map();                      // blob: degli assets salvati nel browser → il loro file
 
@@ -145,8 +113,6 @@ const SFONDO_ANIM = (() => {
       try { localStorage.setItem(CHIAVE, attivo ? '1' : '0'); } catch {}
       for (const f of ascolta) try { f(attivo); } catch {}
     },
-    quandoCambia: f => ascolta.add(f),
-    // solo per le prove automatiche
-    _gifAnimata: gifAnimata, _webpAnimata: webpAnimata, _pngAnimata: pngAnimata
+    quandoCambia: f => ascolta.add(f)
   };
 })();

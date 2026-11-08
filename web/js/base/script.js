@@ -1955,7 +1955,7 @@ function assetEl(a) {
   });
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'bgBtn'; b.textContent = '🖼'; b.title = 'Usa come sfondo della scena'; b.setAttribute('aria-label', 'Usa ' + a.name + ' come sfondo');
-  b.addEventListener('click', () => setBackground(a.url, a.id, { nome: a.name }));
+  b.addEventListener('click', () => setBackground(a.url, a.id, { anim: a.anim, nome: a.name }));
   d.append(im, b, x);
   return d;
 }
