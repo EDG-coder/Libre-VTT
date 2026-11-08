@@ -39,6 +39,9 @@ body.vistaMuove #world, body.vistaMuove #stage { will-change: transform; }
 #bgBox { position: absolute; user-select: none; }
 #bgBox[hidden] { display: none; }
 #map { display: block; width: 100%; height: 100%; pointer-events: none; user-select: none; }
+/* sfondo animato (video in loop, muto): al posto dell'immagine, stesse misure */
+#mapVideo { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; user-select: none; }
+#mapVideo[hidden], #map[hidden] { display: none; }
 /* touch: mappa e riempimento li disegna #mappaTela, sotto la scena (vedi disegnaTela in script.js); l'immagine resta per misure e maniglie */
 #mappaTela { position: absolute; left: 0; top: 0; pointer-events: none; }
 html.mappaSuTela #map, html.mappaSuTela #boardFill { visibility: hidden; }
@@ -228,6 +231,8 @@ body.menu-open #sideToggle svg { transform: rotate(180deg); }
 .asset { position: relative; border: 2px solid transparent; border-radius: 8px; background: var(--panel-2); cursor: grab; overflow: hidden; }
 .asset:hover { border-color: #ff9f43; }
 .asset img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; pointer-events: none; }
+.asset video { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; pointer-events: none; background: #000; }
+.assetVideo::after { content: '▶'; position: absolute; left: 6px; bottom: 4px; font-size: 13px; color: #fff; text-shadow: 0 1px 3px #000; pointer-events: none; }
 .asset .del {
   position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; padding: 0;
   border: 0; border-radius: 50%; background: rgba(0, 0, 0, .7); color: #fff; font-size: 15px; line-height: 1;

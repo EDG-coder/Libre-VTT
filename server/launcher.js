@@ -920,7 +920,7 @@ function immaginiCampagna(dir) {
     for (const v of voci) {
       const f = path.join(d, v.name);
       if (v.isDirectory() && prof < 3) giro(f, prof + 1);
-      else if (v.isFile() && /\.(webp|png|jpe?g|gif|svg|bmp|avif)$/i.test(v.name) || v.isFile() && /^[a-f0-9]{64}\.\w+$/.test(v.name)) out.push(f);
+      else if (v.isFile() && /\.(webp|png|jpe?g|gif|svg|bmp|avif|mp4|webm)$/i.test(v.name) || v.isFile() && /^[a-f0-9]{64}\.\w+$/.test(v.name)) out.push(f);
       else if (v.isFile() && /^\..+\.icloud$/.test(v.name)) out.push(path.join(d, v.name.slice(1, -7)));   // segnaposto di iCloud
     }
   };

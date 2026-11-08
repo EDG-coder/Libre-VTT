@@ -454,7 +454,9 @@ async function netEnsureAsset(url, name) {
     const r = await fetch(url);
     if (!r.ok) return null;
     const buf = await r.arrayBuffer();
-    if (buf.byteLength > 12 * 1024 * 1024) { netSay('«' + (name || 'immagine') + '» supera i 12 MB: i giocatori non la vedranno.', 'warn'); return null; }
+    // un video (sfondo animato) può arrivare a 25 MB, come nel deposito della partita
+    const tipo = String(r.headers.get('content-type') || '').toLowerCase(), video = /^video\//.test(tipo);
+    if (buf.byteLength > (video ? 25 : 12) * 1024 * 1024) { netSay('«' + (name || (video ? 'video' : 'immagine')) + (video ? '» supera i 25 MB: i giocatori non lo vedranno.' : '» supera i 12 MB: i giocatori non la vedranno.'), 'warn'); return null; }
     const hash = toHex(await crypto.subtle.digest('SHA-256', buf));
     NET.assetHash.set(url, hash);
     if (!NET.assetKnown.has(hash)) {

@@ -23,6 +23,7 @@
     <div id="boardFill"></div>
     <div id="bgBox" hidden>
       <img id="map" alt="Sfondo della scena" draggable="false">
+      <video id="mapVideo" muted loop playsinline disablepictureinpicture disableremoteplayback preload="auto" aria-hidden="true" hidden></video>
     </div>
     <div id="board"></div>
   </div>
@@ -111,7 +112,7 @@
       <label class="typeOpt"><input type="radio" name="sceneType" value="map" checked><span><b>🗺 Mappa</b><small>Con la griglia già attiva</small></span></label>
       <label class="typeOpt"><input type="radio" name="sceneType" value="cinematic"><span><b>🎬 Scena cinematografica</b><small>Senza griglia (si può attivare dopo)</small></span></label>
     </fieldset>
-    <label class="field">Sfondo (facoltativo) <input id="sceneBgInput" type="file" accept="image/*,.dd2vtt,.uvtt,.df2vtt"><small class="campoNota">Anche una mappa di Dungeondraft (.dd2vtt, .uvtt): arrivano pure griglia, muri, porte e luci.</small></label>
+    <label class="field">Sfondo (facoltativo) <input id="sceneBgInput" type="file" accept="image/*,video/mp4,video/webm,.mp4,.webm,.dd2vtt,.uvtt,.df2vtt"><small class="campoNota">Anche una mappa di Dungeondraft (.dd2vtt, .uvtt): arrivano pure griglia, muri, porte e luci.</small><small class="campoNota">Oppure uno sfondo animato: GIF, WebP animato o video mp4/webm in loop, senza audio (al massimo 25 MB).</small></label>
     <div class="dialogBtns">
       <button type="button" id="sceneCancel" class="btn ghost">Annulla</button>
       <button type="submit" id="sceneCreate" class="btn">Crea scena</button>
@@ -178,6 +179,8 @@
           </div>
         </div>
         <label class="check"><input id="autoBg" type="checkbox"> Sfondo della pagina dal colore dello sfondo della scena</label>
+        <label class="check"><input id="sfondiAnimati" type="checkbox"> Sfondi animati in movimento</label>
+        <p class="note">GIF e video delle scene. Spento, si vede il primo fotogramma: consuma meno batteria. Vale per questo dispositivo.</p>
       </div>
 
       <div class="sect" data-sect="fog" id="fogSect">
@@ -355,7 +358,7 @@
         <label class="btn" for="upload">Carica foto</label>
         <button id="newFolder" type="button" class="btn ghost">Nuova cartella</button>
       </div>
-      <input id="upload" type="file" accept="image/*" multiple hidden>
+      <input id="upload" type="file" accept="image/*,video/mp4,video/webm,.mp4,.webm" multiple hidden>
       <div class="row">Carica come
         <div class="seg" id="uploadAs">
           <button type="button" data-v="token" class="active">Segnalino</button>
@@ -393,6 +396,8 @@
   <div class="dialogBtns"><button id="helpMai" type="button" class="btn ghost" title="Riapparirà solo quando la guida cambia. La trovi sempre in Impostazioni › Strumenti.">Non mostrare più</button><span style="flex:1"></span><button id="helpOk" type="button" class="btn">Ho capito</button></div>
 </dialog>
 <div id="ctx" hidden><button type="button">🗑 Elimina</button></div>
+<script src="condiviso/animazione.js"></script>
+<script src="js/mappa/sfondo-animato.js"></script>
 <script src="js/base/script.js"></script>
 <script src="js/schede/formule.js"></script>
 <script src="js/schede/sheets.js"></script>

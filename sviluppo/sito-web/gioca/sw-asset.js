@@ -13,8 +13,21 @@ self.addEventListener('fetch', e => {
   if (u.origin !== location.origin) return;
   const m = u.pathname.match(/\/asset\/([a-f0-9]{64})$/);
   if (!m) return;
-  e.respondWith(dai(m[1], e.clientId));
+  e.respondWith(dai(m[1], e.clientId).then(r => r.ok ? aPezzi(r, e.request.headers.get('range')) : r));
 });
+
+// I video (sfondi animati) il browser li chiede a pezzi, con «Range»: Safari (iPhone, iPad, Mac) senza
+// una risposta 206 non li fa partire. Dalla cache si ritaglia il pezzo chiesto.
+async function aPezzi(r, range) {
+  const q = /^bytes=(\d*)-(\d*)$/.exec(String(range || '').trim());
+  if (!q || !(q[1] || q[2])) return r;
+  const blob = await r.blob(), n = blob.size;
+  const da = q[1] ? +q[1] : Math.max(0, n - +q[2]), a = q[1] && q[2] ? Math.min(+q[2], n - 1) : n - 1;
+  const testa = new Headers(r.headers);
+  if (da >= n || da > a) { testa.set('Content-Range', 'bytes */' + n); return new Response('', { status: 416, headers: testa }); }
+  testa.set('Content-Range', `bytes ${da}-${a}/${n}`); testa.set('Content-Length', String(a - da + 1)); testa.set('Accept-Ranges', 'bytes');
+  return new Response(blob.slice(da, a + 1), { status: 206, headers: testa });
+}
 
 async function dai(hash, clientId) {
   const cache = await caches.open(CACHE);

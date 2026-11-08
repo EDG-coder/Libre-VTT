@@ -1,5 +1,5 @@
 const $ = id => document.getElementById(id);
-const viewport = $('viewport'), stage = $('stage'), world = $('world'), bgBox = $('bgBox'), map = $('map');
+const viewport = $('viewport'), stage = $('stage'), world = $('world'), bgBox = $('bgBox'), map = $('map'), mapVideo = $('mapVideo');
 const board = $('board'), boardFill = $('boardFill'), pingsEl = $('pings'), targetSwitch = $('targetSwitch');
 const upload = $('upload'), gridEl = $('grid');
 
@@ -160,10 +160,12 @@ const TELA = (() => {
 })();
 // gli SVG si lasciano all'immagine: il browser li ridisegna nitidi a ogni zoom (su canvas verrebbero sgranati)
 const sfondoSvg = () => /\.svg(?:[?#]|$)|^data:image\/svg/i.test(bgBox.dataset.url || '') || /^data:image\/svg|\.svg(?:[?#]|$)/i.test(map.currentSrc || map.src || '');
+const sfondoMosso = () => bgBox.dataset.anim === 'video' || (bgBox.dataset.anim === 'img' && SFONDO_ANIM.attivo);
 function disegnaTela() {
   if (!TELA) return;
   const { c, ctx } = TELA, W = innerWidth, H = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
-  const usa = !bgBox.hidden && map.complete && map.naturalWidth > 0 && !sfondoSvg();
+  // uno sfondo animato resta nella pagina (sul canvas si fermerebbe al fotogramma del disegno)
+  const usa = !bgBox.hidden && map.complete && map.naturalWidth > 0 && !sfondoSvg() && !sfondoMosso();
   document.documentElement.classList.toggle('mappaSuTela', usa);
   const cw = Math.round(W * dpr), ch = Math.round(H * dpr);
   if (c.width !== cw || c.height !== ch) { c.width = cw; c.height = ch; c.style.width = W + 'px'; c.style.height = H + 'px'; }
@@ -678,6 +680,7 @@ viewport.addEventListener('drop', e => {
   if (!raw) return;
   e.preventDefault();
   const a = JSON.parse(raw);
+  if (SFONDO_ANIM.eVideoNome(a.name)) return setBackground(a.url, a.id, { anim: 'video' });     // un video sulla mappa è lo sfondo
   addPhotoToMap(a.url, { x: (e.clientX - view.x) / view.s, y: (e.clientY - view.y) / view.s }, a.id);
 });
 
@@ -694,18 +697,59 @@ async function importaMappeUvtt(files) {
 // ---------- Sfondo della scena ----------
 function setBgBox(bg) {
   if (!bg) {
-    bgBox.hidden = true; bgBox.dataset.url = ''; bgBox.dataset.aid = '';
-    map.removeAttribute('src');
+    bgBox.hidden = true; bgBox.dataset.url = ''; bgBox.dataset.aid = ''; bgBox.dataset.anim = '';
+    map.removeAttribute('src'); map.hidden = false; fermaVideo();
     refreshEditing();
     return;
   }
   bgBox.hidden = false;
   Object.assign(bgBox.style, { left: bg.x + 'px', top: bg.y + 'px', width: bg.w + 'px', height: bg.h + 'px' });
   bgBox.dataset.url = bg.url; bgBox.dataset.aid = bg.aid ?? ''; bgBox.dataset.gid = bg.gid || '';
-  map.src = bg.url;
-  riduciSulTelefono(bg.url);
+  // «anim»: 'video' (mp4/webm in loop, muto) o 'img' (GIF, WebP o PNG animati); niente = immagine ferma
+  bgBox.dataset.anim = bg.anim === 'video' || bg.anim === 'img' ? bg.anim : '';
+  mostraSfondo(bg.url);
   refreshEditing();
 }
+// ---------- Sfondi animati (vedi js/mappa/sfondo-animato.js) ----------
+mapVideo.muted = true; mapVideo.defaultMuted = true;          // senza audio: la musica è un'altra cosa
+function fermaVideo() {
+  mapVideo.hidden = true;
+  if (!mapVideo.dataset.url) return;
+  mapVideo.pause(); mapVideo.removeAttribute('src'); mapVideo.dataset.url = '';
+  try { mapVideo.load(); } catch {}
+}
+function mostraSfondo(indirizzo) {
+  const anim = bgBox.dataset.anim, url = SFONDO_ANIM.urlMedia(indirizzo);
+  if (!url) { map.removeAttribute('src'); fermaVideo(); return; }
+  map.dataset.nw = map.dataset.nh = '';
+  if (anim === 'video') {
+    map.removeAttribute('src'); map.hidden = true;
+    mapVideo.hidden = false;
+    // #t=0.001: Safari (iPhone) altrimenti mostra nero finché il video non parte
+    if (mapVideo.dataset.url !== url) { mapVideo.dataset.url = url; mapVideo.src = url + (url.includes('#') ? '' : '#t=0.001'); }
+    muoviVideo();
+    return;
+  }
+  fermaVideo(); map.hidden = false;
+  if (anim === 'img') {                         // né copia ridotta né canvas: perderebbero il movimento
+    map.src = url;
+    if (!SFONDO_ANIM.attivo) SFONDO_ANIM.fermaImmagine(url).then(f => { if (bgBox.dataset.url === indirizzo && bgBox.dataset.anim === 'img' && !SFONDO_ANIM.attivo) map.src = f; }, () => {});
+    return;
+  }
+  map.src = url;
+  riduciSulTelefono(indirizzo);
+}
+// il video gira solo se il movimento è acceso e la pagina si vede (in un'altra scheda consumerebbe per niente)
+function muoviVideo() {
+  if (mapVideo.hidden || !mapVideo.dataset.url) return;
+  if (SFONDO_ANIM.attivo && !document.hidden) { if (mapVideo.paused) { const p = mapVideo.play(); if (p) p.catch(() => {}); } }
+  else if (!mapVideo.paused) mapVideo.pause();
+}
+document.addEventListener('visibilitychange', muoviVideo);
+// se il browser non lo fa partire da solo (risparmio energetico dell'iPhone), parte al primo tocco
+addEventListener('pointerdown', () => { if (mapVideo.paused) muoviVideo(); }, { passive: true, capture: true });
+mapVideo.addEventListener('loadedmetadata', () => { if (typeof ridisegnaTela === 'function') ridisegnaTela(); });
+SFONDO_ANIM.quandoCambia(() => { if (!bgBox.hidden && bgBox.dataset.anim) { mostraSfondo(bgBox.dataset.url); if (typeof ridisegnaTela === 'function') ridisegnaTela(); } });
 // Sul telefono una mappa enorme (oltre 4096 px di lato) si mostra da una copia ridotta, fatta qui
 // e tenuta solo in memoria: la campagna resta com'è. Le misure restano quelle dell'originale.
 const LATO_TELEFONO = 4096, copieRidotte = new Map();
@@ -731,17 +775,22 @@ async function riduciSulTelefono(url) {
     map.src = copia.src;
   } catch {}
 }
-const misuraMappa = () => ({ w: +map.dataset.nw || map.naturalWidth, h: +map.dataset.nh || map.naturalHeight });
-// legge le misure naturali dell'immagine: {url, aid, x, y, w, h} oppure null se non si carica
-const loadBg = (url, aid) => new Promise(res => {
-  const im = new Image();
-  im.onload = () => res({ url, aid, x: 0, y: 0, w: im.naturalWidth, h: im.naturalHeight });
-  im.onerror = () => res(null);
-  im.src = url;
-});
-async function setBackground(url, aid) {
-  const bg = await loadBg(url, aid);
-  if (!bg) { setStatus('❌ Non riesco a leggere questa immagine come sfondo.'); return; }
+const misuraMappa = () => bgBox.dataset.anim === 'video' ? { w: mapVideo.videoWidth, h: mapVideo.videoHeight }
+  : { w: +map.dataset.nw || map.naturalWidth, h: +map.dataset.nh || map.naturalHeight };
+// legge le misure naturali dell'immagine (o del video): {url, aid, x, y, w, h, anim?} oppure null se non si carica
+const loadBg = (url, aid, anim) => anim === 'video'
+  ? SFONDO_ANIM.misureVideo(url).then(m => m ? { url, aid, x: 0, y: 0, w: m.w, h: m.h, anim } : null)
+  : new Promise(res => {
+    const im = new Image();
+    im.onload = () => res({ url, aid, x: 0, y: 0, w: im.naturalWidth, h: im.naturalHeight, ...(anim === 'img' ? { anim } : {}) });
+    im.onerror = () => res(null);
+    im.src = url;
+  });
+// «anim» se lo si sa già (appena caricato); altrimenti si guarda il file («nome» aiuta a riconoscere i video)
+async function setBackground(url, aid, { anim, nome } = {}) {
+  if (anim === undefined) anim = await SFONDO_ANIM.tipoDaUrl(url, nome);
+  const bg = await loadBg(url, aid, anim);
+  if (!bg) { setStatus(anim === 'video' ? '❌ ' + tr('Questo video non si apre in questo browser: prova un mp4 (H.264) o un webm.') : '❌ Non riesco a leggere questa immagine come sfondo.'); return; }
   setBgBox(bg);
   setBoard({ x: bg.x, y: bg.y, w: bg.w, h: bg.h });     // il rettangolo copre tutta la mappa
   fitView(false, 0.9);
@@ -751,14 +800,16 @@ async function setBackground(url, aid) {
 
 // ---------- Colore della pagina dall'immagine di sfondo (colore più presente) ----------
 const colorCache = new Map();
-function dominantColor(url) {
-  return new Promise(res => {
-    const im = new Image();
-    im.onload = () => {
+function dominantColor(url, anim) {
+  return new Promise(async res => {
+    const im = anim === 'video' ? await SFONDO_ANIM.fotogramma(url) : new Image();
+    if (!im) return res(null);
+    const w = () => im.naturalWidth || im.width, h = () => im.naturalHeight || im.height;     // un'immagine o (video) un canvas
+    const leggi = () => {
       try {
-        const k = Math.min(1, 64 / Math.max(im.naturalWidth, im.naturalHeight));
+        const k = Math.min(1, 64 / Math.max(w(), h()));
         const c = document.createElement('canvas');
-        c.width = Math.max(1, Math.round(im.naturalWidth * k)); c.height = Math.max(1, Math.round(im.naturalHeight * k));
+        c.width = Math.max(1, Math.round(w() * k)); c.height = Math.max(1, Math.round(h() * k));
         const ctx = c.getContext('2d', { willReadFrequently: true });
         ctx.drawImage(im, 0, 0, c.width, c.height);
         const d = ctx.getImageData(0, 0, c.width, c.height).data, buckets = new Map();
@@ -773,6 +824,8 @@ function dominantColor(url) {
         res(best ? `rgb(${Math.round(best[1] / best[0])}, ${Math.round(best[2] / best[0])}, ${Math.round(best[3] / best[0])})` : null);
       } catch { res(null); }      // es. aprendo index.html con doppio clic il browser blocca la lettura dei pixel
     };
+    if (anim === 'video') return leggi();
+    im.onload = leggi;
     im.onerror = () => res(null);
     im.src = url;
   });
@@ -781,7 +834,7 @@ async function updatePageColor() {
   const root = document.documentElement, url = settings.autoBg && !bgBox.hidden ? bgBox.dataset.url : '';
   let color = null;
   if (url) {
-    if (!colorCache.has(url)) colorCache.set(url, await dominantColor(url));
+    if (!colorCache.has(url)) colorCache.set(url, await dominantColor(url, bgBox.dataset.anim));
     if (bgBox.dataset.url !== url || !settings.autoBg) return;       // nel frattempo è cambiato qualcosa
     color = colorCache.get(url);
   }
@@ -811,7 +864,7 @@ function captureScene() {
   if (!cur) return;
   cur.view = { x: view.x, y: view.y, s: view.s, w: innerWidth, h: innerHeight };
   cur.board = rectOf(board);
-  cur.bg = bgBox.hidden ? null : { ...rectOf(bgBox), url: rifImmagine(bgBox.dataset.url, bgBox.dataset.gid), gid: bgBox.dataset.gid || undefined, aid: bgBox.dataset.aid === '' ? undefined : +bgBox.dataset.aid };
+  cur.bg = bgBox.hidden ? null : { ...rectOf(bgBox), url: rifImmagine(bgBox.dataset.url, bgBox.dataset.gid), gid: bgBox.dataset.gid || undefined, aid: bgBox.dataset.aid === '' ? undefined : +bgBox.dataset.aid, anim: bgBox.dataset.anim || undefined };
   cur.photos = [...world.querySelectorAll('.photo')].map(p => ({
     id: p.dataset.pid && p.dataset.pid !== 'pending' ? p.dataset.pid : (p.dataset.pid = uid()),
     owner: p.dataset.owner || undefined, gid: p.dataset.gid || undefined,
@@ -1078,7 +1131,7 @@ sceneForm.addEventListener('submit', async e => {
   } else if (file) {
     try {
       const rec = await uploadBackground(file);
-      sc.bg = await loadBg(rec.url, rec.id);
+      sc.bg = await loadBg(rec.url, rec.id, rec.anim);
       if (sc.bg) sc.board = { x: sc.bg.x, y: sc.bg.y, w: sc.bg.w, h: sc.bg.h };
     } catch (err) { setStatus('❌ ' + err.message); }
   }
@@ -1331,6 +1384,9 @@ for (const [id, key] of [['resToken', 'resToken'], ['resBg', 'resBg']]) {
   $(id).addEventListener('change', e => { settings[key] = +e.target.value; scheduleBoardSave(); });
 }
 $('autoBg').addEventListener('input', e => { settings.autoBg = e.target.checked; updatePageColor(); scheduleBoardSave(); });
+// per questo dispositivo, non per la campagna: chi ha il telefono scarico ferma gli sfondi animati solo per sé
+$('sfondiAnimati').checked = SFONDO_ANIM.attivo;
+$('sfondiAnimati').addEventListener('input', e => { SFONDO_ANIM.attivo = e.target.checked; });
 $('spareggioDes').addEventListener('input', e => { settings.spareggioDes = e.target.checked; settings.prefT = Date.now(); scheduleBoardSave(); if (typeof turniDisegna === 'function') turniDisegna(); });
 ['caselleG', 'caselleR', 'caselleB'].forEach((id, i) => $(id).addEventListener('input', e => {
   settings.boxLabels[i] = e.target.value.slice(0, 14); scheduleBoardSave(); if (typeof hudDisegna === 'function') hudDisegna();
@@ -1802,7 +1858,7 @@ const localStore = (() => {
       const [all, names] = await Promise.all([req(it.getAll()), req(fo.getAllKeys())]);
       all.sort((a, b) => b.t - a.t);
       const items = all.map(i => {
-        if (!urls.has(i.id)) urls.set(i.id, URL.createObjectURL(i.blob));
+        if (!urls.has(i.id)) { urls.set(i.id, URL.createObjectURL(i.blob)); SFONDO_ANIM.ricordaBlob(urls.get(i.id), i.blob); }
         return { id: i.id, name: i.name, folder: i.folder, url: urls.get(i.id) };
       });
       const folders = names.sort((a, b) => a.localeCompare(b)).map(name => ({ name, count: items.filter(i => i.folder === name).length }));
@@ -1812,7 +1868,7 @@ const localStore = (() => {
       const [it] = await stores('readwrite');
       const final = free(await req(it.getAll()), folder, name);
       const id = await req(it.add({ name: final, folder, blob, t: Date.now() }));
-      urls.set(id, URL.createObjectURL(blob));
+      urls.set(id, URL.createObjectURL(blob)); SFONDO_ANIM.ricordaBlob(urls.get(id), blob);
       return { id, name: final, folder, url: urls.get(id) };
     },
     async remove(a) { const [it] = await stores('readwrite'); await req(it.delete(a.id)); },
@@ -1882,8 +1938,14 @@ function chip(name, label, count) {
 function assetEl(a) {
   const d = document.createElement('div');
   d.className = 'asset'; d.draggable = true; d.title = a.name; d._asset = a;
-  const im = new Image();
-  im.src = a.url; im.alt = a.name; im.draggable = false;
+  const video = SFONDO_ANIM.eVideoNome(a.name);
+  let im;
+  if (video) {                                  // un video: il primo fotogramma, fermo, e il segno ▶
+    im = document.createElement('video');
+    im.muted = true; im.preload = 'metadata'; im.playsInline = true; im.src = a.url + '#t=0.1';
+    im.setAttribute('aria-label', a.name); d.classList.add('assetVideo');
+  } else { im = new Image(); im.src = a.url; im.alt = a.name; im.loading = 'lazy'; }
+  im.draggable = false;
   const x = document.createElement('button');
   x.type = 'button'; x.className = 'del'; x.textContent = '×'; x.setAttribute('aria-label', 'Elimina ' + a.name);
   x.addEventListener('click', () => confirm(`Eliminare «${a.name}» dagli assets?`) && act(() => store.remove(a)));
@@ -1893,7 +1955,7 @@ function assetEl(a) {
   });
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'bgBtn'; b.textContent = '🖼'; b.title = 'Usa come sfondo della scena'; b.setAttribute('aria-label', 'Usa ' + a.name + ' come sfondo');
-  b.addEventListener('click', () => setBackground(a.url, a.id));
+  b.addEventListener('click', () => setBackground(a.url, a.id, { anim: a.anim, nome: a.name }));
   d.append(im, b, x);
   return d;
 }
@@ -1944,26 +2006,42 @@ async function preparaImmagine(file, res) {
   return eSvg(file) ? { nome: nome + '.svg', blob: await comeSvg(file) } : { nome: nome + '.webp', blob: await toWebp(file, res) };
 }
 // salva l'immagine nella cartella degli sfondi (creandola se serve) e restituisce l'asset
+// Uno sfondo animato (video, GIF, WebP o PNG animati) si tiene così com'è: rifatto in WebP perderebbe il movimento.
+// Il risultato ha «anim» ('video' / 'img') se è animato.
 async function uploadBackground(file) {
   try { await store.addFolder(BG_FOLDER); } catch { /* esiste già */ }
+  const anim = await SFONDO_ANIM.tipo(file, file.name), nome = file.name.replace(/\.[^.]+$/, '') || 'sfondo';
+  if (anim === 'video') {
+    if (file.size > SFONDO_ANIM.MAX_VIDEO) throw new Error(tr('Video troppo grande (massimo 25 MB): accorcialo o abbassane la risoluzione.'));
+    const webm = /webm/i.test(file.type) || /\.webm$/i.test(file.name);
+    const rec = await store.add(nome + (webm ? '.webm' : '.mp4'), BG_FOLDER, new Blob([file], { type: webm ? 'video/webm' : 'video/mp4' }));
+    return { ...rec, anim };
+  }
+  if (anim === 'img') {
+    if (file.size > SFONDO_ANIM.MAX_ANIMATA) throw new Error(tr('Immagine animata troppo grande (massimo 12 MB).'));
+    const ext = ((/^image\/(gif|webp|a?png)$/i.exec(file.type) || /\.(gif|webp|a?png)$/i.exec(file.name) || [, 'gif'])[1]).toLowerCase().replace('apng', 'png');
+    const rec = await store.add(nome + '.' + ext, BG_FOLDER, new Blob([file], { type: 'image/' + ext }));
+    return { ...rec, anim };
+  }
   const im = await preparaImmagine(file, settings.resBg);
   return store.add(im.nome, BG_FOLDER, im.blob);
 }
 
 upload.addEventListener('change', async () => {
-  const files = [...upload.files].filter(f => f.type.startsWith('image/'));
+  const files = [...upload.files].filter(f => f.type.startsWith('image/') || SFONDO_ANIM.eVideoFile(f));
   upload.value = '';   // permette di ricaricare lo stesso file
   setStatus();
   let first = null;
   for (const file of files) {
     try {
-      if (uploadAs === 'bg') { const rec = await uploadBackground(file); first ||= rec; }
+      // un video è sempre uno sfondo (un segnalino non può esserlo)
+      if (uploadAs === 'bg' || SFONDO_ANIM.eVideoFile(file)) { const rec = await uploadBackground(file); first ||= rec; }
       else { const im = await preparaImmagine(file, settings.resToken); await store.add(im.nome, current, im.blob); }
     } catch (err) { setStatus('❌ ' + err.message); }
   }
   if (first) current = BG_FOLDER;
   await reload();
-  if (first) setBackground(first.url, first.id);      // il primo file diventa lo sfondo della scena attiva
+  if (first) setBackground(first.url, first.id, { anim: first.anim || '' });      // il primo file diventa lo sfondo della scena attiva
 });
 
 // ---------- Stato della mappa: scene, impostazioni ----------

@@ -41,12 +41,16 @@ const ASSETS = path.join(DATA, 'assets');
 fs.mkdirSync(ASSETS, { recursive: true });
 const MIME_EXT = { 'application/json': '.json', 'image/webp': '.webp', 'image/png': '.png', 'image/jpeg': '.jpg', 'image/gif': '.gif', 'image/avif': '.avif', 'image/svg+xml': '.svg', 'image/bmp': '.bmp',
   // le canzoni che il master fa sentire a tutti (musica dal computer): solo il master le carica
-  'audio/mpeg': '.mp3', 'audio/ogg': '.ogg', 'audio/wav': '.wav', 'audio/mp4': '.m4a', 'audio/aac': '.aac', 'audio/flac': '.flac', 'audio/webm': '.weba' };
+  'audio/mpeg': '.mp3', 'audio/ogg': '.ogg', 'audio/wav': '.wav', 'audio/mp4': '.m4a', 'audio/aac': '.aac', 'audio/flac': '.flac', 'audio/webm': '.weba',
+  // gli sfondi animati delle scene (video in loop, senza audio): solo il master li carica
+  'video/mp4': '.mp4', 'video/webm': '.webm' };
 const EXT_MIME = Object.fromEntries(Object.entries(MIME_EXT).map(([m, e]) => [e, m]));
 const MAX_ASSET = 12 * 1024 * 1024;
 const MAX_AUDIO = 40 * 1024 * 1024;           // una canzone può essere più grande di un'immagine
+const MAX_VIDEO = 25 * 1024 * 1024;           // uno sfondo animato: un video corto in loop
 const isAudio = m => /^audio\//.test(String(m || ''));
-const maxPer = m => isAudio(m) ? MAX_AUDIO : MAX_ASSET;
+const isVideo = m => /^video\//.test(String(m || ''));
+const maxPer = m => isAudio(m) ? MAX_AUDIO : isVideo(m) ? MAX_VIDEO : MAX_ASSET;
 const isHash = h => typeof h === 'string' && /^[a-f0-9]{64}$/.test(h);
 
 let assetIndex = {};
@@ -138,7 +142,7 @@ world = Object.assign({ v: 1, active: null, publicScene: null, scenes: [], sheet
 // anche senza il master che le carica.
 function importaImmaginiCampagna() {
   const CAMP = process.env.CAMPAIGN_DIR ? path.resolve(process.env.CAMPAIGN_DIR) : path.dirname(DATA);
-  const ESTENSIONI = { '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.avif': 'image/avif', '.svg': 'image/svg+xml', '.bmp': 'image/bmp' };
+  const ESTENSIONI = { '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.avif': 'image/avif', '.svg': 'image/svg+xml', '.bmp': 'image/bmp', '.mp4': 'video/mp4', '.webm': 'video/webm' };
   let n = 0;
   const prendi = o => {
     if (!o || typeof o.url !== 'string' || (o.gid && haveAsset(o.gid))) return;
@@ -148,7 +152,7 @@ function importaImmaginiCampagna() {
     const f = path.resolve(base, rel), mime = ESTENSIONI[path.extname(f).toLowerCase()];
     if (!mime || !f.startsWith(base + path.sep)) return;
     let buf; try { buf = fs.readFileSync(f); } catch { return; }
-    if (buf.length > MAX_ASSET) return;
+    if (buf.length > maxPer(mime)) return;
     const h = storeAsset(buf, mime, path.basename(f));
     if (h) { o.gid = h; n++; }
   };
@@ -1272,6 +1276,7 @@ function handleIntent(c, m) {
         if (!mime) return deny(c, m.op, 'tipo di file non ammesso');
         if (mime === 'application/json' && c.role !== 'master') return deny(c, m.op, 'solo il master carica dati');
         if (isAudio(mime) && c.role !== 'master') return deny(c, m.op, 'solo il master carica la musica');
+        if (isVideo(mime) && c.role !== 'master') return deny(c, m.op, 'solo il master carica i video');
         job = { parts: [], got: 0, mime, name: str(m.name, 80) };
         box.set(id, job);
       }
@@ -1280,7 +1285,7 @@ function handleIntent(c, m) {
       // in tutto, un giocatore carica al massimo 300 MB per collegamento: il disco del master non è infinito
       c.caricati = (c.caricati || 0) + chunk.length;
       if (c.role !== 'master' && c.caricati > 300 * 1024 * 1024) { box.delete(id); return deny(c, m.op, 'hai caricato troppe immagini per questa sessione'); }
-      if (job.got > maxPer(job.mime)) { box.delete(id); return deny(c, m.op, isAudio(job.mime) ? 'canzone troppo grande (max 40 MB)' : 'immagine troppo grande (max 12 MB)'); }
+      if (job.got > maxPer(job.mime)) { box.delete(id); return deny(c, m.op, isAudio(job.mime) ? 'canzone troppo grande (max 40 MB)' : isVideo(job.mime) ? 'video troppo grande (max 25 MB)' : 'immagine troppo grande (max 12 MB)'); }
       job.parts.push(chunk);
       if (!m.last) return;
       box.delete(id);
