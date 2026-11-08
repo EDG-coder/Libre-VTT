@@ -2,8 +2,11 @@
 
 [English](README.md) · **Italiano**
 
+🌐 **Sito: [libre-vtt.pages.dev](https://libre-vtt.pages.dev)** — i giocatori entrano dal browser, senza installare niente.
+
 [![Download totali](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/total?label=download%20totali)](https://github.com/EDG-coder/Libre-VTT/releases)
 [![Download ultima versione](https://img.shields.io/github/downloads/EDG-coder/Libre-VTT/latest/total?label=download%20ultima%20versione)](https://github.com/EDG-coder/Libre-VTT/releases/latest)
+[![Sito](https://img.shields.io/badge/sito-libre--vtt.pages.dev-f38020)](https://libre-vtt.pages.dev)
 [![Ultima versione](https://img.shields.io/github/v/release/EDG-coder/Libre-VTT?label=ultima%20versione)](https://github.com/EDG-coder/Libre-VTT/releases/latest)
 
 ## Download
