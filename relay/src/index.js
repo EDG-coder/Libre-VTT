@@ -19,9 +19,10 @@
 // Usa la Hibernation API: mentre nessuno scrive, la stanza dorme e non consuma.
 
 const VERSIONE = 'v1';
-const MAX_GIOCATORI = 40;
+const MAX_GIOCATORI = 40;                      // predefiniti: si cambiano con le variabili MAX_GIOCATORI e RAFFICA_N (wrangler.toml)
 const MAX_MSG_GIOCATORE = 512 * 1024;          // i pezzi di un'immagine sono ~64 KB
 const RAFFICA = { n: 300, ms: 10000 };         // al massimo 300 messaggi in 10 secondi per giocatore
+const intero = (v, d, min, max) => { const k = Math.floor(+v); return Number.isFinite(k) && k >= min && k <= max ? k : d; };
 const FIRMA_VALIDA_MS = 5 * 60 * 1000;
 
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -50,9 +51,13 @@ export default {
 };
 
 export class Stanza {
-  constructor(ctx, env) { this.ctx = ctx; this.env = env; this.raffiche = new Map(); }
+  constructor(ctx, env) {
+    this.ctx = ctx; this.env = env; this.raffiche = new Map();
+    this.maxGiocatori = intero(env.MAX_GIOCATORI, MAX_GIOCATORI, 1, 200);
+    this.raffica = { n: intero(env.RAFFICA_N, RAFFICA.n, 10, 5000), ms: RAFFICA.ms };
+  }
 
-  master() { return this.ctx.getWebSockets('master').find(ws => (ws.deserializeAttachment() || {}).ok) || null; }
+  master(escluso) { return this.ctx.getWebSockets('master').find(ws => ws !== escluso && ws.readyState === 1 && (ws.deserializeAttachment() || {}).ok) || null; }
   giocatore(id) { return this.ctx.getWebSockets('g:' + id)[0] || null; }
 
   async fetch(req) {
@@ -72,7 +77,7 @@ export class Stanza {
       server.serializeAttachment({ ruolo, id });
       // senza master (o stanza piena) lo si accetta solo per dirgli perché, e lo si chiude: il browser riprova
       if (!m) server.close(4004, 'Il master non ha aperto la partita (o non è collegato).');
-      else if (quanti >= MAX_GIOCATORI) server.close(4029, 'La stanza è piena.');
+      else if (quanti >= this.maxGiocatori) server.close(4029, 'La stanza è piena.');
       else m.send('+' + id);
     }
     return new Response(null, { status: 101, webSocket: client });
@@ -94,8 +99,8 @@ export class Stanza {
     if (dati.length > MAX_MSG_GIOCATORE) { try { ws.close(4009, 'Messaggio troppo grande.'); } catch {} return; }
     const ora = Date.now();
     let r = this.raffiche.get(a.id);
-    if (!r || ora - r.da > RAFFICA.ms) this.raffiche.set(a.id, r = { da: ora, n: 0 });
-    if (++r.n > RAFFICA.n) { try { ws.close(4008, 'Troppi messaggi: rallenta.'); } catch {} return; }
+    if (!r || ora - r.da > this.raffica.ms) this.raffiche.set(a.id, r = { da: ora, n: 0 });
+    if (++r.n > this.raffica.n) { try { ws.close(4008, 'Troppi messaggi: rallenta.'); } catch {} return; }
     const m = this.master();
     if (!m) { try { ws.close(4004, 'Il master si è scollegato.'); } catch {} return; }
     try { m.send(a.id + '\n' + dati); } catch {}
@@ -130,7 +135,7 @@ export class Stanza {
   via(ws) {
     const a = ws.deserializeAttachment() || {};
     if (a.ruolo === 'master') {
-      if (!a.ok || this.master()) return;
+      if (!a.ok || this.master(ws)) return;
       // il master se n'è andato: senza di lui non si gioca
       for (const g of this.ctx.getWebSockets()) {
         const x = g.deserializeAttachment() || {};

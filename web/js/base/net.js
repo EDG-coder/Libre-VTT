@@ -1092,7 +1092,8 @@ function onSheetDeleted(id) {
 NET._tel = 0;
 setInterval(() => {
   if (!NET.on || !cur) return;
-  if (NET.leggera && (++NET._tel % 5)) return;                // con il collegamento debole, una volta ogni 20 secondi
+  if (NET.relay && document.hidden) return;                   // dal sito, scheda in secondo piano: niente (tiene sveglia la stanza sul relay)
+  if ((NET.leggera || NET.relay) && (++NET._tel % 5)) return;  // con il collegamento debole o dal sito (relay), una volta ogni 20 secondi
   netSend({ t: 'telemetry', scene: cur.id, view: { x: view.x, y: view.y, s: view.s } });
 }, 4000);
 
