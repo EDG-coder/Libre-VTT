@@ -1825,6 +1825,42 @@ let bridge = null, bridgeBuf = '', bridgeQueue = [], bridgeQueueBytes = 0;
 let lastHello = null;
 let invitoInAttesa = null;            // il codice nuovo mandato dall'host, finché chi gioca non lo accetta
 let hostUp = false, lastFromHost = 0, bridgeTries = 0, bridgeTimer = 0;
+
+// ---- Il tubo può passare dal relay, al posto di uffa-link (iroh) ----
+// LIBRE_JOIN_VIA: «iroh» (di sempre), «relay» (solo relay) o «auto» (iroh; se in ~30 secondi l'host non risponde, il relay).
+// Il relay è lo stesso di «Partita pubblica» (relay/src/index.js): ci si collega alla stanza del codice come un giocatore
+// qualsiasi del sito, quindi l'host ci vede un collegamento «web» (mai master). Niente buchi nel router da fare.
+const JOIN_RELAY = MODE === 'join' && /^wss?:\/\//i.test(process.env.LIBRE_JOIN_RELAY || '') ? String(process.env.LIBRE_JOIN_RELAY).replace(/\/+$/, '') : '';
+const JOIN_CODICE = /^[a-f0-9]{64}$/.test(process.env.LIBRE_JOIN_CODICE || '') ? process.env.LIBRE_JOIN_CODICE : '';
+const JOIN_VIA = JOIN_RELAY && JOIN_CODICE && typeof WebSocket === 'function' && ['relay', 'auto'].includes(process.env.LIBRE_JOIN_VIA) ? process.env.LIBRE_JOIN_VIA : 'iroh';
+if (MODE === 'join' && JOIN_RELAY && JOIN_VIA === 'iroh' && process.env.LIBRE_JOIN_VIA !== 'iroh') console.log('Relay: non posso usarlo (serve Node 22 e un codice valido): uso uffa-link.');
+let viaRelay = JOIN_VIA === 'relay';
+/** Fa finta di essere un socket (le poche cose che il ponte usa): ogni riga è un messaggio del relay. */
+class SocketRelay extends require('events') {
+  constructor(url) {
+    super();
+    this.readyState = 'opening'; this.connecting = true; this.destroyed = false; this.bufferedAmount = 0;
+    let finito = false;
+    const fine = () => { if (finito) return; finito = true; this.readyState = 'closed'; this.connecting = false; this.emit('close'); };
+    let ws;
+    try { ws = new WebSocket(url); } catch { setImmediate(fine); return; }
+    this.ws = ws;
+    ws.onopen = () => { this.readyState = 'open'; this.connecting = false; this.emit('connect'); };
+    ws.onmessage = e => { if (typeof e.data === 'string') this.emit('data', Buffer.from(e.data + '\n', 'utf8')); };
+    ws.onclose = fine; ws.onerror = fine;
+    this.fine = fine;
+  }
+  setNoDelay() {}
+  write(testo) {
+    if (!this.ws || this.readyState !== 'open') return false;
+    for (const riga of String(testo).split('\n')) if (riga) { try { this.ws.send(riga); } catch {} }
+    return true;
+  }
+  destroy() { this.destroyed = true; try { this.ws && this.ws.close(); } catch {} this.fine && this.fine(); }
+}
+const apriTubo = () => viaRelay
+  ? new SocketRelay(JOIN_RELAY + '/v1/stanza/' + crypto.createHash('sha256').update('libre-vtt-stanza|' + JOIN_CODICE).digest('hex'))
+  : net.connect(LINK_PORT, '127.0.0.1');
 const linkState = up => {
   if (hostUp === up) return;
   hostUp = up;
@@ -1832,13 +1868,15 @@ const linkState = up => {
   for (const c of clients) c.send({ t: 'link', up });   // il browser mostra «mi sto ricollegando…»
 };
 function bridgeConnect() {
-  const sock = net.connect(LINK_PORT, '127.0.0.1');
+  // «auto»: se uffa-link non ha mai portato niente (nemmeno un battito) dopo due tentativi falliti, si passa al relay
+  if (JOIN_VIA === 'auto' && !viaRelay && bridgeTries >= 2) { viaRelay = true; console.log('Collegamento diretto (iroh) non riuscito: passo al relay.'); panelPush({ t: 'link', via: 'relay' }); }
+  const sock = apriTubo();
   bridge = sock;
   sock.setNoDelay(true);
   sock.on('connect', () => {
     bridgeBuf = '';                                      // via i pezzi di riga del collegamento vecchio
     lastFromHost = Date.now();
-    console.log('Ponte aperto verso uffa-link.');
+    console.log(viaRelay ? 'Ponte aperto verso il relay.' : 'Ponte aperto verso uffa-link.');
     if (lastHello) sock.write(JSON.stringify(lastHello) + '\n');
     else sock.write('{"t":"eco"}\n');                   // nessun saluto da ripresentare: almeno sapere se l'host c'è
   });
@@ -1947,7 +1985,7 @@ const STABILE = process.env.LINK_STABILE !== '0';
 let stabile = null, stabileBuf = '', stabileTimer = 0, stabileUltimo = 0, hostSaStabile = false;
 const OPS_A = new Set(['chat', 'rule', 'roll', 'roll.prov', 'token.move', 'scatta', 'luce.porta', 'chat.del']);
 function stabileApri() {
-  if (!STABILE || !hostSaStabile || stabile || stabileTimer || !lastHello || !lastHello.token) return;
+  if (!STABILE || viaRelay || !hostSaStabile || stabile || stabileTimer || !lastHello || !lastHello.token) return;   // (dal relay non c'è il canale stabile)
   const sock = net.connect(LINK_PORT, '127.0.0.1');
   stabile = sock; sock.setNoDelay(true);
   stabileBuf = '';

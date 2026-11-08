@@ -306,6 +306,12 @@
       <button class="b go" type="button" id="impRelaySalva">Salva</button>
     </div>
     <p class="nota" id="impRelayEsito" role="status"></p>
+    <h4>Collegamento tra app</h4>
+    <p class="nota">Di solito le app si parlano da sole con iroh (collegamento diretto tra computer). Se il tuo router o la tua rete non lo lasciano passare, il traffico può invece passare dal relay qui sopra.</p>
+    <div class="seg" id="impAppVia">
+      <button type="button" data-v="iroh">Diretto (iroh)</button><button type="button" data-v="auto">Prima iroh, poi relay</button><button type="button" data-v="relay">Solo relay</button>
+    </div>
+    <p class="nota" id="impAppViaAiuto"></p>
   </details>
   <div class="piede"><button class="b go" type="button" id="impChiudi">Fatto</button></div>
 </dialog>
@@ -575,6 +581,11 @@ function disegna() {
           righe.append(sh);
         }
       }
+    } else if (S.mode === 'join' && S.viaRelay) {
+      const lab = document.createElement('span');
+      lab.style.cssText = 'font-size:.86rem;color:var(--muted)';
+      lab.textContent = S.viaRelay === 'relay' ? '🌐 Collegamento tramite relay (senza iroh).' : '🌐 Prima iroh; se non risponde, si passa al relay.';
+      righe.append(lab);
     }
   }
   disegnaPubblica(acceso && S.mode === 'host' && !S.mobile);
@@ -619,11 +630,23 @@ const RELAY_AIUTO = {
   proprio: 'Un relay che gira su un tuo server (per esempio con «npx wrangler dev» o workerd, dietro un https). Serve un indirizzo wss:// raggiungibile da chi gioca.',
   terzi: 'L\'indirizzo di un relay messo a disposizione da qualcun altro. Chi lo gestisce può leggere tutto quello che passa dal relay verso i giocatori del sito (chat, mosse, immagini): usane uno solo di cui ti fidi.'
 };
+const APPVIA_AIUTO = {
+  iroh: 'Si usa solo iroh, come sempre.',
+  auto: 'Si prova iroh; se in circa mezzo minuto l\'host non risponde, si passa al relay. Chi conduce deve avere la «Partita pubblica» accesa, con lo stesso relay.',
+  relay: 'Tutto passa dal relay, senza iroh (niente da aprire sul router). Chi conduce deve avere la «Partita pubblica» accesa, con lo stesso relay. Dal relay non si può essere master e il traffico è un po\' meno veloce.'
+};
+$('impAppVia').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  premuto($('impAppVia'), b.dataset.v); $('impAppViaAiuto').textContent = APPVIA_AIUTO[b.dataset.v];
+  await post('/api/relay', { appVia: b.dataset.v });
+  carica();
+};
 let relayTipo = 'sito';
 function disegnaRelayImp() {
   const P = S.pubblica || {};
   relayTipo = P.tipo || 'sito';
   premuto($('impRelayTipo'), relayTipo);
+  premuto($('impAppVia'), P.appVia || 'iroh'); $('impAppViaAiuto').textContent = APPVIA_AIUTO[P.appVia || 'iroh'];
   $('impRelayAiuto').textContent = RELAY_AIUTO[relayTipo];
   $('impRelayRiga').classList.toggle('hide', relayTipo === 'sito');
   if (document.activeElement !== $('impRelayIndirizzo')) $('impRelayIndirizzo').value = P.indirizzo || '';
