@@ -1907,7 +1907,7 @@ function bridgeConnect() {
       if (msg.t === 'beat') { bridgeSend({ t: 'pong' }); continue; }   // il ponte è vivo anche senza browser
       if (msg.t === 'eco') continue;                        // la risposta al nostro «ci sei?»: basta che sia arrivata
       if (msg.t === 'welcome') hostSaStabile = Array.isArray(msg.sa) && msg.sa.includes('stabile');
-      if (msg.t === 'pannello.r') { const f = pannelloAttese.get(String(msg.id)); if (f) { pannelloAttese.delete(String(msg.id)); f({ codice: +msg.codice || 500, dati: msg.dati }); } continue; }
+      if (msg.t === 'pannello.r') { const f = pannelloAttese.get(String(msg.id)); if (typeof f === 'function') { pannelloAttese.delete(String(msg.id)); f({ codice: +msg.codice || 500, dati: msg.dati }); } continue; }
       if (msg.t === 'pannello.e') { if (masterQui() && msg.msg) panelPush(msg.msg); continue; }
       versoBrowser(msg);
     }
