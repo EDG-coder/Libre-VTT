@@ -311,7 +311,31 @@ function createPlugins({ dir, stateFile, appVersion }) {
     return m.id;
   }
 
-  return { dir, list, active, folderOf, runningFile, readState, setApplied, setOrder, giveConsent, revokeConsent, createFrom, installFolder };
+  /** Takes a plugin off the list: its folder goes to the bin (the system Trash when the launcher passes
+   *  `toBin`, otherwise Plugins/.cestino) and it is forgotten in the state (applied, order, consent).
+   *  By folder, so a broken plugin, or one of two with the same id, can be removed on its own. */
+  async function remove(folder, toBin) {
+    const p = list().find(x => x.folder === folder);
+    const from = p && safeJoin(dir, p.folder);
+    if (!from || from === dir) throw new Error('plugin non trovato');
+    if (toBin) await toBin(from);
+    else {
+      const bin = path.join(dir, '.cestino');
+      fs.mkdirSync(bin, { recursive: true });
+      fs.renameSync(from, path.join(bin, p.folder + '-' + Date.now().toString(36)));
+    }
+    cache = { at: 0, v: null };
+    if (!list().some(x => x.id === p.id)) {             // another folder with the same id keeps its state
+      const s = readState();
+      s.applied = s.applied.filter(x => x !== p.id);
+      s.order = s.order.filter(x => x !== p.id);
+      delete s.consent[p.id];
+      writeState(s);
+    }
+    return p.id;
+  }
+
+  return { dir, list, active, folderOf, runningFile, readState, setApplied, setOrder, giveConsent, revokeConsent, createFrom, installFolder, remove };
 }
 
 module.exports = { createPlugins, cleanCss, satisfies, KNOWN_PERMISSIONS, API_VERSION, ID_RE };

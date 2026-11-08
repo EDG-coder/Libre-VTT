@@ -1870,7 +1870,7 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/api/plugins' && req.method === 'GET') return ok(pluginsInfo());
   if (u.pathname.startsWith('/api/plugins/') && req.method === 'POST' && u.pathname !== '/api/plugins/installa') {
     const op = u.pathname.slice(13);
-    if (MOBILE && (op === 'crea' || op === 'cartella')) return ok({ errore: 'Nell\'app per telefoni e tablet ci sono solo i plugin inclusi.', ...pluginsInfo() });
+    if (MOBILE && (op === 'crea' || op === 'cartella' || op === 'elimina')) return ok({ errore: 'Nell\'app per telefoni e tablet ci sono solo i plugin inclusi.', ...pluginsInfo() });
     return corpo(m => {
       const id = String(m.id || '');
       try {
@@ -1882,6 +1882,11 @@ const server = http.createServer(async (req, res) => {
         } else if (op === 'ordine') PLUGINS.setOrder(Array.isArray(m.ids) ? m.ids.map(String) : []);
         else if (op === 'consenso') PLUGINS.giveConsent(id, String(m.hash || ''), String(m.nome || ''));
         else if (op === 'revoca') PLUGINS.revokeConsent(id);
+        else if (op === 'elimina') {
+          return PLUGINS.remove(String(m.cartella || ''), nelCestino)
+            .then(id => { say(`Plugin «${id}» spostato nel Cestino.`, 'ok'); ok({ eliminato: id, ...pluginsInfo() }); })
+            .catch(e => ok({ errore: e.message, ...pluginsInfo() }));
+        }
         else if (op === 'cartella') { fs.mkdirSync(PLUGINS_DIR, { recursive: true }); if (!MOBILE) mostraCartella(m.id ? (PLUGINS.folderOf(id) || PLUGINS_DIR) : PLUGINS_DIR); }
         else if (op === 'crea') {
           const nome = String(m.modello || '');
