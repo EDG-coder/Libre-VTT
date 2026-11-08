@@ -14,6 +14,7 @@
 import { cpSync, mkdirSync, rmSync, readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, dirname, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const RADICE = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const OUT = resolve(process.argv[2] || join(RADICE, '_site'));
@@ -76,6 +77,12 @@ writeFileSync(join(OUT, 'robots.txt'), 'User-agent: *\nAllow: /\n' + (URL_SITO ?
 if (URL_SITO) writeFileSync(join(OUT, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
   `  <url><loc>${URL_SITO}/</loc></url>\n  <url><loc>${URL_SITO}/gioca/</loc></url>\n</urlset>\n`);
+// la cornice dove gira il codice dei plugin del master in sandbox: come la serve il programma (server/server.js),
+// senza rete e senza origine, con solo il suo script
+const sandboxHtml = readFileSync(da('web/plugin-sandbox.html'), 'utf8');
+const sandboxHash = [...sandboxHtml.matchAll(/<script>([\s\S]*?)<\/script[^>]*>/gi)].map(x => `'sha256-${createHash('sha256').update(x[1], 'utf8').digest('base64')}'`).join(' ');
+if (!sandboxHash) throw new Error('web/plugin-sandbox.html: non trovo lo script');
+const sandboxCsp = `  Content-Security-Policy: default-src 'none'; script-src ${sandboxHash} blob:; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'; sandbox allow-scripts`;
 // Cloudflare Pages legge _headers (GitHub Pages lo ignora): il tavolo non va indicizzato a pezzi,
 // e i file non devono finire dentro le pagine di altri siti.
 writeFileSync(join(OUT, '_headers'), [
@@ -85,6 +92,12 @@ writeFileSync(join(OUT, '_headers'), [
   '  X-Frame-Options: SAMEORIGIN',
   '/gioca/*',
   '  X-Robots-Tag: noindex',
+  '/gioca/plugin-sandbox.html',
+  sandboxCsp,
+  '  Cache-Control: no-store',
+  '/gioca/plugin-sandbox',
+  sandboxCsp,
+  '  Cache-Control: no-store',
   '/relay.json',
   '  Access-Control-Allow-Origin: *',
   '  Cache-Control: public, max-age=300',

@@ -244,6 +244,10 @@
   .plgPiede .gruppo { display: flex; flex-wrap: wrap; gap: 8px; }
   .plgCrea { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
   .plg [hidden] { display: none !important; }
+  .plgCond { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; margin-top: 6px; font-size: .85rem; }
+  .plgCond label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .plgCond input[type=checkbox] { width: 18px; height: 18px; margin: 0; }
+  .plgCond .desc { flex-basis: 100%; margin: 0; }
   .plgCrea select { min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; font: inherit; padding: 0 8px; }
   /* gli avvisi per l'accesso completo: volutamente seri */
   dialog.avvisoPlg { width: min(480px, calc(100vw - 24px)); border: 2px solid #b3261e; border-radius: 16px; background: var(--panel); color: var(--text); padding: 20px; }
@@ -1176,6 +1180,29 @@ function disegnaPlugin() {
     else stato.textContent = '';
     if (stato.textContent) mezzo.append(stato);
     for (const w of p.warnings || []) { const x = document.createElement('p'); x.className = 'stato'; x.textContent = plgTr(w); mezzo.append(x); }
+    // condividerlo con i giocatori (quando conduci): facoltativo, o necessario per entrare
+    if (!(p.errors && p.errors.length)) {
+      const sc = document.createElement('div'); sc.className = 'plgCond';
+      const l1 = document.createElement('label'), c1 = document.createElement('input');
+      c1.type = 'checkbox'; c1.checked = !!p.shared;
+      c1.onchange = () => plgChiama('condividi', { id: p.id, on: c1.checked, necessario: false });
+      l1.append(c1, document.createTextNode(' ' + plgTr('Condividi con i giocatori')));
+      sc.append(l1);
+      if (p.shared) {
+        const l2 = document.createElement('label'), c2 = document.createElement('input');
+        c2.type = 'checkbox'; c2.checked = !!p.sharedRequired;
+        c2.onchange = () => plgChiama('condividi', { id: p.id, on: true, necessario: c2.checked });
+        l2.append(c2, document.createTextNode(' ' + plgTr('Necessario per entrare')));
+        sc.append(l2);
+        const x = document.createElement('p'); x.className = 'desc';
+        x.textContent = !p.running ? plgTr('Lo offrirai ai giocatori quando sarà applicato.')
+          : p.bytes > 8 * 1024 * 1024 ? plgTr('Troppo grande da mandare ai giocatori (più di 8 MB).')
+          : p.sharedRequired ? plgTr('Chi entra deve accettarlo: finché non lo accetta resta fuori (può sempre andarsene).')
+          : plgTr('Chi entra se lo vede proporre: può accettarlo o giocare senza.');
+        sc.append(x);
+      }
+      mezzo.append(sc);
+    }
     if (p.access === 'full' && p.consented && p.applied) {
       const x = document.createElement('button'); x.type = 'button'; x.className = 'b'; x.style.marginTop = '6px';
       x.textContent = plgTr('Togli il consenso');

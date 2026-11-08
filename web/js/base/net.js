@@ -146,11 +146,7 @@ function netConnect() {
   let ws;
   try { ws = new WebSocket(NET.relay || 'ws://127.0.0.1:' + NET.port + '/ws'); } catch { return netRetry(); }
   NET.ws = ws;
-  ws.onopen = () => {
-    // delta: sappiamo ricevere solo i pezzi cambiati; ver e chatDa: dove eravamo rimasti (per rientrare senza ricaricare tutto)
-    // NET.account (solo dal sito, vedi gioca-web.js): codice e impronta della password, tenuti solo in memoria
-    ws.send(JSON.stringify({ t: 'hello', token: netToken(), firma: netFirma(), name: netName(), client: 'LIBRE VTT 2', delta: 1, ver: NET.ver || 0, chatDa: NET.chatUltimo || '', account: NET.account || undefined }));
-  };
+  ws.onopen = () => netSaluta(ws);
   ws.onmessage = e => {
     if (NET.ws !== ws) return;
     NET.ultimo = Date.now();
@@ -160,6 +156,17 @@ function netConnect() {
   };
   ws.onclose = () => netCaduto(ws);
   ws.onerror = () => {};
+}
+/** Il saluto: chi sono e da dove riparto. Si rimanda (sullo stesso collegamento) quando, davanti alla porta, si
+ *  accettano i plugin che il master chiede per entrare (vedi js/plugins/condivisi.js). */
+function netSaluta(ws = NET.ws) {
+  if (!ws || ws.readyState !== 1) return;
+  // delta: sappiamo ricevere solo i pezzi cambiati; ver e chatDa: dove eravamo rimasti (per rientrare senza ricaricare tutto)
+  // NET.account (solo dal sito, vedi gioca-web.js): codice e impronta della password, tenuti solo in memoria
+  // plugins: sappiamo ricevere i plugin del master; pluginsOk: quelli a cui abbiamo già dato il consenso
+  const C = window.LIBRE && window.LIBRE.condivisi;
+  ws.send(JSON.stringify({ t: 'hello', token: netToken(), firma: netFirma(), name: netName(), client: 'LIBRE VTT 2', delta: 1, ver: NET.ver || 0, chatDa: NET.chatUltimo || '', account: NET.account || undefined,
+    plugins: C ? 1 : undefined, pluginsOk: C ? C.perSaluto() : undefined }));
 }
 /** Il collegamento locale è caduto (o lo diamo per morto noi): ci si ricollega. */
 function netCaduto(ws) {
@@ -222,6 +229,7 @@ function netRetry() {
 /** Scollegarsi a mano: si esce dalla sessione e non si riprova finché non lo chiedi tu. */
 function netDisconnect() {
   NET.manual = true; NET.retrying = false; NET.hostDown = false;
+  if (window.LIBRE && window.LIBRE.condivisi) window.LIBRE.condivisi.fuori();
   clearTimeout(netTimer); netTimer = 0;
   const ws = NET.ws;
   if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify({ t: 'leave' })); } catch {} }
@@ -255,6 +263,7 @@ function netHandle(m) {
       netSay(NET.leggera ? 'Collegamento debole: modalità leggera. Chat, dadi e segnalini arrivano subito; immagini e musica dopo.' : 'Il collegamento è tornato buono.', NET.leggera ? 'warn' : '');
       return;
     case 'welcome': {
+      if (window.LIBRE && window.LIBRE.condivisi) window.LIBRE.condivisi.dentro();   // davanti alla porta non si sta più
       const back = NET.retrying || NET.hostDown;
       NET.on = true; NET.everOn = true; NET.me = m.you;
       NET.giocatore = m.you.role !== 'master';
@@ -328,6 +337,9 @@ function netHandle(m) {
       netMondoPieno(m.world, m.ver); return;
     case 'delta': netDelta(m); return;
     case 'players': NET.players = m.list || []; return;
+    case 'plugins.offerta': case 'plugins.pezzo': case 'plugins.no':     // i plugin che il master condivide
+      if (window.LIBRE && window.LIBRE.condivisi) window.LIBRE.condivisi.ricevi(m);
+      return;
     case 'chat': netChat(m.msg); return;
     case 'chat.del': netFromServer = true; try { deleteChat(m.id); } finally { netFromServer = false; } return;
     case 'ping': {
@@ -384,6 +396,7 @@ function netHandle(m) {
       // Non insistere: è stata una decisione (o ti sei ricollegato da un'altra finestra), non un guasto.
       NET.stopped = true; NET.retrying = false; NET.hostDown = false;
       clearTimeout(netTimer);
+      if (window.LIBRE && window.LIBRE.condivisi) window.LIBRE.condivisi.fuori();
       const ws = NET.ws;
       NET.ws = null; NET.on = false;
       applyRole();

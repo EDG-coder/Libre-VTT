@@ -39,7 +39,36 @@ const PLUGINS = process.env.LIBRE_PLUGINS_DIR && process.env.LIBRE_PLUGINS_STATE
   ? require('./plugins.js').createPlugins({ dir: path.resolve(process.env.LIBRE_PLUGINS_DIR), stateFile: path.resolve(process.env.LIBRE_PLUGINS_STATE),
     appVersion: String((() => { try { return require('../package.json').version; } catch { return ''; } })()) })
   : null;
-const { cleanCss } = require('./plugins.js');
+const { cleanCss, hashFiles, MAX_SHARE } = require('./plugins.js');
+// I plugin con accesso completo che il master di una partita ha condiviso e che chi gioca ha accettato: il tavolo
+// li riceve dal collegamento e li lascia qui, SOLO IN MEMORIA (spegnendo LIBRE VTT spariscono), perché il browser
+// possa importarli come un modulo con i loro file accanto. Si tengono solo se i file danno proprio l'impronta
+// annunciata: è a quella che il giocatore ha dato il consenso. Nell'app per telefoni non ci sono (regole degli store).
+const RICEVUTI_PIENI = process.env.LIBRE_RICEVUTI_PIENI === '1';
+const ricevuti = new Map();          // `${id}@${hash}` -> Map(percorso -> Buffer)
+function salvaRicevuto(req, res) {
+  if (!RICEVUTI_PIENI) return send(res, 403, 'Qui i plugin con accesso completo del master non si possono usare.');
+  if (!/^application\/json/.test(req.headers['content-type'] || '')) return send(res, 415, 'Serve JSON');
+  const parti = []; let n = 0, troppo = false;
+  req.on('data', d => { n += d.length; if (n > MAX_SHARE * 1.4 + 65536) { troppo = true; send(res, 413, 'Troppo grande'); req.destroy(); } else parti.push(d); });
+  req.on('end', () => {
+    if (troppo) return;
+    let j; try { j = JSON.parse(Buffer.concat(parti).toString('utf8')); } catch { return send(res, 400, 'JSON non valido'); }
+    const id = String(j && j.id || ''), hash = String(j && j.hash || '');
+    if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(id) || !/^[a-f0-9]{64}$/.test(hash) || !Array.isArray(j.files)) return send(res, 400, 'Plugin non valido');
+    const files = [];
+    for (const x of j.files) {
+      const f = Array.isArray(x) ? String(x[0] || '') : '';
+      if (!f || f.split('/').some(seg => !seg || seg === '..' || seg.startsWith('.')) || f.includes('\\')) return send(res, 400, 'Percorso non valido');
+      files.push([f, Buffer.from(String(x[1] || ''), 'base64')]);
+    }
+    if (hashFiles(files) !== hash) return send(res, 409, 'I file non corrispondono all\'impronta del plugin');
+    for (const k of [...ricevuti.keys()]) if (k.startsWith(id + '@')) ricevuti.delete(k);    // la versione vecchia via
+    while (ricevuti.size >= 20) ricevuti.delete(ricevuti.keys().next().value);
+    ricevuti.set(id + '@' + hash, new Map(files));
+    json(res, 200, { ok: true });
+  });
+}
 const BOOT = Date.now();               // cambia a ogni avvio del server (serve per mostrare la guida una volta)
 
 fs.mkdirSync(ASSETS, { recursive: true });
@@ -624,7 +653,8 @@ function handle(req, res) {
     if (route === 'PUT /api/state') return saveState(req, res, q);
     if (route === 'GET /api/miniatura') return getMini(res, q);
     if (route === 'GET /api/sistema') return infoSistema(res);
-    if (route === 'GET /api/plugins') return json(res, 200, { plugins: PLUGINS ? PLUGINS.active() : [], disponibili: !!PLUGINS });
+    if (route === 'GET /api/plugins') return json(res, 200, { plugins: PLUGINS ? PLUGINS.active() : [], disponibili: !!PLUGINS, ricevutiPieni: RICEVUTI_PIENI });
+    if (route === 'POST /api/plugins/ricevuti') return salvaRicevuto(req, res);
     if (route === 'GET /api/compendio') return elencoCompendio(res);
     if (route === 'GET /api/open5e') return open5e(res, q);
     if (route === 'POST /api/compendio/importa') return importaPacchetto(req, res);
@@ -685,6 +715,17 @@ function handle(req, res) {
       if (ext === '.css') d = cleanCss(d.toString('utf8'));
       send(res, 200, d, type);
     });
+  }
+  // i file dei plugin con accesso completo arrivati dal master (in memoria, vedi salvaRicevuto)
+  if (rel.startsWith('/plugins-ricevuti/')) {
+    const m = /^\/plugins-ricevuti\/([a-z0-9][a-z0-9._-]{0,63})\/([a-f0-9]{64})\/(.+)$/.exec(rel);
+    const files = m && ricevuti.get(m[1] + '@' + m[2]);
+    const ext = m ? path.extname(m[3]).toLowerCase() : '';
+    const type = ext === '.html' ? null : MIME[ext];
+    let d = files && type && files.get(m[3]);
+    if (!d) return send(res, 404, 'Non trovato');
+    if (ext === '.css') d = cleanCss(d.toString('utf8'));
+    return send(res, 200, d, type);
   }
   // la pagina dove gira il codice dei plugin in sandbox: senza origine, senza rete, solo il suo script
   if (rel === '/plugin-sandbox.html') {

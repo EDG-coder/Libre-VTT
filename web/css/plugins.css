@@ -31,3 +31,44 @@
 #plgDotAsk div { display: flex; justify-content: flex-end; gap: 8px; }
 #plgDotAsk button { min-height: 34px; padding: 4px 12px; border-radius: 8px; font: inherit; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
 #plgDotAsk .plgDotYes { background: #b3261e; border-color: #b3261e; color: #fff; }
+/* the master's plugins: what they are, and «accept» or «leave» (web/js/plugins/condivisi.js) */
+#plgPorta {
+  position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0;
+  z-index: 600000; display: grid; place-items: center; padding: 16px; box-sizing: border-box;
+  background: transparent; color: var(--text); overflow-y: auto;
+}
+#plgPorta::backdrop { background: rgb(0 0 0 / .55); }
+#plgPorta .plgPortaCarta {
+  width: min(560px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; box-sizing: border-box;
+  padding: 18px 18px 14px; border-radius: 14px; background: var(--panel); color: var(--text); border: 1px solid var(--line);
+  box-shadow: 0 14px 40px rgb(0 0 0 / .5); font-size: .92rem; line-height: 1.4;
+}
+#plgPorta h2 { margin: 0 0 8px; font-size: 1.15rem; }
+#plgPorta p { margin: 0 0 10px; }
+#plgPorta ul { margin: 0 0 10px; padding-left: 20px; }
+#plgPorta .plgPortaNota { color: var(--muted); font-size: .85rem; }
+#plgPorta .plgPortaIcona { font-size: 2rem; color: #e0261b; line-height: 1; margin-bottom: 6px; }
+#plgPorta .plgPortaLista { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+#plgPorta .plgPortaRiga {
+  display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 10px 12px; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2, var(--panel));
+}
+#plgPorta .plgPortaRiga.pieno { border-color: #b3261e; }
+#plgPorta .plgPortaRiga.no { opacity: .8; cursor: default; }
+#plgPorta .plgPortaRiga input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); }
+#plgPorta .nome { font-weight: 600; overflow-wrap: anywhere; }
+#plgPorta .ver { color: var(--muted); font-size: .8rem; margin-left: 6px; font-weight: 400; }
+#plgPorta .desc { color: var(--muted); font-size: .85rem; margin: 3px 0 0; }
+#plgPorta .chips { margin-top: 4px; }
+#plgPorta .chip { display: inline-block; font-size: .72rem; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); margin: 3px 4px 0 0; }
+#plgPorta .chip.nec { border-color: var(--accent); color: var(--text); }
+#plgPorta .chip.rosso { background: #b3261e; border-color: #b3261e; color: #fff; font-weight: 700; }
+#plgPorta .stato.err, #plgPorta .plgPortaStato.err { color: #ef6b62; }
+#plgPorta .plgPortaStato { font-size: .85rem; }
+#plgPorta .plgPortaStato[hidden], #plgPorta .stato[hidden] { display: none; }
+#plgPorta input[type=text] { width: 100%; box-sizing: border-box; min-height: 40px; margin: 0 0 10px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2, var(--panel)); color: inherit; font: inherit; }
+#plgPorta .plgPortaBottoni { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+#plgPorta .plgPortaBottoni button { min-height: 40px; padding: 4px 16px; border-radius: 10px; font: inherit; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+#plgPorta .plgPortaBottoni button.go { background: var(--accent); border-color: var(--accent); color: #fff; }
+#plgPorta .plgPortaBottoni button.rischio { background: #b3261e; border-color: #b3261e; color: #fff; }
+#plgPorta .plgPortaBottoni button:disabled { opacity: .45; cursor: default; }

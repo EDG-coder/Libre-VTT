@@ -269,7 +269,9 @@ function rowFor(r) {
   }
   sel.onchange = () => { sel.blur(); post('/api/perm', { token: r.token, role: sel.value }).then(load); };
   head.append(nm, sel);
-  if (L.pending) head.append(chip('in attesa', 'warn'));
+  if (L.pending && L.attesaPlugin) { const ch = chip('🧩 sta guardando i plugin', 'warn'); ch.title = 'Entra quando accetta i plugin che hai reso necessari'; head.append(ch); }
+  else if (L.pending) head.append(chip('in attesa', 'warn'));
+  if (r.online && !L.pending && L.plugins) { const ch = chip('🧩 ' + L.plugins); ch.title = 'Plugin del master che ha accettato'; head.append(ch); }
   else head.append(chip(r.online ? 'collegato' : 'non c\'è' + (r.lastSeen ? ' · ' + durata(Math.round((Date.now() - r.lastSeen) / 1000)) + ' fa' : '')));
   // da dove passa: diretto (veloce) o dal relay (un server in mezzo: più lento)
   if (r.online && L.kind === 'link') {
@@ -311,7 +313,7 @@ function rowFor(r) {
   const acts = document.createElement('div');
   acts.className = 'acts';
   const btn = (t, fn, cls) => { const b = document.createElement('button'); b.textContent = t; if (cls) b.className = cls; b.onclick = fn; return b; };
-  if (L.pending) {
+  if (L.pending && !L.attesaPlugin) {
     acts.append(btn('✓ Fallo entrare', () => mod(r.token, 'approve'), 'go'));
     acts.append(btn('✕ Rifiuta', () => mod(r.token, 'refuse'), 'bad'));
   }
