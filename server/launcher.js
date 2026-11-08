@@ -985,7 +985,7 @@ async function avvia(mode, id, campagna, opz = {}) {
   salvaConf();
   state.porte = { web: WEB_PORT, game: GAME_PORT, link: LINK_PORT };
 
-  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP, LIBRE_PREDEFINITE: PREDEFINITE, LIBRE_CAMP_HOME: CAMP_HOME, LIBRE_SEGRETO: SEGRETO, LIBRE_PLUGINS_DIR: PLUGINS_DIR, LIBRE_PLUGINS_STATE: PLUGINS_STATE }, keep: true });
+  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP, LIBRE_PREDEFINITE: PREDEFINITE, LIBRE_CAMP_HOME: CAMP_HOME, LIBRE_SEGRETO: SEGRETO, LIBRE_PLUGINS_DIR: PLUGINS_DIR, LIBRE_PLUGINS_STATE: PLUGINS_STATE, ...(MOBILE ? {} : { LIBRE_RICEVUTI_PIENI: '1' }) }, keep: true });
   if (!await aspettaPorta(WEB_PORT)) return fallisci('Il tavolo non si è acceso.');
 
   if (mode !== 'solo') {
@@ -996,6 +996,8 @@ async function avvia(mode, id, campagna, opz = {}) {
       extra.CAMPAGNA_NOME = state.campagna ? state.campagna.nome : '';
       // la partita pubblica (relay): la chiave serve per farsi riconoscere, l'indirizzo solo se è accesa
       extra.LIBRE_RELAY_CHIAVE = LINK_CHIAVE_FILE;
+      // i plugin che il master condivide con i giocatori: il server di gioco li offre a chi entra
+      extra.LIBRE_PLUGINS_DIR = PLUGINS_DIR; extra.LIBRE_PLUGINS_STATE = PLUGINS_STATE; extra.LIBRE_VERSIONE = VERSIONE;
       if (relayConf().attiva) {
         const url = await indirizzoRelay();
         if (url) extra.LIBRE_RELAY = url;
@@ -1882,6 +1884,7 @@ const server = http.createServer(async (req, res) => {
         } else if (op === 'ordine') PLUGINS.setOrder(Array.isArray(m.ids) ? m.ids.map(String) : []);
         else if (op === 'consenso') PLUGINS.giveConsent(id, String(m.hash || ''), String(m.nome || ''));
         else if (op === 'revoca') PLUGINS.revokeConsent(id);
+        else if (op === 'condividi') PLUGINS.setShared(id, !!m.on, !!m.necessario);
         else if (op === 'elimina') {
           return PLUGINS.remove(String(m.cartella || ''), nelCestino)
             .then(id => { say(`Plugin «${id}» spostato nel Cestino.`, 'ok'); ok({ eliminato: id, ...pluginsInfo() }); })

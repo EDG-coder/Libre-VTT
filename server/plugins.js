@@ -15,6 +15,7 @@ const fs = require('fs'), path = require('path'), crypto = require('crypto');
 const ID_RE = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const KNOWN_PERMISSIONS = ['chat.read', 'chat.write', 'chat.commands', 'ui.buttons', 'ui.notify'];
 const MAX_FILES = 2000, MAX_BYTES = 60 * 1024 * 1024;
+const MAX_SHARE = 8 * 1024 * 1024;          // a plugin sent to the players (through the relay too) stays small
 const API_VERSION = 1;
 
 // ---------- versions ----------
@@ -69,6 +70,8 @@ function createPlugins({ dir, stateFile, appVersion }) {
       order: Array.isArray(s.order) ? s.order.filter(x => ID_RE.test(x)) : [],
       applied: Array.isArray(s.applied) ? s.applied.filter(x => ID_RE.test(x)) : [],
       consent: s.consent && typeof s.consent === 'object' ? s.consent : {},
+      // shared with the players (only the master's, when they host): id -> { required }
+      shared: s.shared && typeof s.shared === 'object' ? Object.fromEntries(Object.entries(s.shared).filter(([k]) => ID_RE.test(k)).map(([k, v]) => [k, { required: !!(v && v.required) }])) : {},
       t: +s.t || 0
     };
   }
@@ -148,6 +151,7 @@ function createPlugins({ dir, stateFile, appVersion }) {
     if (appVersion && !satisfies(appVersion, p.libreVtt)) p.errors.push(`serve LIBRE VTT ${p.libreVtt}`);
     p.hash = hashOf(root, files);
     p.files = files.length;
+    p.bytes = files.reduce((n, f) => { try { return n + fs.statSync(path.join(root, f)).size; } catch { return n; } }, 0);
     return p;
   }
 
@@ -176,6 +180,8 @@ function createPlugins({ dir, stateFile, appVersion }) {
       p.applied = st.applied.includes(p.id);
       p.consented = p.access !== 'full' || (!!p.hash && st.consent[p.id] === p.hash);
       p.consentOld = p.access === 'full' && !!st.consent[p.id] && st.consent[p.id] !== p.hash;
+      p.shared = !!st.shared[p.id];
+      p.sharedRequired = !!(st.shared[p.id] && st.shared[p.id].required);
     }
     resolve(all);
     return all;
@@ -274,6 +280,39 @@ function createPlugins({ dir, stateFile, appVersion }) {
     return writeState(s);
   }
 
+  // ---------- sharing with the players (the master hosts) ----------
+  /** Share (or stop sharing) a plugin with the players; `required`: nobody enters without it. */
+  function setShared(id, on, required) {
+    if (!ID_RE.test(String(id))) throw new Error('plugin non trovato');
+    const s = readState();
+    if (on) s.shared[id] = { required: !!required };
+    else delete s.shared[id];
+    return writeState(s);
+  }
+  /** What the players are offered: the shared plugins that are running here, in the table's order. */
+  function sharedList() {
+    return list().filter(p => p.running && p.shared).sort((a, b) => a.loadIndex - b.loadIndex).map(p => ({
+      id: p.id, name: p.name, description: p.description, version: p.version, author: p.author, license: p.license,
+      hash: p.hash, access: p.access, permissions: p.permissions, style: p.style, client: p.client, locales: p.locales,
+      kinds: p.kinds.filter(k => k !== 'data'), bytes: p.bytes, required: p.sharedRequired, tooBig: p.bytes > MAX_SHARE
+    }));
+  }
+  /** Every file of a shared plugin, read now, with the fingerprint of exactly these bytes (the player checks
+   *  it, and its consent is tied to it). null if it is not shared, not running, changed, or too big. */
+  function sharedPack(id, hash) {
+    const p = list().find(x => x.id === id && x.running && x.shared);
+    if (!p || p.hash !== hash || p.bytes > MAX_SHARE) return null;
+    const root = path.join(dir, p.folder);
+    let files; try { files = filesOf(root); } catch { return null; }
+    const h = crypto.createHash('sha256'), out = [];
+    for (const f of files) {
+      const b = fs.readFileSync(path.join(root, f));
+      h.update(f + '\0'); h.update(b); h.update('\0');
+      out.push([f, b]);
+    }
+    return h.digest('hex') === hash ? out : null;
+  }
+
   /** A new plugin from a template folder (examples/plugins/<template>), with a free id. */
   function createFrom(templateDir, wantedId) {
     fs.mkdirSync(dir, { recursive: true });
@@ -335,7 +374,14 @@ function createPlugins({ dir, stateFile, appVersion }) {
     return p.id;
   }
 
-  return { dir, list, active, folderOf, runningFile, readState, setApplied, setOrder, giveConsent, revokeConsent, createFrom, installFolder, remove };
+  return { dir, list, active, folderOf, runningFile, readState, setApplied, setOrder, giveConsent, revokeConsent, setShared, sharedList, sharedPack, createFrom, installFolder, remove };
 }
 
-module.exports = { createPlugins, cleanCss, satisfies, KNOWN_PERMISSIONS, API_VERSION, ID_RE };
+/** The fingerprint of a plugin from its files ([[path, Buffer]], sorted by path): the same as the folder's. */
+function hashFiles(files) {
+  const h = crypto.createHash('sha256');
+  for (const [f, b] of files) { h.update(f + '\0'); h.update(b); h.update('\0'); }
+  return h.digest('hex');
+}
+
+module.exports = { createPlugins, cleanCss, satisfies, hashFiles, KNOWN_PERMISSIONS, API_VERSION, ID_RE, MAX_SHARE };

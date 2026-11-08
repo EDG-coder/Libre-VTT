@@ -334,7 +334,8 @@ function playerList() {
     return {
       id: c.id, token: c.token, name: c.name, role: c.role, kind: c.kind,
       perms: permsFor(c), sheets: rec.sheets || {},
-      muted: !!rec.muted, frozen: !!rec.frozen, banned: !!rec.banned, pending: !!c.pending,
+      muted: !!rec.muted, frozen: !!rec.frozen, banned: !!rec.banned, pending: !!c.pending, attesaPlugin: !!c.pluginGate,
+      plugins: Array.isArray(c.pluginsOk) ? c.pluginsOk.length : 0,
       client: c.client || '?', peer: c.peer || null, percorso: c.kind === 'link' ? (c.percorso || 'sconosciuto') : 'locale',
       since: c.since || now, onFor: Math.round((now - (c.since || now)) / 1000),
       rtt: c.rtt == null ? null : c.rtt, qualita: c.qualita || 'verde', leggera: !!c.leggera, stabile: stabili.has(c.token),
@@ -1576,6 +1577,10 @@ function onMessage(c, raw) {
     c.chatDa = str(m.chatDa, 40);
     c.since = Date.now();
     c.needName = !want;
+    // i plugin del master: sa riceverli? quali ha già accettato (e carica)?
+    c.sapluginCondivisi = m.plugins === 1;
+    c.pluginGate = false;
+    c.pluginsOk = Array.isArray(m.pluginsOk) ? m.pluginsOk.slice(0, 50).map(x => x && typeof x === 'object' ? { id: str(x.id, 64), hash: str(x.hash, 64) } : null).filter(Boolean) : [];
 
     // --- chi può entrare ---
     if (rec.banned) return shutOut(c, 'Non sei più ammesso a questa sessione.');
@@ -1584,6 +1589,16 @@ function onMessage(c, raw) {
       if (session.locked && newcomer) return shutOut(c, 'La sessione è chiusa: il master non fa entrare altri.');
       const online = [...clients].filter(x => x !== c && x.token && x.role !== 'master' && !x.pending).length;
       if (session.maxPlayers > 0 && online >= session.maxPlayers && newcomer) return shutOut(c, 'Il tavolo è al completo.');
+      // i plugin che il master ha reso necessari: finché non li accetta resta qui davanti (può sempre andarsene)
+      const mancano = pluginMancanti(c);
+      if (mancano.length) {
+        if (!c.sapluginCondivisi) return shutOut(c, 'Il master chiede un plugin per entrare: aggiorna LIBRE VTT e riprova.');
+        c.pending = true; c.pluginGate = true;
+        offriPlugin(c, true);
+        logAction(c, 'ingresso', false, 'deve accettare il plugin del master');
+        sendPlayers();
+        return;
+      }
       if (session.approval && !rec.approved) {
         c.pending = true;
         c.send({ t: 'pending', name: c.name });
@@ -1603,6 +1618,18 @@ function onMessage(c, raw) {
     return;
   }
 
+  // i file di un plugin che il master condivide: anche davanti alla porta (chi deve accettarlo per entrare)
+  if (m.t === 'plugins.chiedi') {
+    if (!c.pluginOfferto || !consuma(c, 'plugin', 10, 0.5)) return;
+    mandaPlugin(c, str(m.id, 64), str(m.hash, 64));
+    return;
+  }
+  if (m.t === 'plugins.accettati') {                              // ha accettato (o tolto) un plugin facoltativo, già dentro
+    if (!c.token || c.pending || !Array.isArray(m.list)) return;
+    c.pluginsOk = m.list.slice(0, 50).map(x => x && typeof x === 'object' ? { id: str(x.id, 64), hash: str(x.hash, 64) } : null).filter(Boolean);
+    sendPlayers();
+    return;
+  }
   // Le richieste di file arrivano dal ponte del giocatore, non da una persona: non aspettano il saluto.
   if (m.t === 'intent' && (m.op === 'asset.get' || m.op === 'asset.have')) {
     if (c.kind === 'link' && !consuma(c, 'file', 400, 40)) return;   // un ponte che chiede file a raffica aspetta
@@ -1636,6 +1663,7 @@ function onMessage(c, raw) {
     return;
   }
   if (m.t === 'intent') {
+    if (c.pending) return;                                        // davanti alla porta (approvazione o plugin) non si tocca niente: rimanda dopo
     // Con il suo numero (q) l'intento si fa una volta sola: il browser lo rimanda finché non ha la conferma
     // («ok»), quindi dopo una caduta (o arrivato da due strade) può arrivare di nuovo.
     // Un giocatore non può sommergere il tavolo: un secchio di gettoni per collegamento (i pezzi delle
@@ -1679,6 +1707,54 @@ function giaFatto(token, q) {
   return false;
 }
 
+// ======================= Plugin del master per i giocatori =======================
+// Il master sceglie nella rotellina della home (⚙ › Plugin) quali plugin condividere e se sono necessari per
+// entrare (vedi server/plugins.js). Chi entra se li vede proporre: niente parte da solo. Un plugin necessario
+// non accettato lascia il giocatore davanti alla porta (pending), da dove può sempre andarsene. I file viaggiano
+// a pezzi nello stesso collegamento della partita (uffa-link o relay) e il giocatore li tiene solo in memoria.
+const PLG = MODE === 'host' && !DEDICATO && process.env.LIBRE_PLUGINS_DIR && process.env.LIBRE_PLUGINS_STATE
+  ? require('./plugins.js').createPlugins({ dir: path.resolve(process.env.LIBRE_PLUGINS_DIR), stateFile: path.resolve(process.env.LIBRE_PLUGINS_STATE), appVersion: process.env.LIBRE_VERSIONE || '' })
+  : null;
+const PEZZO_PLUGIN = 192 * 1024;
+function pluginOfferti() {
+  if (!PLG) return [];
+  try { return PLG.sharedList().filter(p => !p.tooBig); } catch (e) { console.error('plugin condivisi:', e.message); return []; }
+}
+const haAccettato = (c, p) => (c.pluginsOk || []).some(x => x.id === p.id && x.hash === p.hash);
+function pluginMancanti(c) { return c.role === 'master' ? [] : pluginOfferti().filter(p => p.required && !haAccettato(c, p)); }
+function offriPlugin(c, gate) {
+  c.pluginOfferto = true;
+  c.send({ t: 'plugins.offerta', gate: !!gate, list: pluginOfferti() });
+}
+function mandaPlugin(c, id, hash) {
+  let files = null;
+  try { files = PLG && PLG.sharedPack(id, hash); } catch (e) { console.error('plugin', id, e.message); }
+  if (!files) { c.send({ t: 'plugins.no', id, hash, motivo: 'Il master non condivide più questa versione del plugin.' }); return; }
+  const testo = JSON.stringify(files.map(([f, b]) => [f, b.toString('base64')]));
+  const n = Math.max(1, Math.ceil(testo.length / PEZZO_PLUGIN));
+  let k = 0;
+  // un pezzo alla volta, senza intasare il collegamento: chat e segnalini passano in mezzo
+  (function prossimo() {
+    if (!clients.has(c) || k >= n) return;
+    if ((c.ingorgo ? c.ingorgo() : 0) > 2 * 1024 * 1024) return setTimeout(prossimo, 100);
+    c.send({ t: 'plugins.pezzo', id, hash, k, n, d: testo.slice(k * PEZZO_PLUGIN, (k + 1) * PEZZO_PLUGIN) });
+    k++;
+    setImmediate(prossimo);
+  })();
+  logAction(c, 'plugin', true, 'mandato «' + id + '»');
+}
+// il master cambia cosa condivide (o un plugin cambia): chi è già al tavolo, o davanti alla porta, lo sa subito
+if (PLG) {
+  let firma = '';
+  setInterval(() => {
+    const l = pluginOfferti();
+    const f = JSON.stringify(l.map(p => [p.id, p.hash, p.required]));
+    if (f === firma) return;
+    firma = f;
+    for (const c of clients) if (c.token && c.role !== 'master' && c.sapluginCondivisi && (c.pluginOfferto || l.length)) offriPlugin(c, !!c.pluginGate);
+  }, 3000).unref();
+}
+
 function shutOut(c, reason) {
   logAction(c, 'ingresso', false, reason);
   c.send({ t: 'bye', reason });
@@ -1717,6 +1793,9 @@ function sendWelcome(c) {
     c.send({ t: 'welcome', needName: !!c.needName, you, world: w, ver, sa: SA });
   }
   logAction(c, 'ingresso', true, c.role);
+  c.pluginGate = false;
+  // i plugin che il master condivide: i necessari li ha già accettati, i facoltativi li sceglie lui
+  if (c.role !== 'master' && c.sapluginCondivisi && pluginOfferti().length) offriPlugin(c, false);
   scheduleSave(); sendPlayers();
 }
 
@@ -2219,7 +2298,7 @@ function apiPannello(p, m, chi) {
         case 'resetPerms': rec.overrides = {}; break;
         case 'approve':
           rec.approved = true;
-          for (const c of live()) if (c.pending) sendWelcome(c);
+          for (const c of live()) if (c.pending && !c.pluginGate) sendWelcome(c);
           break;
         case 'refuse':
           rec.approved = false;

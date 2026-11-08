@@ -22,6 +22,10 @@
   const EVENT_PERM = { 'chat.message': 'chat.read', 'scene.changed': null };
 
   const loaded = new Map();     // `${id}@${hash}` -> { info, css: <style>, code, strings, module }
+  // the plugins the master of the game shared and this player accepted (js/plugins/condivisi.js): their files
+  // are only in memory, they arrived through the game connection. id -> { info (fromMaster: true), files: Map }
+  const received = new Map();
+  let fullFromMaster = false;   // this table can run a full-access plugin of the master (the desktop app)
   const applied = new Map();    // id -> { key, info, frame?, listeners, buttons, commands, unhooks, errors }
   let lastList = '';
 
@@ -64,7 +68,7 @@
     const full = [...applied.values()].filter(a => a.info.access === 'full');
     const d = dotEl();
     d.hidden = !full.length || dotOff;
-    const t = tr('Plugin con accesso completo applicati: {nomi}. Si gestiscono dalla rotellina della home.', { nomi: full.map(a => nameOf(a.info)).join(', ') });
+    const t = tr('Plugin con accesso completo applicati: {nomi}. Si gestiscono dalla rotellina della home.', { nomi: full.map(a => nameOf(a.info) + (a.info.fromMaster ? ' (' + tr('dal master') + ')' : '')).join(', ') });
     d.title = t;
     d.setAttribute('aria-label', t);
   }
@@ -233,7 +237,14 @@
     const key = info.id + '@' + info.hash;
     if (loaded.has(key)) return loaded.get(key);
     const base = 'plugins/' + encodeURIComponent(info.id) + '/';
-    const get = async (f, as) => { const r = await fetch(base + f + '?v=' + info.hash.slice(0, 12), { cache: 'no-store' }); if (!r.ok) throw new Error(f + ': ' + r.status); return as === 'json' ? r.json() : r.text(); };
+    const rec = info.fromMaster ? received.get(info.id) : null;
+    const get = rec
+      ? async (f, as) => {                       // from memory: what the master sent (checked against its fingerprint)
+        const b = rec.files.get(f); if (!b) throw new Error(f + ': 404');
+        const t = new TextDecoder().decode(b);
+        return as === 'json' ? JSON.parse(t) : /\.css$/i.test(f) ? cleanCss(t) : t;
+      }
+      : async (f, as) => { const r = await fetch(base + f + '?v=' + info.hash.slice(0, 12), { cache: 'no-store' }); if (!r.ok) throw new Error(f + ': ' + r.status); return as === 'json' ? r.json() : r.text(); };
     const L = { info, strings: {} };
     await Promise.all((info.locales || []).map(async l => { try { L.strings[l] = await get('locales/' + l + '.json', 'json'); } catch {} }));
     if (info.style) {
@@ -242,7 +253,12 @@
       L.css.textContent = await get(info.style);
     }
     if (info.client && info.access === 'sandbox') L.code = await get(info.client);
-    if (info.client && info.access === 'full') L.module = await import('/' + base + info.client + '?v=' + info.hash.slice(0, 12));
+    if (info.client && info.access === 'full') {
+      if (rec && !fullFromMaster) throw new Error(tr('qui i plugin con accesso completo del master non si possono usare'));
+      // the master's: from the copy in memory that this computer's LIBRE VTT keeps for the session (server.js)
+      L.module = await import(rec ? '/plugins-ricevuti/' + encodeURIComponent(info.id) + '/' + info.hash + '/' + info.client
+        : '/' + base + info.client + '?v=' + info.hash.slice(0, 12));
+    }
     for (const k of [...loaded.keys()]) if (k.startsWith(info.id + '@')) loaded.delete(k);   // older versions out of memory
     loaded.set(key, L);
     return L;
@@ -304,16 +320,22 @@
   }
 
   // ---------- follow the home ----------
-  let busy = false;
+  let busy = false, again = false;
   async function sync() {
-    if (busy) return;
+    if (busy) { again = true; return; }
     busy = true;
     try {
-      const r = await fetch('api/plugins', { cache: 'no-store' });
-      if (!r.ok) return;
-      const j = await r.json();
-      const list = Array.isArray(j.plugins) ? j.plugins : [];
-      const sig = JSON.stringify(list.map(p => p.id + '@' + p.hash));
+      // on the website there is no LIBRE VTT on this computer: only the master's plugins
+      let list = [];
+      if (!window.LIBRE_WEB) {
+        let j = null;
+        try { const r = await fetch('api/plugins', { cache: 'no-store' }); if (r.ok) j = await r.json(); } catch {}
+        if (!j && !received.size && ![...applied.values()].some(a => a.info.fromMaster)) return;
+        if (j) { list = Array.isArray(j.plugins) ? j.plugins : []; fullFromMaster = !!j.ricevutiPieni; }
+      }
+      // the master's plugins come after this computer's ones; with the same id, the master's version wins
+      list = list.filter(p => !received.has(p.id)).concat([...received.values()].map(x => x.info));
+      const sig = JSON.stringify(list.map(p => p.id + '@' + p.hash + (p.fromMaster ? '@m' : '')));
       if (sig === lastList) return;
       lastList = sig;
       coreHooks();
@@ -322,12 +344,19 @@
       order = list.map(p => p.id);
       for (const p of list) if (!applied.has(p.id)) await apply(p);
       applyCss();
-    } catch {} finally { busy = false; }
+    } catch {} finally { busy = false; if (again) { again = false; sync(); } }
+  }
+  // CSS from the master: the same cleaning the server does for this computer's plugins (server/plugins.js)
+  function cleanCss(text) {
+    return String(text)
+      .replace(/@import[^;]*;?/gi, '/* @import removed */')
+      .replace(/url\(\s*(['"]?)\s*((?:https?:|\/\/|javascript:|file:)[^)'"]*)\1\s*\)/gi, 'url("")')
+      .replace(/expression\s*\(/gi, 'removed(');
   }
   window.LIBRE = window.LIBRE || {};
   if (new URLSearchParams(location.search).has('noplugins')) { window.LIBRE.plugins = { disabled: true }; return; }
   sync();
-  setInterval(sync, 4000);
+  if (!window.LIBRE_WEB) setInterval(sync, 4000);
   addEventListener('focus', sync);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
 
@@ -335,6 +364,11 @@
   window.LIBRE.plugins = Object.freeze({
     applied: () => [...applied.values()].map(a => ({ id: a.info.id, version: a.info.version, access: a.info.access, errors: a.errors.slice() })),
     loaded: () => [...loaded.keys()],
-    sync
+    sync,
+    // for js/plugins/condivisi.js: the master's plugins, accepted by this player
+    get fullFromMaster() { return fullFromMaster; },
+    addReceived(info, files) { received.set(info.id, { info: { ...info, fromMaster: true }, files }); lastList = ''; return sync(); },
+    removeReceived(id) { if (!received.delete(id)) return; lastList = ''; return sync(); },
+    received: () => [...received.values()].map(x => ({ id: x.info.id, hash: x.info.hash }))
   });
 })();

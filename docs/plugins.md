@@ -154,6 +154,44 @@ by hand in the page must be put back in `deactivate()` (or with `vtt.onCleanup`)
 *loaded* and ticking it again re-applies it instantly. If you change the files, the plugin reloads by itself (the
 files' fingerprint changed).
 
+## Sharing a plugin with the players
+
+When you host a game, you can send your plugins to the players. In *⚙ › Plugin*, under an applied plugin:
+
+- **Share with the players**: whoever joins your game is offered it. Nothing is downloaded and nothing runs until
+  they say yes; they can also play without it.
+- **Needed to join** (only for a shared plugin): whoever joins sees the list of what you ask for and stays in front
+  of the door until they accept. *Leave* is always there. In the session panel they show up as
+  «🧩 looking at the plugins» and you cannot let them in by hand: they enter when they accept.
+
+What the player sees before saying yes: the name, the version, the author, the size, whether it is a theme,
+sandboxed code (with its permissions) or full access. A full-access plugin goes through the same two warnings as in
+the home, with its name to type.
+
+How it travels and where it stays:
+
+- The files go in pieces through the game connection (direct link or the relay of the website). The player checks
+  them against the fingerprint (SHA-256 of all the files) your app announced: the consent is tied to exactly those
+  files. A plugin that changes (a new version, a single file) is asked again; a plugin you stop sharing is taken
+  away from the players' tables at once.
+- They are kept **only in memory**: on the player's computer nothing is written to the plugins folder. The yes (and
+  the no to an optional one) is remembered for those files, so next time they are loaded without asking.
+- Up to 8 MB per plugin. The compendium packs (`data/compendium`) are not sent: the players get your compendium as
+  always, from the table.
+- `/plugin master` in the chat shows the list again, to take a plugin or remove one.
+
+What can run where:
+
+| | Theme | Sandboxed code | Full access |
+| --- | --- | --- | --- |
+| Desktop app | ✓ | ✓ | ✓ (after the two warnings) |
+| Website | ✓ | ✓ | — |
+| Phone and tablet apps | ✓ | — | — |
+
+If a plugin you made necessary cannot run where a player is (a full-access one, from the website), they are told
+why and cannot join from there. Players with a LIBRE VTT from before this feature cannot receive plugins: if one is
+necessary they are told to update. A dedicated server (`--server`) does not share plugins yet.
+
 ## Security
 
 - Sandboxed plugins cannot see the page or the data saved in the browser (where your game identity is), and cannot
