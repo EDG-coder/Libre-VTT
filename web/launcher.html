@@ -96,6 +96,7 @@
   .sceltaSis .fileSis { font-size: .82rem; margin-top: 6px; }
 
   details.log { margin-top: 14px; }
+  details.avanzate { margin-top: 14px; } details.avanzate summary { cursor: pointer; } details.avanzate h4 { margin: 12px 0 4px; font-size: .92rem; }
   details.log summary { cursor: pointer; color: var(--muted); font-size: .84rem; }
   .logBox {
     margin-top: 9px; max-height: 240px; overflow: auto;
@@ -289,6 +290,29 @@
   <h3>Plugin</h3>
   <button class="b" type="button" id="impPlugin"><span>🧩 Gestisci i plugin</span><span id="impPluginConta" class="nota" data-noi18n></span></button>
   <p class="nota">Temi, regole e funzioni nuove fatti dalla community. Si applicano al tavolo subito, senza riavviare.</p>
+  <details class="avanzate" id="impAvanzate">
+    <summary><h3 style="display:inline">Impostazioni avanzate</h3></summary>
+    <h4>Relay per il collegamento</h4>
+    <p class="nota">Il relay è il «postino» che fa entrare i giocatori dal sito nella tua «Partita pubblica». Di solito non serve toccarlo: si usa quello del sito. Se vuoi, usane uno tuo.</p>
+    <div class="seg" id="impRelayTipo">
+      <button type="button" data-v="sito">Quello del sito</button><button type="button" data-v="cloudflare">Il mio Cloudflare</button><button type="button" data-v="proprio">Un server mio</button><button type="button" data-v="terzi">Di terzi</button>
+    </div>
+    <p class="nota" id="impRelayAiuto"></p>
+    <div class="row" id="impRelayRiga">
+      <input type="text" id="impRelayIndirizzo" placeholder="wss://…" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="b" type="button" id="impRelayProva">Prova</button>
+      <button class="b go" type="button" id="impRelaySalva">Salva</button>
+    </div>
+    <p class="nota" id="impRelayEsito" role="status"></p>
+    <h4>Collegamento tra app</h4>
+    <p class="nota">Di solito le app si parlano da sole con iroh (collegamento diretto tra computer). Se il tuo router o la tua rete non lo lasciano passare, il traffico può invece passare dal relay qui sopra.</p>
+    <div class="seg" id="impAppVia">
+      <button type="button" data-v="iroh">Diretto (iroh)</button><button type="button" data-v="auto">Prima iroh, poi relay</button><button type="button" data-v="relay">Solo relay</button>
+    </div>
+    <p class="nota" id="impAppViaAiuto"></p>
+  </details>
   <div class="piede"><button class="b go" type="button" id="impChiudi">Fatto</button></div>
 </dialog>
 
@@ -466,14 +490,7 @@
         <input type="text" id="pubblicaLink" readonly>
         <button class="b" id="pubblicaCopia">Copia</button>
       </div>
-      <details class="log" id="pubblicaAvanzate">
-        <summary>Un relay tuo</summary>
-        <p class="nota">Di solito non serve: il relay lo indica il sito. Se ne hai pubblicato uno tuo (vedi docs/sito-web.md), scrivi qui il suo indirizzo; vuoto = quello del sito.</p>
-        <div class="row">
-          <input type="text" id="pubblicaIndirizzo" placeholder="wss://libre-vtt-relay.tuonome.workers.dev" autocomplete="off" spellcheck="false">
-          <button class="b" id="pubblicaSalva">Salva</button>
-        </div>
-      </details>
+      <p class="nota" id="pubblicaRelayRiga"></p>
     </div>
     <div class="row hide" id="prontoCamp" style="margin-top:10px; font-size:.86rem; color:var(--muted)">
       <span>📜 Campagna: <b id="prontoCampNome" style="color:var(--text)"></b></span>
@@ -564,9 +581,15 @@ function disegna() {
           righe.append(sh);
         }
       }
+    } else if (S.mode === 'join' && S.viaRelay) {
+      const lab = document.createElement('span');
+      lab.style.cssText = 'font-size:.86rem;color:var(--muted)';
+      lab.textContent = S.viaRelay === 'relay' ? '🌐 Collegamento tramite relay (senza iroh).' : '🌐 Prima iroh; se non risponde, si passa al relay.';
+      righe.append(lab);
     }
   }
   disegnaPubblica(acceso && S.mode === 'host' && !S.mobile);
+  disegnaRelayImp();
   $('prontoCamp').classList.toggle('hide', !(acceso && S.campagna));
   if (S.campagna) $('prontoCampNome').textContent = S.campagna.nome;
   const trp = window.tr || (x => x);
@@ -580,14 +603,15 @@ function disegnaPubblica(si) {
   if (!si) return;
   const P = S.pubblica || {}, R = S.relay || null;
   $('pubblicaSi').checked = !!P.attiva;
-  if (document.activeElement !== $('pubblicaIndirizzo')) $('pubblicaIndirizzo').value = P.indirizzo || '';
+  $('pubblicaRelayRiga').textContent = P.indirizzo ? 'Relay: ' + P.indirizzo + ' (si cambia da ⚙ Impostazioni › Impostazioni avanzate)' : 'Relay: quello del sito (si cambia da ⚙ Impostazioni › Impostazioni avanzate)';
+  disegnaRelayImp();
   const st = $('pubblicaStato');
   st.className = 'nota';
   if (!P.attiva) st.textContent = 'Spenta: entrano solo i giocatori con l\'app.';
   else if (R && R.collegato) { st.textContent = '✅ Aperta: chi ha il codice entra anche dal sito.'; st.classList.add('ok'); }
   else if (R && R.errore) { st.textContent = '⚠️ ' + R.errore; st.classList.add('err'); }
   else st.textContent = 'Mi collego al relay…';
-  const link = P.attiva && S.sessionId && S.sito ? S.sito + '/gioca/#' + S.sessionId : '';
+  const link = P.attiva && S.sessionId && S.sito ? S.sito + '/gioca/' + (P.indirizzo ? '?relay=' + encodeURIComponent(P.indirizzo) : '') + '#' + S.sessionId : '';
   $('pubblicaLinkRiga').classList.toggle('hide', !link);
   $('pubblicaLink').value = link;
 }
@@ -595,13 +619,58 @@ $('pubblicaSi').onchange = async () => {
   $('pubblicaSi').disabled = true;
   try { await post('/api/relay', { attiva: $('pubblicaSi').checked }); } finally { $('pubblicaSi').disabled = false; carica(); }
 };
-$('pubblicaSalva').onclick = async () => {
-  const r = await post('/api/relay', { indirizzo: $('pubblicaIndirizzo').value });
-  if (r && r.errore) alert(r.errore);
-  carica();
-};
 $('pubblicaLink').onclick = () => $('pubblicaLink').select();
 $('pubblicaCopia').onclick = async () => { try { await navigator.clipboard.writeText($('pubblicaLink').value); $('pubblicaCopia').textContent = 'Copiato'; setTimeout(() => $('pubblicaCopia').textContent = 'Copia', 1400); } catch {} };
+
+
+// ---------- ⚙ Impostazioni avanzate: il relay per il collegamento ----------
+const RELAY_AIUTO = {
+  sito: 'Si usa il relay indicato dal sito: non serve fare niente.',
+  cloudflare: 'L\'indirizzo del relay che hai pubblicato sul tuo account Cloudflare (finisce con .workers.dev). I passi sono in docs/sito-web.md.',
+  proprio: 'Un relay che gira su un tuo server (per esempio con «npx wrangler dev» o workerd, dietro un https). Serve un indirizzo wss:// raggiungibile da chi gioca.',
+  terzi: 'L\'indirizzo di un relay messo a disposizione da qualcun altro. Chi lo gestisce può leggere tutto quello che passa dal relay verso i giocatori del sito (chat, mosse, immagini): usane uno solo di cui ti fidi.'
+};
+const APPVIA_AIUTO = {
+  iroh: 'Si usa solo iroh, come sempre.',
+  auto: 'Si prova iroh; se in circa mezzo minuto l\'host non risponde, si passa al relay. Chi conduce deve avere la «Partita pubblica» accesa, con lo stesso relay.',
+  relay: 'Tutto passa dal relay, senza iroh (niente da aprire sul router). Chi conduce deve avere la «Partita pubblica» accesa, con lo stesso relay. Dal relay non si può essere master e il traffico è un po\' meno veloce.'
+};
+$('impAppVia').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  premuto($('impAppVia'), b.dataset.v); $('impAppViaAiuto').textContent = APPVIA_AIUTO[b.dataset.v];
+  await post('/api/relay', { appVia: b.dataset.v });
+  carica();
+};
+let relayTipo = 'sito';
+function disegnaRelayImp() {
+  const P = S.pubblica || {};
+  relayTipo = P.tipo || 'sito';
+  premuto($('impRelayTipo'), relayTipo);
+  premuto($('impAppVia'), P.appVia || 'iroh'); $('impAppViaAiuto').textContent = APPVIA_AIUTO[P.appVia || 'iroh'];
+  $('impRelayAiuto').textContent = RELAY_AIUTO[relayTipo];
+  $('impRelayRiga').classList.toggle('hide', relayTipo === 'sito');
+  if (document.activeElement !== $('impRelayIndirizzo')) $('impRelayIndirizzo').value = P.indirizzo || '';
+}
+$('impRelayTipo').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  relayTipo = b.dataset.v; premuto($('impRelayTipo'), relayTipo);
+  $('impRelayAiuto').textContent = RELAY_AIUTO[relayTipo];
+  $('impRelayRiga').classList.toggle('hide', relayTipo === 'sito');
+  $('impRelayEsito').textContent = '';
+};
+$('impRelayProva').onclick = async () => {
+  const el = $('impRelayEsito'); el.className = 'nota'; el.textContent = 'Provo…';
+  const r = await post('/api/relay/prova', { indirizzo: relayTipo === 'sito' ? '' : $('impRelayIndirizzo').value });
+  if (r && r.ok) { el.textContent = '✅ Il relay risponde.'; el.classList.add('ok'); }
+  else { el.textContent = '⚠️ ' + ((r && r.errore) || 'Non risponde.'); el.classList.add('err'); }
+};
+$('impRelaySalva').onclick = async () => {
+  const el = $('impRelayEsito'); el.className = 'nota';
+  const r = await post('/api/relay', { tipo: relayTipo, ...(relayTipo === 'sito' ? {} : { indirizzo: $('impRelayIndirizzo').value }) });
+  if (r && r.errore) { el.textContent = '⚠️ ' + r.errore; el.classList.add('err'); return; }
+  el.textContent = 'Salvato. Se la partita pubblica è accesa, vale subito.'; el.classList.add('ok');
+  carica();
+};
 
 async function carica() {
   try {

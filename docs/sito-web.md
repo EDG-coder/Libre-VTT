@@ -120,7 +120,7 @@ GitHub Pages non può far girare il relay: va bene solo insieme a un relay pubbl
 - Chi vuole cambiare il sito o il relay lo pubblica **sul suo account** (stessi passi): i segreti di
   questo repository non arrivano alle copie (fork) né alle loro richieste di modifica.
 - Chi vuole può pubblicare **un relay suo** (stessi passi, sul suo account) e scriverne l'indirizzo
-  nell'app, in «Partita pubblica → Un relay tuo».
+  nell'app, in ⚙ Impostazioni › Impostazioni avanzate › Relay per il collegamento (Cloudflare tuo, server tuo o di terzi). Il tasto «Prova» controlla che risponda; il link da dare ai giocatori del sito porta già l'indirizzo (`?relay=`). Il relay vede tutto quello che passa verso i giocatori del sito: usane solo di cui ti fidi.
 
 ## Per farlo trovare su Google
 
@@ -128,3 +128,17 @@ Dopo la prima pubblicazione: apri https://search.google.com/search-console, aggi
 («Prefisso URL» con l'indirizzo del sito), verificalo con il file HTML che ti danno (va messo in
 `sviluppo/sito-web/pagina/`) e invia `sitemap.xml`. Aiuta anche mettere l'indirizzo nel campo
 *Website* del repository e nel README.
+
+## Le app tra loro, dal relay (al posto di iroh)
+
+Di solito due app si parlano con iroh (collegamento diretto). Se la rete o il router non lo lasciano passare, in
+⚙ Impostazioni › Impostazioni avanzate › **Collegamento tra app** si può scegliere:
+
+- **Diretto (iroh)**: come sempre;
+- **Prima iroh, poi relay**: se in circa mezzo minuto l'host non risponde, il ponte passa al relay;
+- **Solo relay**: niente uffa-link, tutto passa dal relay.
+
+Chi si collega dal relay entra nella stanza del codice come un giocatore del sito: l'host lo vede come collegamento
+«web» (mai master) e ha bisogno della **🌐 Partita pubblica** accesa, con lo **stesso relay** (quello del sito, o quello
+privato scritto da tutti e due in «Relay per il collegamento»). Dal relay non c'è il canale stabile di iroh.
+

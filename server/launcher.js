@@ -143,7 +143,7 @@ function stato() {
     porte: { ui: UI_PORT, ...(state.porte || {}) },
     piattaforma: MOBILE === 'android' ? 'Android' : MOBILE === 'ios' ? 'iPhone e iPad' : WIN ? 'Windows' : MAC ? 'macOS' : 'Linux',
     mobile: MOBILE, campHome: CAMP_HOME, versione: VERSIONE, arch: process.arch, repo: repoGitHub(),
-    relay: state.relay || null, pubblica: relayConf(), sito: SITO_WEB,
+    relay: state.relay || null, pubblica: relayConf(), sito: SITO_WEB, viaRelay: state.viaRelay || null,
     node: process.versions.node, pref: prefCorrenti(), finestraScala
   };
 }
@@ -180,7 +180,7 @@ function argScala() {
 const ENV_VIA = new Set(['NODE_OPTIONS', 'NODE_PATH', 'PORT', 'RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_TARGET_DIR',
   'CARGO_BUILD_TARGET', 'CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN', 'RUSTC', 'RUSTC_WRAPPER', 'RUSTDOC',
   'CC', 'CXX', 'AR', 'LD', 'CFLAGS', 'CXXFLAGS', 'LDFLAGS', 'CPPFLAGS', 'LIBRARY_PATH', 'LD_LIBRARY_PATH',
-  'DATA_DIR', 'CAMPAIGN_DIR', 'LINK_PORT', 'LINK_ID_FILE', 'LIBRE_DEDICATO', 'CHIAVE_MASTER', 'LIBRE_RELAY', 'LIBRE_RELAY_CHIAVE']);
+  'DATA_DIR', 'CAMPAIGN_DIR', 'LINK_PORT', 'LINK_ID_FILE', 'LIBRE_DEDICATO', 'CHIAVE_MASTER', 'LIBRE_RELAY', 'LIBRE_RELAY_CHIAVE', 'LIBRE_JOIN_RELAY', 'LIBRE_JOIN_VIA', 'LIBRE_JOIN_CODICE']);
 function envPulito(extra) {
   const e = {};
   for (const [k, v] of Object.entries(process.env)) {
@@ -319,7 +319,7 @@ function stopAll() {
   for (const [k, p] of Object.entries(state.procs)) { try { p.kill(); } catch {} delete state.procs[k]; }
   try { fs.unlinkSync(LINK_ID_FILE); } catch {}
   try { fs.unlinkSync(LINK_CHIAVE_FILE); } catch {}
-  state.mode = null; state.sessionId = null; state.campagna = null; state.porte = null; state.joinCodice = null; state.relay = null;
+  state.mode = null; state.sessionId = null; state.campagna = null; state.porte = null; state.joinCodice = null; state.relay = null; state.viaRelay = null;
   push();
 }
 
@@ -383,7 +383,37 @@ function ricordaUnita(codice, dati) {
 // installare niente. Il server di gioco si collega al relay (server/relay-host.js) e si fa riconoscere con la
 // chiave del codice. L'indirizzo del relay lo dice il sito (relay.json), oppure lo scrive il master (un suo relay).
 const SITO_WEB = String(amb('SITO') || 'https://libre-vtt.pages.dev').replace(/\/+$/, '');
-function relayConf() { const r = conf.relay || {}; return { attiva: !!r.attiva, indirizzo: typeof r.indirizzo === 'string' ? r.indirizzo : '' }; }
+function relayConf() { const r = conf.relay || {}; return { attiva: !!r.attiva, indirizzo: typeof r.indirizzo === 'string' ? r.indirizzo : '', tipo: ['sito', 'cloudflare', 'proprio', 'terzi'].includes(r.tipo) ? r.tipo : 'sito', appVia: ['iroh', 'auto', 'relay'].includes(r.appVia) ? r.appVia : 'iroh' }; }
+/** L'indirizzo di un relay scritto dall'utente: https:// diventa wss://; vale wss:// (o ws:// solo per questo computer, per le prove). Vuoto = quello del sito. */
+function relayIndirizzoPulito(testo) {
+  let x = String(testo == null ? '' : testo).trim().replace(/^https:/i, 'wss:').replace(/^http:\/\/(localhost|127\.0\.0\.1)/i, 'ws://$1').replace(/\/+$/, '').replace(/\/v1(\/stanza)?$/i, '');
+  if (!x) return { ok: true, valore: '' };
+  if (/^wss:\/\/[\w.-]+(:\d+)?(\/[\w./-]*)?$/i.test(x) || /^ws:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/[\w./-]*)?$/i.test(x)) return { ok: true, valore: x };
+  return { ok: false, errore: 'L\'indirizzo del relay deve cominciare con wss:// (o https://).' };
+}
+/** Prova un relay: la pagina di cortesia all'indirizzo (https://…/) dice «Relay di LIBRE VTT (v1)». */
+/** Indirizzi interni (rete locale, metadati del cloud) che la prova non deve interrogare, a meno che non sia questo stesso computer. */
+function indirizzoInterno(host) {
+  const h = String(host).toLowerCase().replace(/^\[|\]$/g, '');
+  if (h === 'localhost' || h === '127.0.0.1' || h === '::1') return false;
+  if (/\.(local|internal|lan|localdomain)$/.test(h) || !h.includes('.') && !h.includes(':')) return true;
+  const m = h.match(/^(\d+)\.(\d+)\.\d+\.\d+$/);
+  if (m) { const a = +m[1], b = +m[2]; return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127); }
+  return h.includes(':');   // altri indirizzi IPv6 scritti per esteso
+}
+async function provaRelay(url) {
+  try {
+    const u = new URL(url.replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:'));
+    if (u.username || u.password || indirizzoInterno(u.hostname)) return { ok: false, errore: 'Questo indirizzo non è un relay raggiungibile da Internet.' };
+    u.pathname = u.pathname.replace(/\/+$/, '') + '/'; u.search = ''; u.hash = '';
+    const r = await fetch(u.href, { signal: AbortSignal.timeout(10000), redirect: 'error' });
+    const t = (await r.text()).slice(0, 300);
+    if (/Relay di LIBRE VTT \(v1\)/.test(t)) return { ok: true };
+    return { ok: false, errore: r.ok ? 'Risponde, ma non sembra un relay di LIBRE VTT (versione 1).' : 'Il server risponde con un errore (' + r.status + ').' };
+  } catch (e) {
+    return { ok: false, errore: e && e.name === 'TimeoutError' ? 'Il relay non risponde (10 secondi).' : 'Non riesco a collegarmi a questo indirizzo.' };
+  }
+}
 let relayDalSito = { url: null, t: 0 };
 async function indirizzoRelay() {
   const r = relayConf();
@@ -980,15 +1010,23 @@ async function avvia(mode, id, campagna, opz = {}) {
       // la chiave del master di un server dedicato: va al server una volta, entrando (non la si salva)
       const chiave = String(opz.chiaveMaster || '').replace(/[\s-]/g, '').toLowerCase();
       if (/^[a-f0-9]{32}$/.test(chiave)) extra.CHIAVE_MASTER = chiave;
+      // il collegamento tra app può passare dal relay (al posto di iroh, o se iroh non riesce): vedi «Impostazioni avanzate»
+      const via = relayConf().appVia;
+      if (via !== 'iroh' && state.joinCodice) {
+        const url = await indirizzoRelay();
+        if (url) { extra.LIBRE_JOIN_RELAY = url; extra.LIBRE_JOIN_VIA = via; extra.LIBRE_JOIN_CODICE = state.joinCodice; state.viaRelay = via; }
+        else say('Collegamento tramite relay: non trovo l\'indirizzo del relay. Uso il collegamento diretto (iroh).', 'warn');
+      }
     }
     run('regole', NODE, [path.join('server', 'game-server.js'), mode === 'host' ? 'host' : 'join'],
       { env: { PORT: String(GAME_PORT), LINK_PORT: String(LINK_PORT), DATA_DIR: path.join(CAMP, 'data'), LINK_ID_FILE, LIBRE_CANALE: CANALE_REGOLE, LIBRE_SEGRETO: SEGRETO, ...extra }, keep: true });
     if (!await aspettaPorta(GAME_PORT)) return fallisci('Il server di gioco non si è acceso.');
 
-    if (MOBILE ? !LINK_CTRL : !linkBin()) return fallisci(MOBILE ? 'Il collegamento a distanza dell\'app non è partito: chiudi l\'app e riaprila.' : 'Manca il collegamento a distanza: premi «Prepara» e riprova.');
+    const soloRelay = mode === 'join' && extra.LIBRE_JOIN_VIA === 'relay';     // niente uffa-link: tutto passa dal relay
+    if (!soloRelay && (MOBILE ? !LINK_CTRL : !linkBin())) return fallisci(MOBILE ? 'Il collegamento a distanza dell\'app non è partito: chiudi l\'app e riaprila.' : 'Manca il collegamento a distanza: premi «Prepara» e riprova.');
     // uffa-link scrive l'ID nella sua cartella di lavoro: la nostra, dove si può scrivere
     if (mode === 'host') run('sessione', LINK, ['host', '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR });
-    else run('sessione', LINK, ['join', id, '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR });
+    else if (!soloRelay) run('sessione', LINK, ['join', id, '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR });
   }
 
   state.mode = mode; state.busy = null; push();
@@ -1787,14 +1825,25 @@ const server = http.createServer(async (req, res) => {
     const r = relayConf();
     if (typeof m.attiva === 'boolean') r.attiva = m.attiva;
     if (typeof m.indirizzo === 'string') {
-      const x = m.indirizzo.trim().replace(/^https:/i, 'wss:').replace(/\/+$/, '');
-      if (x && !/^wss:\/\/[\w.-]+(:\d+)?(\/[\w./-]*)?$/i.test(x)) return ok({ errore: 'L\'indirizzo del relay deve cominciare con wss://' });
-      r.indirizzo = x;
+      const x = relayIndirizzoPulito(m.indirizzo);
+      if (!x.ok) return ok({ errore: x.errore });
+      r.indirizzo = x.valore;
+      if (!x.valore) r.tipo = 'sito';
     }
+    if (typeof m.appVia === 'string' && ['iroh', 'auto', 'relay'].includes(m.appVia)) r.appVia = m.appVia;   // come si collegano le app tra loro: iroh (diretto), relay, o prima iroh e poi relay
+    if (typeof m.tipo === 'string' && ['sito', 'cloudflare', 'proprio', 'terzi'].includes(m.tipo)) { r.tipo = m.tipo; if (m.tipo === 'sito') r.indirizzo = ''; }
     conf.relay = r; salvaConf();
     if (!r.attiva) state.relay = null;
     await applicaRelay(); push();
     ok({ ok: true, pubblica: r });
+  });
+  // Prova di un relay (quello scritto nel campo, o quello in uso): { indirizzo? } → { ok } o { ok: false, errore }
+  if (u.pathname === '/api/relay/prova' && req.method === 'POST') return corpo(async m => {
+    const x = relayIndirizzoPulito((m || {}).indirizzo);
+    if (!x.ok) return ok({ ok: false, errore: x.errore });
+    const url = x.valore || await indirizzoRelay();
+    if (!url) return ok({ ok: false, errore: 'Non trovo l\'indirizzo del relay del sito.' });
+    ok(await provaRelay(url));
   });
   if (u.pathname === '/api/sfoglia') return ok(sfoglia(u.searchParams.get('path') || ''));
   if (u.pathname === '/api/campagna/info') return ok(infoCampagna(u.searchParams.get('path') || ''));
