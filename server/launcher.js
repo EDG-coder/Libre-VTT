@@ -392,9 +392,21 @@ function relayIndirizzoPulito(testo) {
   return { ok: false, errore: 'L\'indirizzo del relay deve cominciare con wss:// (o https://).' };
 }
 /** Prova un relay: la pagina di cortesia all'indirizzo (https://…/) dice «Relay di LIBRE VTT (v1)». */
+/** Indirizzi interni (rete locale, metadati del cloud) che la prova non deve interrogare, a meno che non sia questo stesso computer. */
+function indirizzoInterno(host) {
+  const h = String(host).toLowerCase().replace(/^\[|\]$/g, '');
+  if (h === 'localhost' || h === '127.0.0.1' || h === '::1') return false;
+  if (/\.(local|internal|lan|localdomain)$/.test(h) || !h.includes('.') && !h.includes(':')) return true;
+  const m = h.match(/^(\d+)\.(\d+)\.\d+\.\d+$/);
+  if (m) { const a = +m[1], b = +m[2]; return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127); }
+  return h.includes(':');   // altri indirizzi IPv6 scritti per esteso
+}
 async function provaRelay(url) {
   try {
-    const r = await fetch(url.replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:') + '/', { signal: AbortSignal.timeout(10000), redirect: 'error' });
+    const u = new URL(url.replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:'));
+    if (u.username || u.password || indirizzoInterno(u.hostname)) return { ok: false, errore: 'Questo indirizzo non è un relay raggiungibile da Internet.' };
+    u.pathname = u.pathname.replace(/\/+$/, '') + '/'; u.search = ''; u.hash = '';
+    const r = await fetch(u.href, { signal: AbortSignal.timeout(10000), redirect: 'error' });
     const t = (await r.text()).slice(0, 300);
     if (/Relay di LIBRE VTT \(v1\)/.test(t)) return { ok: true };
     return { ok: false, errore: r.ok ? 'Risponde, ma non sembra un relay di LIBRE VTT (versione 1).' : 'Il server risponde con un errore (' + r.status + ').' };
