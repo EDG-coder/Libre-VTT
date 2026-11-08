@@ -1858,7 +1858,7 @@ const localStore = (() => {
       const [all, names] = await Promise.all([req(it.getAll()), req(fo.getAllKeys())]);
       all.sort((a, b) => b.t - a.t);
       const items = all.map(i => {
-        if (!urls.has(i.id)) urls.set(i.id, URL.createObjectURL(i.blob));
+        if (!urls.has(i.id)) { urls.set(i.id, URL.createObjectURL(i.blob)); SFONDO_ANIM.ricordaBlob(urls.get(i.id), i.blob); }
         return { id: i.id, name: i.name, folder: i.folder, url: urls.get(i.id) };
       });
       const folders = names.sort((a, b) => a.localeCompare(b)).map(name => ({ name, count: items.filter(i => i.folder === name).length }));
@@ -1868,7 +1868,7 @@ const localStore = (() => {
       const [it] = await stores('readwrite');
       const final = free(await req(it.getAll()), folder, name);
       const id = await req(it.add({ name: final, folder, blob, t: Date.now() }));
-      urls.set(id, URL.createObjectURL(blob));
+      urls.set(id, URL.createObjectURL(blob)); SFONDO_ANIM.ricordaBlob(urls.get(id), blob);
       return { id, name: final, folder, url: urls.get(id) };
     },
     async remove(a) { const [it] = await stores('readwrite'); await req(it.delete(a.id)); },

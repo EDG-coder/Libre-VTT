@@ -66,10 +66,14 @@ const SFONDO_ANIM = (() => {
   async function tipoDaUrl(url, nome) {
     if (eVideoNome(nome) || eVideoNome(url)) return 'video';
     if (/\.svg(?:[?#]|$)|^data:image\/svg/i.test(String(url || '')) || /\.(jpe?g|svg|avif|bmp)$/i.test(nome || '')) return '';
-    const u = urlMedia(url);
-    if (!u) return '';
-    try { const r = await fetch(u); return r.ok ? await tipo(await r.blob(), nome) : ''; } catch { return ''; }
+    // un asset di questo browser (IndexedDB): il file c'è già in memoria
+    if (blobs.has(url)) return tipo(blobs.get(url), nome);
+    // altrimenti solo dal server da cui arriva la pagina (assets della campagna, deposito della partita)
+    let x; try { x = new URL(String(url || ''), location.href); } catch { return ''; }
+    if (x.origin !== location.origin || !/^https?:$/.test(x.protocol)) return '';
+    try { const r = await fetch(location.origin + '/' + x.pathname.replace(/^\/+/, '') + x.search); return r.ok ? await tipo(await r.blob(), nome) : ''; } catch { return ''; }
   }
+  const blobs = new Map();                      // blob: degli assets salvati nel browser → il loro file
 
   // ---------- misure e primo fotogramma di un video ----------
   /** Le misure di un video: { w, h } oppure null se non si legge. */
@@ -134,7 +138,7 @@ const SFONDO_ANIM = (() => {
   try { const v = localStorage.getItem(CHIAVE); if (v === '0' || v === '1') attivo = v === '1'; } catch {}
   const ascolta = new Set();
   return {
-    MAX_VIDEO, MAX_ANIMATA, urlMedia, eVideoFile, eVideoNome, tipo, tipoDaUrl, misureVideo, fotogramma, fermaImmagine,
+    MAX_VIDEO, MAX_ANIMATA, urlMedia, ricordaBlob: (u, b) => blobs.set(u, b), eVideoFile, eVideoNome, tipo, tipoDaUrl, misureVideo, fotogramma, fermaImmagine,
     get attivo() { return attivo; },
     set attivo(v) {
       attivo = !!v;
