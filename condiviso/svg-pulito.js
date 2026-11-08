@@ -23,8 +23,14 @@
 
   /** I richiami dentro uno stile: url(#id) va bene, il resto (file esterni, @import) no. */
   function stilePulito(css) {
-    return urlPuliti(String(css).replace(/@import[^;]*;?/gi, ''))
-      .replace(/expression\s*\(|javascript:|-moz-binding|behavior\s*:/gi, '');
+    let r = urlPuliti(String(css).replace(/@import[^;]*;?/gi, ''));
+    // si ripete finché non cambia più: «javajavascript:script:» tolto una volta sola ridiventerebbe «javascript:»
+    // (al massimo qualche giro, poi lo stile si butta tutto: un annidamento lungo non deve costare il quadrato del testo)
+    for (let giro = 0, prima = null; prima !== r; giro++) {
+      if (giro > 4) return '';
+      prima = r; r = r.replace(/expression\s*\(|javascript:|-moz-binding|behavior\s*:/gi, '');
+    }
+    return r;
   }
   /** Ogni url(…) che non punta dentro il file diventa «none». A mano e in un solo passaggio: con l'espressione regolare di prima
    *  («url\(\s*(['"]?)(.*?)\1\s*\)») un «url(» ripetuto senza chiusura costava il quadrato della lunghezza. */
