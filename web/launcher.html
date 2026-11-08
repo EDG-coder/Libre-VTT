@@ -1189,6 +1189,15 @@ function disegnaPlugin() {
     su.onclick = () => sposta(-1); giu.onclick = () => sposta(1);
     az.append(su, giu);
     if (!PLG.mobile) { const ap = document.createElement('button'); ap.type = 'button'; ap.textContent = '📂'; ap.title = plgTr('Apri la cartella del plugin'); ap.onclick = () => plgChiama('cartella', { id: p.id }); az.append(ap); }
+    if (!PLG.mobile) {
+      const el = document.createElement('button'); el.type = 'button'; el.className = 'elimina'; el.textContent = '🗑'; el.title = plgTr('Elimina il plugin');
+      el.setAttribute('aria-label', plgTr('Elimina {nome}', { nome: plgNome(p) }));
+      el.onclick = () => {
+        if (!confirm(plgTr('Eliminare «{nome}» dalla lista dei plugin?\n\nLa sua cartella va nel Cestino: da lì puoi rimetterla nella cartella dei plugin.', { nome: plgNome(p) }))) return;
+        plgChiama('elimina', { cartella: p.folder });
+      };
+      az.append(el);
+    }
     riga.append(cb, mezzo, az);
     return riga;
   }));

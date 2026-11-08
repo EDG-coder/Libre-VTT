@@ -29,6 +29,11 @@ my-plugin/
 It is shared as a folder or as a `.zip` (*Install from .zip…*: if there is already a plugin with the same `id`,
 the old one goes into `Plugins/.cestino`, the bin).
 
+To take a plugin off the list, press 🗑 on its row and confirm: its folder is moved to the system Trash
+(the Recycle Bin on Windows; nothing is erased, you can put it back in the plugins folder) and LIBRE VTT forgets it was applied and any consent given to it.
+Templates are not touched: you can always create a new plugin from them. In the phone and tablet apps the
+plugins included in the app cannot be deleted, only switched off.
+
 ## plugin.json
 
 Code, field names and function names are in English; the texts players see can have one version per language.
