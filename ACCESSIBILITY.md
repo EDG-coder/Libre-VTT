@@ -1,36 +1,33 @@
-# Accessibilità
+# Accessibility
 
-LIBRE VTT vuole essere usabile dal maggior numero possibile di giocatori e master. Questa pagina
-dice in modo onesto che cosa funziona oggi, che cosa no e come segnalarlo.
+LIBRE VTT wants to be usable by as many players and masters as possible. This page says honestly what works
+today, what does not, and how to report it.
 
-## Dove funziona
+## Where it works
 
-- App per Windows 10/11, macOS (Apple Silicon e Intel), Linux (x64, ARM64, RISC-V), Android 7+
-  e iPhone; oppure in un browser moderno all'indirizzo locale.
-- Interfaccia in italiano e in inglese.
+- Apps for Windows 10/11, macOS (Apple Silicon and Intel), Linux (x64, ARM64, RISC-V), Android 7+ and iPhone; or
+  in a modern browser at the local address; players can also join from the website.
+- Interface in Italian and English.
 
-## Che cosa c'è già
+## What is already there
 
-- Tema scuro, chiaro o come il sistema.
-- Con «Riduci movimento» attivo nel sistema le animazioni si fermano.
-- Molti comandi hanno la tastiera: frecce per spostare i segnalini, Canc, Ctrl/Cmd+C e V,
-  Ctrl/Cmd+Z; i dadi si tirano anche scrivendo in chat (`/r 1d20+5`).
-- Pulsanti e pannelli principali hanno un'etichetta leggibile dai lettori di schermo.
-- Zoom della mappa e del testo con i comandi del browser o del sistema.
+- Dark, light or system theme.
+- With «Reduce motion» on in the system, animations stop.
+- Many commands have keyboard shortcuts: arrows to move tokens, Delete, Ctrl/Cmd+C and V, Ctrl/Cmd+Z; dice can
+  also be rolled by typing in chat (`/r 1d20+5`).
+- The main buttons and panels have a label readable by screen readers.
+- Map and text zoom with the browser or system controls.
 
-## Limiti noti
+## Known limits
 
-- **La mappa è grafica**: segnalini, nebbia e luci non vengono letti da un lettore di schermo.
-  Chi non vede la mappa può seguire la partita dalla chat e dalle schede.
-- Alcune azioni richiedono di trascinare con il mouse o con il dito (spostare finestre, disegnare
-  la nebbia, ridimensionare).
-- Alcuni stati usano solo il colore (per esempio la barra dei punti ferita sui segnalini).
-- Le schede in stile pergamena hanno testo piccolo su sfondo chiaro; non c'è ancora un tema ad
-  alto contrasto.
+- **The map is graphical**: tokens, fog and lights are not read by a screen reader. Someone who cannot see the map
+  can follow the game from the chat and the sheets.
+- Some actions need dragging with the mouse or a finger (moving windows, drawing fog, resizing).
+- Some states use colour only (for example the hit point bar on tokens).
+- The parchment-style sheets have small text on a light background; there is no high-contrast theme yet.
 
-## Segnalare una barriera
+## Reporting a barrier
 
-Apri una [segnalazione](https://github.com/EDG-coder/Libre-VTT/issues/new/choose) con il modulo
-«Problema» e scrivi nel titolo «Accessibilità». Racconta che cosa volevi fare, con quale ausilio
-(lettore di schermo, tastiera, ingrandimento…) e su quale sistema. Le barriere hanno la precedenza
-sulle funzioni nuove.
+Open an [issue](https://github.com/EDG-coder/Libre-VTT/issues/new/choose) with the «Problem» form and write
+«Accessibility» in the title. Tell us what you wanted to do, with which aid (screen reader, keyboard,
+magnification…) and on which system. Barriers come before new features.

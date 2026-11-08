@@ -1,37 +1,38 @@
-# LIBRE VTT per telefoni e tablet
+# LIBRE VTT for phones and tablets
 
-Le app per Android e per iPhone/iPad sono lo **stesso programma del computer**: dentro l'app gira
-Node.js ([nodejs-mobile](https://github.com/nodejs-mobile/nodejs-mobile)) con `server/launcher.js`, e la
-finestra dell'app mostra le stesse pagine. Il collegamento a distanza (`uffa-link`, Rust) è una
-libreria dentro l'app.
+The Android and iPhone/iPad apps are the **same program as the computer one**: inside the app runs Node.js
+([nodejs-mobile](https://github.com/nodejs-mobile/nodejs-mobile)) with `server/launcher.js`, and the app window
+shows the same pages. The remote link (`uffa-link`, Rust) is a library inside the app.
 
-Le compila GitHub (workflow `.github/workflows/app.yml`, che parte anche con ogni release).
+GitHub builds them (workflow `.github/workflows/app.yml`, which also runs with every release).
 
-## Come si adatta
+## How it adapts
 
-- **Dita o mouse**: `mobile.js` sceglie i comandi giusti e cambia al volo (anche a metà partita)
-  se si comincia a usare il mouse o lo schermo.
-- **Samsung DeX, Chromebook, iPad con mouse e tastiera**: l'app lo dice alla pagina
-  (`nativo.js`, `info.dex` / `info.desktop`) e si usa come sul computer.
-- **Telefono o tablet**: sotto i 600 punti di larghezza i pannelli vanno a tutto schermo e gli
-  strumenti salgono dal basso (`mobile.css`); sui tablet resta la disposizione del computer.
+- **Fingers or mouse**: `mobile.js` picks the right controls and switches on the fly (even mid-game) if you start
+  using the mouse or the screen.
+- **Samsung DeX, Chromebook, iPad with mouse and keyboard**: the app tells the page (`nativo.js`, `info.dex` /
+  `info.desktop`) and it works like on a computer.
+- **Phone or tablet**: below 600 points of width the panels go full screen and the tools slide up from the bottom
+  (`mobile.css`); on tablets the computer layout stays.
 
-## Compilare a mano
+## Building by hand
 
-Android (Linux o Mac, con Rust, Android SDK + NDK, Java 17):
+Android (Linux or Mac, with Rust, Android SDK + NDK, Java 17):
 
     bash pacchetti/mobile/android/prepara.sh
     cd pacchetti/mobile/android && ./gradlew assembleRelease
 
-iPhone/iPad (Mac con Xcode e Rust):
+iPhone/iPad (Mac with Xcode and Rust):
 
     bash pacchetti/mobile/ios/prepara.sh
     open pacchetti/mobile/ios/LibreVTT.xcodeproj
 
-## I file
+## The files
 
-- `android/` progetto Android (Java, senza librerie esterne): `MainActivity` (la finestra),
-  `Motore` (avvia Node e il collegamento), `Ponte` (i comandi di `nativo.js`), `Dispositivo`
-  (DeX, mouse, tastiera, tablet), `Servizio` (tiene viva la partita), `Condivisi` (file condivisi).
-- `ios/` progetto Xcode (Swift): `ViewController` (la finestra e il ponte), `Motore`,
-  `AvvioNode.c`. Il progetto lo scrive `crea-progetto.py`.
+- `android/` Android project (Java, no external libraries): `MainActivity` (the window), `Motore` (starts Node
+  and the link), `Ponte` (the commands of `nativo.js`), `Dispositivo` (DeX, mouse, keyboard, tablet), `Servizio`
+  (keeps the game alive), `Condivisi` (shared files).
+- `ios/` Xcode project (Swift): `ViewController` (the window and the bridge), `Motore`, `AvvioNode.c`. The project
+  is written by `crea-progetto.py`.
+- `LEGGIMI-Xcode.txt`: the instructions that go into `LIBRE-VTT-Xcode.zip`.
+- The plugins built into the apps are in `plugins-inclusi/` (at the root of the repository).

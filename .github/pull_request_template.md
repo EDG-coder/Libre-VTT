@@ -1,16 +1,17 @@
-## Che cosa cambia
+## What changes
 
-<!-- In due righe, per chi gioca. -->
+<!-- In two lines, for the people who play. -->
 
-## Come l'ho provata
+## How I tested it
 
-- Sistema e browser:
-- [ ] Da solo
-- [ ] In rete («Conduco io» / «Mi unisco»)
-- [ ] Telefono
+- System and browser:
+- [ ] Alone
+- [ ] Over the network («I'm the GM» / «Join a game»)
+- [ ] Website
+- [ ] Phone
 
-## Controlli
+## Checks
 
-- [ ] Nessun testo dei manuali ufficiali di D&D
-- [ ] Testi nuovi dell'interfaccia passano da `tr()` e hanno la traduzione inglese
-- [ ] Nessuna dipendenza nuova
+- [ ] No text from the official D&D books
+- [ ] New interface texts go through `tr()` and have the English translation
+- [ ] No new dependencies

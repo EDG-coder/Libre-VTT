@@ -1,36 +1,36 @@
-name: Problema
-description: Qualcosa non funziona come dovrebbe
+name: Problem
+description: Something does not work as it should
 labels: [bug]
 body:
   - type: textarea
     id: cosa
     attributes:
-      label: Che cosa succede
-      description: Che cosa volevi fare e che cosa è successo invece.
+      label: What happens
+      description: What you wanted to do and what happened instead.
     validations:
       required: true
   - type: textarea
     id: passi
     attributes:
-      label: Come farlo succedere di nuovo
+      label: How to make it happen again
       placeholder: |
-        1. Apro «Conduco io»
-        2. Trascino un mostro dal Compendio sulla mappa
+        1. I open «I'm the GM»
+        2. I drag a monster from the Compendium onto the map
         3. ...
     validations:
       required: true
   - type: input
     id: versione
     attributes:
-      label: Versione di LIBRE VTT
-      description: "Nella home, apri «Che cosa sta succedendo»: è scritta in fondo."
-      placeholder: 3.8.2
+      label: LIBRE VTT version
+      description: "On the home screen, open «What's happening»: it is written at the bottom."
+      placeholder: 3.8.3
     validations:
       required: true
   - type: dropdown
     id: sistema
     attributes:
-      label: Sistema
+      label: System
       multiple: true
       options: [Windows, macOS, Linux, Android, iPhone / iPad, Browser]
     validations:
@@ -38,10 +38,10 @@ body:
   - type: dropdown
     id: modo
     attributes:
-      label: Come stavi giocando
-      options: [Da solo, Conduco io, Mi unisco, Server dedicato]
+      label: How you were playing
+      options: [Play alone, I'm the GM, Join a game, Dedicated server, Website]
   - type: textarea
     id: altro
     attributes:
-      label: Immagini o registro
-      description: Uno screenshot aiuta molto. Il registro è nella cartella dei log (vedi README).
+      label: Pictures or log
+      description: A screenshot helps a lot. The log is in the logs folder (see the README).

@@ -1,144 +1,143 @@
-# La versione sito web
+# The website version
 
-Oltre all'app e al server dedicato, LIBRE VTT ha una versione **sito web**:
+Besides the app and the dedicated server, LIBRE VTT has a **website** version:
 
-- `/` la pagina di presentazione (cos'è, immagini, «Gioca ora» con il codice, download diretti da GitHub)
-- `/gioca/` il tavolo per i **giocatori**: si incolla il codice del master, si sceglie un nome e si entra,
-  senza account e senza installare niente, anche dal telefono
+- `/` the landing page (what it is, pictures, «Play now» with the code, direct downloads from GitHub)
+- `/gioca/` the table for **players**: paste the master's code, pick a name and you are in, with no account and
+  nothing to install, even from a phone
 
-Dal sito si gioca **solo da giocatori**: nessuno può fare il master dal browser (né con la chiave del
-master, né facendosi dare il ruolo dal pannello). Per condurre serve l'app.
+From the website you can **only play as a player**: nobody can be the master from the browser (neither with the
+master key, nor by getting the role from the panel). To run a game you need the app.
 
-## Come funziona
+## How it works
 
 ```
- giocatore (browser) ──wss──▶ relay (Cloudflare) ◀──wss── app del master (Node)
-                                                           │
- giocatore (app) ─────────── uffa-link (p2p) ──────────────┘
+ player (browser) ──wss──▶ relay (Cloudflare) ◀──wss── master's app (Node)
+                                                         │
+ player (app) ─────────── uffa-link (p2p) ───────────────┘
 ```
 
-1. Il master apre la partita con l'app («Conduco io») e, nella schermata della partita aperta, accende
-   **🌐 Partita pubblica**. L'app si collega al relay come master della **stanza del suo codice** e lo
-   dimostra firmando con la chiave del codice (il codice è la sua chiave pubblica): nessun altro può fare
-   il master di quella stanza.
-2. Il giocatore apre il sito, incolla il codice ed entra. Il browser calcola il nome della stanza
-   (un'impronta del codice: il relay non vede mai il codice) e si collega lì.
-3. Il relay è un postino: i messaggi di un giocatore vanno solo al master, quelli del master solo a quel
-   giocatore. Non salva niente. Tutto il resto (permessi, nebbia, dadi, chi vede cosa) lo decide l'app del
-   master, esattamente come per i giocatori che entrano con l'app. Senza master collegato non si gioca.
-4. Le immagini (mappe, segnalini) arrivano dal master a pezzi, il browser controlla l'impronta e le tiene
-   nella sua cache (`sw-asset.js`), così la volta dopo sono già lì.
+1. The master opens the game with the app («I'm the GM») and, on the open-game screen, switches on
+   **🌐 Public game**. The app connects to the relay as master of **the room of its code** and proves it by
+   signing with the code's key (the code is its public key): nobody else can be master of that room.
+2. The player opens the website, pastes the code and joins. The browser computes the room name (a fingerprint of
+   the code: the relay never sees the code) and connects there.
+3. The relay is a postman: a player's messages go only to the master, the master's only to that player. It saves
+   nothing. Everything else (permissions, fog, dice, who sees what) is decided by the master's app, exactly as for
+   players who join with the app. Without the master connected there is no game.
+4. Images (maps, tokens) come from the master in pieces; the browser checks their fingerprint and keeps them in
+   its cache (`sw-asset.js`), so next time they are already there.
 
-I giocatori con l'app continuano a entrare come sempre (collegamento diretto con uffa-link); i due modi
-convivono nella stessa partita.
+Players with the app keep joining as always (direct link with uffa-link); the two ways live together in the same
+game.
 
-### Account con codice (per giocare da più browser)
+### Accounts with a code (to play from more than one browser)
 
-Senza account il master riconosce un giocatore del sito solo dal browser (il gettone firmato salvato lì):
-cambiando dispositivo, o se il browser cancella i dati (Safari su iPhone lo fa dopo 7 giorni), si rientra
-come persona nuova. Con l'account no:
+Without an account the master recognises a website player only by their browser (the signed token saved there):
+changing device, or if the browser clears its data (Safari on iPhone does after 7 days), you come back as a new
+person. With an account you don't:
 
-1. Nel **pannello della sessione** il master preme **🔑 Crea account** sul profilo di un giocatore. Nasce
-   un codice di 12 caratteri (per esempio `K7QM-2XPA-9RTD`), unico nella campagna. Se il giocatore è
-   collegato dal sito lo riceve subito e può scegliere la password lì; altrimenti il master glielo manda.
-2. Il giocatore, nella schermata d'ingresso del sito, apre **Ho un account**, scrive codice e password ed
-   entra con quel profilo (nome, ruolo, schede) da qualsiasi browser. La prima volta la password la
-   sceglie lui; da lì in poi va scritta a ogni ingresso (ricaricando la pagina si riscrive). Dal sito,
-   un profilo con l'account non si prende più con il solo gettone del browser.
-3. Il master non vede la password e non la può cambiare. L'unica cosa che può fare è **⛔ Blocca account**:
-   per sempre, il codice non vale più e il profilo resta bandito. Se un giocatore dimentica la password,
-   rientra dal sito, il master gli crea un account nuovo e gli ridà le schede da «Permessi e schede».
+1. In the **session panel** the master presses **🔑 Create account** on a player's profile. A 12-character code
+   is created (for example `K7QM-2XPA-9RTD`), unique in the campaign. If the player is connected from the website
+   they get it right away and can choose the password there; otherwise the master sends it to them.
+2. The player, on the website's entry screen, opens **I have an account**, types code and password and joins with
+   that profile (name, role, sheets) from any browser. The first time the player chooses the password; from then
+   on it must be typed at every entry (reloading the page asks again). From the website, a profile with an account
+   can no longer be taken with the browser token alone.
+3. The master does not see the password and cannot change it. The only thing they can do is **⛔ Block account**:
+   forever, the code stops working and the profile stays banned. If a player forgets the password, they come back
+   from the website, the master creates a new account for them and gives the sheets back from «Permissions and
+   sheets».
 
-Il codice vale solo dal sito (dall'app si entra come sempre). Tutto sta nel computer del master, in
-`players.json` della campagna. La password non viaggia mai così com'è: il browser ne fa un'impronta
-(PBKDF2-SHA256, 200.000 giri, con il codice come sale) e manda quella; il master la ripassa con scrypt e
-un sale casuale e salva solo il risultato. Dopo 5 password sbagliate quel codice aspetta un quarto d'ora.
+The code only works from the website (from the app you join as always). Everything is stored on the master's
+computer, in the campaign's `players.json`. The password never travels as it is: the browser makes a fingerprint
+of it (PBKDF2-SHA256, 200,000 rounds, with the code as salt) and sends that; the master hashes it again with
+scrypt and a random salt and saves only the result. After 5 wrong passwords that code waits a quarter of an hour.
 
-Il codice: relay in `relay/`, lato master `server/relay-host.js` (+ `game-server.js`, `launcher.js`,
-`launcher.html`), lato giocatore `sviluppo/sito-web/gioca/` (+ `NET.relay` in `web/js/base/net.js`).
+The code: relay in `relay/`, master side `server/relay-host.js` (+ `game-server.js`, `launcher.js`,
+`launcher.html`), player side `sviluppo/sito-web/gioca/` (+ `NET.relay` in `web/js/base/net.js`).
 
-## Come si costruisce e si prova in locale
+## Building and testing locally
 
-    node sviluppo/sito-web/costruisci.mjs          # crea _site/ (SITO_RELAY=wss://… per relay.json)
-    cd relay && npx wrangler@4.149.0 dev           # il relay su http://127.0.0.1:8787
+    node sviluppo/sito-web/costruisci.mjs          # creates _site/ (SITO_RELAY=wss://… for relay.json)
+    cd relay && npx wrangler@4.149.0 dev           # the relay on http://127.0.0.1:8787
 
-Il master: `LIBRE_RELAY=ws://127.0.0.1:8787 LIBRE_RELAY_CHIAVE=<file con la chiave> node server/game-server.js host`
-(dall'app lo fa da sé). Il giocatore: servi `_site/` (es. `python3 -m http.server 8000` dentro `_site`) e apri
-`http://localhost:8000/gioca/?relay=ws://127.0.0.1:8787#<codice>`.
+The master: `LIBRE_RELAY=ws://127.0.0.1:8787 LIBRE_RELAY_CHIAVE=<file with the key> node server/game-server.js host`
+(the app does it by itself). The player: serve `_site/` (e.g. `python3 -m http.server 8000` inside `_site`) and
+open `http://localhost:8000/gioca/?relay=ws://127.0.0.1:8787#<code>`.
 
-## Come si pubblica (una volta sola, poi va da sé)
+## Publishing (only once, then it runs by itself)
 
-Lo fa il workflow **Sito web** (`.github/workflows/sito-web.yml`): parte da solo alla fine di ogni
-**Rilascio** che pubblica una versione, oppure a mano da *Actions → Sito web → Run workflow*. Pubblica il
-relay (Cloudflare Workers) e il sito (Cloudflare Pages), e scrive l'indirizzo del relay in `relay.json`
-sul sito, da dove lo leggono il tavolo e l'app del master.
+The **Sito web** workflow (`.github/workflows/sito-web.yml`) does it: it starts by itself at the end of every
+**Rilascio** (release) that publishes a version, or by hand from *Actions → Sito web → Run workflow*. It publishes
+the relay (Cloudflare Workers) and the website (Cloudflare Pages), and writes the relay address in `relay.json` on
+the website, where the table and the master's app read it.
 
-### Cloudflare (gratis)
+### Cloudflare (free)
 
-L'indirizzo del sito sarà `https://libre-vtt.pages.dev`.
+The website address will be `https://libre-vtt.pages.dev`.
 
-1. Crea un account gratuito su https://dash.cloudflare.com/sign-up (basta un'email, nessuna carta).
-2. Apri una volta **Workers & Pages** nel menu a sinistra: la prima volta ti chiede di scegliere il tuo
-   sottodominio `….workers.dev` (es. `edg-coder`). Scegline uno e conferma.
-3. **ID dell'account**: nella home della dashboard, menu dei tre puntini accanto al nome dell'account →
-   *Copy account ID* (oppure lo trovi nell'indirizzo della pagina: `dash.cloudflare.com/<ID>/…`).
+1. Create a free account at https://dash.cloudflare.com/sign-up (an email is enough, no card).
+2. Open **Workers & Pages** in the left menu once: the first time it asks you to choose your `….workers.dev`
+   subdomain (e.g. `edg-coder`). Pick one and confirm.
+3. **Account ID**: on the dashboard home, the three-dots menu next to the account name → *Copy account ID* (or
+   you find it in the page address: `dash.cloudflare.com/<ID>/…`).
 4. **Token**: https://dash.cloudflare.com/profile/api-tokens → *Create Token* → *Create Custom Token*.
-   Nome «LIBRE VTT sito»; in *Permissions* aggiungi due righe: *Account* · *Cloudflare Pages* · *Edit* e
-   *Account* · *Workers Scripts* · *Edit*. In *Account Resources* scegli *Include* · il tuo account (non
-   «All accounts»). *Continue to summary* → *Create Token*, e copia il token (si vede una volta sola).
-   Non incollarlo da nessun'altra parte: va solo su GitHub, al passo 5.
-5. Su GitHub, nel repository: *Settings → Environments → New environment*, nome `cloudflare`.
+   Name «LIBRE VTT sito»; in *Permissions* add two rows: *Account* · *Cloudflare Pages* · *Edit* and
+   *Account* · *Workers Scripts* · *Edit*. In *Account Resources* choose *Include* · your account (not
+   «All accounts»). *Continue to summary* → *Create Token*, and copy the token (it is shown only once).
+   Do not paste it anywhere else: it only goes on GitHub, at step 5.
+5. On GitHub, in the repository: *Settings → Environments → New environment*, name `cloudflare`.
    - *Deployment branches and tags* → *Selected branches and tags* → *Add deployment branch or tag rule*:
-     ramo `main`, poi di nuovo *Add* → *Tag* `v*`. Così i segreti si aprono solo per il codice di `main` e
-     delle versioni pubblicate, non per un ramo o una copia (fork) con un workflow cambiato.
-   - più in basso, *Environment secrets* → *Add environment secret*: `CLOUDFLARE_API_TOKEN` (il token) e
-     `CLOUDFLARE_ACCOUNT_ID` (l'ID). Non metterli fra i segreti del repository.
-   - poi *Settings → Secrets and variables → Actions*, scheda **Variables** → *New repository variable*:
-     `SITO_WEB` = `cloudflare`, e `SITO_URL` = `https://libre-vtt.pages.dev` (serve a Google: sitemap e
-     indirizzo ufficiale).
+     branch `main`, then *Add* again → *Tag* `v*`. This way the secrets open only for the code of `main` and of
+     published versions, not for a branch or a copy (fork) with a changed workflow.
+   - further down, *Environment secrets* → *Add environment secret*: `CLOUDFLARE_API_TOKEN` (the token) and
+     `CLOUDFLARE_ACCOUNT_ID` (the ID). Do not put them among the repository secrets.
+   - then *Settings → Secrets and variables → Actions*, **Variables** tab → *New repository variable*:
+     `SITO_WEB` = `cloudflare`, and `SITO_URL` = `https://libre-vtt.pages.dev` (Google needs it: sitemap and
+     canonical address).
 6. *Actions → Sito web → Run workflow*.
 
-Se il nome `libre-vtt` fosse già preso su Pages, aggiungi la variabile `SITO_CLOUDFLARE_NOME` con un altro
-nome (es. `libre-vtt-edg`) e aggiorna `SITO_URL`. L'app del master cerca `relay.json` su
-`https://libre-vtt.pages.dev`: con un altro indirizzo va cambiato `SITO_WEB` in `server/launcher.js`
-(o la variabile d'ambiente `LIBRE_SITO`).
+If the name `libre-vtt` were already taken on Pages, add the variable `SITO_CLOUDFLARE_NOME` with another name
+(e.g. `libre-vtt-edg`) and update `SITO_URL`. The master's app looks for `relay.json` on
+`https://libre-vtt.pages.dev`: with another address you must change `SITO_WEB` in `server/launcher.js` (or the
+`LIBRE_SITO` environment variable).
 
-### GitHub Pages (solo il sito, in alternativa)
+### GitHub Pages (website only, as an alternative)
 
-GitHub Pages non può far girare il relay: va bene solo insieme a un relay pubblicato altrove (variabile
-`SITO_RELAY` = `wss://…`). *Settings → Pages → Source*: **GitHub Actions**, poi variabile
-`SITO_WEB` = `github` (o `cloudflare,github`).
+GitHub Pages cannot run the relay: it only works together with a relay published elsewhere (variable
+`SITO_RELAY` = `wss://…`). *Settings → Pages → Source*: **GitHub Actions**, then variable
+`SITO_WEB` = `github` (or `cloudflare,github`).
 
-## Limiti del piano gratuito di Cloudflare
+## Limits of the Cloudflare free plan
 
-- **Sito (Pages)**: traffico senza limiti, file fino a 25 MiB, 500 pubblicazioni al mese.
-- **Relay (Workers + Durable Objects)**: 100.000 richieste al giorno. Ogni messaggio che arriva al relay
-  conta 1/20 di richiesta; una partita con 5 giocatori dal sito per 4 ore ne usa qualche migliaio. Poi
-  13.000 GB-s al giorno di tempo di lavoro: circa 28 ore di stanze attive al giorno. Si azzera a mezzanotte
-  UTC; se si sfora, il relay dà errore fino al giorno dopo (non si paga niente). Il piano a pagamento è
-  5 $ al mese.
-- Chi vuole cambiare il sito o il relay lo pubblica **sul suo account** (stessi passi): i segreti di
-  questo repository non arrivano alle copie (fork) né alle loro richieste di modifica.
-- Chi vuole può pubblicare **un relay suo** (stessi passi, sul suo account) e scriverne l'indirizzo
-  nell'app, in ⚙ Impostazioni › Impostazioni avanzate › Relay per il collegamento (Cloudflare tuo, server tuo o di terzi). Il tasto «Prova» controlla che risponda; il link da dare ai giocatori del sito porta già l'indirizzo (`?relay=`). Il relay vede tutto quello che passa verso i giocatori del sito: usane solo di cui ti fidi.
+- **Website (Pages)**: unlimited traffic, files up to 25 MiB, 500 deployments a month.
+- **Relay (Workers + Durable Objects)**: 100,000 requests a day. Each message reaching the relay counts as 1/20 of
+  a request; a game with 5 website players for 4 hours uses a few thousand. Then 13,000 GB-s a day of work time:
+  about 28 hours of active rooms a day. It resets at midnight UTC; if you go over, the relay gives errors until the
+  next day (you pay nothing). The paid plan is $5 a month.
+- Whoever wants to change the website or the relay publishes it **on their own account** (same steps): this
+  repository's secrets do not reach copies (forks) or their pull requests.
+- Anyone can publish **their own relay** (same steps, on their account) and write its address in the app, in
+  ⚙ Settings › Advanced settings › Relay for the connection (your Cloudflare, your server or a third party's). The
+  «Try» button checks that it answers; the link to give website players already carries the address (`?relay=`).
+  The relay sees everything that goes to the website players: only use ones you trust.
 
-## Per farlo trovare su Google
+## Making it findable on Google
 
-Dopo la prima pubblicazione: apri https://search.google.com/search-console, aggiungi il sito
-(«Prefisso URL» con l'indirizzo del sito), verificalo con il file HTML che ti danno (va messo in
-`sviluppo/sito-web/pagina/`) e invia `sitemap.xml`. Aiuta anche mettere l'indirizzo nel campo
-*Website* del repository e nel README.
+After the first deployment: open https://search.google.com/search-console, add the site («URL prefix» with the
+website address), verify it with the HTML file they give you (it goes in `sviluppo/sito-web/pagina/`) and submit
+`sitemap.xml`. It also helps to put the address in the repository's *Website* field and in the README.
 
-## Le app tra loro, dal relay (al posto di iroh)
+## Apps talking to each other through the relay (instead of iroh)
 
-Di solito due app si parlano con iroh (collegamento diretto). Se la rete o il router non lo lasciano passare, in
-⚙ Impostazioni › Impostazioni avanzate › **Collegamento tra app** si può scegliere:
+Usually two apps talk with iroh (direct link). If the network or the router does not let it through, in
+⚙ Settings › Advanced settings › **Connection between apps** you can choose:
 
-- **Diretto (iroh)**: come sempre;
-- **Prima iroh, poi relay**: se in circa mezzo minuto l'host non risponde, il ponte passa al relay;
-- **Solo relay**: niente uffa-link, tutto passa dal relay.
+- **Direct (iroh)**: as always;
+- **iroh first, then relay**: if the host does not answer in about half a minute, the bridge switches to the relay;
+- **Relay only**: no uffa-link, everything goes through the relay.
 
-Chi si collega dal relay entra nella stanza del codice come un giocatore del sito: l'host lo vede come collegamento
-«web» (mai master) e ha bisogno della **🌐 Partita pubblica** accesa, con lo **stesso relay** (quello del sito, o quello
-privato scritto da tutti e due in «Relay per il collegamento»). Dal relay non c'è il canale stabile di iroh.
-
+Whoever connects through the relay joins the code's room like a website player: the host sees them as a «web»
+connection (never master) and needs **🌐 Public game** switched on, with the **same relay** (the website's, or the
+private one written by both in «Relay for the connection»). Through the relay there is no stable iroh channel.
