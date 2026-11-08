@@ -53,6 +53,8 @@ export default {
 export class Stanza {
   constructor(ctx, env) {
     this.ctx = ctx; this.env = env; this.raffiche = new Map();
+    // «ping» → «pong» lo risponde Cloudflare da solo, senza svegliare la stanza (e senza contare come richiesta): i browser lo usano per sapere che il collegamento c'è
+    this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
     this.maxGiocatori = intero(env.MAX_GIOCATORI, MAX_GIOCATORI, 1, 200);
     this.raffica = { n: intero(env.RAFFICA_N, RAFFICA.n, 10, 5000), ms: RAFFICA.ms };
   }

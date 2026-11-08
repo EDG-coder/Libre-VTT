@@ -154,6 +154,7 @@ function netConnect() {
   ws.onmessage = e => {
     if (NET.ws !== ws) return;
     NET.ultimo = Date.now();
+    if (e.data === 'pong') { clearTimeout(NET._eco); NET._eco = 0; return; }   // la risposta del relay al «ping» (vedi netControlla)
     let m; try { m = JSON.parse(e.data); } catch { return; }
     netHandle(m);
   };
@@ -184,7 +185,9 @@ function netControlla() {
   if (!ws || ws.readyState > 1) { NET.tries = 0; netConnect(); return; }
   if (ws.readyState !== 1 || NET._eco) return;
   NET._eco = setTimeout(() => { NET._eco = 0; netCaduto(ws); }, 3000);
-  netSend({ t: 'eco' });
+  // dal sito (relay): il «ping» lo risponde il relay stesso senza svegliare la stanza, così un tavolo fermo non consuma durata
+  // (se il master se ne va, il relay chiude il collegamento di tutti e ci si accorge lo stesso)
+  if (NET.relay) { try { ws.send('ping'); } catch {} } else netSend({ t: 'eco' });
 }
 addEventListener('online', netControlla);
 addEventListener('pageshow', netControlla);
@@ -1093,8 +1096,14 @@ NET._tel = 0;
 setInterval(() => {
   if (!NET.on || !cur) return;
   if (NET.relay && document.hidden) return;                   // dal sito, scheda in secondo piano: niente (tiene sveglia la stanza sul relay)
-  if ((NET.leggera || NET.relay) && (++NET._tel % 5)) return;  // con il collegamento debole o dal sito (relay), una volta ogni 20 secondi
-  netSend({ t: 'telemetry', scene: cur.id, view: { x: view.x, y: view.y, s: view.s } });
+  if (NET.leggera && (++NET._tel % 5)) return;                // con il collegamento debole, una volta ogni 20 secondi
+  const t = { t: 'telemetry', scene: cur.id, view: { x: view.x, y: view.y, s: view.s } };
+  if (NET.relay) {                                            // dal sito: solo se è cambiato (o ogni minuto), così la stanza può dormire nelle pause
+    const k = JSON.stringify([t.scene, Math.round(t.view.x), Math.round(t.view.y), Math.round(t.view.s * 100)]);
+    if (k === NET._telK && Date.now() - NET._telT < 60000) return;
+    NET._telK = k; NET._telT = Date.now();
+  }
+  netSend(t);
 }, 4000);
 
 addEventListener('DOMContentLoaded', () => setTimeout(netConnect, 600));
