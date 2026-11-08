@@ -80,7 +80,7 @@ if (URL_SITO) writeFileSync(join(OUT, 'sitemap.xml'),
 // la cornice dove gira il codice dei plugin del master in sandbox: come la serve il programma (server/server.js),
 // senza rete e senza origine, con solo il suo script
 const sandboxHtml = readFileSync(da('web/plugin-sandbox.html'), 'utf8');
-const sandboxHash = [...sandboxHtml.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x => `'sha256-${createHash('sha256').update(x[1], 'utf8').digest('base64')}'`).join(' ');
+const sandboxHash = [...sandboxHtml.matchAll(/<script>([\s\S]*?)<\/script[^>]*>/gi)].map(x => `'sha256-${createHash('sha256').update(x[1], 'utf8').digest('base64')}'`).join(' ');
 if (!sandboxHash) throw new Error('web/plugin-sandbox.html: non trovo lo script');
 const sandboxCsp = `  Content-Security-Policy: default-src 'none'; script-src ${sandboxHash} blob:; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'; sandbox allow-scripts`;
 // Cloudflare Pages legge _headers (GitHub Pages lo ignora): il tavolo non va indicizzato a pezzi,
