@@ -1247,7 +1247,7 @@ const SWATCHES = [['#ffffff', 'Bianco'], ['#000000', 'Nero'], ['#ff4d4d', 'Rosso
 const gridFields = withShow => [
   ...(withShow ? [{ f: 'show', type: 'check', label: 'Mostra la griglia' }] : []),
   { f: 'forma', type: 'select', label: 'Forma delle caselle', options: GRIGLIA_FORME.FORMA_NOMI },
-  { f: 'rot', type: 'range', label: 'Rotazione', min: 0, max: 359, step: 1, unit: '°' },
+  { f: 'rot', type: 'range', label: 'Rotazione della casella', min: 0, max: 359, step: 1, unit: '°' },
   { f: 'snap', type: 'check', label: 'Aggancia le immagini alla griglia' },
   { f: 'fitToken', type: 'check', label: 'Nuovi segnalini grandi quanto una casella (con la griglia visibile)' },
   { f: 'size', type: 'range', label: 'Cella', min: 10, max: 300, step: 0.1 },

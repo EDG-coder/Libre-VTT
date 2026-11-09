@@ -15,6 +15,11 @@
 }
 
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--page-bg, var(--bg)); transition: background-color .8s ease; font-family: system-ui, sans-serif; }
+/* Il tavolo non è una pagina da leggere: un trascinamento o un Ctrl+A non deve colorare di blu tutto
+   (succedeva soprattutto nel browser, sul sito). Il testo resta selezionabile dove serve: nei campi
+   e nei messaggi della chat. */
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, [contenteditable="true"], [contenteditable=""], #chatLog, .selezionabile { -webkit-user-select: text; user-select: text; }
 
 #viewport {
   position: fixed; inset: 0;

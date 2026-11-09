@@ -1,7 +1,10 @@
 // ---------- Forma delle caselle della griglia ----------
 // La griglia può essere fatta di quadrati (com'era), triangoli, esagoni, e delle sole altre forme che
 // riempiono il piano senza buchi: pentagoni «del Cairo», ottagoni con quadratini, dodecagoni con
-// triangolini. Tutto può ruotare (grid.rot, in gradi) attorno all'origine della griglia.
+// triangolini. La rotazione (grid.rot, in gradi) è quella della casella: la prima casella (quella
+// all'origine della griglia) gira su se stessa attorno al suo centro e resta dov'è, le altre le si
+// rimettono intorno senza buchi. Con angoli come 30° (esagoni) o 45° (quadrati) le file restano dritte;
+// con gli altri si inclinano, perché caselle che si toccano non possono girare ognuna per conto suo.
 //   grid.forma  3 | 4 | 5 | 6 | 8 | 12   (manca = 4, i quadrati)
 //   grid.rot    gradi, 0-359             (manca = 0)
 // Ogni forma è un reticolo (due vettori a, b) e un «motivo» di caselle che si ripete. Le misure sono in
@@ -81,8 +84,11 @@
     let m = cache.get(k);
     if (!m) {
       const base = FORME[f](), ca = Math.cos(rot * Math.PI / 180), sa = Math.sin(rot * Math.PI / 180);
-      const T = p => [s * (p[0] * ca - p[1] * sa), s * (p[0] * sa + p[1] * ca)];
-      m = { a: T(base.a), b: T(base.b), celle: base.celle.map(c => ({ c: T(c.c), v: c.v.map(T), main: c.main })) };
+      // si gira attorno al centro della prima casella: quella resta dov'era e gira su se stessa
+      const c0 = base.celle.find(c => c.main).c;
+      const R = p => [s * (p[0] * ca - p[1] * sa), s * (p[0] * sa + p[1] * ca)];
+      const T = p => { const q = R([p[0] - c0[0], p[1] - c0[1]]); return [q[0] + s * c0[0], q[1] + s * c0[1]]; };
+      m = { a: R(base.a), b: R(base.b), celle: base.celle.map(c => ({ c: T(c.c), v: c.v.map(T), main: c.main })) };
       // per passare da un punto alle coordinate del reticolo
       const det = m.a[0] * m.b[1] - m.a[1] * m.b[0];
       m.inv = [m.b[1] / det, -m.b[0] / det, -m.a[1] / det, m.a[0] / det];
