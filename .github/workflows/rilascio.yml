@@ -72,6 +72,7 @@ jobs:
         with:
           name: link-${{ matrix.nome }}
           path: out/*
+          retention-days: 1
 
   mac:
     name: Mac (collegamento universale e .dmg)
@@ -107,10 +108,12 @@ jobs:
         with:
           name: link-macos-universal
           path: out/*
+          retention-days: 1
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: dmg
           path: dmg/*.dmg
+          retention-days: 3
 
   installatori:
     name: Installatori Linux e Windows
@@ -155,10 +158,12 @@ jobs:
         with:
           name: installatori
           path: out/*
+          retention-days: 3
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: stage-windows
           path: pacchetti/installer/windows/stage
+          retention-days: 1
 
   setup-exe:
     name: LIBRE-VTT-Setup.exe
@@ -221,6 +226,7 @@ jobs:
         with:
           name: setup-exe
           path: installatori/LIBRE-VTT-Setup*.exe
+          retention-days: 3
 
   app:
     name: App
@@ -250,6 +256,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/') || inputs.versione
     needs: [controlla, collegamento, mac, installatori, setup-exe, app]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write   # per cancellare gli artifact di questa esecuzione dopo averli messi nella release
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -274,6 +283,18 @@ jobs:
             gh release create "$TAG" file/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
               --title "LIBRE VTT ${TAG#v}" --notes-file note.md
           fi
+      - name: Libera lo spazio Actions (i file ora stanno nella release)
+        # gli artifact contano nello spazio Actions dell'account ogni ora che restano lì;
+        # la release invece non conta. Se qualcosa va storto qui, la release resta valida.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" --jq '.artifacts[] | "\(.id) \(.name)"' |
+          while read -r id nome; do
+            echo "cancello $nome"
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" || true
+          done
 
   # la versione sito web, aggiornata insieme alla release (dove va lo decide la variabile SITO_WEB:
   # vedi sito-web.yml; senza variabile si costruisce soltanto)

@@ -1,0 +1,51 @@
+name: Pulizia artifact
+
+# Si avvia solo a mano (Actions > Pulizia artifact > Run workflow).
+# Cancella gli artifact delle esecuzioni passate, che occupano lo spazio Actions
+# dell'account. Non tocca le release né i file già pubblicati.
+
+on:
+  workflow_dispatch:
+    inputs:
+      giorni:
+        description: 'Cancella gli artifact più vecchi di questi giorni (0 = tutti)'
+        required: false
+        default: '0'
+      prova:
+        description: 'Solo elenco, senza cancellare niente'
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  actions: write
+
+jobs:
+  pulizia:
+    name: Cancella gli artifact vecchi
+    runs-on: ubuntu-latest
+    steps:
+      - name: Elenca e cancella
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GIORNI: ${{ inputs.giorni }}
+          PROVA: ${{ inputs.prova }}
+        run: |
+          case "$GIORNI" in ''|*[!0-9]*) echo "::error::«giorni» deve essere un numero"; exit 1;; esac
+          limite=$(date -u -d "-$GIORNI days" +%Y-%m-%dT%H:%M:%SZ)
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
+            --jq ".artifacts[] | select(.expired | not) | select(.created_at <= \"$limite\") | \"\(.id) \(.size_in_bytes) \(.created_at) \(.name)\"" > lista.txt
+          tot=$(awk '{s+=$2} END {printf "%.2f", s/1073741824}' lista.txt)
+          echo "Artifact da cancellare: $(wc -l < lista.txt) (${tot} GB)"
+          echo "### Artifact: $(wc -l < lista.txt), ${tot} GB" >> "$GITHUB_STEP_SUMMARY"
+          while read -r id byte data nome; do
+            printf '%-26s %8.1f MB  %s\n' "$nome" "$(awk -v b="$byte" 'BEGIN {print b/1048576}')" "$data"
+            if [ "$PROVA" != "true" ]; then
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" || echo "::warning::non riesco a cancellare $nome ($id)"
+            fi
+          done < lista.txt
+          if [ "$PROVA" = "true" ]; then
+            echo "Solo elenco: per cancellare davvero rilancia togliendo la spunta «Solo elenco»." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Cancellati." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi

@@ -122,6 +122,7 @@ jobs:
           name: app-android
           path: app-android/*
           if-no-files-found: error
+          retention-days: 3
 
   prova-android:
     name: Prova nell'emulatore Android
@@ -240,6 +241,7 @@ jobs:
           name: app-ios
           path: app-ios/*
           if-no-files-found: error
+          retention-days: 3
 
   pubblica:
     name: Aggiungi le app alla release

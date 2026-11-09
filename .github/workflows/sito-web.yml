@@ -78,7 +78,7 @@ jobs:
           name: sito-web
           path: _site
           include-hidden-files: true
-          retention-days: 14
+          retention-days: 2
       - name: Il pacchetto per GitHub Pages
         if: contains(vars.SITO_WEB, 'github')
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
