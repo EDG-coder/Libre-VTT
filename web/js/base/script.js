@@ -3,6 +3,21 @@ const viewport = $('viewport'), stage = $('stage'), world = $('world'), bgBox = 
 const board = $('board'), boardFill = $('boardFill'), pingsEl = $('pings'), targetSwitch = $('targetSwitch');
 const upload = $('upload'), gridEl = $('grid');
 
+// ---------- Grafica leggera (per questo dispositivo) ----------
+// Sui tablet e telefoni economici sfocature dietro i pannelli, ombre dei segnalini e canvas a doppia
+// risoluzione rendono scattosi zoom e spostamenti. Accesa: niente sfocature né ombre, canvas a risoluzione 1.
+// Di base si accende da sola su un dispositivo touch con poca memoria (navigator.deviceMemory ≤ 4, solo Chrome/Android).
+const K_LEGGERA = 'libre-grafica-leggera';
+function graficaLeggeraScelta() {
+  let v = null; try { v = localStorage.getItem(K_LEGGERA); } catch {}
+  if (v === '1' || v === '0') return v === '1';
+  const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  return !!(touch && navigator.deviceMemory && navigator.deviceMemory <= 4);
+}
+document.documentElement.classList.toggle('graficaLeggera', graficaLeggeraScelta());
+const graficaLeggera = () => document.documentElement.classList.contains('graficaLeggera');
+const dprTela = () => graficaLeggera() ? 1 : Math.min(devicePixelRatio || 1, 2);
+
 const STEP = 1.1;          // fattore di zoom per ogni scatto della rotellina
 const BTN_STEP = 1.3;      // fattore di zoom dei pulsanti + e −
 const MIN_FACTOR = 0.4;    // zoom minimo = 40% della vista "adatta allo schermo"
@@ -164,7 +179,7 @@ const sfondoSvg = () => /\.svg(?:[?#]|$)|^data:image\/svg/i.test(bgBox.dataset.u
 const sfondoMosso = () => bgBox.dataset.anim === 'video' || (bgBox.dataset.anim === 'img' && SFONDO_ANIM.attivo);
 function disegnaTela() {
   if (!TELA) return;
-  const { c, ctx } = TELA, W = innerWidth, H = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
+  const { c, ctx } = TELA, W = innerWidth, H = innerHeight, dpr = dprTela();
   // uno sfondo animato resta nella pagina (sul canvas si fermerebbe al fotogramma del disegno)
   const usa = !bgBox.hidden && map.complete && map.naturalWidth > 0 && !sfondoSvg() && !sfondoMosso();
   document.documentElement.classList.toggle('mappaSuTela', usa);
@@ -188,7 +203,7 @@ function disegnaTela() {
   rr = Math.min(rr, (W - view.x) / view.s); bb = Math.min(bb, (H - view.y) / view.s);
   if (rr <= l || bb <= t) return;
   const kx = map.naturalWidth / r.w, ky = map.naturalHeight / r.h;
-  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = view.s * Math.min(1 / kx, 1 / ky) > 1 ? 'medium' : 'high';
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = graficaLeggera() ? 'low' : view.s * Math.min(1 / kx, 1 / ky) > 1 ? 'medium' : 'high';
   try {
     ctx.drawImage(map, (l - r.x) * kx, (t - r.y) * ky, (rr - l) * kx, (bb - t) * ky,
       (view.x + l * view.s) * dpr, (view.y + t * view.s) * dpr, (rr - l) * view.s * dpr, (bb - t) * view.s * dpr);
@@ -328,7 +343,7 @@ function placeGrid() {
   Object.assign(gridEl.style, { left: l + 'px', top: t + 'px', width: rr - l + 'px', height: bb - t + 'px' });
   if (!semplice) {
     if (!gridTela) { gridTela = document.createElement('canvas'); gridTela.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%'; gridEl.appendChild(gridTela); }
-    const dpr = Math.min(devicePixelRatio || 1, 2), W = rr - l, H = bb - t;
+    const dpr = dprTela(), W = rr - l, H = bb - t;
     if (gridTela.width !== Math.round(W * dpr) || gridTela.height !== Math.round(H * dpr)) { gridTela.width = Math.round(W * dpr); gridTela.height = Math.round(H * dpr); }
     const ctx = gridTela.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
@@ -1486,6 +1501,13 @@ $('autoBg').addEventListener('input', e => { settings.autoBg = e.target.checked;
 // per questo dispositivo, non per la campagna: chi ha il telefono scarico ferma gli sfondi animati solo per sé
 $('sfondiAnimati').checked = SFONDO_ANIM.attivo;
 $('sfondiAnimati').addEventListener('input', e => { SFONDO_ANIM.attivo = e.target.checked; });
+$('graficaLeggera').checked = graficaLeggera();
+$('graficaLeggera').addEventListener('input', e => {
+  try { localStorage.setItem(K_LEGGERA, e.target.checked ? '1' : '0'); } catch {}
+  document.documentElement.classList.toggle('graficaLeggera', e.target.checked);
+  if (typeof ridisegnaTela === 'function') ridisegnaTela();
+  if (typeof placeGrid === 'function') placeGrid();
+});
 $('spareggioDes').addEventListener('input', e => { settings.spareggioDes = e.target.checked; settings.prefT = Date.now(); scheduleBoardSave(); if (typeof turniDisegna === 'function') turniDisegna(); });
 ['caselleG', 'caselleR', 'caselleB'].forEach((id, i) => $(id).addEventListener('input', e => {
   settings.boxLabels[i] = e.target.value.slice(0, 14); scheduleBoardSave(); if (typeof hudDisegna === 'function') hudDisegna();

@@ -124,7 +124,23 @@
   .weBox .codice { font: 700 20px/1.3 ui-monospace, Menlo, monospace; letter-spacing: .08em; text-align: center; background: #0c0e13; border: 1px solid #2a3040; border-radius: 8px; padding: 10px; margin: 6px 0 4px; user-select: all; }
   .weBox .due { display: flex; gap: 10px; }
   .weBox .due button { margin-top: 18px; }
-  .weBox button.secondo { background: #2a3040; }`;
+  .weBox button.secondo { background: #2a3040; }
+  .weBox button[hidden] { display: none; }
+  .weBox .stato { margin: 14px 0 0; color: #c3cad8; font-size: 15px; display: flex; gap: 10px; align-items: center; }
+  .weBox .stato[hidden] { display: none; }
+  .weBox .stato::before { content: ''; flex: none; width: 10px; height: 10px; border-radius: 50%; background: #9b82ff; animation: wePulsa 1.2s ease-in-out infinite; }
+  @keyframes wePulsa { 50% { opacity: .25; } }
+  @media (prefers-reduced-motion: reduce) { .weBox .stato::before { animation: none; } }
+  .weSess { width: min(420px, calc(100vw - 32px)); background: #1a1f2b; color: #e8ecf3; border: 1px solid #2a3040; border-radius: 14px; padding: 20px; font: 15px/1.5 system-ui, sans-serif; }
+  .weSess::backdrop { background: rgba(0,0,0,.55); }
+  .weSess h2 { margin: 0 0 8px; font-size: 19px; }
+  .weSess p { margin: 0 0 10px; color: #c3cad8; }
+  .weSess ul { list-style: none; margin: 0 0 12px; padding: 0; max-height: 40vh; overflow: auto; }
+  .weSess li { padding: 6px 0; border-bottom: 1px solid #2a3040; display: flex; gap: 8px; align-items: center; }
+  .weSess li .tu { color: #9aa3b5; font-size: 13px; }
+  .weSess .bottoni { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .weSess button { flex: 1 1 auto; padding: 10px 12px; border: 0; border-radius: 9px; background: #2a3040; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+  .weSess button.forte { background: #7c5cff; }`;
   document.head.append(st);
   const box = document.createElement('div');
   box.id = 'webEntra'; box.className = 'weBox';
@@ -143,7 +159,8 @@
       <input id="wePass" type="password" autocomplete="current-password">
       <p class="piccolo" data-t="Con l'account rientri con lo stesso personaggio da qualsiasi browser. La prima volta la password la scegli tu, poi va scritta a ogni ingresso. Il master non la vede: se la dimentichi, può solo bloccare l'account e fartene uno nuovo.">Con l'account rientri con lo stesso personaggio da qualsiasi browser. La prima volta la password la scegli tu, poi va scritta a ogni ingresso. Il master non la vede: se la dimentichi, può solo bloccare l'account e fartene uno nuovo.</p>
     </details>
-    <button type="submit" id="weVai" data-t="Entra">Entra</button>
+    <div class="due"><button type="button" class="secondo" id="weAnnulla" data-t="Annulla" hidden>Annulla</button><button type="submit" id="weVai" data-t="Entra">Entra</button></div>
+    <p class="stato" id="weStato" role="status" hidden></p>
     <p class="err" id="weErr" role="alert"></p>
     <p class="piccolo"><span data-t="Dal sito si gioca solo come giocatore. Per condurre una partita serve l'app.">Dal sito si gioca solo come giocatore. Per condurre una partita serve l'app.</span> <a href="../#scarica" data-t="Scarica l'app">Scarica l'app</a></p>
   </form>`;
@@ -156,10 +173,43 @@
   if (ls.get(K_ACCOUNT)) $('weAcc').open = true;
   const errore = t => { $('weErr').textContent = t || ''; };
   // le finestre del tavolo (per esempio il benvenuto) stanno sopra a tutto: finché si è qui, restano chiuse
-  const chiudiDialoghi = () => { if (!box.hidden) document.querySelectorAll('dialog[open]').forEach(d => { try { d.close(); } catch {} }); };
+  // (tranne la porta dei plugin del master, che arriva proprio mentre si entra: vedi js/plugins/condivisi.js)
+  const chiudiDialoghi = () => { if (!box.hidden) document.querySelectorAll('dialog[open]:not(.plgPorta)').forEach(d => { try { d.close(); } catch {} }); };
   new MutationObserver(chiudiDialoghi).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open'] });
   chiudiDialoghi();
-  let entrato = false;
+  // Si resta su questa schermata finché il master non fa entrare davvero («welcome»): sotto c'è il tavolo
+  // salvato in questo browser l'ultima volta, che non va mostrato finché non si è nella partita.
+  //   modulo     si scrive il codice (all'inizio, o tornati qui)
+  //   attesa     ci si sta collegando, o si è in sala d'attesa
+  //   dentro     si gioca (la schermata è nascosta)
+  let entrato = false, dentro = false, cadute = 0;
+  const stato = t => { $('weStato').textContent = t || ''; $('weStato').hidden = !t; };
+  function mostra(modo, msg) {
+    const attesa = modo === 'attesa';
+    for (const el of box.querySelectorAll('input, summary')) { el.disabled = attesa; el.style.pointerEvents = attesa ? 'none' : ''; }
+    $('weVai').hidden = attesa; $('weAnnulla').hidden = !attesa;
+    stato(attesa ? msg : '');
+    if (modo === 'modulo') { entrato = false; dentro = false; if (msg != null) errore(msg); }
+    box.hidden = modo === 'dentro';
+    if (!box.hidden) { chiudiDialoghi(); if (typeof netSayHide === 'function') netSayHide(); }
+  }
+  window.libreWebEntrato = () => { dentro = true; cadute = 0; errore(''); mostra('dentro'); };
+  window.libreWebAttesa = () => { if (!dentro) mostra('attesa', tr('Sei in sala d\'attesa: il master deve farti entrare.')); };
+  // Il relay ha chiuso il collegamento: true = non si insiste e si torna qui (net.js smette di riprovare).
+  window.libreWebChiuso = (codice, motivo) => {
+    if (!entrato) return true;
+    if (codice === 4001 || codice === 4008) return false;            // il master si è ricollegato / troppa fretta: si rientra da soli
+    let msg = '';
+    if (codice === 4004) msg = dentro ? tr('Il master si è scollegato: la partita è chiusa. Potrai rientrare quando la riapre.')
+      : tr('Il master non ha aperto la partita (o non ha acceso «Partita pubblica»). Riprova quando ti dice che è pronta.');
+    else if (codice === 4029) msg = tr('La partita è piena: non c\'è posto per altri giocatori.');
+    else if (codice >= 4000 && codice < 4100) msg = motivo ? tr(motivo) : tr('Il collegamento è stato chiuso.');
+    else if (!dentro && ++cadute >= 3) msg = tr('Non riesco a raggiungere il server della partita: controlla la connessione e riprova.');
+    if (!msg) return false;                                           // dentro la partita, la rete che va e viene: si riprova
+    mostra('modulo', msg);
+    return true;
+  };
+  $('weAnnulla').onclick = () => { netDisconnect(); mostra('modulo', ''); };
 
   async function entra(codice) {
     const relay = await indirizzoRelay();
@@ -167,7 +217,8 @@
     if (!(await swPronto)) errore(tr('Questo browser non lascia arrivare le immagini della partita: prova con un altro (Chrome, Edge, Firefox o Safari aggiornati).'));
     NET.relay = relay + '/v1/stanza/' + await stanzaDi(codice);
     ls.set(K_CODICE, codice);
-    entrato = true;
+    entrato = true; dentro = false; cadute = 0;
+    mostra('attesa', tr('Mi collego alla partita…'));
     netReconnectNow();
     return true;
   }
@@ -195,7 +246,7 @@
         if (ls.get(K_ACCOUNT)) { try { localStorage.removeItem(K_ACCOUNT); localStorage.removeItem('uffa-token'); localStorage.removeItem('uffa-firma'); } catch {} }
       }
       if (nome.length >= 2) ls.set('uffa-name', nome);
-      if (await entra(codice)) box.hidden = true;
+      await entra(codice);
     } finally { $('weVai').disabled = false; }
   });
 
@@ -257,11 +308,63 @@
     setTimeout(netReconnectNow, 3000);
   };
 
-  // Scollegati a mano o allontanati: si torna alla schermata d'ingresso.
+  // Scollegati a mano o allontanati (anche dalla porta dei plugin): si torna alla schermata d'ingresso.
   setInterval(() => {
-    if (!box.hidden || !entrato || NET.on || !(NET.manual || NET.stopped)) return;
-    entrato = false;
-    errore(netBar && !netBar.hidden ? netBar.querySelector('.nbTxt').textContent : '');
-    box.hidden = false;
-  }, 1000);
+    if (!entrato || NET.on || !(NET.manual || NET.stopped)) return;
+    mostra('modulo', netBar && !netBar.hidden && !NET.manual ? netBar.querySelector('.nbTxt').textContent : '');
+  }, 500);
+
+  // ---------- il riquadro «Sessione» delle impostazioni, per chi gioca dal sito ----------
+  // Sul sito non c'è il programma: niente porta del server, niente pannello su 127.0.0.1. Il pannello qui è una
+  // finestra con chi c'è nella partita; «Torna alla home» esce dalla partita e va alla pagina del sito.
+  const porta = $('netPortIn'); if (porta && porta.closest('label')) porta.closest('label').hidden = true;
+  function allaHome(e) {
+    if (e) e.preventDefault();
+    if (NET.on || NET.ws) netDisconnect();
+    setTimeout(() => { location.href = '../'; }, 250);               // il tempo di salutare il master
+  }
+  for (const a of [$('netHome'), $('sceneHome')]) {
+    if (!a) continue;
+    a.href = '../'; a.hidden = false; a.removeAttribute('target');
+    a.addEventListener('click', allaHome);
+  }
+  const rc = $('netReconnect');
+  if (rc) rc.addEventListener('click', e => {                      // sul sito si rientra dalla schermata d'ingresso
+    e.stopImmediatePropagation();
+    if (NET.on) return;
+    netDisconnect(); mostra('modulo', '');
+  }, true);
+  const sess = document.createElement('dialog');
+  sess.className = 'weSess';
+  sess.innerHTML = `<h2 data-t="Sessione">Sessione</h2><p id="wsStato"></p><ul id="wsChi"></ul>
+    <div class="bottoni"><button type="button" id="wsEsci" data-t="Esci dalla partita">Esci dalla partita</button><button type="button" id="wsHome" data-t="Torna alla home">Torna alla home</button><button type="button" class="forte" id="wsChiudi" data-t="Chiudi">Chiudi</button></div>`;
+  document.body.append(sess);
+  for (const el of sess.querySelectorAll('[data-t]')) el.textContent = tr(el.dataset.t);
+  let sessTimer = 0;
+  function riempi() {
+    const io = NET.me;
+    $('wsStato').textContent = NET.on && io ? tr('Sei nella partita come «{n}».', { n: io.name }) : tr('Non sei collegato alla partita.');
+    const chi = NET.on ? (NET.players || []).filter(p => p.token && !p.pending) : [];
+    const html = chi.map(p => `<li><span>${p.role === 'master' ? '👑' : '🎲'}</span><span class="n" data-noi18n></span>${io && p.token === io.token ? '<span class="tu"></span>' : ''}</li>`).join('');
+    const ul = $('wsChi');
+    if (ul._html !== html || ul._nomi !== chi.map(p => p.name).join('\n')) {
+      ul._html = html; ul._nomi = chi.map(p => p.name).join('\n'); ul.innerHTML = html;
+      ul.querySelectorAll('li').forEach((li, i) => { li.querySelector('.n').textContent = chi[i].name; const t = li.querySelector('.tu'); if (t) t.textContent = tr('(tu)'); });
+    }
+    ul.hidden = !chi.length;
+    $('wsEsci').hidden = !(NET.on || NET.retrying);
+  }
+  const pn = $('netPanel');
+  if (pn) {
+    pn.removeAttribute('target'); pn.href = '#';
+    pn.addEventListener('click', e => {
+      e.preventDefault(); e.stopImmediatePropagation();
+      riempi(); clearInterval(sessTimer); sessTimer = setInterval(riempi, 1000);
+      try { sess.showModal(); } catch { sess.setAttribute('open', ''); }
+    }, true);
+  }
+  sess.addEventListener('close', () => clearInterval(sessTimer));
+  $('wsChiudi').onclick = () => sess.close();
+  $('wsEsci').onclick = () => { sess.close(); netDisconnect(); mostra('modulo', tr('Sei uscito dalla partita.')); };
+  $('wsHome').onclick = () => { sess.close(); allaHome(); };
 })();

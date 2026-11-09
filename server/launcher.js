@@ -642,10 +642,46 @@ function infoCampagna(dir) {
   out.scrivibile = scrivibile(dir);
   let nomi = []; try { nomi = fs.readdirSync(dir).filter(n => !n.startsWith('.')); } catch {}
   out.vuota = nomi.length === 0;
+  // Leggere board.json, sheets.json e world.json per intero (possono essere decine di MB) e contare le immagini
+  // costa: con tante campagne, o su Documenti sincronizzati con iCloud, l'elenco ci metteva secondi. Si rifà
+  // solo se uno di quei file (o la cartella delle immagini) è cambiato: per accorgersene basta guardarne data e peso.
+  const D = path.join(dir, 'data');
+  const firma = [path.join(dir, 'campagna.json'), ...['board.json', 'sheets.json', 'world.json'].map(f => path.join(D, f)), D, path.join(dir, 'assets')]
+    .map(f => { try { const s = fs.statSync(f); return s.mtimeMs + ':' + s.size; } catch { return '-'; } }).join('|');
+  const giaVisto = INFO_CACHE.get(dir);
+  if (giaVisto && giaVisto.firma === firma) Object.assign(out, giaVisto.dati);
+  else {
+    calcolaInfo(dir, D, out);
+    const { nome, campagna, sistema, scene, schede, immagini, modificata } = out;
+    INFO_CACHE.set(dir, { firma, dati: { nome, campagna, sistema, scene, schede, immagini, modificata } });
+    if (INFO_CACHE.size > 500) INFO_CACHE.delete(INFO_CACHE.keys().next().value);
+    salvaInfoCache();
+  }
+  out.vecchia = (!IN_APP && dir === path.resolve(ROOT)) || (!!VECCHIA && dir === VECCHIA);
+  if (out.vecchia) out.nome = 'La campagna di prima';
+  return out;
+}
+// cartella → { firma, dati } (vedi infoCampagna). Resta anche su disco, così pure la prima apertura dell'elenco è svelta.
+const INFO_CACHE_FILE = path.join(USERDIR, 'info-campagne.json');
+const INFO_CACHE = (() => {
+  try {
+    const j = JSON.parse(fs.readFileSync(INFO_CACHE_FILE, 'utf8'));
+    if (j && j.v === 1 && Array.isArray(j.voci)) return new Map(j.voci.filter(x => Array.isArray(x) && typeof x[0] === 'string' && x[1] && typeof x[1].firma === 'string' && x[1].dati && typeof x[1].dati === 'object').slice(-500));
+  } catch {}
+  return new Map();
+})();
+let infoCacheTimer = 0;
+function salvaInfoCache() {
+  clearTimeout(infoCacheTimer);
+  infoCacheTimer = setTimeout(() => {
+    try { fs.mkdirSync(USERDIR, { recursive: true }); fs.writeFileSync(INFO_CACHE_FILE, JSON.stringify({ v: 1, voci: [...INFO_CACHE] })); } catch {}
+  }, 1000);
+  if (infoCacheTimer.unref) infoCacheTimer.unref();
+}
+function calcolaInfo(dir, D, out) {
   const meta = leggiJson(path.join(dir, 'campagna.json'));
   if (meta) { out.campagna = true; if (meta.nome) out.nome = String(meta.nome).slice(0, 60); }
   out.sistema = meta && meta.sistema && meta.sistema.id ? { id: String(meta.sistema.id), nome: String(meta.sistema.nome || meta.sistema.id).slice(0, 60) } : null;
-  const D = path.join(dir, 'data');
   const b = leggiJson(path.join(D, 'board.json')), sh = leggiJson(path.join(D, 'sheets.json')), w = leggiJson(path.join(D, 'world.json'));
   if (b || sh || w) out.campagna = true;
   out.scene = (b && Array.isArray(b.scenes) && b.scenes.length) || (w && Array.isArray(w.scenes) && w.scenes.length) || 0;
@@ -659,9 +695,6 @@ function infoCampagna(dir) {
     else if (/\.(png|jpe?g|gif|webp|avif|bmp)$/i.test(e.name)) n++;
   } } catch {} return n; };
   out.immagini = conta(path.join(dir, 'assets'), 0);
-  out.vecchia = (!IN_APP && dir === path.resolve(ROOT)) || (!!VECCHIA && dir === VECCHIA);
-  if (out.vecchia) out.nome = 'La campagna di prima';
-  return out;
 }
 
 /** Mette in una cartella quello che serve a una campagna, senza toccare quello che c'è già. */

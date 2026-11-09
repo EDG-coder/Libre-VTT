@@ -1934,6 +1934,8 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Oppure uno sfondo animato: GIF, WebP animato o video mp4/webm in loop, senza audio (al massimo 25 MB).": "Or an animated background: GIF, animated WebP or a looping mp4/webm video, without sound (25 MB at most).",
 "Sfondi animati in movimento": "Animated backgrounds in motion",
 "GIF e video delle scene. Spento, si vede il primo fotogramma: consuma meno batteria. Vale per questo dispositivo.": "GIFs and videos of the scenes. When off you see the first frame: it uses less battery. Applies to this device.",
+"Grafica leggera": "Light graphics",
+"Per tablet e telefoni lenti: zoom e spostamenti più fluidi, senza sfocature dietro i pannelli né ombre sotto i segnalini. Si accende da sola sui dispositivi con poca memoria. Vale per questo dispositivo.": "For slow tablets and phones: smoother zoom and panning, without blur behind the panels or shadows under the tokens. It turns on by itself on devices with little memory. Applies to this device.",
 "Questo video non si apre in questo browser: prova un mp4 (H.264) o un webm.": "This video doesn't open in this browser: try an mp4 (H.264) or a webm.",
 "Video troppo grande (massimo 25 MB): accorcialo o abbassane la risoluzione.": "Video too large (25 MB at most): shorten it or lower its resolution.",
 "Immagine animata troppo grande (massimo 12 MB).": "Animated image too large (12 MB at most).",
@@ -2629,5 +2631,24 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "🎨 Colore della puntina": "🎨 Pin colour",
 "🎨 Altro colore…": "🎨 Other colour…",
 "Arancione": "Orange",
-"Viola": "Purple"
+"Viola": "Purple",
+
+// ---------- sito web: ingresso, uscita e sessione ----------
+"Mi collego alla partita…": "Connecting to the game…",
+"Il master si è scollegato: la partita è chiusa. Potrai rientrare quando la riapre.": "The GM disconnected: the game is closed. You can join again when they reopen it.",
+"Il master non ha aperto la partita (o non ha acceso «Partita pubblica»). Riprova quando ti dice che è pronta.": "The GM hasn't opened the game (or hasn't switched on «Public game»). Try again when they tell you it's ready.",
+"La partita è piena: non c'è posto per altri giocatori.": "The game is full: there's no room for more players.",
+"Il collegamento è stato chiuso.": "The connection was closed.",
+"Non riesco a raggiungere il server della partita: controlla la connessione e riprova.": "I can't reach the game server: check your connection and try again.",
+"Esci dalla partita": "Leave the game",
+"Sei nella partita come «{n}».": "You're in the game as «{n}».",
+"Non sei collegato alla partita.": "You're not connected to the game.",
+"(tu)": "(you)",
+"Sei uscito dalla partita.": "You left the game.",
+"Chiuso dal master.": "Closed by the GM.",
+"La stanza è piena.": "The room is full.",
+"Messaggio troppo grande.": "Message too large.",
+"Troppi messaggi: rallenta.": "Too many messages: slow down.",
+"Il master si è scollegato.": "The GM disconnected.",
+"Presentazione non valida.": "Invalid handshake."
 });

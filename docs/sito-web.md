@@ -24,7 +24,10 @@ master key, nor by getting the role from the panel). To run a game you need the 
    the code: the relay never sees the code) and connects there.
 3. The relay is a postman: a player's messages go only to the master, the master's only to that player. It saves
    nothing. Everything else (permissions, fog, dice, who sees what) is decided by the master's app, exactly as for
-   players who join with the app. Without the master connected there is no game.
+   players who join with the app. Without the master connected there is no game: the website keeps the entry screen
+   until the master lets you in (it never shows the table saved in the browser from last time), says so if the
+   master hasn't opened the game, and sends everyone back to the entry screen when the master leaves. From the table,
+   **Session panel** shows who is in the game, and **Back to home** leaves the game and goes to the landing page.
 4. Images (maps, tokens) come from the master in pieces; the browser checks their fingerprint and keeps them in
    its cache (`sw-asset.js`), so next time they are already there.
 

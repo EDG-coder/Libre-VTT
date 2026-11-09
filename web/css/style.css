@@ -549,3 +549,9 @@ html:not(.ui-tel) body.menu-open #dockZone { left: calc((100vw - min(var(--side-
 .sceneFolder.sopra { outline: 2px dashed var(--accent); outline-offset: -2px; }
 #sceneFolderNew { display: block; width: 100%; margin-top: 4px; padding: 7px 10px; border: 1px dashed var(--line); border-radius: 10px; background: none; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
 #sceneFolderNew:hover { background: var(--panel-3); }
+
+/* ---------- Grafica leggera (Impostazioni › Aspetto, per i dispositivi lenti: vedi script.js) ---------- */
+html.graficaLeggera *, html.graficaLeggera *::before, html.graficaLeggera *::after,
+html.graficaLeggera ::backdrop { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.graficaLeggera :is(.glass, #dice, #zoomBox, #sceneBtn, #layerSwitch, #targetSwitch) { background-color: rgba(18, 21, 28, .88); }
+html.graficaLeggera .photo:not(.selected) img { filter: none; }
