@@ -28,7 +28,8 @@ let target = 'board';      // nel livello Mappa: 'board' = rettangolo, 'bg' = im
 // ---------- Impostazioni e scene ----------
 const DEFAULT_GRID = { show: false, snap: false, fitToken: true, size: 50, color: '#ffffff', opacity: 85 };
 const DEFAULT_BORDER = { color: '#000000', transparent: false, width: 3 };
-const DEFAULT_PING = { color: '#ff4d4d', size: 2, speed: 8, fade: 2500 };      // size in cm, speed in cm/s, fade in ms
+// size in cm, speed in cm/s, fade in ms; modo 'griglia' = diametro in caselle (caselle); legacy = il cerchio pieno di prima
+const DEFAULT_PING = { color: '#ff4d4d', size: 2, speed: 8, fade: 2500, modo: 'cm', caselle: 2, legacy: false };
 const SECTIONS = { look: true, res: false, grid: true, gridDefault: false, map: false, border: false, ping: false, sheets: false, tools: false, ordineStrumenti: false, hidden: false, chat: false };   // sezioni aperte di default
 const RESOLUTIONS = [[480, '480p'], [720, '720p'], [1080, '1080p'], [1440, '1440p'], [0, 'Originale']];
 const settings = { theme: 'dark', autoBg: true, fogColor: 'auto', fogVeil: 0.55, caratLibere: false, spareggioDes: true, prefT: 0, boxLabels: ['', '', ''], resToken: 720, resBg: 1080, gridDefault: { ...DEFAULT_GRID }, border: { ...DEFAULT_BORDER }, ping: { ...DEFAULT_PING }, sections: {},
@@ -307,11 +308,13 @@ for (const t of ['gesturestart', 'gesturechange']) addEventListener(t, e => e.pr
 // ---------- Griglia (disegnata a schermo ma solo dentro il rettangolo, con linee sempre sottili) ----------
 function paintGrid() {
   const gc = gridPreview ? '#ff2bd6' : `color-mix(in srgb, ${grid.color} ${grid.opacity}%, transparent)`, dk = 'rgba(0, 0, 0, .4)';
-  gridEl.style.backgroundImage =
+  gridEl.style.backgroundImage = !GRIGLIA_FORME.semplice(grid) ? 'none' :
     `linear-gradient(to right, ${gc} 1px, transparent 0), linear-gradient(to bottom, ${gc} 1px, transparent 0),` +
     `linear-gradient(to right, ${dk} 3px, transparent 0), linear-gradient(to bottom, ${dk} 3px, transparent 0)`;
   placeGrid();
 }
+// Le forme diverse dai quadrati (o i quadrati ruotati) si disegnano su un canvas dentro #grid (griglia-forme.js)
+let gridTela = null;
 function placeGrid() {
   const r = boardRect(), s = view.s, o = gridOrigin();
   const x0 = Math.round(view.x + r.x * s), y0 = Math.round(view.y + r.y * s);
@@ -319,9 +322,24 @@ function placeGrid() {
   const l = Math.max(0, x0), t = Math.max(0, y0), rr = Math.min(innerWidth, x1), bb = Math.min(innerHeight, y1);
   const visible = (!!grid.show && !grid.hideLines || gridPreview) && rr > l && bb > t;
   gridEl.classList.toggle('on', visible);
+  const semplice = GRIGLIA_FORME.semplice(grid);
+  if (gridTela) gridTela.hidden = !visible || semplice;
   if (!visible) return;
+  Object.assign(gridEl.style, { left: l + 'px', top: t + 'px', width: rr - l + 'px', height: bb - t + 'px' });
+  if (!semplice) {
+    if (!gridTela) { gridTela = document.createElement('canvas'); gridTela.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%'; gridEl.appendChild(gridTela); }
+    const dpr = Math.min(devicePixelRatio || 1, 2), W = rr - l, H = bb - t;
+    if (gridTela.width !== Math.round(W * dpr) || gridTela.height !== Math.round(H * dpr)) { gridTela.width = Math.round(W * dpr); gridTela.height = Math.round(H * dpr); }
+    const ctx = gridTela.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+    const colore = gridPreview ? '#ff2bd6' : grid.color, alfa = gridPreview ? 1 : (+grid.opacity || 85) / 100;
+    ctx.globalAlpha = alfa;
+    GRIGLIA_FORME.disegna(ctx, grid, o, view, l, t, W, H, colore, 'rgba(0, 0, 0, .4)');
+    ctx.globalAlpha = 1;
+    return;
+  }
   const c = Math.max(3, grid.size * s), px = view.x + o.x * s - l, py = view.y + o.y * s - t;
-  Object.assign(gridEl.style, { left: l + 'px', top: t + 'px', width: rr - l + 'px', height: bb - t + 'px', backgroundSize: `${c}px ${c}px` });
+  Object.assign(gridEl.style, { backgroundSize: `${c}px ${c}px` });
   gridEl.style.backgroundPosition = `${px}px ${py}px, ${px}px ${py}px, ${px - 1}px ${py - 1}px, ${px - 1}px ${py - 1}px`;
 }
 // Le celle partono dall'angolo in alto a sinistra del rettangolo, spostate di grid.ox, grid.oy
@@ -332,9 +350,23 @@ function cellOf(x, y) { const o = gridOrigin(), s = grid.size; return { i: Math.
 /** L'angolo in alto a sinistra della casella i, j. */
 function cellPos(i, j) { const o = gridOrigin(), s = grid.size; return { x: o.x + i * s, y: o.y + j * s }; }
 /** Il punto messo dentro la casella sotto (x, y), per un oggetto w × h: centrato. */
-function cellFit(x, y, w, h) { const c = cellOf(x, y), p = cellPos(c.i, c.j); return { x: p.x + (grid.size - w) / 2, y: p.y + (grid.size - h) / 2 }; }
-const snapPoint = (x, y) => {
+function cellFit(x, y, w, h) {
+  if (!GRIGLIA_FORME.semplice(grid)) { const c = GRIGLIA_FORME.centroCella(grid, gridOrigin(), x, y); return { x: c.x - w / 2, y: c.y - h / 2 }; }
+  const c = cellOf(x, y), p = cellPos(c.i, c.j); return { x: p.x + (grid.size - w) / 2, y: p.y + (grid.size - h) / 2 };
+}
+/** Il centro della casella sotto (x, y), per qualunque forma della griglia. */
+function cellCentre(x, y) {
+  if (!GRIGLIA_FORME.semplice(grid)) return GRIGLIA_FORME.centroCella(grid, gridOrigin(), x, y);
+  const c = cellOf(x, y), p = cellPos(c.i, c.j); return { x: p.x + grid.size / 2, y: p.y + grid.size / 2 };
+}
+// Con i quadrati l'angolo in alto a sinistra va su un incrocio delle linee. Con le altre forme non ci
+// sono incroci regolari: un oggetto (w × h) si centra nella sua casella, un punto va al centro della casella.
+const snapPoint = (x, y, w, h) => {
   if (!grid.snap) return { x, y };
+  if (!GRIGLIA_FORME.semplice(grid)) {
+    if (w > 0 && h > 0) return cellFit(x + w / 2, y + h / 2, w, h);
+    return GRIGLIA_FORME.centroCella(grid, gridOrigin(), x, y);
+  }
   const o = gridOrigin(), s = grid.size;
   return { x: o.x + Math.round((x - o.x) / s) * s, y: o.y + Math.round((y - o.y) / s) * s };
 };
@@ -513,7 +545,7 @@ viewport.addEventListener('pointermove', e => {
     applyView();
   } else if (mode === 'photo') {
     // le foto vivono nelle coordinate della mappa: dividi per lo zoom
-    const p = snapPoint(origX + dx / view.s, origY + dy / view.s);
+    const p = snapPoint(origX + dx / view.s, origY + dy / view.s, num(activeEl, 'width'), num(activeEl, 'height'));
     activeEl.style.left = p.x + 'px';
     activeEl.style.top  = p.y + 'px';
     if (Math.hypot(dx, dy) > 3) photoMoved = true;
@@ -553,28 +585,44 @@ function stop() {
 viewport.addEventListener('pointerup', () => { rightPhoto = null; stop(); });
 viewport.addEventListener('pointercancel', stop);
 
-// ---------- Ping: tieni premuto e un cerchio cresce dal cursore ----------
+// ---------- Ping: tieni premuto e partono delle onde dal cursore ----------
 // Il ping sta sulla mappa: il centro e il raggio sono in coordinate del mondo, quindi resta nello stesso
-// punto se sposti la vista e cresce o rimpicciolisce con lo zoom. La dimensione in cm delle impostazioni
-// vale per lo zoom di chi lo fa; chi lo riceve ha raggio e velocità già in unità del mondo (o.r, o.v).
-const pingMondo = () => ({ r: settings.ping.size * CM / view.s, v: settings.ping.speed * CM / view.s });
+// punto se sposti la vista e cresce o rimpicciolisce con lo zoom. La dimensione delle impostazioni è in
+// cm (vale per lo zoom di chi lo fa) oppure in caselle della griglia (diametro: uguale per tutti, a
+// qualunque zoom). Chi lo riceve ha raggio e velocità già in unità del mondo (o.r, o.v).
+// Due modi di disegnarlo, scelti da chi lo guarda:
+//  - onde (predefinito): anelli che si allargano dal punto e svaniscono, uno dietro l'altro; finché si
+//    tiene premuto ne partono altri;
+//  - legacy: il cerchio pieno di prima, che cresce finché si tiene premuto e poi sbiadisce.
+// Con il ping a caselle il cerchio arriva sempre alla misura piena, anche se si lascia subito.
+const pingAGriglia = () => settings.ping.modo === 'griglia' && +grid.size > 0;
+const pingTempo = () => clamp(settings.ping.size / (settings.ping.speed || 1), 0.2, 1.5);    // secondi per crescere (legacy)
+function pingMondo() {
+  if (pingAGriglia()) {
+    const r = clamp(+settings.ping.caselle || 2, 0.5, 20) * grid.size / 2;
+    return { r, v: r / pingTempo() };
+  }
+  return { r: settings.ping.size * CM / view.s, v: settings.ping.speed * CM / view.s };
+}
 function startPing(x, y, o) {
   const { color, fade } = settings.ping;
   const wx = (x - view.x) / view.s, wy = (y - view.y) / view.s;
   const def = pingMondo();
   const max = +(o && o.r) > 0 ? +o.r : def.r, rate = +(o && o.v) > 0 ? +o.v : def.v;   // unità del mondo e unità/s
+  const mio = !o || !o.altrui, pieno = mio && (pingAGriglia() || !!(o && o.pieno));   // pieno: arriva alla misura piena anche senza tenere premuto
+  const ping = { held: true };
+  if (mio) livePing = ping;
+  if (!settings.ping.legacy) return pingOnde(wx, wy, max, rate, (o && o.color) || color, ping, mio && !pieno);
   const el = document.createElement('div');
   el.className = 'ping';
   el.style.setProperty('--pc', (o && o.color) || color);
   pingsEl.appendChild(el);
-  const ping = { held: true };
-  if (!o || !o.altrui) livePing = ping;
   const t0 = performance.now();
   let tf = 0, r = 0;
   const frame = now => {
     if (!tf) {
       r = Math.min(max, (now - t0) / 1000 * rate);
-      if (r >= max || !ping.held) { tf = now; if (livePing === ping && r >= max) livePing = null; }   // crescita finita (o rilascio): inizia a sbiadire
+      if (r >= max || (!ping.held && !pieno)) { tf = now; if (livePing === ping && r >= max) livePing = null; }   // crescita finita (o rilascio): inizia a sbiadire
     }
     el.style.left = (wx * view.s + view.x) + 'px'; el.style.top = (wy * view.s + view.y) + 'px';
     el.style.width = el.style.height = 2 * r * view.s + 'px';
@@ -585,6 +633,41 @@ function startPing(x, y, o) {
     }
     requestAnimationFrame(frame);
   };
+  frame(t0);
+}
+// Le onde: ogni anello va da 0 al raggio pieno in `dur` secondi, rallentando; resta spesso finché
+// cresce, poi si assottiglia e svanisce. Il secondo parte poco dopo il primo; tenendo premuto ne
+// partono altri (solo per il proprio ping, al massimo per 20 secondi).
+function pingOnde(wx, wy, max, rate, colore, ping, ripete) {
+  const dur = clamp(4 * max / (rate || 1), 0.6, 2.4) * 1000, passo = dur * 0.32;
+  const t0 = performance.now(), onde = [];
+  let partite = 0;
+  const nuova = () => {
+    const el = document.createElement('div');
+    el.className = 'pingOnda';
+    el.style.setProperty('--pc', colore);
+    pingsEl.appendChild(el);
+    onde.push({ el, t: t0 + partite * passo });
+    partite++;
+  };
+  const frame = now => {
+    // la prima e la seconda partono sempre; le altre solo mentre si tiene premuto
+    while (now >= t0 + partite * passo && (partite < 2 || (ripete && ping.held && now - t0 < 20000))) nuova();
+    if (!ping.held && livePing === ping) livePing = null;
+    const cx = wx * view.s + view.x, cy = wy * view.s + view.y, rpx = max * view.s;
+    const spesso = clamp(rpx * 0.11, 3, 12);
+    for (let i = onde.length - 1; i >= 0; i--) {
+      const o = onde[i], k = (now - o.t) / dur;
+      if (k < 0) continue;
+      if (k >= 1) { o.el.remove(); onde.splice(i, 1); continue; }
+      const e = 1 - Math.pow(1 - k, 3);                       // rallenta verso la fine
+      const r = rpx * e, w = spesso * (k < 0.55 ? 1 : 1 - 0.75 * (k - 0.55) / 0.45);
+      Object.assign(o.el.style, { left: cx + 'px', top: cy + 'px', width: 2 * r + 'px', height: 2 * r + 'px', borderWidth: w + 'px', opacity: k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4 });
+    }
+    if (onde.length || (ripete && ping.held && now - t0 < 20000)) requestAnimationFrame(frame);
+    else if (livePing === ping) livePing = null;
+  };
+  nuova();
   frame(t0);
 }
 
@@ -635,7 +718,7 @@ function addPhotoToMap(url, at, aid) {
       l = (innerWidth / 2 - view.x) / view.s - w / 2 + off;
       t = (innerHeight / 2 - view.y) / view.s - h / 2 + off;
     }
-    const p = fit && grid.snap && at ? { x: l, y: t } : snapPoint(l, t);
+    const p = fit && grid.snap && at ? { x: l, y: t } : snapPoint(l, t, w, h);
     if (layer === 'map') setLayer('tokens');
     createPhoto(url, w, h, p.x, p.y, aid, false, layer === 'hidden' ? 'hidden' : 'tokens');
   };
@@ -1148,6 +1231,8 @@ const SWATCHES = [['#ffffff', 'Bianco'], ['#000000', 'Nero'], ['#ff4d4d', 'Rosso
 // Crea i controlli di un gruppo di impostazioni dentro `root`; lavora sull'oggetto restituito da get()
 const gridFields = withShow => [
   ...(withShow ? [{ f: 'show', type: 'check', label: 'Mostra la griglia' }] : []),
+  { f: 'forma', type: 'select', label: 'Forma delle caselle', options: GRIGLIA_FORME.FORMA_NOMI },
+  { f: 'rot', type: 'range', label: 'Rotazione', min: 0, max: 359, step: 1, unit: '°' },
   { f: 'snap', type: 'check', label: 'Aggancia le immagini alla griglia' },
   { f: 'fitToken', type: 'check', label: 'Nuovi segnalini grandi quanto una casella (con la griglia visibile)' },
   { f: 'size', type: 'range', label: 'Cella', min: 10, max: 300, step: 0.1 },
@@ -1167,12 +1252,16 @@ const BORDER_FIELDS = [
 ];
 const PING_FIELDS = [
   { f: 'color', type: 'color', label: 'Colore' },
+  { f: 'modo', type: 'select', label: 'Misura del ping', options: [['cm', 'Centimetri'], ['griglia', 'Caselle della griglia']] },
+  { f: 'caselle', type: 'number', label: 'Dimensione (diametro)', min: 0.5, max: 20, step: 0.5, unit: ' caselle' },
   { f: 'size', type: 'range', label: 'Dimensione (raggio)', min: 0.3, max: 5, step: 0.1, unit: ' cm' },
   { f: 'speed', type: 'range', label: 'Velocità di crescita', min: 0.5, max: 10, step: 0.5, unit: ' cm/s' },
-  { f: 'fade', type: 'number', label: 'Durata (dissolvenza)', min: 300, max: 8000, step: 100, unit: ' ms' }
+  { f: 'fade', type: 'number', label: 'Durata (dissolvenza)', min: 300, max: 8000, step: 100, unit: ' ms' },
+  { f: 'legacy', type: 'check', label: 'Ping legacy (il cerchio pieno delle versioni prima)' }
 ];
 function fieldHtml(d) {
   const rng = `min="${d.min}" max="${d.max}" step="${d.step}"`;
+  if (d.type === 'select') return `<label class="row">${d.label} <select data-f="${d.f}">${d.options.map(([v, n]) => `<option value="${v}">${n}</option>`).join('')}</select></label>`;
   if (d.type === 'check') return `<label class="check"><input data-f="${d.f}" type="checkbox"> ${d.label}</label>`;
   if (d.type === 'range') return `<label class="row">${d.label} <input data-f="${d.f}" type="range" ${rng}> <output data-o="${d.f}"></output>${d.unit || ''}</label>`;
   if (d.type === 'number') return `<label class="row${d.cls ? ' ' + d.cls : ''}">${d.label} <input data-f="${d.f}" type="number" ${rng}>${d.unit || ''}</label>`;
@@ -1186,9 +1275,10 @@ function buildForm(root, fields, { get, onChange }) {
     const g = get();
     root.querySelectorAll('[data-f]').forEach(i => {
       if (i.type === 'checkbox') i.checked = !!g[i.dataset.f];
+      else if (i.tagName === 'SELECT') i.value = g[i.dataset.f] ?? i.options[0].value;
       else if (!(i.type === 'number' && i === document.activeElement)) i.value = g[i.dataset.f] ?? 0;   // non disturbare chi sta scrivendo
     });
-    root.querySelectorAll('[data-o]').forEach(o => { o.textContent = +(+g[o.dataset.o]).toFixed(1); });
+    root.querySelectorAll('[data-o]').forEach(o => { o.textContent = +(+g[o.dataset.o] || 0).toFixed(1); });
     root.querySelectorAll('.swatches button').forEach(b => b.classList.toggle('active', !g.transparent && b.dataset.color === g.color));
   };
   root.addEventListener('input', e => {
@@ -1196,6 +1286,7 @@ function buildForm(root, fields, { get, onChange }) {
     const g = get();
     if (i.type === 'checkbox') g[f] = i.checked;
     else if (i.type === 'range') g[f] = +i.value;
+    else if (i.tagName === 'SELECT') g[f] = i.value !== '' && Number.isFinite(+i.value) ? +i.value : i.value;
     else if (i.type === 'number') { const v = parseFloat(i.value); if (!Number.isFinite(v)) return; g[f] = clamp(v, +i.min, +i.max); }
     else { g[f] = i.value; if ('transparent' in g) g.transparent = false; }
     sync(); onChange();
@@ -1297,7 +1388,15 @@ $('gridFitMap').addEventListener('click', () => avviaAdatta('griglia'));
 $('mapFitGrid').addEventListener('click', () => avviaAdatta('mappa'));
 const syncDefaultGrid = buildForm($('gridDefault'), gridFields(false), { get: () => settings.gridDefault, onChange: scheduleBoardSave });
 const syncBorder = buildForm($('borderForm'), BORDER_FIELDS, { get: () => settings.border, onChange: () => { paintBorder(); scheduleBoardSave(); } });
-const syncPingForm = buildForm($('pingForm'), PING_FIELDS, { get: () => settings.ping, onChange: scheduleBoardSave });
+const syncPingCampi = buildForm($('pingForm'), PING_FIELDS, { get: () => settings.ping, onChange: () => { syncPingForm(); scheduleBoardSave(); } });
+// si vedono solo i campi che servono: cm o caselle; la dissolvenza solo per il ping legacy
+function syncPingForm() {
+  syncPingCampi();
+  const p = settings.ping, riga = f => $('pingForm').querySelector(`[data-f="${f}"]`).closest('label, .row');
+  riga('caselle').hidden = p.modo !== 'griglia';
+  riga('size').hidden = p.modo === 'griglia';
+  riga('fade').hidden = !p.legacy;
+}
 
 // sezioni comprimibili: titolo + freccia, il contenuto scorre via
 const CHEVRON = '<svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';

@@ -407,6 +407,7 @@ function delParty(sc, ph) {
   if (ph.party === false) return false;
   if (tokenOwner(sc, ph)) return true;
   const sh = schedaDi(ph);
+  if (sh && sh.f && sh.f.party) return true;                       // scheda segnata «nel party»
   return !!(sh && Object.values(roster).some(r => r.role !== 'master' && r.sheets && r.sheets[sh.id] === 'rw'));
 }
 const viste = new Map();                // scena → { chiave, vista }
@@ -590,7 +591,7 @@ function sheetVisible(c, s) {
 // Un disegno arrivato da un giocatore: solo i campi che servono, con valori controllati
 // (finisce dentro un SVG sugli schermi di tutti).
 function formaPulita(x) {
-  if (!x || typeof x !== 'object' || !['rect', 'ellipse', 'tri', 'line', 'path', 'text'].includes(x.t)) return null;
+  if (!x || typeof x !== 'object' || !['rect', 'ellipse', 'tri', 'line', 'path', 'text', 'pin'].includes(x.t)) return null;
   const n = (v, max) => { const k = +v; return Number.isFinite(k) ? Math.max(0, Math.min(max, k)) : 0; };
   const c = /^#[0-9a-f]{3,8}$/i.test(String(x.c)) ? String(x.c) : '#ff4d4d';
   const sh = { t: x.t, c, sw: n(x.sw, 100), vw: n(x.vw, 20000), vh: n(x.vh, 20000) };

@@ -75,7 +75,7 @@
     if (p.dataset.party === '0') return false;
     if (p.dataset.owner) return true;
     const sh = p.dataset.sheet && sheets.find(s => s.id === p.dataset.sheet);
-    return !!(sh && sh.owner);
+    return !!(sh && (sh.owner || (sh.f && sh.f.party)));          // anche le schede segnate «nel party»
   }
   const luceSegnalino = p => { try { return p.dataset.luce ? JSON.parse(p.dataset.luce) : null; } catch { return null; } };
 
