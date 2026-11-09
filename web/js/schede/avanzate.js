@@ -346,6 +346,7 @@
     };
     const disegna = () => {
       d.innerHTML = `<h3>⚙ ${esc(tr('Avanzate'))} · <span data-noi18n>${esc(s.name)}</span></h3>
+        <label class="check avParty"><input type="checkbox" data-party ${s.f.party ? 'checked' : ''}> 🧑‍🤝‍🧑 ${esc(tr('Nel party (il master lo mette in campo con «Piazza il party»)'))}</label>
         <nav class="avSez">${SEZIONI.map(([k, n]) => `<button type="button" class="${k === cur ? 'on' : ''}" data-sez="${k}">${esc(tr(n))}</button>`).join('')}</nav>
         <div class="avSezCorpo">${corpo()}</div>
         <div class="dialogBtns"><span style="flex:1"></span><button type="button" class="btn" data-a="ok">${esc(tr('Fatto'))}</button></div>`;
@@ -374,6 +375,7 @@
     });
     d.addEventListener('change', e => {
       const el = e.target;
+      if (el.dataset.party != null) { if (typeof impostaParty === 'function') impostaParty(s, el.checked); return; }
       if (el.dataset.ab) { const k = el.dataset.ab, v = el.value; s.f['kh_' + k] = v === 'mezza' ? '1' : ''; s.f['kp_' + k] = v === 'comp' || v === 'mae' ? '1' : ''; s.f['ke_' + k] = v === 'mae' ? '1' : ''; cambiata(s); const td = el.closest('tr').querySelector('.avVal'); if (td) td.textContent = sgn(calcValue(s, 'skill:' + k)); return; }
       if (el.dataset.dif) { const dif = J(s, 'avDif', {}), g = el.dataset.dif; dif[g] = (dif[g] || []).filter(x => x !== el.dataset.t); if (el.checked) dif[g].push(el.dataset.t); salvaJ(s, 'avDif', dif); return; }
       if (el.dataset.cond) { const dif = J(s, 'avDif', {}); dif.cond = (dif.cond || []).filter(x => x !== el.dataset.cond); if (el.checked) dif.cond.push(el.dataset.cond); salvaJ(s, 'avDif', dif); return; }

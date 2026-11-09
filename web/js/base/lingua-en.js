@@ -2604,5 +2604,30 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Il master non condivide più questa versione del plugin.": "The master no longer shares this version of the plugin.",
 "No, grazie": "No, thanks",
 "Il master non condivide plugin in questa partita.": "The master doesn't share plugins in this game.",
-"Password": "Password"
+"Password": "Password",
+
+// ---------- forma della griglia, ping, party e puntina ----------
+"Forma delle caselle": "Cell shape",
+"Quadrati": "Squares",
+"Esagoni": "Hexagons",
+"Triangoli": "Triangles",
+"Pentagoni (Cairo)": "Pentagons (Cairo)",
+"Ottagoni e quadratini": "Octagons and small squares",
+"Dodecagoni e triangolini": "Dodecagons and small triangles",
+"Misura del ping": "Ping size",
+"Centimetri": "Centimetres",
+"Caselle della griglia": "Grid squares",
+"Dimensione (diametro)": "Size (diameter)",
+"caselle": "squares",
+"Ping legacy (il cerchio pieno delle versioni prima)": "Legacy ping (the filled circle of older versions)",
+"🧑‍🤝‍🧑 Nel party": "🧑‍🤝‍🧑 In the party",
+"Nel party (il master lo mette in campo con «Piazza il party»)": "In the party (the GM places it with «Place the party»)",
+"🧑‍🤝‍🧑 Piazza il party": "🧑‍🤝‍🧑 Place the party",
+"📌 Piazza la puntina": "📌 Place a pin",
+"Nessuna scheda nel party: aggiungile con il clic destro su una scheda o da ⚙ Avanzate.": "No sheet in the party: add them with a right-click on a sheet or from ⚙ Advanced.",
+"Party piazzato: {n} personaggi.": "Party placed: {n} characters.",
+"🎨 Colore della puntina": "🎨 Pin colour",
+"🎨 Altro colore…": "🎨 Other colour…",
+"Arancione": "Orange",
+"Viola": "Purple"
 });

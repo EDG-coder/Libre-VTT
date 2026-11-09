@@ -196,6 +196,7 @@ function textBox(txt, fs) {
 }
 function shapeSvg(sh) {                                          // disegno vettoriale dentro il riquadro dell'oggetto
   const { vw, vh, sw } = sh, p = sw / 2, c = sh.c;
+  if (sh.t === 'pin') return PIN_SVG(c);
   if (sh.t === 'text') {
     const lh = sh.fs * 1.25, tx = sh.txt.split('\n').map((l, i) => `<tspan x="0" y="${+(sh.fs * 0.95 + i * lh).toFixed(1)}">${esc(l) || ' '}</tspan>`).join('');
     return `<svg viewBox="0 0 ${vw} ${vh}" preserveAspectRatio="none"><rect width="${vw}" height="${vh}" fill="transparent"/><text font-family="system-ui, sans-serif" font-size="${sh.fs}" font-weight="600" fill="${c}" stroke="rgba(0,0,0,.45)" stroke-width="${+(sh.fs * 0.05).toFixed(2)}" paint-order="stroke" xml:space="preserve">${tx}</text></svg>`;
@@ -213,9 +214,34 @@ function shapeSvg(sh) {                                          // disegno vett
   // sotto: stessa figura con tratto trasparente più largo, così si clicca facilmente
   return `<svg viewBox="0 0 ${vw} ${vh}" preserveAspectRatio="none">${geo(`fill="none" stroke="transparent" stroke-width="${Math.max(sw, 12)}" ${st}`)}${geo(`fill="${fill}" stroke="${c}" stroke-width="${sw}" ${st}`)}</svg>`;
 }
+// La puntina del master: un segnaposto a goccia, con la punta sul punto scelto. Si cambia solo il colore.
+const PIN_SVG = c => `<svg viewBox="0 0 24 32"><path d="M12 31C12 31 2.5 19.6 2.5 11.5a9.5 9.5 0 0 1 19 0C21.5 19.6 12 31 12 31z" fill="${c}" stroke="rgba(0,0,0,.6)" stroke-width="1.4" stroke-linejoin="round"/>` +
+  `<path d="M12 27.4C9.6 24.4 5 17.6 5 11.6a7 7 0 0 1 14 0c0 6-4.6 12.8-7 15.8z" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="1.2" stroke-dasharray="2.2 1.8"/>` +
+  `<circle cx="12" cy="11.5" r="3.2" fill="#fff"/></svg>`;
+function piazzaPuntina(wx, wy) {
+  const s = (grid.show || grid.snap ? grid.size : 50) * 0.8, w = s * 0.75, h = s;
+  const c = /^#[0-9a-f]{6}$/i.test(settings.colorePuntina || '') ? settings.colorePuntina : '#e53935';
+  if (layer === 'map') setLayer('tokens');
+  createShape({ t: 'pin', c, vw: 24, vh: 32, sw: 0 }, w, h, wx - w / 2, wy - h, layer === 'hidden' ? 'hidden' : 'tokens');
+}
+function colorePuntina(el, c) {
+  if (!/^#[0-9a-f]{6}$/i.test(c)) return;
+  el._shape = { ...el._shape, c }; refreshShape(el);
+  settings.colorePuntina = c;                        // la prossima puntina nasce di questo colore
+  scheduleBoardSave();
+}
+function scegliColorePuntina(el) {
+  const i = document.createElement('input');
+  i.type = 'color'; i.value = el._shape.c; i.style.cssText = 'position:fixed;left:-50px;top:0;opacity:0;width:1px;height:1px';
+  document.body.appendChild(i);
+  i.addEventListener('input', () => colorePuntina(el, i.value));
+  i.addEventListener('change', () => { colorePuntina(el, i.value); i.remove(); });
+  i.addEventListener('blur', () => setTimeout(() => i.remove(), 500));
+  i.click();
+}
 function createShape(sh, w, h, l, t, lay, silent) {
   const el = document.createElement('div');
-  el.className = 'photo shape'; el.dataset.layer = lay || 'tokens'; el._shape = sh;
+  el.className = 'photo shape' + (sh.t === 'pin' ? ' pin' : ''); el.dataset.layer = lay || 'tokens'; el._shape = sh;
   Object.assign(el.style, { width: w + 'px', height: h + 'px', left: l + 'px', top: t + 'px', zIndex: el.dataset.layer === 'map' ? 1 : ++zTop });
   el.innerHTML = shapeSvg(sh);
   addHandles(el);
@@ -409,7 +435,7 @@ rulerPlus.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventD
 rulerGrip.addEventListener('click', () => setRuler(!rulerOn));
 $('unitSel').addEventListener('change', rulerTitle);
 function clearRuler() { clearTimeout(rulerFade); const cera = !!ruler; rulerSvg.replaceChildren(); ruler = null; syncRulerPlus(); if (cera && typeof netRighello === 'function') netRighello(null, true); }
-const cellCenter = (x, y) => { const c = cellOf(x, y), p = cellPos(c.i, c.j); return { x: p.x + grid.size / 2, y: p.y + grid.size / 2 }; };
+const cellCenter = (x, y) => cellCentre(x, y);
 const rp = e => { const x = (e.clientX - view.x) / view.s, y = (e.clientY - view.y) / view.s; return settings.rulerCenter ? cellCenter(x, y) : snapPoint(x, y); };
 // Il righello è un percorso: ruler.pts sono i punti fissati (il primo è la partenza, gli altri le
 // giunzioni) e ruler.b è la fine, che segue il puntatore. Il tasto destro (o «+») fissa la fine e
@@ -609,7 +635,7 @@ function numeraNome(nm, altri) {
 }
 function makeToken(wx, wy) {
   if (layer === 'map') setLayer('tokens');
-  const size = tok.size * (grid.show ? grid.size : 60), p = snapPoint(wx - size / 2, wy - size / 2);
+  const size = tok.size * (grid.show ? grid.size : 60), p = snapPoint(wx - size / 2, wy - size / 2, size, size);
   // se lì c'è già un segnalino, una casella più in là (così non finiscono uno sopra l'altro)
   const altri = [...world.querySelectorAll('.photo')].filter(o => !o._shape && (o.dataset.layer || 'tokens') !== 'map');
   const passo = grid.show ? grid.size : size;
@@ -661,7 +687,7 @@ addEventListener('keydown', e => {
   const step = grid.snap ? grid.size : (e.shiftKey ? 1 : 10) / view.s;      // con l'aggancio: una casella; Maiusc: spostamenti fini
   for (const p of selection) {
     let x = num(p, 'left') + d[0] * step, y = num(p, 'top') + d[1] * step;
-    if (grid.snap) { const q = snapPoint(x, y); x = q.x; y = q.y; }
+    if (grid.snap) { const q = snapPoint(x, y, num(p, 'width'), num(p, 'height')); x = q.x; y = q.y; }
     p.style.left = x + 'px'; p.style.top = y + 'px';
   }
   scheduleBoardSave();
@@ -783,7 +809,11 @@ function toolMenu(el) {
 function mapMenu(e) {
   const pub = settings.publicScene === cur.id;
   return [
-    { label: '📍 Ping qui', fn: () => startPing(e.clientX, e.clientY) },
+    { label: '📍 Ping qui', fn: () => startPing(e.clientX, e.clientY, { pieno: true }) },
+    ...(typeof isMaster !== 'function' || isMaster() ? [
+      { label: '🧑‍🤝‍🧑 Piazza il party', fn: () => piazzaParty((e.clientX - view.x) / view.s, (e.clientY - view.y) / view.s) },
+      { label: '📌 Piazza la puntina', fn: () => piazzaPuntina((e.clientX - view.x) / view.s, (e.clientY - view.y) / view.s) }
+    ] : []),
     { label: 'Centra tutta la mappa', fn: () => fitView(true) },
     '-',
     { label: grid.show ? 'Nascondi la griglia' : 'Mostra la griglia', fn: () => { grid.show = !grid.show; paintGrid(); syncSceneGrid(); scheduleBoardSave(); } },

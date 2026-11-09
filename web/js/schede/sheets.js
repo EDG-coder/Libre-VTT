@@ -230,7 +230,7 @@ function renderSheetList() {
     const d = document.createElement('div'), im = new Image(), nm = document.createElement('span'), sm = document.createElement('small');
     d.className = 'sheetItem'; d.dataset.id = s.id; d.draggable = true; d.title = document.documentElement.classList.contains('ui-touch') ? 'Tocca per aprire, tieni premuto per le altre opzioni' : 'Doppio clic per aprire, trascina sulla mappa per il segnalino';
     im.className = 'sicon'; im.src = iconOf(s); im.alt = ''; im.draggable = false;
-    nm.className = 'nm'; nm.textContent = s.name; sm.textContent = { standard: 'Standard', dnd5e: 'Open 5e', simple: 'Open semplice' }[s.tpl] || '';
+    nm.className = 'nm'; nm.textContent = s.name; sm.textContent = (nelParty(s) ? '🧑‍🤝‍🧑 ' : '') + ({ standard: 'Standard', dnd5e: 'Open 5e', simple: 'Open semplice' }[s.tpl] || '');
     d.append(im, nm, sm);
     d.addEventListener('dblclick', () => openSheet(s.id));
     // copia = segnalino sulla mappa; sposta = in una cartella dell'elenco
@@ -262,11 +262,64 @@ function duplicateSheet(id) {
   if (typeof cartellaSchedaCopiata === 'function') cartellaSchedaCopiata(id, c.id); renderSheetList(); scheduleSheets();
   if (typeof onSheetCreated === 'function') onSheetCreated(c);
 }
+// ---------- Il party ----------
+// Una scheda «nel party» (campo f.party, così si salva, si esporta e in partita arriva a tutti come gli
+// altri campi): il master la mette in campo con «Piazza il party» (clic destro sulla mappa), e il suo
+// segnalino vede e scopre la mappa con la luce dinamica. La segna il master o chi ha la scheda.
+const nelParty = s => !!(s && s.f && s.f.party);
+const avvisaMappa = (t, k) => (typeof netSay === 'function' ? netSay(t, k) : setStatus(t));
+function impostaParty(s, si) {
+  if (!s) return;
+  s.f = s.f || {};
+  if (si) s.f.party = '1'; else delete s.f.party;
+  if (typeof schedaCambiata === 'function') schedaCambiata(s); else scheduleSheets();
+  renderSheetList();
+  if (typeof luceRidisegna === 'function') luceRidisegna();
+}
+/** Mette in campo i personaggi del party attorno al punto (wx, wy), una casella ciascuno. Chi ha già il
+ *  suo segnalino in questa scena (livello Segnalini) lo vede spostato lì; agli altri se ne crea uno. */
+function piazzaParty(wx, wy) {
+  const party = sheets.filter(nelParty);
+  if (!party.length) return avvisaMappa(tr('Nessuna scheda nel party: aggiungile con il clic destro su una scheda o da ⚙ Avanzate.'));
+  if (layer !== 'tokens') setLayer('tokens');
+  const size = grid.show || grid.snap ? grid.size : 60;
+  // i posti: il centro e poi in cerchi sempre più larghi, una casella di distanza (con l'aggancio, al centro delle caselle)
+  const posti = [], occupato = (x, y) => posti.some(p => Math.hypot(p.x - x, p.y - y) < size * 0.6);
+  for (let anello = 0; posti.length < party.length && anello < 12; anello++) {
+    const n = anello ? Math.max(6, Math.round(2 * Math.PI * anello)) : 1;
+    for (let k = 0; k < n && posti.length < party.length; k++) {
+      const a = k / n * 2 * Math.PI;
+      let x = wx + Math.cos(a) * anello * size, y = wy + Math.sin(a) * anello * size;
+      if (grid.snap) ({ x, y } = cellCentre(x, y));
+      if (!occupato(x, y)) posti.push({ x, y });
+    }
+  }
+  const esistenti = [...world.querySelectorAll('.photo')].filter(p => !p._shape && (p.dataset.layer || 'tokens') === 'tokens');
+  const messi = [];
+  party.forEach((sh, i) => {
+    const pos = posti[i] || posti[posti.length - 1];
+    let el = esistenti.find(p => p.dataset.sheet === sh.id);
+    if (el) {
+      el.style.left = pos.x - num(el, 'width') / 2 + 'px'; el.style.top = pos.y - num(el, 'height') / 2 + 'px';
+      el.style.zIndex = ++zTop;
+    } else {
+      el = createPhoto(iconOf(sh), size, size, pos.x - size / 2, pos.y - size / 2, sh.icon && sh.icon.aid, true, 'tokens');
+      el.dataset.sheet = sh.id; el.dataset.name = sh.name;
+      if (typeof applyLook === 'function') applyLook(el);
+    }
+    messi.push(el);
+  });
+  setSelection(messi);
+  updateTokenBars(); scheduleBoardSave();
+  avvisaMappa(tr('Party piazzato: {n} personaggi.', { n: messi.length }));
+}
+
 // In partita un giocatore cancella solo le schede sue; quelle degli altri le può nascondere dalla sua lista.
 const sheetItemMenu = id => {
   const s = sheets.find(x => x.id === id), mia = !s || typeof schedaMia !== 'function' || schedaMia(s);
   return [
     { label: '📜 Apri', fn: () => openSheet(id) },
+    ...(s && mia ? [{ label: (nelParty(s) ? '✓ ' : '') + '🧑‍🤝‍🧑 Nel party', fn: () => impostaParty(s, !nelParty(s)) }] : []),
     { label: '🖼 Cambia icona…', fn: () => (typeof scegliIconaScheda === 'function' ? scegliIconaScheda(s) : pickAsset(a => setSheetIcon(s, a))) },
     { label: 'Duplica', fn: () => duplicateSheet(id) },
     ...(typeof menuCartellaPerScheda === 'function' ? menuCartellaPerScheda(id) : []),
@@ -281,7 +334,7 @@ function tokenFromSheet(s, wx, wy) {
   const fit = grid.show && grid.fitToken, size = fit ? grid.size : 60;
   let l = wx - size / 2, t = wy - size / 2;
   if (fit && grid.snap) ({ x: l, y: t } = cellFit(wx, wy, size, size));
-  else { const p = snapPoint(l, t); l = p.x; t = p.y; }
+  else { const p = snapPoint(l, t, size, size); l = p.x; t = p.y; }
   const el = createPhoto(iconOf(s), size, size, l, t, s.icon && s.icon.aid, false, layer === 'hidden' ? 'hidden' : 'tokens');
   el.dataset.sheet = s.id; el.dataset.name = s.name;
   updateTokenBars(); scheduleBoardSave();
@@ -328,6 +381,11 @@ function tokenMenu(el) {
     if (s) items.push({ label: 'Scollega dalla scheda', fn: () => { delete el.dataset.sheet; scheduleBoardSave(); } });
     items.push('-');
   } else if (el._shape.t === 'text') items.push({ label: '✎ Modifica il testo', fn: () => editText(el) }, '-');
+  else if (el._shape.t === 'pin') items.push({ label: '🎨 Colore della puntina', items: [
+    ...[['#e53935', 'Rosso'], ['#fb8c00', 'Arancione'], ['#fdd835', 'Giallo'], ['#43a047', 'Verde'], ['#1e88e5', 'Azzurro'], ['#8e24aa', 'Viola'], ['#212121', 'Nero'], ['#ffffff', 'Bianco']]
+      .map(([c, n]) => ({ label: (el._shape.c === c ? '✓ ' : '') + n, fn: () => colorePuntina(el, c) })),
+    { label: '🎨 Altro colore…', fn: () => scegliColorePuntina(el) }
+  ] }, '-');
   items.push(
     { label: many ? `Copia (${group.length})` : 'Copia', fn: () => copySel() },
     { label: many ? `Duplica (${group.length})` : 'Duplica', fn: () => setSelection(group.map(p => duplicatePhoto(p))) },

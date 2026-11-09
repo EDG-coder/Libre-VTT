@@ -498,6 +498,18 @@ body.menu-open #sideToggle svg { transform: rotate(180deg); }
   box-shadow: 0 0 16px var(--pc, #ff4d4d), inset 0 0 14px color-mix(in srgb, var(--pc, #ff4d4d) 55%, transparent);
   will-change: width, height, opacity;
 }
+/* il ping a onde: anelli pieni del colore scelto, senza riempimento (misure e spessore da script) */
+.pingOnda {
+  position: absolute; box-sizing: border-box; border-radius: 50%; transform: translate(-50%, -50%);
+  border: 6px solid var(--pc, #ff4d4d);
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, .35));
+  will-change: width, height, opacity, border-width;
+}
+@media (prefers-reduced-motion: reduce) { .pingOnda { filter: none; } }
+#pingForm [hidden] { display: none !important; }
+/* la puntina: non si ridimensiona, si sposta e basta */
+.photo.shape.pin .handle { display: none !important; }
+.photo.shape.pin svg { width: 100%; height: 100%; display: block; overflow: visible; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .45)); }
 @media (prefers-reduced-motion: reduce) {
   .sectBody, .sectHead .chev, #sideGrip::after { transition: none; }
 }
