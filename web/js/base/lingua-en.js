@@ -1362,6 +1362,8 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "annulla (Maiusc per ripetere).": "undoes (Shift to redo).",
 "per i tiri rapidi. In chat": "for quick rolls. In chat",
 "sussurra: lo vedete solo voi due e il master.": "whispers: only the two of you and the GM see it.",
+"Con il mouse su un segnalino tieni premuto": "With the mouse over a token, hold",
+"(⌥ Option su Mac): lo vedi intero e grande quanto lo schermo finché non lasci il tasto.": "(⌥ Option on Mac): you see the whole token as big as the screen until you let go of the key.",
 "Ancora niente: qui compaiono i messaggi del tavolo e della sessione quando parte una campagna.": "Nothing yet: messages from the table and the session show up here when a campaign starts.",
 "collegamento a distanza pronto": "remote connection ready",
 "collegamento a distanza da preparare": "remote connection to be set up",

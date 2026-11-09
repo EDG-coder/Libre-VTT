@@ -1169,3 +1169,15 @@ html.ui-tel #turniBarra .tbTesta { font-size: 13px; padding: 6px 10px; gap: 8px;
 #righelliSvg text { font: 600 14px system-ui, sans-serif; paint-order: stroke; stroke: rgba(0, 0, 0, .75); stroke-width: 4px; fill: #fff; }
 #righelliSvg text.pezzo { font-size: 11px; font-weight: 500; opacity: .9; }
 #righelliSvg text.chi { font-size: 13px; font-weight: 700; }
+
+/* Alt (⌥ Option) tenuto sopra un segnalino: lo si vede intero, grande quanto la finestra */
+#anteprimaSegnalino {
+  position: fixed; inset: 0; z-index: 2147483000; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(8, 10, 16, .82);
+}
+#anteprimaSegnalino img {
+  width: 94vw; height: 94vh; object-fit: contain;
+  filter: drop-shadow(0 6px 24px rgba(0, 0, 0, .6));
+  user-select: none;
+}
