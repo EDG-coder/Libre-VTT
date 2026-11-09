@@ -1934,6 +1934,8 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Oppure uno sfondo animato: GIF, WebP animato o video mp4/webm in loop, senza audio (al massimo 25 MB).": "Or an animated background: GIF, animated WebP or a looping mp4/webm video, without sound (25 MB at most).",
 "Sfondi animati in movimento": "Animated backgrounds in motion",
 "GIF e video delle scene. Spento, si vede il primo fotogramma: consuma meno batteria. Vale per questo dispositivo.": "GIFs and videos of the scenes. When off you see the first frame: it uses less battery. Applies to this device.",
+"Grafica leggera": "Light graphics",
+"Per tablet e telefoni lenti: zoom e spostamenti più fluidi, senza sfocature dietro i pannelli né ombre sotto i segnalini. Si accende da sola sui dispositivi con poca memoria. Vale per questo dispositivo.": "For slow tablets and phones: smoother zoom and panning, without blur behind the panels or shadows under the tokens. It turns on by itself on devices with little memory. Applies to this device.",
 "Questo video non si apre in questo browser: prova un mp4 (H.264) o un webm.": "This video doesn't open in this browser: try an mp4 (H.264) or a webm.",
 "Video troppo grande (massimo 25 MB): accorcialo o abbassane la risoluzione.": "Video too large (25 MB at most): shorten it or lower its resolution.",
 "Immagine animata troppo grande (massimo 12 MB).": "Animated image too large (12 MB at most).",
