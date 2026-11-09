@@ -2629,5 +2629,24 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "🎨 Colore della puntina": "🎨 Pin colour",
 "🎨 Altro colore…": "🎨 Other colour…",
 "Arancione": "Orange",
-"Viola": "Purple"
+"Viola": "Purple",
+
+// ---------- sito web: ingresso, uscita e sessione ----------
+"Mi collego alla partita…": "Connecting to the game…",
+"Il master si è scollegato: la partita è chiusa. Potrai rientrare quando la riapre.": "The GM disconnected: the game is closed. You can join again when they reopen it.",
+"Il master non ha aperto la partita (o non ha acceso «Partita pubblica»). Riprova quando ti dice che è pronta.": "The GM hasn't opened the game (or hasn't switched on «Public game»). Try again when they tell you it's ready.",
+"La partita è piena: non c'è posto per altri giocatori.": "The game is full: there's no room for more players.",
+"Il collegamento è stato chiuso.": "The connection was closed.",
+"Non riesco a raggiungere il server della partita: controlla la connessione e riprova.": "I can't reach the game server: check your connection and try again.",
+"Esci dalla partita": "Leave the game",
+"Sei nella partita come «{n}».": "You're in the game as «{n}».",
+"Non sei collegato alla partita.": "You're not connected to the game.",
+"(tu)": "(you)",
+"Sei uscito dalla partita.": "You left the game.",
+"Chiuso dal master.": "Closed by the GM.",
+"La stanza è piena.": "The room is full.",
+"Messaggio troppo grande.": "Message too large.",
+"Troppi messaggi: rallenta.": "Too many messages: slow down.",
+"Il master si è scollegato.": "The GM disconnected.",
+"Presentazione non valida.": "Invalid handshake."
 });

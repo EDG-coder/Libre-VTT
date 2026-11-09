@@ -154,7 +154,7 @@ function netConnect() {
     let m; try { m = JSON.parse(e.data); } catch { return; }
     netHandle(m);
   };
-  ws.onclose = () => netCaduto(ws);
+  ws.onclose = e => netCaduto(ws, e);
   ws.onerror = () => {};
 }
 /** Il saluto: chi sono e da dove riparto. Si rimanda (sullo stesso collegamento) quando, davanti alla porta, si
@@ -169,13 +169,22 @@ function netSaluta(ws = NET.ws) {
     plugins: C ? 1 : undefined, pluginsOk: C ? C.perSaluto() : undefined }));
 }
 /** Il collegamento locale è caduto (o lo diamo per morto noi): ci si ricollega. */
-function netCaduto(ws) {
+function netCaduto(ws, e) {
   if (NET.ws !== ws) return;                                  // uno vecchio, già sostituito
   NET.ws = null;
   clearTimeout(NET._eco); NET._eco = 0;
   try { ws.close(); } catch {}
   const was = NET.on;
   NET.on = false;
+  // dal sito: il relay dice perché ha chiuso (il master non c'è, se n'è andato, stanza piena…). Se gioca-web.js
+  // decide che non si deve insistere, si esce dalla partita e si torna alla schermata d'ingresso.
+  if (NET.relay && typeof window.libreWebChiuso === 'function' && window.libreWebChiuso(e ? e.code : 0, e ? String(e.reason || '') : '')) {
+    NET.stopped = true; NET.retrying = false; NET.hostDown = false;
+    clearTimeout(netTimer); netTimer = 0;
+    if (window.LIBRE && window.LIBRE.condivisi) window.LIBRE.condivisi.fuori();
+    if (was || NET.me) applyRole();
+    return;
+  }
   if (NET.everOn && !NET.manual && !NET.stopped) NET.retrying = true;
   if (was) applyRole();
   netRetry();
@@ -264,6 +273,7 @@ function netHandle(m) {
       return;
     case 'welcome': {
       if (window.LIBRE && window.LIBRE.condivisi) window.LIBRE.condivisi.dentro();   // davanti alla porta non si sta più
+      if (typeof window.libreWebEntrato === 'function') window.libreWebEntrato();   // dal sito: via la schermata d'ingresso
       const back = NET.retrying || NET.hostDown;
       NET.on = true; NET.everOn = true; NET.me = m.you;
       NET.giocatore = m.you.role !== 'master';
@@ -387,6 +397,7 @@ function netHandle(m) {
     case 'pending':
       NET.pending = true;
       netSay('Sei in sala d\'attesa: il master deve farti entrare.', 'live');
+      if (typeof window.libreWebAttesa === 'function') window.libreWebAttesa();
       return;
     case 'session':
       NET.session = m.session || {};
