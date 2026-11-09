@@ -2610,6 +2610,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 
 // ---------- forma della griglia, ping, party e puntina ----------
 "Forma delle caselle": "Cell shape",
+"Rotazione della casella": "Cell rotation",
 "Quadrati": "Squares",
 "Esagoni": "Hexagons",
 "Triangoli": "Triangles",
