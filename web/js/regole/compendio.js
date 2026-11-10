@@ -7,6 +7,11 @@
 // l'elenco e, per i pacchetti della campagna, il contenuto come un file del deposito (gs:<hash>).
 //
 // Una voce: { id, tipo, nome, en?, fonte, testo, …campi del suo tipo } (vedi strumenti/srd/converti.js).
+//
+// I manuali importati (pacchetti «privato», letti da un PDF che chi gioca possiede: compendio-manuale.js)
+// restano solo su questo dispositivo: nel catalogo privato dell'app (server/manuali-privati.js) o, sul sito,
+// nel browser (IndexedDB). Non si mandano ai giocatori, non si esportano, e il loro testo non si copia
+// nelle schede o nei file da tradurre: solo nomi e numeri del gioco. Ognuno importa il suo manuale.
 (function () {
   const tr = window.tr || (s => s);
   const $ = id => document.getElementById(id);
@@ -31,6 +36,54 @@
     pronto: false, caricando: null
   };
   const chiave = v => v._p + '|' + v.id;
+  // ---------- i manuali privati ----------
+  const privatoP = p => !!(p && p.privato);
+  const privataV = v => !!v && privatoP(C.pacchetti.find(p => p.id === v._p));
+  /** La voce viene da un manuale importato? Allora il suo testo non esce da questo dispositivo. */
+  window.compendioPrivata = privataV;
+  /** Il testo da copiare fuori dal compendio (in una scheda…): vuoto se la voce viene da un manuale importato. */
+  window.compendioTestoCopiabile = (v, t) => privataV(v) ? '' : (t || '');
+  // Sul sito non c'è un server sul computer: i manuali importati stanno nel browser (IndexedDB), solo lì.
+  const IDB = (() => {
+    let db = null;
+    const apri = () => db || (db = new Promise((ok, no) => {
+      const r = indexedDB.open('libre-manuali-privati', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('pacchetti', { keyPath: 'id' });
+      r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error);
+    }));
+    const fai = async (modo, fn) => { const d = await apri(); return new Promise((ok, no) => { const t = d.transaction('pacchetti', modo); const r = fn(t.objectStore('pacchetti')); t.oncomplete = () => ok(r && r.result); t.onerror = () => no(t.error); }); };
+    return {
+      tutti: () => fai('readonly', st => st.getAll()).catch(() => []),
+      prendi: id => fai('readonly', st => st.get(id)).catch(() => null),
+      metti: rec => fai('readwrite', st => st.put(rec)),
+      togli: id => fai('readwrite', st => st.delete(id))
+    };
+  })();
+  const nelBrowser = () => !!window.LIBRE_WEB;
+  // salva voci in un pacchetto del browser, come fa POST api/compendio/pacchetto sul computer
+  async function salvaNelBrowser({ pacchetto = {}, voci = {}, unisci }) {
+    const vecchio = unisci ? await IDB.prendi(unisci) : null;
+    const slug = String(pacchetto.id || pacchetto.nome || 'manuale').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w.-]+/g, '-').slice(0, 50) || 'manuale';
+    let id = vecchio ? vecchio.id : slug, i = 2;
+    if (!vecchio) while (await IDB.prendi(id)) id = slug + '-' + i++;
+    const rec = vecchio || { id, pacchetto: {}, voci: {} };
+    rec.pacchetto = { ...rec.pacchetto, ...pacchetto, id, formato: 'libre-vtt-pacchetto', privato: true };
+    for (const [tipo, arr] of Object.entries(voci)) {
+      if (!/^[a-z]{2,20}$/.test(tipo) || !Array.isArray(arr)) continue;
+      const prima = new Map((rec.voci[tipo] || []).map(v => [v.id, v]));
+      for (const v of arr) { if (!v || !v.nome) continue; v.tipo = tipo; v.id = v.id || tipo + ':' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); if (v._via) prima.delete(v.id); else prima.set(v.id, v); }
+      rec.voci[tipo] = [...prima.values()].sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'it'));
+    }
+    rec.pacchetto.voci = Object.fromEntries(Object.entries(rec.voci).map(([t, a]) => [t, a.length]));
+    await IDB.metti(rec);
+    return id;
+  }
+  // i manuali di chi gioca, da questo dispositivo: dal server sul computer o dal browser
+  async function manualiMiei() {
+    if (nelBrowser()) return (await IDB.tutti()).map(r => ({ ...r.pacchetto, id: r.id, privato: true, mio: true, locale: true, tipi: Object.keys(r.voci || {}) }));
+    const mio = await prendi('api/compendio');
+    return ((mio && mio.pacchetti) || []).filter(p => p.privato).map(p => ({ ...p, mio: true }));
+  }
   const visibilePack = p => (C.vis.pacchetti[p.id] || p.visibile || 'tutti') !== 'master';
   const visibileVoce = v => (C.vis.voci[chiave(v)] || (visibilePack(C.pacchetti.find(p => p.id === v._p) || {}) ? 'tutti' : 'master')) !== 'master';
 
@@ -44,7 +97,10 @@
   const prendi = u => fetch(u, { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
   async function caricaPack(p, filtro) {
     const voci = [];
-    if (p.hash) {                                     // arrivato dal master: un file solo con tutto dentro
+    if (p.locale) {                                   // un manuale salvato nel browser (sito)
+      const r = await IDB.prendi(p.id);
+      for (const [t, arr] of Object.entries((r && r.voci) || {})) if (Array.isArray(arr)) voci.push(...arr.map(v => tipoGiusto({ ...v }, t)));
+    } else if (p.hash) {                                     // arrivato dal master: un file solo con tutto dentro
       const j = await prendi(typeof netAssetUrl === 'function' ? netAssetUrl(p.hash) : 'asset/' + p.hash);
       if (j && j.voci) for (const [t, arr] of Object.entries(j.voci)) if (Array.isArray(arr)) voci.push(...arr.map(v => tipoGiusto(v, t)));
     } else {
@@ -67,10 +123,13 @@
           if (x.url || x.hash) elenco.push(x);
         }
         C.vis = { pacchetti: {}, voci: {}, giocatoriImportano: !!(w && w.giocatoriImportano) };
-        if (C.vis.giocatoriImportano) {                 // i pacchetti che il giocatore ha importato per sé
+        if (C.vis.giocatoriImportano && !nelBrowser()) { // i pacchetti che il giocatore ha importato per sé
           const mio = await prendi('api/compendio');
-          for (const p of (mio && mio.pacchetti) || []) if (!p.base) elenco.push({ ...p, mio: true });
+          for (const p of (mio && mio.pacchetti) || []) if (!p.base && !p.privato) elenco.push({ ...p, mio: true });
         }
+        // i manuali che il giocatore ha importato dal suo PDF: sempre, e solo per lui
+        const ids = new Set(elenco.map(p => p.id));
+        for (const p of await manualiMiei()) if (!ids.has(p.id)) elenco.push(p);
       } else {
         const r = await prendi('api/compendio');
         if (r) { elenco = r.pacchetti || []; C.vis = { pacchetti: {}, voci: {}, giocatoriImportano: false, ...(r.visibilita || {}) }; }
@@ -78,6 +137,7 @@
           const sis = (typeof SISTEMA !== 'undefined' && SISTEMA.id) || 'dnd5e-2014';
           for (const id of ['srd-5.1', 'srd-5.2']) { const p = await prendi(`sistemi/${sis}/compendio/${id}/pacchetto.json`); if (p) elenco.push({ ...p, base: true, url: `sistemi/${sis}/compendio/${id}/`, tipi: Object.keys(p.voci || {}) }); }
         }
+        if (nelBrowser()) elenco.push(...await manualiMiei());   // sul sito, i manuali salvati in questo browser
       }
       C.pacchetti = elenco;
       // il file di traduzione della campagna (in partita lo manda il master)
@@ -158,13 +218,17 @@
     const firma = JSON.stringify([C.pacchetti.map(p => p.id), C.vis, Object.keys(C.traduzioni || {}).length, C._tradVer || 0]);
     if (C._rete && C._reteFirma === firma) return C._rete;
     const out = { pacchetti: [], giocatoriImportano: !!C.vis.giocatoriImportano };
-    if (C.traduzioni && Object.keys(C.traduzioni).length) {
-      const buf = new TextEncoder().encode(JSON.stringify({ voci: C.traduzioni }));
+    // le traduzioni delle voci dei manuali privati non escono (sarebbe il loro testo)
+    const idPrivati = new Set(C.voci.filter(privataV).flatMap(v => [v.id, v.tipo + ':' + v.id]));
+    const tradRete = Object.fromEntries(Object.entries(C.traduzioni || {}).filter(([id]) => !idPrivati.has(id)));
+    if (Object.keys(tradRete).length) {
+      const buf = new TextEncoder().encode(JSON.stringify({ voci: tradRete }));
       const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', buf))].map(b => b.toString(16).padStart(2, '0')).join('');
       if (typeof netPutAsset === 'function' && !(NET.assetKnown && NET.assetKnown.has(hash))) { if (await netPutAsset(hash, buf, 'application/json', 'traduzioni-it.json')) NET.assetKnown && NET.assetKnown.add(hash); }
       out.traduzioni = hash;
     }
     for (const p of C.pacchetti) {
+      if (privatoP(p)) continue;                        // un manuale importato non va mai ai giocatori
       if (!visibilePack(p) && !Object.entries(C.vis.voci).some(([k, v]) => k.startsWith(p.id + '|') && v === 'tutti')) continue;
       const sue = C.voci.filter(v => v._p === p.id);
       const nascoste = sue.filter(v => !visibileVoce(v)).map(v => v.id);
@@ -450,6 +514,7 @@
     }
     const p = C.pacchetti.find(x => x.id === v._p);
     if (p && p.licenza) h += `<p class="cvLic">${esc(p.licenza)}</p>`;
+    if (privatoP(p)) h += `<p class="cvLic">🔒 ${esc(tr('Dal tuo manuale: resta solo su questo dispositivo, non la vede nessun altro.'))}</p>`;
     return h;
   }
   function pulsantiVoce(v) {
@@ -457,10 +522,11 @@
     b.push(['💬', 'Mostra in chat', () => inChat(v)]);
     if (v.tipo === 'mostro' && conduco()) b.push(['🎯', 'Sulla mappa', () => mostroSullaMappa(v)]);
     if (v.tipo === 'oggetto' || v.tipo === 'incantesimo') b.push(['➕', 'Aggiungi a una scheda', () => sceltaScheda(v)]);
-    if (conduco()) b.push([visibileVoce(v) ? '🙈' : '👁', visibileVoce(v) ? 'Nascondi ai giocatori' : 'Mostra ai giocatori', () => nascondi(v)]);
-    const p = C.pacchetti.find(x => x.id === v._p);
-    if (p && !p.base && !p.hash && conduco()) { b.push(['✎', 'Modifica', () => editor(v)]); b.push(['🗑', 'Elimina', () => eliminaVoce(v)]); }
-    if (conduco() && !giocatore()) b.push(['📋', 'Copia come voce nuova (homebrew)', () => editor(v, true)]);
+    const p = C.pacchetti.find(x => x.id === v._p), priv = privatoP(p);
+    if (conduco() && !priv) b.push([visibileVoce(v) ? '🙈' : '👁', visibileVoce(v) ? 'Nascondi ai giocatori' : 'Mostra ai giocatori', () => nascondi(v)]);
+    if (p && !p.base && !p.hash && (conduco() || (priv && p.mio))) { b.push(['✎', 'Modifica', () => editor(v)]); b.push(['🗑', 'Elimina', () => eliminaVoce(v)]); }
+    // copiarla nell'homebrew della campagna la manderebbe ai giocatori: non per le voci dei manuali
+    if (conduco() && !giocatore() && !priv) b.push(['📋', 'Copia come voce nuova (homebrew)', () => editor(v, true)]);
     return b;
   }
   const finestre = new Map();
@@ -583,8 +649,9 @@
         f['ad' + i] = (a.danni || []).map(d => d.dadi + (d.tipo ? ' ' + d.tipo.toLowerCase() : '')).join(' + ');
         i++;
       }
-      const blocco = (tit, arr) => arr && arr.length ? `${tit}\n` + arr.map(a => `${a.nome}${a.uso ? ' (' + a.uso + ')' : ''}. ${a.testo}${Number.isFinite(a.colpire) ? ` [[1d20${a.colpire >= 0 ? '+' : ''}${a.colpire} | ${a.nome}]]` : ''}${(a.danni || []).map(d => ` [[${d.dadi} | ${a.nome} ${d.tipo || ''}]]`).join('')}`).join('\n\n') + '\n\n' : '';
-      f.features = (blocco(tr('TRATTI'), v.tratti) + blocco(tr('AZIONI'), v.azioni) + blocco(tr('AZIONI BONUS'), v.azioniBonus) + blocco(tr('REAZIONI'), v.reazioni) + blocco(tr('AZIONI LEGGENDARIE'), v.leggendarie)).trim();
+      const priv = privataV(v);                         // da un manuale: nomi e tiri sì, il testo no
+      const blocco = (tit, arr) => arr && arr.length ? `${tit}\n` + arr.map(a => `${a.nome}${a.uso ? ' (' + a.uso + ')' : ''}.${priv ? '' : ' ' + (a.testo || '')}${Number.isFinite(a.colpire) ? ` [[1d20${a.colpire >= 0 ? '+' : ''}${a.colpire} | ${a.nome}]]` : ''}${(a.danni || []).map(d => ` [[${d.dadi} | ${a.nome} ${d.tipo || ''}]]`).join('')}`).join('\n\n') + '\n\n' : '';
+      f.features = (priv ? `📖 ${tr('Il testo completo è nel tuo compendio: «{n}».', { n: v.nome })}\n\n` : '') + (blocco(tr('TRATTI'), v.tratti) + blocco(tr('AZIONI'), v.azioni) + blocco(tr('AZIONI BONUS'), v.azioniBonus) + blocco(tr('REAZIONI'), v.reazioni) + blocco(tr('AZIONI LEGGENDARIE'), v.leggendarie)).trim();
       f.racial = [v.sensi && tr('Sensi') + ': ' + v.sensi, v.lingue && tr('Linguaggi') + ': ' + v.lingue, v.resistenze && tr('Resistenze') + ': ' + v.resistenze, v.immunita && tr('Immunità') + ': ' + v.immunita, v.immCondizioni && tr('Immunità alle condizioni') + ': ' + v.immCondizioni].filter(Boolean).join('\n');
     } else {
       f.desc = [v.taglia, v.tipoCreatura, 'GS ' + v.gs, 'CA ' + v.ca, 'PF ' + v.pf].join(' · ');
@@ -639,7 +706,7 @@
       const L = v.livello || 0;
       let i = 0; while (i < 200 && ((f[`sp${L}_${i}`] || '').trim() || (f[`sp${L}_${i}_d`] || '').trim())) i++;
       f[`sp${L}_${i}`] = v.nome + (v.danni ? ` [[${v.danni} | ${v.nome}]]` : '');
-      f[`sp${L}_${i}_d`] = [`${v.livello ? tr('Livello {n}', { n: v.livello }) : tr('Trucchetto')} · ${v.scuola || ''}`, `${v.tempo || ''} · ${v.gittata || ''} · ${v.componenti || ''} · ${v.concentrazione ? tr('Concentrazione') + ', ' : ''}${v.durata || ''}`, '', v.testo || '', v.superiore ? '\n' + v.superiore : ''].join('\n').trim();
+      f[`sp${L}_${i}_d`] = [`${v.livello ? tr('Livello {n}', { n: v.livello }) : tr('Trucchetto')} · ${v.scuola || ''}`, `${v.tempo || ''} · ${v.gittata || ''} · ${v.componenti || ''} · ${v.concentrazione ? tr('Concentrazione') + ', ' : ''}${v.durata || ''}`, '', privataV(v) ? `📖 ${tr('Il testo completo è nel tuo compendio: «{n}».', { n: v.nome })}` : v.testo || '', !privataV(v) && v.superiore ? '\n' + v.superiore : ''].join('\n').trim();
     }
     scheduleSheets();
     const w = wins.get(s.id);
@@ -733,11 +800,21 @@
   }
   window.compendioEditor = editor;
   async function salvaVoci(pack, voci, pacchetto) {
+    if (nelBrowser() && privatoP(C.pacchetti.find(p => p.id === pack))) {
+      try { await salvaNelBrowser({ pacchetto: { id: pack, ...pacchetto }, voci, unisci: pack }); return true; }
+      catch (e) { alert(tr('Non sono riuscito a salvarla.') + ' ' + e.message); return false; }
+    }
     const r = await fetch('api/compendio/pacchetto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pacchetto: { id: pack, ...pacchetto }, voci, unisci: pack }) }).catch(() => null);
     if (!r || !r.ok) { alert(tr('Non sono riuscito a salvarla.') + (r ? ' ' + await r.text() : '')); return false; }
     return true;
   }
   window.compendioSalvaPacchetto = async (pacchetto, voci) => {
+    if (nelBrowser()) {                                 // sul sito: solo i manuali, e solo in questo browser
+      if (!pacchetto || !pacchetto.privato) throw new Error(tr('Dal sito si possono importare solo i tuoi manuali.'));
+      const id = await salvaNelBrowser({ pacchetto, voci });
+      await ricaricaCompendio();
+      return id;
+    }
     const r = await fetch('api/compendio/pacchetto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pacchetto, voci }) }).catch(() => null);
     if (!r || !r.ok) throw new Error(r ? await r.text() : tr('server spento'));
     await ricaricaCompendio();
@@ -806,12 +883,13 @@
     const disegnaP = () => {
       dlg.innerHTML = `<h3>${esc(tr('Pacchetti del compendio'))}</h3><div class="compPL">${C.pacchetti.map(p => {
         const n = C.voci.filter(v => v._p === p.id).length, vis = visibilePack(p);
-        return `<div class="compP" data-id="${esc(p.id)}"><div><b>${esc(p.nome)}</b> <small>${esc(tr('{n} voci', { n }))}${p.base ? ' · ' + esc(tr('di base')) : ''}${p.usoPersonale ? ' · ' + esc(tr('uso personale')) : ''}</small><br><small class="compLic">${esc(p.licenza || '')}</small></div>
-          <div class="compPB">${conduco() && !giocatore() ? `<button type="button" class="btn ghost" data-a="vis" title="${esc(vis ? tr('Lo vedono anche i giocatori') : tr('Lo vedi solo tu'))}">${vis ? '👁 ' + esc(tr('Tutti')) : '🙈 ' + esc(tr('Solo master'))}</button>` : ''}
-          ${!giocatore() || p.mio ? `<button type="button" class="btn ghost" data-a="esp">📤 ${esc(tr('Esporta'))}</button>` : ''}
+        const priv = privatoP(p);
+        return `<div class="compP" data-id="${esc(p.id)}"><div><b>${esc(p.nome)}</b> <small>${esc(tr('{n} voci', { n }))}${p.base ? ' · ' + esc(tr('di base')) : ''}${priv ? ' · 🔒 ' + esc(tr('manuale privato, solo su questo dispositivo')) : p.usoPersonale ? ' · ' + esc(tr('uso personale')) : ''}</small><br><small class="compLic">${esc(p.licenza || '')}</small></div>
+          <div class="compPB">${conduco() && !giocatore() && !priv ? `<button type="button" class="btn ghost" data-a="vis" title="${esc(vis ? tr('Lo vedono anche i giocatori') : tr('Lo vedi solo tu'))}">${vis ? '👁 ' + esc(tr('Tutti')) : '🙈 ' + esc(tr('Solo master'))}</button>` : ''}
+          ${(!giocatore() || p.mio) && !priv ? `<button type="button" class="btn ghost" data-a="esp">📤 ${esc(tr('Esporta'))}</button>` : ''}
           ${!p.base && (!giocatore() || p.mio) ? `<button type="button" class="btn ghost" data-a="via">🗑</button>` : ''}</div></div>`;
       }).join('') || `<p class="note">${esc(tr('Nessun pacchetto.'))}</p>`}</div>
-      ${!giocatore() && typeof window.apriImportaManuale === 'function' ? `<div class="row compManB"><button type="button" class="btn ghost" data-a="manuale">📖 ${esc(tr('Importa da un manuale che possiedi…'))}</button></div>` : ''}
+      ${typeof window.apriImportaManuale === 'function' ? `<div class="row compManB"><button type="button" class="btn ghost" data-a="manuale">📖 ${esc(tr('Importa da un manuale che possiedi…'))}</button></div>` : ''}
       ${conduco() && !giocatore() ? `<label class="check"><input type="checkbox" id="compGioImp" ${C.vis.giocatoriImportano ? 'checked' : ''}> ${esc(tr('I giocatori possono importare pacchetti per sé'))}</label>
       <div class="compTrad"><b>🌐 ${esc(tr('Traduzione in italiano'))}</b> <small>${esc(tr('{n} voci tradotte dal file della campagna', { n: Object.keys(C.traduzioni || {}).length }))}</small>
         <p class="note">${esc(tr('Scarica il file, scrivi «nome» e «testo» in italiano per le voci che vuoi (le altre lasciale vuote) e ricaricalo: il compendio lo usa da solo, anche per i giocatori.'))}</p>
@@ -831,8 +909,10 @@
         if (p.usoPersonale && !confirm(tr('Questo pacchetto è segnato «uso personale»: contiene materiale protetto (per esempio copiato da un manuale). Va bene per te e il tuo tavolo, ma non va condiviso pubblicamente. Lo esporto?'))) return;
         const a = document.createElement('a'); a.href = 'api/compendio/esporta?id=' + encodeURIComponent(id); a.download = (p.nome || id) + '.librepack'; document.body.append(a); a.click(); a.remove();
       } else if (b.dataset.a === 'via') {
-        if (!confirm(tr('Togliere il pacchetto «{n}» dalla campagna?', { n: p.nome }))) return;
-        await fetch('api/compendio?id=' + encodeURIComponent(id), { method: 'DELETE' }); await ricaricaCompendio(); disegnaP();
+        if (!confirm(privatoP(p) ? tr('Eliminare il manuale importato «{n}» da questo dispositivo?', { n: p.nome }) : tr('Togliere il pacchetto «{n}» dalla campagna?', { n: p.nome }))) return;
+        if (p.locale) await IDB.togli(id);
+        else await fetch('api/compendio?id=' + encodeURIComponent(id), { method: 'DELETE' });
+        await ricaricaCompendio(); disegnaP();
       }
     });
     dlg.addEventListener('change', async e => { if (e.target.id === 'compGioImp') { C.vis.giocatoriImportano = e.target.checked; await salvaVis(); } });
@@ -844,7 +924,7 @@
   function scaricaTraduzioni() {
     const voci = {};
     for (const v of C.voci) {
-      if (voci[v.id]) continue;
+      if (voci[v.id] || privataV(v)) continue;          // il testo dei manuali importati non va in un file
       const o = originale(v), t = (C.traduzioni || {})[v.id] || {};
       voci[v.id] = { tipo: v.tipo, originale: o.en || o.nome, nome: t.nome || (o.en && o.nome !== o.en ? o.nome : ''), testo: t.testo || o.testoIt || '', testoOriginale: o.testo || '' };
     }

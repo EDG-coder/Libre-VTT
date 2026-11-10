@@ -187,6 +187,14 @@ Temi, pacchetti del compendio e funzioni nuove fatti da chiunque. Stanno in **Do
 decidono l'ordine; *＋ Crea* parte da un modello pronto. Il codice gira in una sandbox senza internet, a meno che il
 plugin chieda l'accesso completo: in quel caso LIBRE VTT lo applica solo dopo due avvisi. Come si fanno: [docs/plugins.md](docs/plugins.md).
 
+## I manuali che possiedi
+
+Il compendio può importare le voci di un manuale dal **tuo** PDF (*Compendio › Pacchetti › Importa da un manuale
+che possiedi*). Restano solo sul tuo dispositivo, in un catalogo privato: non vanno mai al master, agli altri
+giocatori, al relay o al sito e non si esportano. Ogni giocatore importa la propria copia. I PDF protetti
+(cifrati, con password o DRM) si rifiutano: LIBRE VTT non toglie mai le protezioni. I dettagli (in inglese):
+[docs/manuals.md](docs/manuals.md).
+
 ## Se cade la connessione
 
 Se il collegamento cade mentre l'app è aperta (wifi, portatile in pausa, il master che riavvia),

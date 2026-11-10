@@ -199,6 +199,14 @@ order; *＋ Create* starts from a ready template. The code runs in a sandbox wit
 asks for full access: in that case LIBRE VTT applies it only after two warnings. How to make one:
 [docs/plugins.md](docs/plugins.md).
 
+## Books you own
+
+The compendium can import the entries of a rulebook from **your own** PDF (*Compendium › Packages › Import from a
+book you own*). They stay on your device, in a private catalog: they are never sent to the GM, the other
+players, the relay or the website, and never exported. Every player imports their own copy. Protected PDFs
+(encrypted, password, DRM) are refused: LIBRE VTT never removes protections. Details:
+[docs/manuals.md](docs/manuals.md).
+
 ## If the connection drops
 
 If the link drops while the app is open (wifi, laptop asleep, the master restarting), a «reconnecting» notice appears at the top and LIBRE VTT keeps trying **until it comes back**, with no limit on
@@ -298,7 +306,7 @@ the run's page, without publishing.
 | `sistemi/` | the ready game systems (5e SRD 5.1 and 5.2, empty) with their compendium |
 | `examples/plugins/` | the plugin templates (empty, theme, sandbox, full access) used by «＋ Create» |
 | `plugins-inclusi/` | the plugins built into the phone apps (empty for now) |
-| `docs/` | the plugin guide, the website version, the README images |
+| `docs/` | the plugin guide, the website version, importing your books, the README images |
 | `relay/` | the relay of the website version |
 | `assets/` | the welcome background |
 | `pacchetti/` | what is needed to build the installable versions: `installer/`, `mac/`, `mobile/`, and the `uffa-link/` link |

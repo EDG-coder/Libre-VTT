@@ -9,6 +9,11 @@
 // «Traduci in italiano» ogni voce riceve il testo italiano (in «testoIt», l'originale resta).
 // La stessa traduzione si può chiedere quando si importa un pacchetto (.librepack/.json): vedi
 // compendioTraduciPacchetto, usata da «Importa un pacchetto» in compendio.js.
+//
+// Le voci lette da un manuale finiscono in un pacchetto «privato»: restano solo su questo dispositivo
+// (catalogo privato dell'app o, sul sito, il browser), non vanno al master, ai giocatori, al relay o al
+// sito e non si esportano. Ognuno importa il proprio manuale. Prima di scegliere il file si conferma di
+// possederlo; i PDF protetti (cifrati, con password o DRM) si rifiutano: vedi apriPdf in manuale-lettore.js.
 (function () {
   'use strict';
   const tr = window.tr || (s => s);
@@ -116,18 +121,23 @@
   window.apriImportaManuale = function () {
     const dlg = document.createElement('dialog'); dlg.className = 'compDlg compMan';
     dlg.innerHTML = `<h3>📖 ${esc(tr('Importa da un manuale che possiedi'))}</h3>
-      <p class="note">${esc(tr('Per i manuali che hai comprato (PDF con il testo, anche scansioni passate in OCR). Le voci finiscono in un pacchetto «uso personale»: vanno bene per te e il tuo tavolo, ma non vanno condivise pubblicamente.'))}</p>
+      <p class="note">${esc(tr('Per i manuali che hai comprato (PDF con il testo, anche scansioni passate in OCR).'))}</p>
+      <div class="compManPatto">
+        <p class="note">🔒 ${esc(tr('Le voci restano solo su questo dispositivo, in un catalogo privato: non vanno al master, agli altri giocatori, al relay o al sito, e non si esportano. Ognuno importa il proprio manuale.'))}</p>
+        <p class="note">🛡 ${esc(tr('LIBRE VTT non toglie protezioni: i PDF cifrati, con password o con DRM non si leggono.'))}</p>
+        <label class="check"><input type="checkbox" data-k="patto"> ${esc(tr('Confermo che possiedo questo manuale e che lo importo solo per uso personale.'))}</label>
+      </div>
       <div class="compEdG">
         <label>${esc(tr('Che cosa contiene'))}<select data-k="tipo">${TIPI_V.map(([k, n]) => `<option value="${k}">${esc(tr(n))}</option>`).join('')}</select></label>
         <label>${esc(tr('Lingua del manuale'))}<select data-k="lingua"><option value="">${esc(tr('La riconosco io'))}</option><option value="it">Italiano</option><option value="en">English</option></select></label>
         <label>${esc(tr('Pagine (da–a)'))}<span class="row"><input data-k="da" type="number" min="1" placeholder="1" style="width:70px"> – <input data-k="a" type="number" min="1" placeholder="${esc(tr('fine'))}" style="width:70px"></span></label>
-        <label>${esc(tr('Nome del pacchetto'))}<input data-k="nome" placeholder="${esc(tr('es. Manuale del Giocatore'))}"></label>
+        <label>${esc(tr('Nome del pacchetto'))}<input data-k="nome" placeholder="${esc(tr('es. Il mio manuale'))}"></label>
       </div>
       <label class="check"><input type="checkbox" data-k="trad" disabled> ${esc(tr('Traduci in italiano le voci in inglese'))}</label>
       <p class="note" data-k="tradNota">${esc(tr('Controllo se il browser ha un traduttore…'))}</p>
-      <div class="row compManFonte"><button type="button" class="btn" data-a="pdf">📄 ${esc(tr('Scegli il PDF…'))}</button><button type="button" class="btn ghost" data-a="incolla">📋 ${esc(tr('Incolla il testo…'))}</button></div>
+      <div class="row compManFonte"><button type="button" class="btn" data-a="pdf" disabled>📄 ${esc(tr('Scegli il PDF…'))}</button><button type="button" class="btn ghost" data-a="incolla" disabled>📋 ${esc(tr('Incolla il testo…'))}</button></div>
       <textarea data-k="testo" rows="8" hidden placeholder="${esc(tr('Incolla qui il testo copiato dal manuale, poi premi «Leggi il testo».'))}"></textarea>
-      <div class="row" data-k="leggiRiga" hidden><button type="button" class="btn" data-a="leggi">${esc(tr('Leggi il testo'))}</button></div>
+      <div class="row" data-k="leggiRiga" hidden><button type="button" class="btn" data-a="leggi" disabled>${esc(tr('Leggi il testo'))}</button></div>
       <p class="note" data-k="stato"></p>
       <div class="row compManStrum" data-k="strum" hidden><label class="check"><input type="checkbox" data-k="soloDubbi"> ${esc(tr('Mostra solo le voci da controllare'))}</label></div>
       <p class="note" data-k="iaNota" hidden></p>
@@ -138,6 +148,9 @@
     const $d = k => dlg.querySelector(`[data-k="${k}"]`);
     const stato = t => { $d('stato').textContent = t || ''; };
     let voci = [], lingua = 'en', fileNome = '';
+    // senza la conferma non si sceglie niente
+    const patto = () => $d('patto').checked;
+    $d('patto').addEventListener('change', () => { dlg.querySelectorAll('[data-a=pdf],[data-a=incolla],[data-a=leggi]').forEach(b => { b.disabled = !patto(); }); });
     window.compendioTraduttoreDisponibile().then(ok => {
       $d('trad').disabled = !ok; $d('trad').checked = ok;
       $d('tradNota').textContent = ok ? tr('Il testo lo traduce il traduttore del browser, sul tuo computer: ci vuole qualche minuto per un manuale intero. Controlla le voci importanti.')
@@ -190,6 +203,7 @@
       const b = e.target.closest('[data-a]'); if (!b) return;
       const a = b.dataset.a;
       if (a === 'chiudi') return dlg.close();
+      if ((a === 'pdf' || a === 'incolla' || a === 'leggi' || a === 'salva') && !patto()) return stato(tr('Prima conferma che possiedi il manuale.'));
       if (a === 'tutti') { voci.forEach(v => { v._no = false; }); dlg.querySelectorAll('[data-c=ok]').forEach(x => { x.checked = true; }); return; }
       if (a === 'incolla') { $d('testo').hidden = false; $d('leggiRiga').hidden = false; $d('testo').focus(); return; }
       if (a === 'leggi') {
@@ -209,7 +223,10 @@
             const righe = await P.righeDaPdf(lib, await f.arrayBuffer(), { da: +$d('da').value || 1, a: +$d('a').value || 0, avanza: (n, t) => stato(tr('Leggo la pagina {n} di {t}…', { n, t })) });
             if (!righe.some(r => r.t)) return stato(tr('In questo PDF non c\'è testo: probabilmente è una scansione senza OCR. Non lo posso leggere.'));
             await leggi(righe);
-          } catch (err) { stato(tr('Non riesco a leggere questo PDF: {e}', { e: err.message })); }
+          } catch (err) {
+            if (err && err.code === 'PDF_PROTETTO') stato(tr('Questo PDF è protetto ({m}): LIBRE VTT non toglie le protezioni e non lo legge. Usa un PDF senza protezioni del manuale che possiedi.', { m: tr(err.motivo) }));
+            else stato(tr('Non riesco a leggere questo PDF: {e}', { e: err.message }));
+          }
         };
         inp.click(); return;
       }
@@ -222,6 +239,7 @@
           const nomeP = $d('nome').value.trim() || fileNome || tr('Manuale');
           const out = P.pacchetto(scelte, { srd: window.SRD_NOMI, nome: nomeP, lingua });
           out.pacchetto.licenza = tr('Copiato da un manuale che possiedi: solo per uso personale, non va condiviso.');
+          out.pacchetto.privato = true; out.pacchetto.usoPersonale = true;
           const tutte = Object.values(out.voci).flat();
           let tradotte = 0, nota = '';
           if ($d('trad').checked && lingua === 'en') {

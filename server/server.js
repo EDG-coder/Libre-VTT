@@ -366,20 +366,34 @@ function esportaSistema(res) {
 // stanno nella campagna (compendio/<id>/). Ogni pacchetto: pacchetto.json + voci/<tipo>.json (+ immagini/).
 // compendio/visibilita.json: { pacchetti: { id: 'tutti'|'master' }, voci: { 'pacchetto|voce': 'master'|'tutti' }, giocatoriImportano: bool }
 const COMP = path.join(CAMP, 'compendio');
+// I manuali importati (letti da un PDF che l'utente possiede) non stanno nella campagna ma in un catalogo
+// privato dell'utente: vedi manuali-privati.js. Non si esportano e non vanno mai in rete.
+const MANUALI_P = require('./manuali-privati.js');
+const MANUALI = MANUALI_P.cartellaManuali();
 const ID_PACK = /^[\w.-]{1,60}$/;
+// dove sta il pacchetto <id>: nel catalogo privato o nella campagna (null se non c'è)
+const dirPacchetto = id => !ID_PACK.test(id) ? null
+  : fs.existsSync(path.join(MANUALI, id, 'pacchetto.json')) ? path.join(MANUALI, id)
+    : fs.existsSync(path.join(COMP, id, 'pacchetto.json')) ? path.join(COMP, id) : null;
+const pacchettoPrivato = dir => !!dir && (path.dirname(dir) === MANUALI || MANUALI_P.èManuale({ ...leggiJsonF(path.join(dir, 'pacchetto.json'), {}), id: path.basename(dir) }));
 function leggiJsonF(f, d = null) { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } }
 function elencoCompendio(res) {
   const out = [];
-  const giro = (dir, base, dove) => {
+  const visti = new Set();
+  const giro = (dir, base, dove, privati) => {
     let nomi = []; try { nomi = fs.readdirSync(dir); } catch {}
     for (const n of nomi) {
-      if (!ID_PACK.test(n) || n.startsWith('.')) continue;
+      if (!ID_PACK.test(n) || n.startsWith('.') || visti.has(n)) continue;
       const j = leggiJsonF(path.join(dir, n, 'pacchetto.json'));
       if (!j || j.formato !== 'libre-vtt-pacchetto') continue;
       let tipi = []; try { tipi = fs.readdirSync(path.join(dir, n, 'voci')).filter(f => f.endsWith('.json')).map(f => f.slice(0, -5)); } catch {}
-      out.push({ ...j, id: n, base, url: dove + n + '/', tipi });
+      const p = { ...j, id: n, base, url: dove + n + '/', tipi };
+      // un manuale importato (nel catalogo privato, o nella campagna con le versioni di prima): resta qui
+      if (privati || (!base && MANUALI_P.èManuale(p))) p.privato = true; else delete p.privato;
+      visti.add(n); out.push(p);
     }
   };
+  giro(MANUALI, false, 'manuali/', true);
   giro(path.join(cartellaSistema().dir, 'compendio'), true, 'sistema/compendio/');
   giro(COMP, false, 'compendio/');
   if (PLUGINS) for (const p of PLUGINS.active()) if (p.compendium) {
@@ -393,7 +407,7 @@ const corpoBin = (req, res, max, fn) => {
   req.on('data', d => { n += d.length; if (n > max) { troppo = true; send(res, 413, 'Troppo grande'); req.destroy(); } else parti.push(d); });
   req.on('end', () => { if (!troppo) fn(Buffer.concat(parti)); });
 };
-const idLibero = base => { let id = String(base || 'pacchetto').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'pacchetto', i = 2, x = id; while (fs.existsSync(path.join(COMP, x))) x = id + '-' + i++; return x; };
+const idLibero = base => { let id = String(base || 'pacchetto').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'pacchetto', i = 2, x = id; while (fs.existsSync(path.join(COMP, x)) || fs.existsSync(path.join(MANUALI, x))) x = id + '-' + i++; return x; };
 // un .librepack (zip) da importare
 function importaPacchetto(req, res) {
   corpoBin(req, res, 80 * 1024 * 1024, b => {
@@ -407,11 +421,14 @@ function importaPacchetto(req, res) {
       if (!fs.existsSync(path.join(tmp, 'pacchetto.json'))) { const d = fs.readdirSync(tmp).filter(n => !n.startsWith('.')); if (d.length === 1 && fs.existsSync(path.join(tmp, d[0], 'pacchetto.json'))) radice = path.join(tmp, d[0]); }
       const j = leggiJsonF(path.join(radice, 'pacchetto.json'));
       if (!j || j.formato !== 'libre-vtt-pacchetto') return send(res, 400, 'Manca pacchetto.json: non è un pacchetto di LIBRE VTT');
-      fs.mkdirSync(COMP, { recursive: true });
+      // un pacchetto fatto da un manuale (anche arrivato come file) finisce nel catalogo privato, mai nella campagna
+      const dove = MANUALI_P.èManuale(j) ? MANUALI : COMP;
+      fs.mkdirSync(dove, { recursive: true });
       const id = idLibero(j.id || j.nome);
-      fs.renameSync(radice, path.join(COMP, id));
+      sposta(radice, path.join(dove, id));
       j.id = id; delete j.base;
-      fs.writeFileSync(path.join(COMP, id, 'pacchetto.json'), JSON.stringify(j, null, 2));
+      if (dove === MANUALI) j.privato = true;
+      fs.writeFileSync(path.join(dove, id, 'pacchetto.json'), JSON.stringify(j, null, 2));
       json(res, 200, { ok: true, id, nome: j.nome });
     } catch (e) { send(res, 400, 'Non riesco a importarlo: ' + e.message); }
     finally { fs.rm(tmpZ, { force: true }, () => {}); fs.rm(tmp, { recursive: true, force: true }, () => {}); }
@@ -422,13 +439,17 @@ function salvaPacchetto(req, res) {
   corpoBin(req, res, 60 * 1024 * 1024, b => {
     let m; try { m = JSON.parse(b.toString('utf8')); } catch { return send(res, 400, 'JSON non valido'); }
     const p = m.pacchetto || {};
-    fs.mkdirSync(COMP, { recursive: true });
-    const id = m.unisci && ID_PACK.test(m.unisci) && fs.existsSync(path.join(COMP, m.unisci, 'pacchetto.json')) ? m.unisci : idLibero(p.id || p.nome);
-    const dir = path.join(COMP, id);
+    const esiste = m.unisci ? dirPacchetto(String(m.unisci)) : null;
+    // le voci di un manuale vanno nel catalogo privato dell'utente, mai nella cartella della campagna
+    const privato = esiste ? path.dirname(esiste) === MANUALI : MANUALI_P.èManuale(p);
+    const id = esiste ? path.basename(esiste) : idLibero(p.id || p.nome);
+    const dir = esiste || path.join(privato ? MANUALI : COMP, id);
+    fs.mkdirSync(path.dirname(dir), { recursive: true });
     fs.mkdirSync(path.join(dir, 'voci'), { recursive: true });
     const vecchio = leggiJsonF(path.join(dir, 'pacchetto.json'), {});
     const pk = { ...vecchio, ...p, formato: 'libre-vtt-pacchetto', versione: 1, id };
     delete pk.base;
+    if (privato) pk.privato = true;
     const conta = { ...(vecchio.voci || {}) };
     for (const [tipo, arr] of Object.entries(m.voci || {})) {
       if (!/^[a-z]{2,20}$/.test(tipo) || !Array.isArray(arr)) continue;
@@ -446,16 +467,24 @@ function salvaPacchetto(req, res) {
 }
 function eliminaPacchetto(res, q) {
   const id = String(q.get('id') || '');
-  if (!ID_PACK.test(id) || !fs.existsSync(path.join(COMP, id))) return send(res, 404, 'Pacchetto sconosciuto');
-  const via = path.join(COMP, '.eliminati'); fs.mkdirSync(via, { recursive: true });
-  fs.renameSync(path.join(COMP, id), path.join(via, id + '-' + Date.now().toString(36)));     // si può recuperare a mano
+  const dir = dirPacchetto(id);
+  if (!dir) return send(res, 404, 'Pacchetto sconosciuto');
+  const via = path.join(path.dirname(dir), '.eliminati'); fs.mkdirSync(via, { recursive: true });
+  sposta(dir, path.join(via, id + '-' + Date.now().toString(36)));     // si può recuperare a mano
   json(res, 200, { ok: true });
+}
+// rename, o copia e cancella se le due cartelle sono su dischi diversi
+function sposta(da, a) {
+  try { fs.renameSync(da, a); }
+  catch (e) { if (e.code !== 'EXDEV') throw e; fs.cpSync(da, a, { recursive: true }); fs.rmSync(da, { recursive: true, force: true }); }
 }
 function esportaPacchetto(res, q) {
   const id = String(q.get('id') || '');
-  let dir = path.join(COMP, id);
   if (!ID_PACK.test(id)) return send(res, 400, 'no');
-  if (!fs.existsSync(dir)) dir = path.join(cartellaSistema().dir, 'compendio', id);
+  let dir = dirPacchetto(id);
+  // un manuale importato non esce da qui: chi lo vuole su un altro dispositivo lo importa di nuovo dal suo PDF
+  if (dir && pacchettoPrivato(dir)) return send(res, 403, 'Le voci importate da un manuale restano solo su questo dispositivo: non si esportano.');
+  if (!dir) dir = path.join(cartellaSistema().dir, 'compendio', id);
   if (!fs.existsSync(path.join(dir, 'pacchetto.json'))) return send(res, 404, 'Pacchetto sconosciuto');
   const { creaZip } = require('./zip');
   const tmp = path.join(require('os').tmpdir(), 'libre-pack-' + Date.now().toString(36) + '.zip');
@@ -736,6 +765,12 @@ function handle(req, res) {
         'Content-Security-Policy': `default-src 'none'; script-src ${hash} blob:; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'; sandbox allow-scripts` });
       res.end(d);
     });
+  }
+  // i manuali importati, dal catalogo privato (solo per questa finestra: il server ascolta solo su 127.0.0.1)
+  if (rel.startsWith('/manuali/')) {
+    const file = path.join(MANUALI, rel.slice(9));
+    if (!file.startsWith(MANUALI + path.sep) || path.extname(file).toLowerCase() !== '.json' || rel.includes('/.')) return send(res, 404, 'Non trovato');
+    return fs.readFile(file, (err, d) => err ? send(res, 404, 'Non trovato') : send(res, 200, d, 'application/json'));
   }
   // i pacchetti del compendio della campagna
   if (rel.startsWith('/compendio/')) {

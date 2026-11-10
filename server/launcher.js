@@ -60,6 +60,8 @@ fs.mkdirSync(USERDIR, { recursive: true });
 const CONF_FILE = path.join(USERDIR, 'launcher.json');       // campagne recenti
 const LINK_ID_FILE = path.join(USERDIR, 'uffa-link.id');     // l'ID della sessione, scritto da uffa-link
 const GUEST_DIR = path.join(USERDIR, 'ospite');               // da giocatore: solo una copia locale delle immagini
+// i manuali importati dai PDF dell'utente: un catalogo privato, fuori dalle campagne (vedi manuali-privati.js)
+const MANUALI_DIR = path.join(USERDIR, 'manuali-privati');
 
 // uffa-link: già pronto dentro l'app, oppure compilato nella cartella del gioco (come prima),
 // oppure compilato da noi nella cartella dell'utente quando quella del gioco non è scrivibile.
@@ -818,7 +820,11 @@ function esportaCampagna(dir) {
   // sul telefono le esportazioni vecchie non servono più: le ha già prese chi le doveva prendere
   if (MOBILE) for (const f of fs.readdirSync(dove)) { try { fs.unlinkSync(path.join(dove, f)); } catch {} }
   const file = path.join(dove, nome + '.zip');
-  const r = creaZip(info.path, file, { radice: nome });
+  // i manuali importati con le versioni di prima (compendio/manuale-…) non escono con la campagna
+  const manuali = require('./manuali-privati.js').manualiNellaCampagna(info.path);
+  const salta = manuali.length ? rel => manuali.some(id => rel.startsWith('compendio/' + id + '/')) : null;
+  const r = creaZip(info.path, file, { radice: nome, salta });
+  if (manuali.length) say(`Le voci importate dai manuali (${manuali.length} pacchetti) restano su questo dispositivo: non sono nel file.`);
   say(`Campagna «${nome}» esportata: ${file} (${r.voci} file)`, 'ok');
   if (!MOBILE) mostraCartella(dove);
   return { file, nome: path.basename(file), byte: r.byte };
@@ -1018,7 +1024,7 @@ async function avvia(mode, id, campagna, opz = {}) {
   salvaConf();
   state.porte = { web: WEB_PORT, game: GAME_PORT, link: LINK_PORT };
 
-  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP, LIBRE_PREDEFINITE: PREDEFINITE, LIBRE_CAMP_HOME: CAMP_HOME, LIBRE_SEGRETO: SEGRETO, LIBRE_PLUGINS_DIR: PLUGINS_DIR, LIBRE_PLUGINS_STATE: PLUGINS_STATE, ...(MOBILE ? {} : { LIBRE_RICEVUTI_PIENI: '1' }) }, keep: true });
+  run('tavolo', NODE, [path.join('server', 'server.js')], { env: { PORT: String(WEB_PORT), CAMPAIGN_DIR: CAMP, LIBRE_PREDEFINITE: PREDEFINITE, LIBRE_CAMP_HOME: CAMP_HOME, LIBRE_SEGRETO: SEGRETO, LIBRE_PLUGINS_DIR: PLUGINS_DIR, LIBRE_PLUGINS_STATE: PLUGINS_STATE, LIBRE_MANUALI: MANUALI_DIR, ...(MOBILE ? {} : { LIBRE_RICEVUTI_PIENI: '1' }) }, keep: true });
   if (!await aspettaPorta(WEB_PORT)) return fallisci('Il tavolo non si è acceso.');
 
   if (mode !== 'solo') {

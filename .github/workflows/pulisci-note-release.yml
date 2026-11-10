@@ -1,0 +1,26 @@
+# Toglie dalle note delle release già pubblicate i nomi dei manuali ufficiali e del marchio D&D
+# (sviluppo/strumenti/note-release/pulisci.mjs). Si lancia solo a mano: Actions → Pulisci note release →
+# Run workflow. Con «prova» acceso (predefinito) mostra soltanto cosa cambierebbe.
+name: Pulisci note release
+
+on:
+  workflow_dispatch:
+    inputs:
+      prova:
+        description: Solo prova (mostra cosa cambierebbe, senza modificare niente)
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  pulisci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Correggi le note
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROVA: ${{ inputs.prova && '1' || '0' }}
+        run: node sviluppo/strumenti/note-release/pulisci.mjs
