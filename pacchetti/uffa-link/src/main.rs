@@ -56,9 +56,9 @@ async fn main() -> Result<()> {
     let voce: Arc<dyn uffa_link::Voce> = Arc::new(Schermo);
     let ctrl_c = async { let _ = tokio::signal::ctrl_c().await; };
     match args.mode.as_str() {
-        "host" => uffa_link::host(args.port, ".".into(), voce, ctrl_c).await,
+        "host" => uffa_link::host(args.port, ".".into(), uffa_link::Rete::scelta(), voce, ctrl_c).await,
         "join" => match args.id.clone() {
-            Some(id) => uffa_link::join(&id, args.port, voce, ctrl_c).await,
+            Some(id) => uffa_link::join(&id, args.port, uffa_link::Rete::scelta(), voce, ctrl_c).await,
             None => usage(),
         },
         _ => usage(),

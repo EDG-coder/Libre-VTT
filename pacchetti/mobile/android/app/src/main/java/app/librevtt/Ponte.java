@@ -252,8 +252,9 @@ final class Ponte {
     // ------------------------------------------------------------------ condividere e salvare
 
     private void condividiFile(final int id, String percorso, String mime, String nome) {
-        final File f = new File(percorso);
-        if (!f.isFile()) { rispondi(id, errore("Il file non c'è.")); return; }
+        // solo i file dell'app: la pagina non deve poter far uscire (condividere o salvare altrove) un file qualsiasi
+        final File f = Condivisi.dentroApp(att, percorso);
+        if (f == null) { rispondi(id, errore("Il file non c'è.")); return; }
         final String tipo = mime == null || mime.isEmpty() ? Condivisi.tipo(f.getName()) : mime;
         final String titolo = nome == null || nome.isEmpty() ? f.getName() : nome;
         new AlertDialog.Builder(att)

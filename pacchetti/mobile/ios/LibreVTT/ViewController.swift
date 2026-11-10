@@ -449,11 +449,17 @@ final class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate
     // MARK: - condividere
 
     private func condividiFile(id: Int, percorso: String) {
-        guard !percorso.isEmpty, FileManager.default.fileExists(atPath: percorso) else {
+        // solo i file dell'app (la sua cartella, senza «../» né collegamenti che portano fuori): la pagina non
+        // deve poter far uscire un file qualsiasi
+        let file = URL(fileURLWithPath: percorso).standardizedFileURL.resolvingSymlinksInPath()
+        let casa = URL(fileURLWithPath: NSHomeDirectory()).standardizedFileURL.resolvingSymlinksInPath().path
+        var cartella: ObjCBool = false
+        guard !percorso.isEmpty, file.path.hasPrefix(casa.hasSuffix("/") ? casa : casa + "/"),
+              FileManager.default.fileExists(atPath: file.path, isDirectory: &cartella), !cartella.boolValue else {
             rispondi(id, ["errore": "Il file non c'è."])
             return
         }
-        condividi([URL(fileURLWithPath: percorso)])   // tra le scelte c'è anche «Salva su File»
+        condividi([file])   // tra le scelte c'è anche «Salva su File»
         rispondi(id, true)
     }
 

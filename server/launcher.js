@@ -233,11 +233,13 @@ class ProcWorker extends EventEmitter {
  * scriverebbe sullo schermo (ci si trova l'ID nello stesso modo); «F <n>» = finita da sola.
  */
 class ProcLink extends EventEmitter {
-  constructor(args) {
+  constructor(args, env) {
     super();
     this.stdout = new PassThrough(); this.stderr = new PassThrough();
     const porta = args[args.indexOf('--port') + 1];
-    const cmd = args[0] === 'host' ? `${SEGRETO} host ${porta} ${USERDIR}` : `${SEGRETO} join ${args[1]} ${porta}`;
+    // quanto ci si espone (Impostazioni avanzate): al programma per il computer va in una variabile, qui nel comando
+    const rete = env && RETI_IROH.includes(env.UFFA_LINK_RETE) && env.UFFA_LINK_RETE !== 'normale' ? `rete=${env.UFFA_LINK_RETE} ` : '';
+    const cmd = SEGRETO + ' ' + rete + (args[0] === 'host' ? `host ${porta} ${USERDIR}` : `join ${args[1]} ${porta}`);
     let codice = null, buf = '', finito = false;
     const s = this.sock = net.connect(LINK_CTRL, '127.0.0.1');
     s.setNoDelay(true);
@@ -268,7 +270,7 @@ function lancia(cmd, args, opts) {
     if (MOBILE) return new ProcWorker(args[0], args.slice(1), envPulito(opts.env));
     cmd = process.execPath;
   } else if (cmd === LINK) {
-    if (MOBILE) return new ProcLink(args);
+    if (MOBILE) return new ProcLink(args, opts.env);
     cmd = linkBin();
   }
   return spawn(cmd, args, { cwd: opts.cwd || ROOT, env: envPulito(opts.env), stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
@@ -413,10 +415,30 @@ function indirizzoInterno(host) {
   if (m) { const a = +m[1], b = +m[2]; return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127); }
   return h.includes(':');   // altri indirizzi IPv6 scritti per esteso
 }
+/** Un indirizzo IP (già risolto) che non sta su Internet: questo computer, la rete di casa, i metadati del cloud. */
+function ipInterno(ip) {
+  const net = require('net');
+  let h = String(ip).toLowerCase();
+  const m4 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(h);                // un IPv4 scritto da IPv6
+  if (m4) h = m4[1];
+  if (net.isIPv4(h)) {
+    const [a, b] = h.split('.').map(Number);
+    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224;
+  }
+  if (!net.isIPv6(h)) return true;
+  return h === '::' || h === '::1' || /^f[cd]/.test(h) || /^fe[89ab]/.test(h) || /^ff/.test(h) || h.startsWith('::ffff:');
+}
 async function provaRelay(url) {
   try {
     const u = new URL(url.replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:'));
     if (u.username || u.password || indirizzoInterno(u.hostname)) return { ok: false, errore: 'Questo indirizzo non è un relay raggiungibile da Internet.' };
+    // anche un nome pubblico può puntare a un indirizzo interno (router, altri computer di casa): si guarda dove porta davvero
+    const locale = ['localhost', '127.0.0.1', '::1'].includes(u.hostname.toLowerCase().replace(/^\[|\]$/g, ''));
+    if (!locale) {
+      const dove = await require('dns').promises.lookup(u.hostname, { all: true }).catch(() => []);
+      if (!dove.length) return { ok: false, errore: 'Non riesco a collegarmi a questo indirizzo.' };
+      if (dove.some(x => ipInterno(x.address))) return { ok: false, errore: 'Questo indirizzo non è un relay raggiungibile da Internet.' };
+    }
     u.pathname = u.pathname.replace(/\/+$/, '') + '/'; u.search = ''; u.hash = '';
     const r = await fetch(u.href, { signal: AbortSignal.timeout(10000), redirect: 'error' });
     const t = (await r.text()).slice(0, 300);

@@ -35,10 +35,17 @@ public final class Condivisi extends ContentProvider {
     /** Il file indicato, ma solo se sta davvero in una cartella dell'app (niente «../»). */
     private File file(Uri u) throws FileNotFoundException {
         if (u.getPathSegments().size() != 2 || !"f".equals(u.getPathSegments().get(0))) throw new FileNotFoundException(u.toString());
-        Context c = getContext();
-        if (c == null) throw new FileNotFoundException(u.toString());
+        File f = dentroApp(getContext(), u.getPathSegments().get(1));
+        if (f == null) throw new FileNotFoundException(u.toString());
+        return f;
+    }
+
+    /** Il file a quel percorso, ma solo se sta davvero in una cartella dell'app (niente «../», niente
+     *  collegamenti che portano fuori); altrimenti null. Lo usa anche «Salva in…» (vedi Ponte). */
+    static File dentroApp(Context c, String percorso) {
+        if (c == null || percorso == null || percorso.isEmpty()) return null;
         try {
-            File f = new File(u.getPathSegments().get(1)).getCanonicalFile();
+            File f = new File(percorso).getCanonicalFile();
             File[] permesse = { c.getFilesDir(), c.getCacheDir(), c.getExternalFilesDir(null), c.getExternalCacheDir() };
             for (File p : permesse) {
                 if (p == null) continue;
@@ -48,7 +55,7 @@ public final class Condivisi extends ContentProvider {
         } catch (IOException ignorata) {
             // sotto
         }
-        throw new FileNotFoundException(u.toString());
+        return null;
     }
 
     @Override

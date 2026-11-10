@@ -670,7 +670,6 @@ function disegnaRelayImp() {
   relayTipo = P.tipo || 'sito';
   premuto($('impRelayTipo'), relayTipo);
   premuto($('impAppVia'), P.appVia || 'iroh'); $('impAppViaAiuto').textContent = APPVIA_AIUTO[P.appVia || 'iroh'];
-  $('impIrohReteBox').classList.toggle('hide', !!S.mobile);      // nelle app per telefono il collegamento è dentro l'app: per ora non si sceglie
   premuto($('impIrohRete'), P.irohRete || 'normale'); $('impIrohReteAiuto').textContent = IROHRETE_AIUTO[P.irohRete || 'normale'];
   $('impRelayAiuto').textContent = RELAY_AIUTO[relayTipo];
   $('impRelayRiga').classList.toggle('hide', relayTipo === 'sito');
