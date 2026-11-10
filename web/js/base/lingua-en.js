@@ -447,7 +447,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Clic destro": "Right click",
 "su qualsiasi cosa: altre opzioni.": "on anything: more options.",
 "Sinistro": "Left",
-": seleziona e sposta i segnalini (bordi blu per ridimensionare). Trascina su un punto libero per selezionarne": ": selects and moves tokens (blue edges to resize). Drag on an empty spot to select",
+": seleziona e sposta i segnalini (bordi blu per ridimensionare, il pallino sopra per ruotare: Maiusc a scatti di 15°, doppio clic per raddrizzare). Trascina su un punto libero per selezionarne": ": selects and moves tokens (blue edges to resize, the dot above to rotate: Shift for 15° steps, double-click to straighten). Drag on an empty spot to select",
 "più di uno": "more than one",
 "Canc": "Del",
 "elimina,": "deletes,",
@@ -589,6 +589,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Crea un segnalino": "Create a token",
 "Es. Goblin 1": "E.g. Goblin 1",
 "Trascinalo sulla mappa": "Drag it onto the map",
+"Trascina per ruotare (Maiusc: a scatti di 15°, doppio clic: dritto)": "Drag to rotate (Shift: 15° steps, double-click: straighten)",
 "Forma": "Shape",
 "◯ Tondo": "◯ Round",
 "▢ Quadrato": "▢ Square",
@@ -1267,7 +1268,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 Object.assign(window.LIBRE_LINGUE.en, {
 "e": "and",
 ". Il menu in basso si chiude con la freccia che compare passando col mouse.": ". The bottom menu closes with the arrow that appears on mouse hover.",
-"su qualsiasi cosa = clic destro (il menu). Tieni premuto su un punto libero: ping. Tocco con due dita: il menu della mappa. Doppio tocco = doppio clic. ⬚ in basso: selezione di più segnalini. Negli assets e nelle schede basta un tocco per mettere l'immagine o il personaggio sulla mappa. Per spostare un pulsante del menu a sinistra": "on anything = right click (the menu). Press and hold on an empty spot: ping. Two-finger tap: the map menu. Double tap = double click. ⬚ at the bottom: select several tokens. In the assets and sheets one tap puts the image or character on the map. To move a button of the left menu",
+"su qualsiasi cosa = clic destro (il menu). Tieni premuto su un punto libero: ping. Tocco con due dita: il menu della mappa. Doppio tocco = doppio clic. Il pallino sopra il segnalino selezionato lo ruota (doppio tocco: dritto). ⬚ in basso: selezione di più segnalini. Negli assets e nelle schede basta un tocco per mettere l'immagine o il personaggio sulla mappa. Per spostare un pulsante del menu a sinistra": "on anything = right click (the menu). Press and hold on an empty spot: ping. Two-finger tap: the map menu. Double tap = double click. The dot above the selected token rotates it (double tap: straight). ⬚ at the bottom: select several tokens. In the assets and sheets one tap puts the image or character on the map. To move a button of the left menu",
 });
 Object.assign(window.LIBRE_LINGUE.en, {
 "o": "or",

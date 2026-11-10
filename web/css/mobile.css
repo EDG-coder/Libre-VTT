@@ -41,6 +41,10 @@
 .ui-touch .handle[data-d="ne"] { right: calc(-24px * var(--inv, 1)); top: calc(-24px * var(--inv, 1)); }
 .ui-touch .handle[data-d="sw"] { left: calc(-24px * var(--inv, 1)); bottom: calc(-24px * var(--inv, 1)); }
 .ui-touch .handle[data-d="se"] { right: calc(-24px * var(--inv, 1)); bottom: calc(-24px * var(--inv, 1)); }
+.ui-touch .handle[data-d="rot"] {
+  top: calc(-56px * var(--inv, 1)); width: calc(26px * var(--inv, 1)); height: calc(26px * var(--inv, 1)); margin-left: calc(-13px * var(--inv, 1));
+}
+.ui-touch .handle[data-d="rot"]::after { height: calc(30px * var(--inv, 1)); }
 
 /* trascinare con il dito: le barre delle finestre e gli strumenti fuori dal menu non fanno scorrere la pagina;
    uno strumento nel menu si «prende» tenendolo premuto (si ingrandisce un po') */

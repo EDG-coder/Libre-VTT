@@ -657,7 +657,12 @@ function aggiornaSulPosto(sc) {
     const muove = (el === activeEl && mode) || netMossaInAttesa(p.id);
     if (!muove) Object.assign(el.style, { left: p.l + 'px', top: p.t + 'px', width: p.w + 'px', height: p.h + 'px' });
     if (p.z && el.dataset.layer !== 'map') el.style.zIndex = p.z;
-    if (!p.shape) datiSuSegnalino(el, p);
+    if (!p.shape) {
+      // la rotazione appena data qui e non ancora confermata dal server non torna indietro
+      const rot = muove ? el.dataset.rot : null;
+      datiSuSegnalino(el, p);
+      if (muove && String(rot || '') !== String(el.dataset.rot || '')) ruotaSegnalino(el, +rot || 0);
+    }
   }
   let tolti = false;
   for (const el of tutti) if (!visti.has(el.dataset.pid) && el !== activeEl) {
@@ -722,6 +727,7 @@ function mergeIntoCurrent(w) {
     if (el === activeEl || mode) continue;                           // il master lo sta muovendo adesso
     if (Math.abs(num(el, 'left') - p.l) > 0.5) el.style.left = p.l + 'px';
     if (Math.abs(num(el, 'top') - p.t) > 0.5) el.style.top = p.t + 'px';
+    if (!p.shape && (+p.rot || 0) !== (+el.dataset.rot || 0)) ruotaSegnalino(el, p.rot);   // girato da un giocatore
     // l'immagine cambiata da un giocatore (la sua icona nuova): la prende anche il master
     const prima = NET.photosById.get(id), img = el.querySelector('img');
     if (img && prima && prima.url !== p.url && String(p.url || '').startsWith('gs:')) {
@@ -737,6 +743,7 @@ function mergeIntoCurrent(w) {
     if (!el) continue;
     el.dataset.pid = id;
     for (const k of ['sheet', 'name', 'round', 'ring']) if (p[k]) el.dataset[k] = p[k];
+    if (+p.rot && !p.shape) el.dataset.rot = String(+p.rot);
     if (typeof applyLook === 'function') applyLook(el);
     if (typeof fxDaDati === 'function') fxDaDati(el, p);
   }
@@ -752,7 +759,7 @@ function mergeIntoCurrent(w) {
 function rememberPhotos() {
   NET.photosById = new Map();
   const sc = NET.world && (NET.world.scenes || []).find(s => s.id === (cur && cur.id));
-  for (const p of (sc && sc.photos) || []) NET.photosById.set(p.id, { l: p.l, t: p.t, w: p.w, h: p.h, url: p.url });
+  for (const p of (sc && sc.photos) || []) NET.photosById.set(p.id, { l: p.l, t: p.t, w: p.w, h: p.h, rot: +p.rot || 0, url: p.url });
 }
 
 // ---------- Quello che manda il browser ----------
@@ -784,11 +791,11 @@ function netPushPlayerChanges() {
   const seen = new Set();
   for (const el of world.querySelectorAll('.photo')) {
     const id = el.dataset.pid;
-    const box = { l: num(el, 'left'), t: num(el, 'top'), w: num(el, 'width'), h: num(el, 'height') };
+    const box = { l: num(el, 'left'), t: num(el, 'top'), w: num(el, 'width'), h: num(el, 'height'), rot: +el.dataset.rot || 0 };
     if (id && NET.photosById.has(id)) {
       seen.add(id);
       const was = NET.photosById.get(id);
-      if (Math.abs(was.l - box.l) > 0.5 || Math.abs(was.t - box.t) > 0.5 || Math.abs(was.w - box.w) > 0.5) {
+      if (Math.abs(was.l - box.l) > 0.5 || Math.abs(was.t - box.t) > 0.5 || Math.abs(was.w - box.w) > 0.5 || (+was.rot || 0) !== box.rot) {
         intent('token.move', { scene: cur.id, id, pos: box });
         NET.ultimoMosso = el;
         Object.assign(was, box);

@@ -597,6 +597,8 @@ function dueTratti(muri, campo, cella, ax, ay, sl, max) {
   return due ? { caselle: uno.caselle + due.caselle } : null;
 }
 
+/** La rotazione di un segnalino: gradi interi 0-359 (0 = dritto, anche per valori strani). */
+const gradiRotazione = v => { const n = Math.round(+v); return Number.isFinite(n) ? ((n % 360) + 360) % 360 : 0; };
 /** Il percorso locale del master non vale per gli altri: fuori va «gs:<hash>». */
 const outUrl = o => (o && o.gid) ? { ...o, url: 'gs:' + o.gid, aid: undefined } : o;
 
@@ -990,6 +992,8 @@ function handleIntent(c, m) {
       ph.l = sl ? sl.l : +pos.l || 0; ph.t = sl ? sl.t : +pos.t || 0;
       if (pos.w > 0) ph.w = +pos.w;
       if (pos.h > 0) ph.h = +pos.h;
+      // la rotazione dell'immagine (gradi, 0-359): solo un numero, 0 = dritto
+      if ('rot' in pos && !ph.shape) { const g = gradiRotazione(pos.rot); if (g) ph.rot = g; else delete ph.rot; }
       if (sl) c.send({ t: 'salto', id: ph.id, x: sl.x, y: sl.y });
       changed();
       return;
@@ -1047,6 +1051,7 @@ function handleIntent(c, m) {
       if (dato.round) tk.round = '1';
       if (typeof dato.ring === 'string' && COLORE.test(dato.ring.trim())) tk.ring = dato.ring.trim();
       if (Number.isFinite(+dato.z)) tk.z = Math.round(+dato.z);
+      if (gradiRotazione(dato.rot)) tk.rot = gradiRotazione(dato.rot);
       tk.layer = c.role === 'master' && ['map', 'hidden', 'tokens'].includes(dato.layer) ? dato.layer : 'tokens';
       // un giocatore può mettere in campo solo un personaggio suo
       if (c.role !== 'master') {
