@@ -152,7 +152,7 @@ function converti(ed, idSis, idPack, nomePack, fonte) {
   for (const sp of voci.specie || []) {
     if (sp.en === 'Half-Elf') { sp.aumentiScelta = { quante: 2, bonus: 1, tranne: ['cha'] }; sp.abilitaScelta = 2; }
   }
-  // l'umano variante non è nell'SRD (è del Manuale del Giocatore 2014): solo le regole, con un testo nostro
+  // l'umano variante non è nell'SRD 5.1: solo le regole, con un testo nostro
   if (ed === '2014') metti('specie', { index: 'human-variant', corpo: {
     fonte: 'LIBRE VTT', nome: 'Umano (variante)', en: 'Variant Human', taglia: 'Media', velocita: 30, aumenti: [], lingue: ['Comune'], competenze: [],
     aumentiScelta: { quante: 2, bonus: 1 }, abilitaScelta: 1, talentoScelta: 1,

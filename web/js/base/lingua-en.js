@@ -2064,7 +2064,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Pagine (da–a)": "Pages (from–to)",
 "fine": "end",
 "Nome del pacchetto": "Package name",
-"es. Manuale del Giocatore": "e.g. Player's Handbook",
+"es. Il mio manuale": "e.g. My book",
 "Metti ogni voce anche nell'altra lingua (italiano ↔ inglese)": "Also put every entry in the other language (Italian ↔ English)",
 "Scegli il PDF…": "Choose the PDF…",
 "Incolla il testo…": "Paste the text…",

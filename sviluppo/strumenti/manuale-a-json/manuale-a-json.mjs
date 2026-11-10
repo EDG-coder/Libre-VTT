@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Da un manuale (PDF o .txt) al JSON di compendio di LIBRE VTT, dal terminale.
-//   node manuale-a-json.mjs Manuale.pdf [--da 207 --a 289] [--tipo incantesimo] [--nome "Manuale del Giocatore"] [--lingua en|it] [-o uscita.json]
+//   node manuale-a-json.mjs Manuale.pdf [--da 207 --a 289] [--tipo incantesimo] [--nome "Il mio manuale"] [--lingua en|it] [-o uscita.json]
 // Per i PDF serve pdf.js: una volta sola, in questa cartella,  npm install pdfjs-dist@4
 // Con un .txt (testo già estratto) non serve niente.
 import fs from 'node:fs';

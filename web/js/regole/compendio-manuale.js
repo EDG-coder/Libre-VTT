@@ -131,7 +131,7 @@
         <label>${esc(tr('Che cosa contiene'))}<select data-k="tipo">${TIPI_V.map(([k, n]) => `<option value="${k}">${esc(tr(n))}</option>`).join('')}</select></label>
         <label>${esc(tr('Lingua del manuale'))}<select data-k="lingua"><option value="">${esc(tr('La riconosco io'))}</option><option value="it">Italiano</option><option value="en">English</option></select></label>
         <label>${esc(tr('Pagine (da–a)'))}<span class="row"><input data-k="da" type="number" min="1" placeholder="1" style="width:70px"> – <input data-k="a" type="number" min="1" placeholder="${esc(tr('fine'))}" style="width:70px"></span></label>
-        <label>${esc(tr('Nome del pacchetto'))}<input data-k="nome" placeholder="${esc(tr('es. Manuale del Giocatore'))}"></label>
+        <label>${esc(tr('Nome del pacchetto'))}<input data-k="nome" placeholder="${esc(tr('es. Il mio manuale'))}"></label>
       </div>
       <label class="check"><input type="checkbox" data-k="trad" disabled> ${esc(tr('Traduci in italiano le voci in inglese'))}</label>
       <p class="note" data-k="tradNota">${esc(tr('Controllo se il browser ha un traduttore…'))}</p>
