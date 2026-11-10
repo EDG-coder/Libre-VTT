@@ -260,9 +260,12 @@
   }
 
   // ---------- dalla scelta alla scheda ----------
+  // Le voci di un manuale importato (compendio privato) danno alla scheda nomi e numeri, non il testo:
+  // la scheda la vedono il master e, in partita, anche altri; il testo resta nel compendio di chi l'ha importato.
+  const T = (v, t) => typeof window.compendioTestoCopiabile === 'function' ? window.compendioTestoCopiabile(v, t) : (t || '');
   function privilegiFino(cl, liv) {
     const out = [];
-    for (const l of (cl.livelli || []).slice(0, liv)) for (const p of l.privilegi || []) out.push(`${p.nome} (${tr('liv. {n}', { n: l.livello })})${p.testo ? '\n' + p.testo : ''}`);
+    for (const l of (cl.livelli || []).slice(0, liv)) for (const p of l.privilegi || []) { const t = T(cl, p.testo); out.push(`${p.nome} (${tr('liv. {n}', { n: l.livello })})${t ? '\n' + t : ''}`); }
     return out;
   }
   function costruisci(prova) {
@@ -294,11 +297,11 @@
     for (const c of cls) {
       priv.push(`— ${c.cl.nome} —`, ...privilegiFino(c.cl, +c.livello || 1));
       const sc = trova('sottoclasse', c.sotto);
-      if (sc) { priv.push(`— ${sc.nome} —`); for (const p of sc.privilegi || []) if ((p.livello || 1) <= (+c.livello || 1)) priv.push(`${p.nome} (${tr('liv. {n}', { n: p.livello })})\n${p.testo || ''}`); }
+      if (sc) { priv.push(`— ${sc.nome} —`); for (const p of sc.privilegi || []) if ((p.livello || 1) <= (+c.livello || 1)) priv.push(`${p.nome} (${tr('liv. {n}', { n: p.livello })})\n${T(sc, p.testo)}`.trim()); }
     }
     if (priv.length) f.classf = priv.join('\n\n');
-    const razz = [...((sp && sp.tratti) || []), ...((so && so.tratti) || [])].map(t => `${t.nome}\n${t.testo || ''}`);
-    if (bg && bg.privilegio) razz.push(`${bg.privilegio.nome}\n${bg.privilegio.testo || ''}`);
+    const razz = [...((sp && sp.tratti) || []), ...((so && so.tratti) || [])].map(t => `${t.nome}\n${T(sp, t.testo)}`.trim());
+    if (bg && bg.privilegio) razz.push(`${bg.privilegio.nome}\n${T(bg, bg.privilegio.testo)}`.trim());
     if (razz.length) f.racial = razz.join('\n\n');
     const talenti = [bg && bg.talento, sp && sp.talentoScelta && st.spTal].filter(Boolean);
     if (talenti.length) f.feats = talenti.join('\n');
@@ -328,7 +331,7 @@
         const v = trova('incantesimo', id); if (!v) continue;
         const L = v.livello || 0, i = per[L] = (per[L] ?? -1) + 1;
         f[`sp${L}_${i}`] = v.nome + (v.danni ? ` [[${v.danni} | ${v.nome}]]` : '');
-        f[`sp${L}_${i}_d`] = [`${v.tempo || ''} · ${v.gittata || ''} · ${v.componenti || ''} · ${v.durata || ''}`, '', v.testo || ''].join('\n').trim();
+        f[`sp${L}_${i}_d`] = [`${v.tempo || ''} · ${v.gittata || ''} · ${v.componenti || ''} · ${v.durata || ''}`, '', T(v, v.testo)].join('\n').trim();
         if (L) f[`spk_${L}_${i}`] = '1';
       }
     }
@@ -410,7 +413,7 @@
         if (scelta.i >= 0) mie[scelta.i].livello = nuovo; else mie.push({ nome: cl.nome, cl, livello: 1 });
         f.class = mie.length > 1 ? mie.map(x => `${x.nome} ${x.livello}`).join(' / ') : mie[0].nome;
         if (scelta.i < 0) f.hd = [f.hd, 'd' + cl.dadoVita].filter(Boolean).join(' + ');
-        const nuoviP = (l && l.privilegi || []).map(p => `${p.nome} (${cl.nome}, ${tr('liv. {n}', { n: nuovo })})${p.testo ? '\n' + p.testo : ''}`);
+        const nuoviP = (l && l.privilegi || []).map(p => `${p.nome} (${cl.nome}, ${tr('liv. {n}', { n: nuovo })})${T(cl, p.testo) ? '\n' + T(cl, p.testo) : ''}`);
         if (nuoviP.length) f.classf = [f.classf, ...nuoviP].filter(Boolean).join('\n\n');
         if (scelta.aum.a) { const x = scelta.aum.b && scelta.aum.b !== scelta.aum.a ? 1 : 2; f[scelta.aum.a] = String(Math.min(20, (parseInt(f[scelta.aum.a], 10) || 10) + x)); if (x === 1) f[scelta.aum.b] = String(Math.min(20, (parseInt(f[scelta.aum.b], 10) || 10) + 1)); }
         const sc = l && l.incantesimi;

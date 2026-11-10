@@ -42,8 +42,35 @@
   const BONUS_COMP = [2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6];
 
   // ---------- 1a. righe dal PDF (con pdf.js), come nel VTT + via intestazioni e piè di pagina ----------
+  // ---------- 0. i PDF protetti non si leggono ----------
+  // LIBRE VTT non toglie protezioni: un PDF con password, con un DRM che pdf.js non apre, o che
+  // l'editore ha segnato «non copiare il testo» si rifiuta con un messaggio chiaro. Si leggono solo i PDF
+  // senza protezioni, o quelli in cui l'editore permette di copiare il testo.
+  const PERMESSO_COPIA = 0x10;                          // PermissionFlag.COPY del formato PDF (bit 5)
+  function protetto(motivo) {
+    const e = new Error('Questo PDF è protetto (' + motivo + '): LIBRE VTT non toglie le protezioni e non lo legge. Usa un PDF senza protezioni del manuale che possiedi.');
+    e.code = 'PDF_PROTETTO'; e.motivo = motivo;
+    return e;
+  }
+  async function apriPdf(pdfjs, buf) {
+    const task = pdfjs.getDocument({ data: new Uint8Array(buf), isEvalSupported: false });
+    // niente onPassword: pdf.js allora rifiuta subito i PDF con password (PasswordException), senza chiederla
+    let doc;
+    try { doc = await task.promise; }
+    catch (err) {
+      if (err && (err.name === 'PasswordException' || /password/i.test(err.message || ''))) throw protetto('password');
+      if (err && /encrypt|decrypt|security handler|crypt filter/i.test(err.message || '')) throw protetto('DRM');
+      throw err;
+    }
+    let permessi = null; try { permessi = await doc.getPermissions(); } catch {}
+    if (Array.isArray(permessi) && !permessi.includes((pdfjs.PermissionFlag && pdfjs.PermissionFlag.COPY) || PERMESSO_COPIA)) {
+      doc.destroy && doc.destroy();
+      throw protetto('copia del testo non permessa');
+    }
+    return doc;
+  }
   async function righeDaPdf(pdfjs, buf, opz = {}) {
-    const doc = await pdfjs.getDocument({ data: new Uint8Array(buf), isEvalSupported: false }).promise;
+    const doc = await apriPdf(pdfjs, buf);
     const fine = Math.min(doc.numPages, opz.a || doc.numPages), righe = [];
     for (let n = Math.max(1, opz.da || 1); n <= fine; n++) {
       opz.avanza && opz.avanza(n, fine);
@@ -821,9 +848,9 @@
       (per[v.tipo] ||= []).push(v);
     }
     return {
-      pacchetto: { id: 'manuale-' + slug(nomeP), nome: nomeP, autore: '', usoPersonale: true, fonte: nomeP, licenza: 'Copiato da un manuale che possiedi: solo per uso personale, non va condiviso.' },
+      pacchetto: { id: 'manuale-' + slug(nomeP), nome: nomeP, autore: '', usoPersonale: true, privato: true, fonte: nomeP, licenza: 'Copiato da un manuale che possiedi: solo per uso personale, non va condiviso.' },
       voci: per
     };
   }
-  return { righeDaPdf, righeDaTesto, pulisci, trovaVoci, leggi, pacchetto, controlla, mediaDadi, _spaziata: spaziata };
+  return { righeDaPdf, apriPdf, righeDaTesto, pulisci, trovaVoci, leggi, pacchetto, controlla, mediaDadi, _spaziata: spaziata };
 });

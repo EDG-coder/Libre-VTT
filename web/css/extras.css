@@ -1148,6 +1148,10 @@ html.ui-tel #turniBarra .tbTesta { font-size: 13px; padding: 6px 10px; gap: 8px;
 .compManV summary input[data-c=nome] { flex: 0 1 220px; min-width: 120px; }
 .compManV summary small { color: var(--muted); flex: 1 1 200px; }
 .compManV textarea { width: 100%; box-sizing: border-box; margin-top: 6px; }
+.compMan [hidden] { display: none !important; }
+.compMan .btn:disabled { opacity: .45; cursor: not-allowed; }
+.compManPatto { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin: 8px 0; }
+.compManPatto .note { margin: 2px 0; }
 .compManStrum { gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
 .compManDubbio { color: var(--warn, #d08a00); cursor: help; }
 .compManDubbi { color: var(--warn, #d08a00); margin: 4px 0; }

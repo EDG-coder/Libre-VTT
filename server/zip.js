@@ -55,9 +55,9 @@ function elenca(dir, rel = '', out = []) {
  * Mette tutta la cartella `dir` in `fileZip`. Dentro lo zip i file stanno sotto `radice/`
  * (così chi lo apre a mano trova una cartella sola e non cento file sparsi).
  */
-function creaZip(dir, fileZip, { radice = path.basename(dir) } = {}) {
+function creaZip(dir, fileZip, { radice = path.basename(dir), salta = null } = {}) {
   const pre = radice ? radice.replace(/[\\/]+/g, '_') + '/' : '';
-  const voci = elenca(dir);
+  const voci = salta ? elenca(dir).filter(r => !salta(r)) : elenca(dir);
   const centrale = [];
   const tmp = fileZip + '.part';
   const fd = fs.openSync(tmp, 'w');

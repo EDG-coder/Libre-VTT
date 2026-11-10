@@ -59,6 +59,21 @@ const saveAssetIndex = () => { try { fs.writeFileSync(path.join(DATA, 'assets.js
 const assetFile = h => assetIndex[h] ? path.join(ASSETS, h + assetIndex[h].ext) : null;
 const haveAsset = h => { const f = assetFile(h); return !!(f && fs.existsSync(f)); };
 const SVG = require('../condiviso/svg-pulito.js');
+const MANUALI = require('./manuali-privati.js');
+// Le versioni fino alla 3.9.0 mandavano ai giocatori anche i pacchetti letti da un manuale (un JSON nel
+// deposito): all'avvio si tolgono, qui e nelle copie dei giocatori. Da ora non ci arrivano più (storeAsset).
+{
+  let via = 0;
+  for (const [h, info] of Object.entries(assetIndex)) {
+    if (!info || info.ext !== '.json') continue;
+    const f = path.join(ASSETS, h + '.json');
+    let t = ''; try { t = fs.readFileSync(f, 'utf8'); } catch { continue; }
+    if (!MANUALI.jsonConManuale(t)) continue;
+    try { fs.rmSync(f, { force: true }); } catch {}
+    delete assetIndex[h]; via++;
+  }
+  if (via) { saveAssetIndex(); console.log(`Tolti dal deposito ${via} file con voci di manuali importati (restano solo sul computer di chi li ha importati).`); }
+}
 const { intestazioniPagina, segretoOk } = require('./csp.js');
 // I soli tipi che il deposito accetta: immagini e (per il compendio del master) JSON. Qualsiasi altro
 // (text/html, application/javascript...) servito da 127.0.0.1 girerebbe con i permessi del tavolo.
@@ -78,6 +93,8 @@ function storeAsset(buf, mime, name) {
     if (p.errore) { console.error('asset svg:', p.errore); return null; }
     buf = Buffer.from(p.svg, 'utf8');
   }
+  // le voci di un manuale importato restano sul computer di chi l'ha importato: il deposito non le prende
+  if (mime === 'application/json' && MANUALI.jsonConManuale(buf.toString('utf8'))) { console.error('asset: le voci di un manuale importato non si condividono'); return null; }
   const hash = crypto.createHash('sha256').update(buf).digest('hex');
   const ext = MIME_EXT[mime] || '.bin';
   if (!haveAsset(hash)) {
@@ -894,6 +911,7 @@ function handleIntent(c, m) {
       // il compendio che vedono i giocatori: l'elenco dei pacchetti (e per quelli della campagna l'hash del file)
       // (si sostituisce solo se è cambiato davvero: così il server se ne accorge al volo e non lo rimanda)
       if (b.compendio && typeof b.compendio === 'object' && Array.isArray(b.compendio.pacchetti)) {
+        b.compendio.pacchetti = b.compendio.pacchetti.filter(p => !MANUALI.èManuale(p));   // i manuali importati non escono
         const t = JSON.stringify(b.compendio);
         if (t.length < 2000000 && t !== testoDi(world.compendio)) world.compendio = JSON.parse(t);
       }
