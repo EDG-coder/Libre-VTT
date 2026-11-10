@@ -195,6 +195,22 @@ function chiaveMasterOk(x) {
   if (!/^[a-f0-9]{32}$/.test(k) || v.length !== k.length) return false;
   return crypto.timingSafeEqual(Buffer.from(v), Buffer.from(k));
 }
+// La parola d'invito: la seconda metà del codice che il master manda ai suoi (32 cifre dopo le 64 dell'ID).
+// L'ID del collegamento è una chiave pubblica: chi raggiunge la porta di chi ospita la può leggere, e i server
+// di passaggio la conoscono. La parola no: non esce da qui e dal messaggio del master. La scrive l'avviatore
+// (o il server dedicato) in data/invito.segreto e cambia con «Cambia codice»; la si rilegge ogni volta.
+// Serve solo a chi il tavolo non conosce ancora: chi è già entrato si fa riconoscere con gettone e firma.
+// Senza il file (server acceso a mano) non si controlla niente, come prima.
+const INVITO_SEGRETO_FILE = path.join(DATA, 'invito.segreto');
+function parolaInvito() {
+  try { const t = fs.readFileSync(INVITO_SEGRETO_FILE, 'utf8').trim().toLowerCase(); return /^[a-f0-9]{32}$/.test(t) ? t : ''; } catch { return ''; }
+}
+function invitoOk(x) {
+  const k = parolaInvito();
+  if (!k) return true;
+  const v = typeof x === 'string' ? x.trim().toLowerCase() : '';
+  return v.length === k.length && crypto.timingSafeEqual(Buffer.from(v), Buffer.from(k));
+}
 /** L'identità con cui entra chi saluta: il suo gettone se è buono, altrimenti uno nuovo dato da noi.
  *  Il browser di questo computer (chi conduce) non passa dal tubo: di lui ci si fida come prima.
  *  Sul server dedicato no: lì nessuno conduce da questa macchina, e la firma la mostrano tutti. */
@@ -1544,6 +1560,11 @@ function onMessage(c, raw) {
     // e un tetto ai profili nuovi di tutto il tavolo: una serata vera non ci arriva mai vicino.
     if (c.kind === 'link' && !consuma(c, 'saluti', 8, 0.1)) { c.send({ t: 'bye', reason: 'Troppi ingressi tutti insieme: riprova tra un momento.' }); setTimeout(() => c.close(), 150); return; }
     const token = identitaDi(m, c);
+    // chi il tavolo non conosce entra solo con il codice intero (ID + parola d'invito); sul server dedicato vale anche la chiave del master
+    if (c.kind === 'link' && !roster[token] && !invitoOk(m.invito) && !(DEDICATO && chiaveMasterOk(m.chiaveMaster))) {
+      c.send({ t: 'bye', reason: 'Questo codice non basta per entrare: chiedi al master il codice intero (quello nuovo è più lungo) e controlla di avere l\'ultima versione di LIBRE VTT.' });
+      setTimeout(() => c.close(), 150); return;
+    }
     if (c.kind === 'link' && !roster[token] && !consuma(INGRESSI, 'nuovi', 40, 0.1)) { c.send({ t: 'bye', reason: 'Troppi ingressi nuovi tutti insieme: riprova tra un momento.' }); setTimeout(() => c.close(), 150); return; }
     // Un profilo con l'account, dal sito, si prende solo con codice e password (ogni volta): non basta il gettone
     // rimasto nel browser. (Il controllo è prima di tutto il resto: non deve buttare fuori chi c'è davvero.)
@@ -2265,7 +2286,7 @@ function statoPannello() {
   let sessionId = null;
   try { sessionId = fs.readFileSync(LINK_ID_FILE, 'utf8').trim() || null; } catch {}
   return {
-    mode: MODE, dedicato: DEDICATO || undefined, sessionId, relay: relay ? relay.stato() : undefined, perms: PERMS, roles: Object.keys(ROLE_DEFAULTS), defaults: ROLE_DEFAULTS,
+    mode: MODE, dedicato: DEDICATO || undefined, sessionId, invito: sessionId ? sessionId + parolaInvito() : null, relay: relay ? relay.stato() : undefined, perms: PERMS, roles: Object.keys(ROLE_DEFAULTS), defaults: ROLE_DEFAULTS,
     session,
     players: playerList(),
     log: actionLog.slice(-120),
@@ -2513,6 +2534,8 @@ function avviatore(cosa, dati) { process.stdout.write('@@LIBRE ' + CANALE + ' ' 
 let identitaSalvata = null;
 const CHIAVE_MASTER = /^[a-f0-9]{32}$/i.test(String(process.env.CHIAVE_MASTER || '').replace(/[\s-]/g, '')) ? String(process.env.CHIAVE_MASTER).replace(/[\s-]/g, '').toLowerCase() : '';
 delete process.env.CHIAVE_MASTER;
+const JOIN_PAROLA = /^[a-f0-9]{32}$/.test(process.env.LIBRE_JOIN_PAROLA || '') ? process.env.LIBRE_JOIN_PAROLA : '';
+delete process.env.LIBRE_JOIN_PAROLA;
 try { const x = JSON.parse(process.env.IDENTITA || 'null'); if (x && /^[a-f0-9]{24}$/.test(x.token)) identitaSalvata = x; } catch {}
 /** La miniatura dell'ultima scena vista, per il riquadro di «Mi unisco» (la tiene l'avviatore). */
 function salvaMiniatura(m) {
@@ -2559,6 +2582,8 @@ if (MODE === 'join') {
     if (m.t === 'hello' && !m.canale && identitaSalvata) m = { ...m, token: identitaSalvata.token, firma: identitaSalvata.firma || undefined };
     // la chiave del master del server dedicato, se chi gioca l'ha scritta entrando (vale solo lì)
     if (m.t === 'hello' && !m.canale && CHIAVE_MASTER) m = { ...m, chiaveMaster: CHIAVE_MASTER };
+    // la parola d'invito (la seconda metà del codice scritto entrando): serve all'host finché non ci conosce
+    if (m.t === 'hello' && !m.canale && JOIN_PAROLA) m = { ...m, invito: JOIN_PAROLA };
     if (m.t === 'hello') lastHello = m;
     if (m.t === 'name' && lastHello) lastHello = { ...lastHello, name: m.name };
     if (m.t === 'leave') { lastHello = null; if (stabile) stabile.destroy(); }   // scollegato a mano: non ripresentarlo

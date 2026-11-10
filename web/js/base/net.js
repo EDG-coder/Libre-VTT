@@ -165,7 +165,7 @@ function netSaluta(ws = NET.ws) {
   // NET.account (solo dal sito, vedi gioca-web.js): codice e impronta della password, tenuti solo in memoria
   // plugins: sappiamo ricevere i plugin del master; pluginsOk: quelli a cui abbiamo già dato il consenso
   const C = window.LIBRE && window.LIBRE.condivisi;
-  ws.send(JSON.stringify({ t: 'hello', token: netToken(), firma: netFirma(), name: netName(), client: 'LIBRE VTT 2', delta: 1, ver: NET.ver || 0, chatDa: NET.chatUltimo || '', account: NET.account || undefined,
+  ws.send(JSON.stringify({ t: 'hello', token: netToken(), firma: netFirma(), name: netName(), client: 'LIBRE VTT 2', delta: 1, ver: NET.ver || 0, chatDa: NET.chatUltimo || '', account: NET.account || undefined, invito: NET.parolaInvito || undefined,
     plugins: C ? 1 : undefined, pluginsOk: C ? C.perSaluto() : undefined }));
 }
 /** Il collegamento locale è caduto (o lo diamo per morto noi): ci si ricollega. */

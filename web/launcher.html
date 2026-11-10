@@ -565,10 +565,10 @@ function disegna() {
       righe.append(lab);
       if (S.sessionId) {
         const inp = document.createElement('input');
-        inp.type = 'text'; inp.readOnly = true; inp.value = S.sessionId; inp.onclick = () => inp.select();
+        inp.type = 'text'; inp.readOnly = true; inp.value = S.invito || S.sessionId; inp.onclick = () => inp.select();
         const cp = document.createElement('button');
         cp.className = 'b go'; cp.textContent = 'Copia';
-        cp.onclick = async () => { try { await navigator.clipboard.writeText(S.sessionId); cp.textContent = 'Copiato'; setTimeout(() => cp.textContent = 'Copia', 1400); } catch {} };
+        cp.onclick = async () => { try { await navigator.clipboard.writeText(S.invito || S.sessionId); cp.textContent = 'Copiato'; setTimeout(() => cp.textContent = 'Copia', 1400); } catch {} };
         const nuovo = document.createElement('button');
         nuovo.className = 'b'; nuovo.textContent = 'Cambia codice';
         nuovo.title = 'Un codice nuovo: chi è dentro adesso lo riceve da solo, a chi è fuori lo mandi tu. Quello vecchio non vale più.';
@@ -581,7 +581,7 @@ function disegna() {
         if (NAT.disponibile) {
           const sh = document.createElement('button');
           sh.className = 'b'; sh.textContent = 'Condividi';
-          sh.onclick = () => NAT.condividiTesto('Ecco il codice per entrare nella partita di LIBRE VTT:\n' + S.sessionId, 'Codice della partita');
+          sh.onclick = () => NAT.condividiTesto('Ecco il codice per entrare nella partita di LIBRE VTT:\n' + (S.invito || S.sessionId), 'Codice della partita');
           righe.append(sh);
         }
       }
@@ -615,7 +615,7 @@ function disegnaPubblica(si) {
   else if (R && R.collegato) { st.textContent = '✅ Aperta: chi ha il codice entra anche dal sito.'; st.classList.add('ok'); }
   else if (R && R.errore) { st.textContent = '⚠️ ' + R.errore; st.classList.add('err'); }
   else st.textContent = 'Mi collego al relay…';
-  const link = P.attiva && S.sessionId && S.sito ? S.sito + '/gioca/' + (P.indirizzo ? '?relay=' + encodeURIComponent(P.indirizzo) : '') + '#' + S.sessionId : '';
+  const link = P.attiva && S.sessionId && S.sito ? S.sito + '/gioca/' + (P.indirizzo ? '?relay=' + encodeURIComponent(P.indirizzo) : '') + '#' + (S.invito || S.sessionId) : '';
   $('pubblicaLinkRiga').classList.toggle('hide', !link);
   $('pubblicaLink').value = link;
 }

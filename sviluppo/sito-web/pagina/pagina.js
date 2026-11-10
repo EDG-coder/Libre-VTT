@@ -15,7 +15,7 @@
     'Incolla qui il codice del master': "Paste the GM's code here",
     'Entra': 'Join',
     "Il master deve avere l'app aperta con «Partita pubblica» accesa. Dal sito si gioca solo da giocatori: per condurre serve l'app.": 'The GM needs the app open with “Public game” turned on. On the website you can only play as a player: running a game needs the app.',
-    'Il codice non va bene: è lungo 64 caratteri, fatto di numeri e lettere da a a f.': "That code isn't right: it is 64 characters long, made of digits and the letters a to f.",
+    'Il codice non va bene: è lungo 96 caratteri (64 quelli di prima), fatto di numeri e lettere da a a f.': "That code isn't right: it is 96 characters long (64 for older codes), made of digits and the letters a to f.",
     'Nebbia e luce dinamica': 'Fog and dynamic lighting',
     'Muri, porte e finestre bloccano la vista: ogni giocatore vede solo quello che vede il suo personaggio, il master vede attraverso il velo.': 'Walls, doors and windows block sight: each player sees only what their character sees, while the GM sees through the veil.',
     'Schede e compendio': 'Sheets and compendium',
@@ -85,8 +85,8 @@
   try { const c = localStorage.getItem('libre-web-codice'); if (c) $('codice').value = c; } catch {}
   $('entra').addEventListener('submit', e => {
     e.preventDefault();
-    const m = $('codice').value.toLowerCase().match(/[a-f0-9]{64}/);
-    if (!m) { $('codiceErr').textContent = t('Il codice non va bene: è lungo 64 caratteri, fatto di numeri e lettere da a a f.'); $('codice').focus(); return; }
+    const m = $('codice').value.toLowerCase().match(/[a-f0-9]{64}(?:[a-f0-9]{32})?/);
+    if (!m) { $('codiceErr').textContent = t('Il codice non va bene: è lungo 96 caratteri (64 quelli di prima), fatto di numeri e lettere da a a f.'); $('codice').focus(); return; }
     // il codice rifatto carattere per carattere da un alfabeto fisso: nell'indirizzo finiscono solo cifre esadecimali
     const HEX = '0123456789abcdef', codice = Array.from(m[0], ch => HEX[HEX.indexOf(ch)]).join('');
     try { localStorage.setItem('libre-web-codice', codice); } catch {}

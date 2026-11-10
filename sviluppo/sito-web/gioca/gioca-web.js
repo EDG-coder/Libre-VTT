@@ -86,7 +86,10 @@
     return null;
   }
   const stanzaDi = async codice => hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('libre-vtt-stanza|' + codice)));
-  const codiceDa = testo => { const m = String(testo || '').toLowerCase().match(/[a-f0-9]{64}/); return m ? m[0] : null; };
+  // Il codice intero è l'ID della partita (64 cifre) più la parola d'invito (32): la stanza si trova con l'ID, la
+  // parola va al master nel saluto (serve finché il tavolo non ci conosce). Un codice di prima ha solo l'ID.
+  const interoDa = testo => { const m = String(testo || '').toLowerCase().match(/[a-f0-9]{64}(?:[a-f0-9]{32})?/); return m ? m[0] : null; };
+  const codiceDa = testo => { const m = interoDa(testo); return m ? m.slice(0, 64) : null; };
 
   // ---------- l'account (codice dal master + password) ----------
   // La password non esce mai da qui così com'è: se ne manda un'impronta (PBKDF2-SHA256 con il codice come sale),
@@ -167,7 +170,7 @@
   document.body.append(box);
   for (const el of box.querySelectorAll('[data-t]')) el.textContent = tr(el.dataset.t);
   for (const el of box.querySelectorAll('[data-p]')) el.placeholder = tr(el.dataset.p);
-  $('weCodice').value = codiceDa(location.hash) || ls.get(K_CODICE);
+  $('weCodice').value = interoDa(location.hash) || ls.get(K_CODICE);
   $('weNome').value = ls.get('uffa-name');
   $('weAccCodice').value = ls.get(K_ACCOUNT);
   if (ls.get(K_ACCOUNT)) $('weAcc').open = true;
@@ -211,12 +214,14 @@
   };
   $('weAnnulla').onclick = () => { netDisconnect(); mostra('modulo', ''); };
 
-  async function entra(codice) {
+  async function entra(intero) {
+    const codice = intero.slice(0, 64);
+    NET.parolaInvito = intero.length === 96 ? intero.slice(64) : '';
     const relay = await indirizzoRelay();
     if (!relay) { errore(tr('Questo sito non ha ancora un relay: per ora si gioca solo con l\'app.')); return false; }
     if (!(await swPronto)) errore(tr('Questo browser non lascia arrivare le immagini della partita: prova con un altro (Chrome, Edge, Firefox o Safari aggiornati).'));
     NET.relay = relay + '/v1/stanza/' + await stanzaDi(codice);
-    ls.set(K_CODICE, codice);
+    ls.set(K_CODICE, intero);
     entrato = true; dentro = false; cadute = 0;
     mostra('attesa', tr('Mi collego alla partita…'));
     netReconnectNow();
@@ -224,9 +229,9 @@
   }
   box.querySelector('form').addEventListener('submit', async e => {
     e.preventDefault();
-    const codice = codiceDa($('weCodice').value), nome = $('weNome').value.trim().replace(/\s+/g, ' ').slice(0, 40);
+    const codice = interoDa($('weCodice').value), nome = $('weNome').value.trim().replace(/\s+/g, ' ').slice(0, 40);
     const acc = codiceAcc($('weAccCodice').value), pw = $('wePass').value;
-    if (!codice) { errore(tr('Il codice non va bene: è lungo 64 caratteri, fatto di numeri e lettere da a a f.')); $('weCodice').focus(); return; }
+    if (!codice) { errore(tr('Il codice non va bene: è lungo 96 caratteri (64 quelli di prima), fatto di numeri e lettere da a a f.')); $('weCodice').focus(); return; }
     if (acc || pw) {
       $('weAcc').open = true;
       if (acc.length !== 12) { errore(tr('Il codice dell\'account è di 12 caratteri, lettere e numeri (i trattini non contano).')); $('weAccCodice').focus(); return; }
@@ -302,7 +307,7 @@
 
   // Il master ha cambiato codice: si passa alla stanza nuova (il codice vecchio non vale più).
   window.libreWebNuovoCodice = async codice => {
-    ls.set(K_CODICE, codice);
+    ls.set(K_CODICE, codice); NET.parolaInvito = '';      // (chi è dentro è già conosciuto: la parola non gli serve più)
     netSay(tr('Il master ha cambiato il codice: passo a quello nuovo…'), 'retry');
     NET.relay = NET.relay.replace(/[a-f0-9]{64}$/, await stanzaDi(codice));
     setTimeout(netReconnectNow, 3000);
