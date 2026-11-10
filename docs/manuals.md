@@ -25,13 +25,15 @@ LIBRE VTT keeps that content to you:
 
 ## Protected PDFs are not read
 
-LIBRE VTT never removes or bypasses protections. A PDF is refused, with a clear message, when:
+LIBRE VTT never removes or bypasses protections. **Any encrypted PDF is refused**, with a clear message,
+before a single page is read:
 
 - it needs a password to open;
-- it uses an encryption or DRM scheme that pdf.js cannot open;
-- the publisher disabled copying its text (the PDF "copy" permission is off).
+- it is encrypted, even if it opens without a password and even if the publisher allows copying its text;
+- it uses a DRM scheme.
 
-Use a PDF without these protections. There is no option to force it, and no password prompt.
+The check looks for the PDF encryption dictionary (`/Encrypt`) in the file, then asks pdf.js again after opening
+it. Use a PDF without any protection. There is no option to force it, and no password prompt.
 
 ## Before you import
 

@@ -43,30 +43,43 @@
 
   // ---------- 1a. righe dal PDF (con pdf.js), come nel VTT + via intestazioni e piè di pagina ----------
   // ---------- 0. i PDF protetti non si leggono ----------
-  // LIBRE VTT non toglie protezioni: un PDF con password, con un DRM che pdf.js non apre, o che
-  // l'editore ha segnato «non copiare il testo» si rifiuta con un messaggio chiaro. Si leggono solo i PDF
-  // senza protezioni, o quelli in cui l'editore permette di copiare il testo.
-  const PERMESSO_COPIA = 0x10;                          // PermissionFlag.COPY del formato PDF (bit 5)
+  // LIBRE VTT non toglie protezioni: qualsiasi PDF cifrato (con o senza password, con o senza il permesso
+  // di copiare il testo) o con un DRM si rifiuta con un messaggio chiaro, prima di leggerne una pagina.
+  // Si leggono solo i PDF senza nessuna protezione.
   function protetto(motivo) {
     const e = new Error('Questo PDF è protetto (' + motivo + '): LIBRE VTT non toglie le protezioni e non lo legge. Usa un PDF senza protezioni del manuale che possiedi.');
     e.code = 'PDF_PROTETTO'; e.motivo = motivo;
     return e;
   }
+  // il dizionario /Encrypt nel trailer (o nel flusso xref) c'è in ogni PDF cifrato: si cerca nei byte,
+  // senza aprire il file (/Encrypt seguito da «<<» o da un riferimento «12 0 R»)
+  function cifrato(bytes) {
+    const E = [47, 69, 110, 99, 114, 121, 112, 116];   // «/Encrypt»
+    for (let i = 0, n = bytes.length - 12; i < n; i++) {
+      if (bytes[i] !== 47 || bytes[i + 1] !== 69) continue;
+      let k = 2; while (k < 8 && bytes[i + k] === E[k]) k++;
+      if (k < 8) continue;
+      let j = i + 8; while (j < bytes.length && (bytes[j] === 32 || bytes[j] === 10 || bytes[j] === 13 || bytes[j] === 9 || bytes[j] === 12)) j++;
+      if (bytes[j] === 60 && bytes[j + 1] === 60) return true;
+      if (bytes[j] >= 48 && bytes[j] <= 57) return true;
+    }
+    return false;
+  }
   async function apriPdf(pdfjs, buf) {
-    const task = pdfjs.getDocument({ data: new Uint8Array(buf), isEvalSupported: false });
+    const dati = new Uint8Array(buf);
+    if (cifrato(dati)) throw protetto('cifrato o con DRM');
+    const task = pdfjs.getDocument({ data: dati, isEvalSupported: false });
     // niente onPassword: pdf.js allora rifiuta subito i PDF con password (PasswordException), senza chiederla
     let doc;
     try { doc = await task.promise; }
     catch (err) {
       if (err && (err.name === 'PasswordException' || /password/i.test(err.message || ''))) throw protetto('password');
-      if (err && /encrypt|decrypt|security handler|crypt filter/i.test(err.message || '')) throw protetto('DRM');
+      if (err && /encrypt|decrypt|security handler|crypt filter/i.test(err.message || '')) throw protetto('cifrato o con DRM');
       throw err;
     }
+    // seconda prova: se pdf.js ha trovato una cifratura, ha dei permessi (anche se permettono tutto)
     let permessi = null; try { permessi = await doc.getPermissions(); } catch {}
-    if (Array.isArray(permessi) && !permessi.includes((pdfjs.PermissionFlag && pdfjs.PermissionFlag.COPY) || PERMESSO_COPIA)) {
-      doc.destroy && doc.destroy();
-      throw protetto('copia del testo non permessa');
-    }
+    if (permessi) { doc.destroy && doc.destroy(); throw protetto('cifrato o con DRM'); }
     return doc;
   }
   async function righeDaPdf(pdfjs, buf, opz = {}) {

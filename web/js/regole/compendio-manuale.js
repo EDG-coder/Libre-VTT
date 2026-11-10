@@ -13,7 +13,7 @@
 // Le voci lette da un manuale finiscono in un pacchetto «privato»: restano solo su questo dispositivo
 // (catalogo privato dell'app o, sul sito, il browser), non vanno al master, ai giocatori, al relay o al
 // sito e non si esportano. Ognuno importa il proprio manuale. Prima di scegliere il file si conferma di
-// possederlo; i PDF protetti (password, DRM, copia vietata) si rifiutano: vedi apriPdf in manuale-lettore.js.
+// possederlo; i PDF protetti (cifrati, con password o DRM) si rifiutano: vedi apriPdf in manuale-lettore.js.
 (function () {
   'use strict';
   const tr = window.tr || (s => s);
@@ -124,7 +124,7 @@
       <p class="note">${esc(tr('Per i manuali che hai comprato (PDF con il testo, anche scansioni passate in OCR).'))}</p>
       <div class="compManPatto">
         <p class="note">🔒 ${esc(tr('Le voci restano solo su questo dispositivo, in un catalogo privato: non vanno al master, agli altri giocatori, al relay o al sito, e non si esportano. Ognuno importa il proprio manuale.'))}</p>
-        <p class="note">🛡 ${esc(tr('LIBRE VTT non toglie protezioni: i PDF con password, DRM o con la copia del testo vietata non si leggono.'))}</p>
+        <p class="note">🛡 ${esc(tr('LIBRE VTT non toglie protezioni: i PDF cifrati, con password o con DRM non si leggono.'))}</p>
         <label class="check"><input type="checkbox" data-k="patto"> ${esc(tr('Confermo che possiedo questo manuale e che lo importo solo per uso personale.'))}</label>
       </div>
       <div class="compEdG">

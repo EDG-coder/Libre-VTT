@@ -204,7 +204,7 @@ asks for full access: in that case LIBRE VTT applies it only after two warnings.
 The compendium can import the entries of a rulebook from **your own** PDF (*Compendium › Packages › Import from a
 book you own*). They stay on your device, in a private catalog: they are never sent to the GM, the other
 players, the relay or the website, and never exported. Every player imports their own copy. Protected PDFs
-(password, DRM, copying disabled) are refused: LIBRE VTT never removes protections. Details:
+(encrypted, password, DRM) are refused: LIBRE VTT never removes protections. Details:
 [docs/manuals.md](docs/manuals.md).
 
 ## If the connection drops
