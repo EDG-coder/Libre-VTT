@@ -1451,6 +1451,9 @@ function consuma(c, quale, max, alSecondo) {
   b.n -= 1;
   return true;
 }
+const INGRESSI = {};                                              // il secchio dei profili nuovi, uno per tutto il tavolo
+// Quanti collegamenti da fuori si tengono aperti: in tutto, e di quelli che non hanno ancora salutato.
+const MAX_LINK = 200, MAX_LINK_MUTI = 60;
 function troppeRichieste(c, op) {
   if (Date.now() - (c.avvisatoFretta || 0) < 10000) return;      // un avviso ogni 10 secondi basta
   c.avvisatoFretta = Date.now();
@@ -1536,7 +1539,12 @@ function onMessage(c, raw) {
 
   if (m.t === 'hello') {
     // Il gettone è l'identità: il browser se lo tiene e lo rimanda, con la firma. Se non è buono, gliene do uno.
+    // Da fuori (tubo o sito) i saluti si contano: chi ha il codice non deve poter riempire il registro di profili
+    // finti né far lavorare il server a vuoto. Pochi saluti per collegamento (chi ricarica la pagina ne manda uno),
+    // e un tetto ai profili nuovi di tutto il tavolo: una serata vera non ci arriva mai vicino.
+    if (c.kind === 'link' && !consuma(c, 'saluti', 8, 0.1)) { c.send({ t: 'bye', reason: 'Troppi ingressi tutti insieme: riprova tra un momento.' }); setTimeout(() => c.close(), 150); return; }
     const token = identitaDi(m, c);
+    if (c.kind === 'link' && !roster[token] && !consuma(INGRESSI, 'nuovi', 40, 0.1)) { c.send({ t: 'bye', reason: 'Troppi ingressi nuovi tutti insieme: riprova tra un momento.' }); setTimeout(() => c.close(), 150); return; }
     // Un profilo con l'account, dal sito, si prende solo con codice e password (ogni volta): non basta il gettone
     // rimasto nel browser. (Il controllo è prima di tutto il resto: non deve buttare fuori chi c'è davvero.)
     if (c.web && !c.viaAccount && roster[token] && roster[token].account && roster[token].account.impronta) {
@@ -1892,6 +1900,11 @@ function onUpgrade(req, sock, head) {
 // ======================= I giocatori che arrivano da iroh (solo modo host) =======================
 function startLinkServer() {
   net.createServer(sock => {
+    // un tetto ai collegamenti: chi ne apre a centinaia (ognuno può tenere da parte una riga lunga) non deve
+    // poter mangiare la memoria di chi ospita
+    let aperti = 0, muti = 0;
+    for (const x of clients) if (x.kind === 'link' && !x.web) { aperti++; if (!x.token) muti++; }
+    if (aperti >= MAX_LINK || muti >= MAX_LINK_MUTI) { sock.destroy(); return; }
     sock.setNoDelay(true);
     let buf = '';
     const c = {
@@ -1903,7 +1916,8 @@ function startLinkServer() {
     attach(c);
     sock.on('data', d => {
       buf += d.toString('utf8');
-      if (buf.length > 2 * 1024 * 1024) { sock.destroy(); return; }   // una riga di un giocatore non arriva a tanto
+      // una riga di un giocatore non arriva a tanto; prima del saluto ancora meno (saluto, «ci sei?», richieste di file)
+      if (buf.length > (c.token ? 2 * 1024 * 1024 : 64 * 1024)) { sock.destroy(); return; }
       let i;
       while ((i = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, i); buf = buf.slice(i + 1);
