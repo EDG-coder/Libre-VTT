@@ -1674,7 +1674,7 @@ function pulsantiDanni(d, m, critico) {
   const inRete = typeof NET !== 'undefined' && NET.on;
   if (inRete && !(isMaster() || (NET.me && m.byId === NET.me.token))) return;
   const box = document.createElement('span'); box.className = 'rDanni';
-  const b = (t, crit) => { const x = document.createElement('button'); x.type = 'button'; x.textContent = tr(t); if (crit) x.className = 'crit'; x.addEventListener('click', () => tiraDanni(m.rif, crit, !!m.secret)); return x; };
+  const b = (t, crit) => { const x = document.createElement('button'); x.type = 'button'; x.textContent = tr(t); if (crit) x.className = 'crit'; x.addEventListener('click', () => tiraDanni(m.rif, crit, m.cieco ? 'cieco' : !!m.secret)); return x; };
   box.append(b('🗡 Danni', false));
   if (critico) box.append(b('💥 Danni critici', true));
   d.append(box);
@@ -1695,7 +1695,7 @@ function msgDanno(d, m) {
   const el = (tag, cl, txt) => { const e = document.createElement(tag); if (cl) e.className = cl; if (txt != null) e.textContent = txt; return e; };
   const testa = el('div', 'dTesta');
   if (chi) testa.append(el('span', 'dChi', chi));
-  if (m.secret) { const s = el('span', 'sec', '🔒 segreto'); s.title = 'Lo vedete solo tu e il master'; testa.append(s); }
+  if (m.secret) testa.append(etichettaNascosto(m));
   if (m.provvisorio) testa.append(el('span', 'provv', '⚠ non verificato'));
   const titolo = el('div', 'dCosa');
   titolo.append(el('span', 'dIc', /critic/i.test(cosa) ? '💥' : '🗡'), el('span', '', cosa));
@@ -1715,7 +1715,49 @@ function msgDanno(d, m) {
   }
   return d;
 }
+// Il tiro segreto, per chi conduce: «👁 Mostra a tutti» toglie la censura e il risultato lo vedono tutti.
+// Un tiro segreto già mostrato porta il segno «👁 mostrato».
+function pulsanteSvela(d, m) {
+  if (m.svelato) {
+    const s = document.createElement('span'); s.className = 'svelato'; s.textContent = tr('👁 mostrato');
+    s.title = tr('Era un tiro segreto: il master l\'ha mostrato a tutti'); d.append(s);
+    return;
+  }
+  if (!m.secret || m.provvisorio || !(typeof isMaster !== 'function' || isMaster())) return;
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'svela';
+  b.textContent = tr('👁 Mostra a tutti'); b.title = tr('Toglie la censura: il risultato di questo tiro lo vedranno tutti');
+  b.addEventListener('click', e => { e.stopPropagation(); svelaTiro(m.id); });
+  d.append(b);
+}
+function svelaTiro(id) {
+  if (typeof NET !== 'undefined' && NET.on) { intent('chat.svela', { id }); return; }
+  const m = chat.find(x => x.id === id);
+  if (!m || !m.secret) return;
+  const nuovo = { ...m, svelato: true }; delete nuovo.secret; delete nuovo.cieco;
+  updateChat(nuovo);
+}
+/** Un messaggio già in chat cambia (es. un tiro segreto mostrato a tutti): lo si ridisegna dov'è, anche nelle finestre della chat. */
+function updateChat(m) {
+  const i = chat.findIndex(x => x.id === m.id);
+  if (i < 0) return;
+  chat[i] = m;
+  document.querySelectorAll('.msg').forEach(el => { if (el.dataset.id === m.id) el.replaceWith(msgEl(m)); });
+  if (chatReady) persist.save('chat', chat);
+}
+// il messaggio in chat; i tiri nascosti hanno in fondo il pulsante del master per mostrarli a tutti
 function msgEl(m) {
+  const d = msgElBase(m);
+  if (m.kind === 'roll' && !m.hidden && Array.isArray(m.rolls)) pulsanteSvela(d, m);
+  return d;
+}
+// l'etichetta di un tiro nascosto: 🔒 segreto (solo il master) o 🤫 sussurro (chi tira e il master)
+function etichettaNascosto(m) {
+  const s = document.createElement('span'); s.className = 'sec' + (m.cieco ? ' cieco' : '');
+  s.textContent = tr(m.cieco ? '🔒 segreto' : '🤫 sussurro');
+  s.title = tr(m.cieco ? 'Lo vede solo il master: anche chi ha tirato vede il risultato censurato' : 'Lo vedete solo tu e il master');
+  return s;
+}
+function msgElBase(m) {
   const d = document.createElement('div');
   d.dataset.id = m.id;
   const who = whoTag(m);
@@ -1726,8 +1768,11 @@ function msgEl(m) {
     if (who) d.append(who);
     if (m.hidden || !Array.isArray(m.rolls)) {          // il tiro segreto di un altro: si sa solo che c'è stato
       d.classList.add('single', 'hiddenRoll');
-      head.textContent = '🔒 tiro segreto';
-      const q = document.createElement('span'); q.className = 'rr'; q.textContent = '?';
+      head.textContent = m.cieco ? '🔒 tiro segreto' : '🤫 tiro sussurrato al master';
+      // il risultato censurato: un rettangolo pieno al posto del numero (il numero qui non c'è proprio)
+      const q = document.createElement('span'); q.className = 'rr censura';
+      q.title = tr(m.cieco ? 'Lo vede solo il master, finché non decide di mostrarlo a tutti' : 'Lo vedono solo chi ha tirato e il master');
+      q.setAttribute('aria-label', tr('risultato nascosto'));
       d.append(head, q);
       return d;
     }
@@ -1737,7 +1782,7 @@ function msgEl(m) {
     // due tiri alla pari (dalla scheda in vantaggio o svantaggio): si vedono tutti e due, senza dire quale vale
     if (m.doppio && Array.isArray(m.rolls) && m.rolls.length === 2) {
       d.classList.add('doppio');
-      if (m.secret) { const s = document.createElement('span'); s.className = 'sec'; s.textContent = '🔒 segreto'; s.title = 'Lo vedete solo tu e il master'; d.append(s); }
+      if (m.secret) d.append(etichettaNascosto(m));
       const mod = m.mod || 0, box = document.createElement('span'); box.className = 'rr rDue'; box.title = tr('Due tiri: scegli tu quale tenere');
       m.rolls.forEach((v, i) => {
         if (i) box.append(document.createTextNode(' · '));
@@ -1751,7 +1796,7 @@ function msgEl(m) {
       return d;
     }
     if (m.adv) { const a = document.createElement('span'); a.className = 'adv ' + m.adv; a.textContent = m.adv === 'adv' ? 'vantaggio' : 'svantaggio'; d.append(a); }
-    if (m.secret) { const s = document.createElement('span'); s.className = 'sec'; s.textContent = '🔒 segreto'; s.title = 'Lo vedete solo tu e il master'; d.append(s); }
+    if (m.secret) d.append(etichettaNascosto(m));
     // tirato da scollegati (dadi provvisori): il server non l'ha tirato lui, ha solo controllato che i dadi tornino
     if (m.provvisorio) { const s = document.createElement('span'); s.className = 'provv'; s.textContent = '⚠ non verificato'; s.title = 'Tirato da scollegato: i dadi li ha tirati il suo dispositivo, non il server'; d.append(s); }
     const drop = new Set(m.drop || []), mod = m.mod || 0;
@@ -2285,7 +2330,8 @@ function fitDice() { if (dice.classList.contains('open')) dice.style.setProperty
 // Valgono per qualsiasi tiro: i pulsanti qui, quelli delle schede, «/r» in chat.
 // Vantaggio e svantaggio toccano solo il d20 del tiro (1d20+5 → 2d20kh1+5): i danni restano uguali.
 // Maiusc+clic = vantaggio, Alt+clic = svantaggio, solo per quel tiro.
-const diceMode = { adv: 'none', secret: false };
+// secret: «sussurro al master» (lo vedete tu e il master); cieco: tiro segreto (lo vede solo il master)
+const diceMode = { adv: 'none', secret: false, cieco: false };
 let diceKeys = { adv: false, dis: false, at: 0 };
 addEventListener('pointerdown', e => { diceKeys = { adv: e.shiftKey, dis: e.altKey && !e.shiftKey, at: performance.now() }; }, true);
 function diceAdvNow() {
@@ -2300,8 +2346,9 @@ function diceApply(expr) {
     // il primo d20 singolo («d20», «1d20») diventa due d20 di cui si tiene il migliore (o il peggiore)
     e = e.replace(/(^|[+-])1?d20(?![\dk])/i, (_, sign) => sign + '2d20' + (adv === 'adv' ? 'kh1' : 'kl1'));
   }
-  return { expr: e, secret: diceMode.secret, adv };
+  return { expr: e, secret: diceMode.secret || diceMode.cieco, cieco: diceMode.cieco || undefined, adv };
 }
+const tagNascosto = m => m.cieco ? ' · ' + tr('🔒 segreto') : m.secret ? ' · ' + tr('🤫 sussurro') : '';
 /** Riassunto dell'ultimo tiro sotto ai dadi. */
 function diceShowLast(m) {
   if (!m || !m.rolls) return;
@@ -2309,9 +2356,9 @@ function diceShowLast(m) {
   const kept = m.rolls.filter((_, i) => !drop.has(i));
   const tag = m.adv === 'adv' ? ' (vantaggio)' : m.adv === 'dis' ? ' (svantaggio)' : '';
   const parts = m.rolls.length <= 12 ? m.rolls.map((v, i) => drop.has(i) ? `(${v})` : String(v)).join(' ') : '';
-  if (m.doppio && m.rolls.length === 2) { diceLast.textContent = `${m.label}: ${m.rolls.map(v => v + (m.mod || 0)).join(' · ')}` + (m.secret ? ' · 🔒 segreto' : ''); fitDice(); diceMostraGrande(m, ''); return; }
+  if (m.doppio && m.rolls.length === 2) { diceLast.textContent = `${m.label}: ${m.rolls.map(v => v + (m.mod || 0)).join(' · ')}` + tagNascosto(m); fitDice(); diceMostraGrande(m, ''); return; }
   diceLast.textContent = `${m.label}${tag}: ` + (kept.length === 1 && !m.mod && !drop.size ? m.total : (parts ? parts + ' → ' : '') + m.total) +
-    (m.secret ? ' · 🔒 segreto' : '');
+    tagNascosto(m);
   fitDice();
   diceMostraGrande(m, tag);
 }
@@ -2328,7 +2375,7 @@ function diceMostraGrande(m, tag) {
     document.body.appendChild(pop);
   }
   const lab = document.createElement('span'), tot = document.createElement('b');
-  lab.textContent = m.label + tag + (m.secret ? ' · 🔒' : '');
+  lab.textContent = m.label + tag + (m.cieco ? ' · 🔒' : m.secret ? ' · 🤫' : '');
   tot.textContent = m.doppio && m.rolls && m.rolls.length === 2 ? m.rolls.map(v => v + (m.mod || 0)).join(' · ') : m.total;
   pop.replaceChildren(lab, tot);
   pop.classList.remove('on'); void pop.offsetWidth; pop.classList.add('on');
@@ -2337,14 +2384,15 @@ function diceMostraGrande(m, tag) {
 }
 function diceSyncModes() {
   for (const b of $('diceAdv').children) { const on = b.dataset.adv === diceMode.adv; b.classList.toggle('active', on); b.setAttribute('aria-checked', on); }
-  for (const b of $('diceVis').children) { const on = (b.dataset.vis === 'secret') === diceMode.secret; b.classList.toggle('active', on); b.setAttribute('aria-checked', on); }
+  const vis = diceMode.cieco ? 'cieco' : diceMode.secret ? 'secret' : 'public';
+  for (const b of $('diceVis').children) { const on = b.dataset.vis === vis; b.classList.toggle('active', on); b.setAttribute('aria-checked', on); }
   // anche a vassoio chiuso si vede che un modo è acceso: conta per i tiri delle schede
   const badge = $('diceBadge');
-  const txt = (diceMode.adv === 'adv' ? 'V' : diceMode.adv === 'dis' ? 'S' : '') + (diceMode.secret ? '🔒' : '');
+  const txt = (diceMode.adv === 'adv' ? 'V' : diceMode.adv === 'dis' ? 'S' : '') + (diceMode.cieco ? '🔒' : diceMode.secret ? '🤫' : '');
   badge.textContent = txt; badge.hidden = !txt;
   badge.className = diceMode.adv === 'dis' ? 'dis' : diceMode.adv === 'adv' ? 'adv' : '';
   diceToggle.title = [diceMode.adv === 'adv' ? 'Vantaggio acceso' : diceMode.adv === 'dis' ? 'Svantaggio acceso' : '',
-    diceMode.secret ? 'Tiri segreti' : ''].filter(Boolean).join(' · ') || 'Dadi';
+    diceMode.cieco ? 'Tiri segreti (solo il master)' : diceMode.secret ? 'Tiri sussurrati al master' : ''].filter(Boolean).join(' · ') || 'Dadi';
 }
 
 function rollDice(sides) {
@@ -2371,7 +2419,7 @@ $('diceAdv').addEventListener('click', e => {
 });
 $('diceVis').addEventListener('click', e => {
   const b = e.target.closest('[data-vis]'); if (!b) return;
-  diceMode.secret = b.dataset.vis === 'secret'; diceSyncModes();
+  diceMode.secret = b.dataset.vis === 'secret'; diceMode.cieco = b.dataset.vis === 'cieco'; diceSyncModes();
 });
 diceSyncModes();
 $('customRoll').addEventListener('click', () => {

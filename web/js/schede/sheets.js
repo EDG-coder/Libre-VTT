@@ -64,6 +64,7 @@ function rollExpr(expr, label) {
   if (!r) return false;
   const m = { kind: 'roll', label: label || String(expr).replace(/\s+/g, ''), ...r };
   if (d.secret) m.secret = true;
+  if (d.cieco) m.cieco = true;
   if (window.tiroDoppio && r.rolls && r.rolls.length === 2) m.doppio = true;
   if (window.tiroCritico >= 15 && window.tiroCritico <= 19) m.crit = window.tiroCritico;
   if (window.tiroRif) m.rif = { ...window.tiroRif };
@@ -690,11 +691,11 @@ function tiraDanni(rif, critico, segreto) {
   const s = sheets.find(x => x.id === rif.sh), expr = s && s.f['ad' + rif.at];
   if (!s || !expr) { addChat({ kind: 'text', text: tr('Non trovo più quell\'attacco nella scheda.') }); return; }
   const label = `${s.name} · ${critico ? tr('Danni critici') : tr('Danni')} ${s.f['an' + rif.at] || ''}`.trim();
-  const prima = diceMode.secret;
-  if (segreto) diceMode.secret = true;
+  const prima = diceMode.secret, primaCieco = diceMode.cieco;
+  if (segreto === 'cieco') diceMode.cieco = true; else if (segreto) diceMode.secret = true;
   const e = conCaratteristiche(s, expr);
   try { if (!rollExpr(conBonusDanni(s, critico ? raddoppiaDadi(e) : e), label)) addChat({ kind: 'text', text: `${s.name}: tiro non valido («${expr}»)` }); }
-  finally { diceMode.secret = prima; }
+  finally { diceMode.secret = prima; diceMode.cieco = primaCieco; }
 }
 // Da che numero il d20 dell'attacco è un critico: «19-20» scritto nel nome o nel bonus di quell'attacco
 // (armi speciali), altrimenti «Critico da» della scheda, altrimenti 20.

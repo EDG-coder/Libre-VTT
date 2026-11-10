@@ -351,6 +351,7 @@ function netHandle(m) {
       if (window.LIBRE && window.LIBRE.condivisi) window.LIBRE.condivisi.ricevi(m);
       return;
     case 'chat': netChat(m.msg); return;
+    case 'chat.upd': if (m.msg && m.msg.id) updateChat(m.msg); return;
     case 'chat.del': netFromServer = true; try { deleteChat(m.id); } finally { netFromServer = false; } return;
     case 'ping': {
       const x = m.x * view.s + view.x, y = m.y * view.s + view.y;
@@ -535,6 +536,7 @@ function netDelta(m) {
 /** Rientrati con il mondo già giusto: si aggiunge la chat persa e si tolgono i messaggi cancellati nel frattempo. */
 function netRiprendi(m) {
   for (const msg of m.chatDopo || []) if (msg && !chat.some(x => x.id === msg.id)) netChat(msg);
+  for (const msg of m.chatSvelati || []) if (msg && msg.id) updateChat(msg);
   for (const id of m.chatVia || []) if (chat.some(x => x.id === id)) { netFromServer = true; try { deleteChat(id); } finally { netFromServer = false; } }
 }
 
@@ -837,6 +839,10 @@ function netChat(msg) {
   try { addChat(msg); } finally { netFromServer = false; }
   // il proprio tiro, tornato dal server: il risultato anche sotto ai dadi
   if (msg && msg.kind === 'roll' && !msg.hidden && NET.me && msg.byId === NET.me.token) diceShowLast(msg);
+  // il proprio tiro segreto: il risultato lo vede solo il master
+  else if (msg && msg.kind === 'roll' && msg.hidden && msg.cieco && NET.me && msg.byId === NET.me.token && typeof diceLast !== 'undefined') {
+    diceLast.textContent = tr('🔒 Tiro segreto: il risultato lo vede solo il master.'); if (typeof fitDice === 'function') fitDice();
+  }
 }
 
 // In rete i dadi li tira il server: qui si manda solo l'espressione (già con vantaggio o
@@ -851,7 +857,7 @@ var rollExpr = (prev => function (expr, label) {
   if (!can('roll')) { netSay('Non puoi tirare i dadi.', 'warn'); return true; }
   const d = diceApply(expr);
   if (!parseExpr(d.expr)) return false;                     // si vede subito se è scritto male
-  intent('roll', { expr: d.expr, label: label || String(expr).replace(/\s+/g, ''), secret: d.secret, doppio: !!window.tiroDoppio, crit: window.tiroCritico || undefined, rif: window.tiroRif || undefined });
+  intent('roll', { expr: d.expr, label: label || String(expr).replace(/\s+/g, ''), secret: d.secret, cieco: d.cieco, doppio: !!window.tiroDoppio, crit: window.tiroCritico || undefined, rif: window.tiroRif || undefined });
   diceLast.textContent = 'Tiro mandato al server…';
   return true;
 })(rollExpr);
@@ -860,6 +866,8 @@ var rollExpr = (prev => function (expr, label) {
  *  Il server controlla che i dadi tornino con la formula e lo mette in chat con «⚠ non verificato». */
 function netTiroProvvisorio(expr, label) {
   const d = diceApply(expr);
+  // un tiro segreto da scollegati non si può: i dadi li tirerebbe (e li vedrebbe) questo dispositivo
+  if (d.cieco) { netSay('Sei scollegato: un tiro segreto si può fare solo quando torna il collegamento.', 'warn'); return true; }
   const r = parseExpr(d.expr);
   if (!r) return false;
   const lab = label || String(expr).replace(/\s+/g, '');
