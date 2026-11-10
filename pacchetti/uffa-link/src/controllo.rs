@@ -13,6 +13,9 @@
 //!   <segreto> host <porta> <cartella>      apre una sessione; l'ID va anche in <cartella>/uffa-link.id
 //!   <segreto> join <ID> <porta>            si collega alla sessione <ID>
 //!
+//! Subito dopo il segreto ci può essere «rete=<scelta>» (normale, senza-upnp, solo-relay): quanto ci si espone,
+//! come la variabile UFFA_LINK_RETE del programma per il computer (vedi `Rete` in lib.rs).
+//!
 //! Poi la connessione resta aperta finché dura la sessione. Chiuderla (o scrivere «stop»)
 //! ferma la sessione. Nell'altro verso arrivano:
 //!
@@ -32,8 +35,8 @@ use std::thread;
 /// Quello che l'avviatore chiede.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Comando {
-    Host { porta: u16, cartella: String },
-    Join { id: String, porta: u16 },
+    Host { porta: u16, cartella: String, rete: String },
+    Join { id: String, porta: u16, rete: String },
 }
 
 /// Legge la prima riga. `None` se non è un comando valido o se il segreto non torna.
@@ -43,12 +46,17 @@ pub fn leggi_comando(riga: &str, segreto: &str) -> Option<Comando> {
     if !uguali(chiave.as_bytes(), segreto.as_bytes()) {
         return None;
     }
+    // «rete=<scelta>», se c'è, viene prima del comando
+    let (rete, resto) = match resto.strip_prefix("rete=").and_then(|r| r.split_once(' ')) {
+        Some((scelta, dopo)) => (scelta.to_string(), dopo),
+        None => (String::new(), resto),
+    };
     let mut parti = resto.splitn(3, ' ');
     match parti.next()? {
         "host" => {
             let porta = parti.next()?.trim().parse().ok()?;
             let cartella = parti.next().map(str::trim).filter(|c| !c.is_empty()).unwrap_or(".").to_string();
-            Some(Comando::Host { porta, cartella })
+            Some(Comando::Host { porta, cartella, rete })
         }
         "join" => {
             let id = parti.next()?.trim().to_string();
@@ -56,7 +64,7 @@ pub fn leggi_comando(riga: &str, segreto: &str) -> Option<Comando> {
             if id.is_empty() {
                 return None;
             }
-            Some(Comando::Join { id, porta })
+            Some(Comando::Join { id, porta, rete })
         }
         _ => None,
     }
@@ -161,9 +169,14 @@ mod prove {
     #[test]
     fn comandi() {
         assert_eq!(leggi_comando("abc host 4010 /dati/con spazi/ok\n", "abc"),
-            Some(Comando::Host { porta: 4010, cartella: "/dati/con spazi/ok".into() }));
-        assert_eq!(leggi_comando("abc host 4010\n", "abc"), Some(Comando::Host { porta: 4010, cartella: ".".into() }));
-        assert_eq!(leggi_comando("abc join xyz123 4011\r\n", "abc"), Some(Comando::Join { id: "xyz123".into(), porta: 4011 }));
+            Some(Comando::Host { porta: 4010, cartella: "/dati/con spazi/ok".into(), rete: String::new() }));
+        assert_eq!(leggi_comando("abc host 4010\n", "abc"), Some(Comando::Host { porta: 4010, cartella: ".".into(), rete: String::new() }));
+        assert_eq!(leggi_comando("abc join xyz123 4011\r\n", "abc"), Some(Comando::Join { id: "xyz123".into(), porta: 4011, rete: String::new() }));
+        assert_eq!(leggi_comando("abc rete=solo-relay host 4010 /dati/x\n", "abc"),
+            Some(Comando::Host { porta: 4010, cartella: "/dati/x".into(), rete: "solo-relay".into() }));
+        assert_eq!(leggi_comando("abc rete=senza-upnp join xyz123 4011\n", "abc"),
+            Some(Comando::Join { id: "xyz123".into(), porta: 4011, rete: "senza-upnp".into() }));
+        assert_eq!(leggi_comando("abc rete=solo-relay\n", "abc"), None, "manca il comando");
         assert_eq!(leggi_comando("abd host 4010 /x", "abc"), None, "segreto sbagliato");
         assert_eq!(leggi_comando("abc host 99999 /x", "abc"), None, "porta fuori misura");
         assert_eq!(leggi_comando("abc join  4011", "abc"), None);

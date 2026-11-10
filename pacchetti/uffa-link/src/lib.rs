@@ -256,9 +256,8 @@ impl Pipe {
 
 /// Apre la sessione e resta in ascolto finché `fermo` non si compie.
 /// L'ID da dare ai giocatori finisce anche in `<cartella>/uffa-link.id` (lo legge il pannello).
-pub async fn host(porta: u16, cartella: PathBuf, voce: Arc<dyn Voce>, fermo: impl Future<Output = ()>) -> Result<()> {
+pub async fn host(porta: u16, cartella: PathBuf, rete: Rete, voce: Arc<dyn Voce>, fermo: impl Future<Output = ()>) -> Result<()> {
     let local: SocketAddr = format!("127.0.0.1:{porta}").parse().anyerr()?;
-    let rete = Rete::scelta();
     let endpoint = match chiave_salvata(&cartella) {
         Some(k) => rete.applica(Endpoint::builder(presets::N0).secret_key(k)).bind().await?,
         None => rete.applica(Endpoint::builder(presets::N0)).bind().await?,
@@ -320,9 +319,8 @@ async fn vuole_stabile(tcp: &TcpStream) -> bool {
 }
 
 /// Apre 127.0.0.1:<porta> e porta all'host ogni connessione che ci arriva, finché `fermo` non si compie.
-pub async fn join(id: &str, porta: u16, voce: Arc<dyn Voce>, fermo: impl Future<Output = ()>) -> Result<()> {
+pub async fn join(id: &str, porta: u16, rete: Rete, voce: Arc<dyn Voce>, fermo: impl Future<Output = ()>) -> Result<()> {
     let remote: EndpointId = id.trim().parse().anyerr()?;
-    let rete = Rete::scelta();
     let endpoint = rete.applica(Endpoint::builder(presets::N0)).bind().await?;
     // Il canale stabile: un secondo endpoint che passa solo dai relay (niente UDP diretto). È più lento, ma
     // il relay viaggia sulla porta 443 come il web: regge Wi-Fi ballerini, cambi di rete e firewall che
@@ -422,8 +420,8 @@ impl controllo::Motore for MotoreIroh {
             // si ferma quando l'avviatore lo chiede (o se ne va: il mittente sparisce)
             let fermo = async move { let _ = attesa.await; };
             let esito = match comando {
-                controllo::Comando::Host { porta, cartella } => host(porta, PathBuf::from(cartella), voce.clone(), fermo).await,
-                controllo::Comando::Join { id, porta } => join(&id, porta, voce.clone(), fermo).await,
+                controllo::Comando::Host { porta, cartella, rete } => host(porta, PathBuf::from(cartella), Rete::da_testo(&rete), voce.clone(), fermo).await,
+                controllo::Comando::Join { id, porta, rete } => join(&id, porta, Rete::da_testo(&rete), voce.clone(), fermo).await,
             };
             if let Err(e) = &esito {
                 voce.errore(&format!("{e}"));
