@@ -71,6 +71,7 @@
   transition: width .4s cubic-bezier(.22, .9, .3, 1), height .4s cubic-bezier(.22, .9, .3, 1), border-radius .4s;
 }
 .tool.glass.open { width: var(--tw, 240px); height: var(--dh, 240px); border-radius: 20px; }
+.tool.glass.open { translate: var(--dx, 0) var(--dy, 0); }
 .tool.glass > .tgrip {
   position: absolute; left: 0; top: 0; width: 52px; height: 52px; padding: 0;
   display: grid; place-items: center; border: 0; background: none; color: inherit;

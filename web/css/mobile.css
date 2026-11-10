@@ -122,6 +122,7 @@
   background: rgba(18, 21, 28, .94);
 }
 .ui-tel .tool.open .tbody, .ui-tel #dice.open #diceBody { width: auto !important; }
+.ui-tel .tool.glass.open { translate: none; }
 .ui-tel #zoomBox.open { width: auto !important; height: 52px !important; }
 
 /* in basso: la scena e i livelli. Niente scorrimento (su iPhone taglierebbe il menu delle scene, che sta

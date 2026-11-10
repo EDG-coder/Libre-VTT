@@ -144,7 +144,20 @@ function toggleOpen(box, open) {                                 // pannello che
 function misuraPannello(box) {
   const body = box.querySelector('.tbody') || box.querySelector('#diceBody');
   if (!body) return;
-  const top = Math.max(0, box.getBoundingClientRect().top), spazio = innerHeight - top - 10;
+  // Il pannello parte dalla sua casella: se sotto non c'è posto per tutto il contenuto, sale (e, se sta nel menu,
+  // si sposta di lato, per non coprire le altre icone) invece di restare un francobollo da scorrere con l'icona
+  // sopra il testo.
+  box.style.setProperty('--dx', '0px'); box.style.setProperty('--dy', '0px');
+  const r = box.getBoundingClientRect(), top = Math.max(0, r.top), tetto = Math.max(120, innerHeight - 20);
+  const voluto = Math.min(body.scrollHeight, tetto);
+  let dy = 0, dx = 0;
+  if (top + voluto > innerHeight - 10) dy = Math.max(10 - top, innerHeight - 10 - top - voluto);
+  if (dy < -8) {
+    const menu = box.closest('#toolDrawer');
+    if (menu) { const m = menu.getBoundingClientRect(); dx = Math.max(0, Math.round(m.right + 8 - r.left)); }
+  }
+  box.style.setProperty('--dx', dx + 'px'); box.style.setProperty('--dy', Math.round(dy) + 'px');
+  const spazio = innerHeight - (top + dy) - 10;
   box.style.setProperty('--dh', Math.max(120, Math.min(body.scrollHeight, spazio)) + 'px');
 }
 // Il contenuto può crescere mentre è aperto (una scaletta, un testo che va a capo): si rimisura.
