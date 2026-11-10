@@ -774,11 +774,13 @@ function parseExpr(str, dati) {
   return out;
 }
 
-// Un tiro segreto lo vedono solo chi l'ha fatto e chi conduce. Agli altri arriva solo che
-// c'è stato un tiro, senza numeri: il risultato non lascia proprio questo computer.
+// Due tiri nascosti. Il tiro «sussurrato» (secret) lo vedono chi l'ha fatto e chi conduce; il tiro
+// segreto (secret + cieco) solo chi conduce, nemmeno chi l'ha tirato. Agli altri arriva solo che c'è
+// stato un tiro, senza numeri: il risultato non lascia proprio questo computer. Il master può poi
+// mostrarlo a tutti (chat.svela).
 function seesSecret(c, m) {
   if (!c.token) return false;
-  return c.token === m.byId || recOf(c.token).role === 'master';
+  return (!m.cieco && c.token === m.byId) || recOf(c.token).role === 'master';
 }
 // Un sussurro (/w Nome testo) lo vedono solo chi lo scrive, chi lo riceve e chi conduce:
 // agli altri non arriva proprio.
@@ -789,7 +791,7 @@ function seesWhisper(c, m) {
 function chatFor(c, m) {
   if (m.whisper) return seesWhisper(c, m) ? m : null;
   if (!m.secret || seesSecret(c, m)) return m;
-  return { id: m.id, ts: m.ts, kind: 'roll', secret: true, hidden: true, label: 'tiro segreto', by: m.by, byId: m.byId };
+  return { id: m.id, ts: m.ts, kind: 'roll', secret: true, cieco: m.cieco || undefined, hidden: true, label: 'tiro segreto', by: m.by, byId: m.byId };
 }
 
 function addChat(m) {
@@ -1101,7 +1103,8 @@ function handleIntent(c, m) {
       } else r = parseExpr(m.expr);
       if (!r) return deny(c, m.op, 'tiro non valido');
       const msg = { kind: 'roll', label: str(m.label || m.expr, 80), by: c.name, byId: c.token, ...r };
-      if (m.secret) msg.secret = true;
+      if (m.secret || m.cieco) msg.secret = true;
+      if (m.cieco) msg.cieco = true;                                           // tiro segreto: lo vede solo il master
       if (m.doppio && r.rolls && r.rolls.length === 2) msg.doppio = true;   // due tiri mostrati alla pari (scheda in vantaggio/svantaggio)
       const cr = Math.round(+m.crit);
       if (cr >= 15 && cr <= 19) msg.crit = cr;                                 // «Critico da» della scheda: il d20 da quel numero in su è un critico
@@ -1117,6 +1120,7 @@ function handleIntent(c, m) {
       if (!world.dadiProvvisori) return deny(c, m.op, 'il master non accetta i tiri fatti da scollegati');
       const r = Array.isArray(m.dadi) && m.dadi.length <= 200 ? parseExpr(m.expr, m.dadi) : null;
       if (!r) return deny(c, m.op, 'tiro non valido');
+      if (m.cieco) return deny(c, m.op, 'un tiro segreto non si può fare da scollegati');   // i dadi li vedrebbe chi tira
       const msg = { kind: 'roll', label: str(m.label || m.expr, 80), by: c.name, byId: c.token, ...r, provvisorio: true };
       const quando = +m.quando;
       if (quando > Date.now() - 24 * 3600e3 && quando <= Date.now()) msg.quando = quando;
@@ -1144,6 +1148,19 @@ function handleIntent(c, m) {
       }
       addChat({ kind: 'text', text, by: c.name, byId: c.token });
       rispostaCalcolo(c, text);
+      return;
+    }
+    // il master toglie la censura a un tiro segreto: da qui in poi il risultato lo vedono tutti
+    case 'chat.svela': {
+      if (c.role !== 'master') return deny(c, m.op, 'solo il master può mostrare un tiro segreto');
+      const msg = (world.chat || []).find(x => x.id === m.id);
+      if (!msg || msg.kind !== 'roll' || !msg.secret) return;
+      delete msg.secret; delete msg.cieco;
+      msg.svelato = true;
+      chatSvelati.push(msg.id); if (chatSvelati.length > 50) chatSvelati.shift();
+      scheduleSave();
+      for (const k of clients) sendA(k, { t: 'chat.upd', msg });
+      panelPush({ t: 'chat.upd', msg });
       return;
     }
     case 'chat.del': {
@@ -1773,6 +1790,7 @@ function shutOut(c, reason) {
 const SA = ['ok', 'stabile', 'righello'];
 // I messaggi di chat cancellati di recente: chi rientra senza ricaricare il mondo li toglie anche da sé.
 const chatTolti = [];
+const chatSvelati = [];   // i tiri segreti mostrati a tutti di recente: chi rientra li riceve scoperti
 function sendWelcome(c) {
   c.pending = false;
   const rec = recOf(c.token);
@@ -1785,7 +1803,8 @@ function sendWelcome(c) {
   // (senza un messaggio da cui ripartire vuol dire che non ne aveva nessuno: gli si mandano tutti)
   if (c.delta && prec && c.verCliente === prec.ver && (i >= 0 || !c.chatDa)) {
     c.send({ t: 'welcome', needName: !!c.needName, you, riprendi: true, sa: SA,
-      chatDopo: chatV.slice(i + 1).slice(-250).map(m => chatFor(c, m)).filter(Boolean), chatVia: chatTolti.slice() });
+      chatDopo: chatV.slice(i + 1).slice(-250).map(m => chatFor(c, m)).filter(Boolean), chatVia: chatTolti.slice(),
+      chatSvelati: chatSvelati.map(id => chatV.find(x => x.id === id)).filter(Boolean) });
     pushWorld(c);
   } else {
     const w = viewFor(c);
@@ -2082,7 +2101,7 @@ function versoBrowser(msg, giaInOrdine) {
 // Si apre quando il tubo è su e c'è un browser da presentare; se cade si riapre da sola.
 const STABILE = process.env.LINK_STABILE !== '0';
 let stabile = null, stabileBuf = '', stabileTimer = 0, stabileUltimo = 0, hostSaStabile = false;
-const OPS_A = new Set(['chat', 'rule', 'roll', 'roll.prov', 'token.move', 'scatta', 'luce.porta', 'chat.del']);
+const OPS_A = new Set(['chat', 'rule', 'roll', 'roll.prov', 'token.move', 'scatta', 'luce.porta', 'chat.del', 'chat.svela']);
 function stabileApri() {
   if (!STABILE || viaRelay || !hostSaStabile || stabile || stabileTimer || !lastHello || !lastHello.token) return;   // (dal relay non c'è il canale stabile)
   const sock = net.connect(LINK_PORT, '127.0.0.1');

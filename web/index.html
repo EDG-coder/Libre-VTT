@@ -52,7 +52,7 @@
     </div>
     <div class="dLabel">Chi vede il risultato</div>
     <div class="dRow dSeg" id="diceVis" role="radiogroup" aria-label="Tiro pubblico o segreto">
-      <button type="button" role="radio" data-vis="public">Tutti</button><button type="button" role="radio" data-vis="secret" title="Il risultato lo vedete solo tu e il master: gli altri vedono solo che hai tirato">🔒 Solo io e il master</button>
+      <button type="button" role="radio" data-vis="public">Tutti</button><button type="button" role="radio" data-vis="secret" title="Sussurro al master: il risultato lo vedete solo tu e il master, gli altri lo vedono censurato">🤫 Sussurro</button><button type="button" role="radio" data-vis="cieco" title="Tiro segreto: il risultato lo vede solo il master, anche tu lo vedi censurato. Il master può mostrarlo a tutti">🔒 Segreto</button>
     </div>
     <div class="dLabel">Dado (un clic tira)</div>
     <div class="dRow" id="diceTypes"></div>
@@ -385,6 +385,7 @@
     <li class="soloMouse"><b>Tieni premuto</b> su un punto libero della mappa: ping.</li>
     <li class="soloMouse">Con il mouse su un segnalino tieni premuto <b>Alt</b> (⌥ Option su Mac): lo vedi intero e grande quanto lo schermo finché non lasci il tasto.</li>
     <li class="soloMouse">I pulsanti nel <b>menu a sinistra</b> (dadi, penna, calcolatrice, righello, zoom) si possono trascinare fuori e rimettere a posto.</li>
+    <li>Nei dadi e in cima alle schede: <b>🤫 Sussurro</b> fa vedere il risultato solo a te e al master, <b>🔒 Segreto</b> solo al master (anche chi tira lo vede censurato). Agli altri compare un rettangolo nero; il master con <b>👁 Mostra a tutti</b> lo scopre.</li>
     <li>Nelle schede e in chat: <b>[[1d20+5]]</b> o <b>/r 2d6+3</b> per i tiri rapidi. In chat <b>/w Nome messaggio</b> sussurra: lo vedete solo voi due e il master.</li>
     <li>La scheda <b>Standard</b> è la scheda a tre pagine compatibile con la 5ª edizione (SRD): clic sui valori tondi, sulle abilità, sui tiri salvezza e sulle armi (◎ colpire, ◆ danni) per tirare subito.</li>
     <li>Nello strumento <b>Segnalini</b>, «Immagine» apre l'editor di ritaglio: sposti e ingrandisci la foto sotto la maschera, togli lo sfondo con la bacchetta e rifinisci la sagoma con la gomma.</li>
@@ -393,7 +394,7 @@
     <li>La <b>Visibilità</b> (l'occhio nel menu) decide come vedono i giocatori: tutto, solo quello che scopri con la <b>nebbia</b>, la <b>luce dinamica</b> o entrambe. Per i giocatori la parte coperta è nera e i segnalini che ci stanno sotto non gli arrivano nemmeno.</li>
     <li>La <b>luce dinamica</b> in tre passi: disegna i <b>muri</b> (anche una stanza intera trascinando; le porte con un clic su un muro), metti una <b>luce</b> o scegli Giorno/Penombra, spunta chi è del <b>party</b>. La lista in cima al pannello dice cosa manca; «Anteprima» ti fa vedere la mappa come la vedono loro.</li>
     <li>Il <b>📚 Compendio</b> (nel pannello di destra) ha mostri, incantesimi, oggetti, classi e regole dell'SRD: trascina un mostro sulla mappa per avere segnalino e scheda, un oggetto o un incantesimo su una scheda per aggiungerlo. In chat <b>@Palla di fuoco</b> diventa un link.</li>
-    <li>In cima a ogni scheda scegli <b>Pubblico/Privato</b> e <b>Svantaggio/Normale/Vantaggio</b>: con due d20 vedi tutti e due i risultati. «Nuova scheda» → <b>🧭 Crea passo passo</b> costruisce il personaggio; <b>⬆ Livello</b> lo fa salire.</li>
+    <li>In cima a ogni scheda scegli <b>Pubblico/Sussurro/Segreto</b> e <b>Svantaggio/Normale/Vantaggio</b>: con due d20 vedi tutti e due i risultati. «Nuova scheda» → <b>🧭 Crea passo passo</b> costruisce il personaggio; <b>⬆ Livello</b> lo fa salire.</li>
     <li>Per giocare a distanza basta aprire <b>LIBRE VTT</b> e scegliere «Conduco io» o «Mi unisco»: permessi, scena mostrata, schede e provvedimenti si regolano nel pannello su <b>localhost:4000</b>.</li>
   </ul>
   <div class="dialogBtns"><button id="helpMai" type="button" class="btn ghost" title="Riapparirà solo quando la guida cambia. La trovi sempre in Impostazioni › Strumenti.">Non mostrare più</button><span style="flex:1"></span><button id="helpOk" type="button" class="btn">Ho capito</button></div>

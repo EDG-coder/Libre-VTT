@@ -1,4 +1,4 @@
-// ---------- In cima a ogni scheda: «Pubblico / Privato» e «Svantaggio / Normale / Vantaggio» ----------
+// ---------- In cima a ogni scheda: «Pubblico / Sussurro / Segreto» e «Svantaggio / Normale / Vantaggio» ----------
 // Valgono per tutti i tiri fatti da quella scheda (caratteristiche, abilità, attacchi, [[…]] nei testi),
 // anche per le schede dei mostri del master e per le voci dei mostri del compendio.
 // In vantaggio o svantaggio si tirano due d20 e si vedono tutti e due i risultati alla pari, senza dire
@@ -17,17 +17,18 @@
     const b = document.createElement('div');
     b.className = 'tiroBar';
     b.innerHTML = `<div class="tiroSeg" role="radiogroup" aria-label="${tr('Chi vede i tiri di questa scheda')}">
-        <button type="button" role="radio" data-s="0">${tr('🌐 Pubblico')}</button><button type="button" role="radio" data-s="1" title="${tr('Il risultato lo vedete solo tu e il master')}">${tr('🔒 Privato')}</button></div>
+        <button type="button" role="radio" data-s="0">${tr('🌐 Pubblico')}</button><button type="button" role="radio" data-s="1" title="${tr('Sussurro al master: il risultato lo vedete solo tu e il master')}">${tr('🤫 Sussurro')}</button><button type="button" role="radio" data-s="2" title="${tr('Tiro segreto: il risultato lo vede solo il master, anche tu lo vedi censurato')}">${tr('🔒 Segreto')}</button></div>
       <div class="tiroSeg" role="radiogroup" aria-label="${tr('Vantaggio o svantaggio per i tiri di questa scheda')}">
         <button type="button" role="radio" data-a="dis" title="${tr('Due d20: vedi tutti e due i risultati')}">${tr('Svantaggio')}</button><button type="button" role="radio" data-a="none">${tr('Normale')}</button><button type="button" role="radio" data-a="adv" title="${tr('Due d20: vedi tutti e due i risultati')}">${tr('Vantaggio')}</button></div>`;
     const segna = () => {
       const x = modoDi(id);
-      b.querySelectorAll('[data-s]').forEach(e => { const on = (e.dataset.s === '1') === !!x.segreto; e.classList.toggle('on', on); e.setAttribute('aria-checked', on); });
+      const s = x.segreto === 'cieco' ? '2' : x.segreto ? '1' : '0';      // segreto: false, true (sussurro) o 'cieco' (solo il master)
+      b.querySelectorAll('[data-s]').forEach(e => { const on = e.dataset.s === s; e.classList.toggle('on', on); e.setAttribute('aria-checked', on); });
       b.querySelectorAll('[data-a]').forEach(e => { const on = e.dataset.a === x.adv; e.classList.toggle('on', on); e.setAttribute('aria-checked', on); e.classList.toggle(e.dataset.a, on); });
     };
     b.addEventListener('click', e => {
       const x = { ...modoDi(id) }, t = e.target.closest('button'); if (!t) return;
-      if (t.dataset.s) x.segreto = t.dataset.s === '1';
+      if (t.dataset.s) x.segreto = t.dataset.s === '2' ? 'cieco' : t.dataset.s === '1';
       if (t.dataset.a) x.adv = t.dataset.a;
       modi.set(id, x); scrivi(id, x); segna();
     });
@@ -78,11 +79,11 @@
   const prima = rollExpr;
   rollExpr = function (expr, label) {                    // eslint-disable-line no-global-assign
     if (!finestra || typeof diceMode === 'undefined') return prima.apply(this, arguments);
-    const m = modoDi(finestra.dataset.id), salvo = { adv: diceMode.adv, secret: diceMode.secret };
-    diceMode.adv = m.adv; diceMode.secret = !!m.segreto;
+    const m = modoDi(finestra.dataset.id), salvo = { adv: diceMode.adv, secret: diceMode.secret, cieco: diceMode.cieco };
+    diceMode.adv = m.adv; diceMode.secret = !!m.segreto && m.segreto !== 'cieco'; diceMode.cieco = m.segreto === 'cieco';
     window.tiroDoppio = m.adv !== 'none' && d20.test(String(expr).replace(/\s+/g, ''));
     try { return prima.apply(this, arguments); }
-    finally { diceMode.adv = salvo.adv; diceMode.secret = salvo.secret; window.tiroDoppio = false; }
+    finally { diceMode.adv = salvo.adv; diceMode.secret = salvo.secret; diceMode.cieco = salvo.cieco; window.tiroDoppio = false; }
   };
   // ---------- ⚙ Avanzate: il primo pezzo del menu avanzato della scheda ----------
   // Abilità (Tuttofare, mezza competenza per abilità), Attacchi (intervallo critico), Iniziativa (bonus,

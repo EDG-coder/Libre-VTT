@@ -307,10 +307,11 @@ body.menu-open #sideToggle svg { transform: rotate(180deg); }
 #dice .dSeg button.active:not(#diceToggle) { background: rgba(124, 92, 255, .5); border-color: #a58bff; box-shadow: inset 0 0 0 1px #a58bff; }
 #dice #diceAdv button[data-adv="adv"].active { background: rgba(46, 200, 140, .45); border-color: #3ddc97; box-shadow: inset 0 0 0 1px #3ddc97; }
 #dice #diceAdv button[data-adv="dis"].active { background: rgba(230, 80, 80, .45); border-color: #ff6b6b; box-shadow: inset 0 0 0 1px #ff6b6b; }
-/* «Tutti» stretto, «🔒 Solo io e il master» prende il resto e se non ci sta va a capo */
+/* «Tutti» stretto, «🤫 Sussurro» e «🔒 Segreto» si dividono il resto e se non ci stanno vanno a capo */
 #dice #diceVis button[data-vis="public"]:not(#diceToggle) { flex: 0 0 auto; padding-inline: 12px; }
-#dice #diceVis button[data-vis="secret"]:not(#diceToggle) { white-space: normal; line-height: 1.15; overflow-wrap: anywhere; }
+#dice #diceVis button:is([data-vis="secret"], [data-vis="cieco"]):not(#diceToggle) { white-space: normal; line-height: 1.15; overflow-wrap: anywhere; }
 #dice #diceVis button[data-vis="secret"].active { background: rgba(255, 176, 32, .38); border-color: #ffb020; box-shadow: inset 0 0 0 1px #ffb020; }
+#dice #diceVis button[data-vis="cieco"].active { background: rgba(230, 80, 80, .42); border-color: #ff6b6b; box-shadow: inset 0 0 0 1px #ff6b6b; }
 /* a vassoio chiuso: si vede lo stesso che un modo è acceso */
 #diceBadge {
   position: absolute; right: 1px; bottom: 1px; min-width: 16px; height: 16px; padding: 0 3px; box-sizing: border-box;
@@ -341,7 +342,22 @@ body.menu-open #sideToggle svg { transform: rotate(180deg); }
 .msg.roll .adv.dis { background: rgba(255, 107, 107, .16); color: #ff8a8a; border: 1px solid rgba(255, 107, 107, .5); }
 .msg.roll .sec { background: rgba(255, 176, 32, .16); color: #ffc04d; border: 1px solid rgba(255, 176, 32, .5); }
 .msg.roll.secret { border-style: dashed; }
-.msg.roll.hiddenRoll { opacity: .75; border-style: dashed; border-color: rgba(255, 176, 32, .5); }
+.msg.roll.hiddenRoll { opacity: .85; border-style: dashed; border-color: rgba(255, 176, 32, .5); align-items: center; }
+/* tiro segreto (lo vede solo il master): rosso al posto dell'arancio del sussurro */
+.msg.roll .sec.cieco { background: rgba(255, 107, 107, .16); color: #ff8a8a; border-color: rgba(255, 107, 107, .5); }
+.msg.roll.hiddenRoll:has(.censura) .rl { font-weight: 600; }
+/* il risultato censurato: un rettangolo pieno, come una riga coperta col pennarello */
+.msg.roll .rr.censura {
+  display: inline-block; width: 3.2em; height: 1.05em; border-radius: 3px; vertical-align: middle;
+  background: repeating-linear-gradient(-45deg, #0b0d12 0 6px, #1c2030 6px 12px); border: 1px solid rgba(255, 255, 255, .18);
+}
+/* il pulsante del master per mostrare a tutti un tiro nascosto, e il segno «mostrato» */
+.msg.roll .svela {
+  margin-left: auto; font: inherit; font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; cursor: pointer;
+  background: rgba(124, 92, 255, .22); color: var(--text); border: 1px solid rgba(165, 139, 255, .7);
+}
+.msg.roll .svela:hover { background: rgba(124, 92, 255, .45); }
+.msg.roll .svelato { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; color: #b9a6ff; border: 1px solid rgba(165, 139, 255, .45); }
 #ctx {
   position: fixed; z-index: 200000; padding: 4px; border-radius: 8px;
   background: var(--panel-3); border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
