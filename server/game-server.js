@@ -282,7 +282,10 @@ async function verificaAccount(a) {
 
 const CAMPAGNA_NOME = String(process.env.CAMPAGNA_NOME || '').slice(0, 80);
 // Le regole d'ingresso e la pausa generale: le decide chi conduce, dal pannello.
-let session = Object.assign({ locked: false, approval: false, maxPlayers: 0, paused: false }, readJson('session.json', null) || {});
+// In una campagna nuova chi entra per la prima volta aspetta il sì del master (lo si spegne dal pannello, «Permessi
+// e schede»): il codice può finire in mani sbagliate. Le campagne già giocate tengono la scelta che avevano, e sul
+// server dedicato resta spento (lì il master può non esserci, e nessuno aprirebbe la porta).
+let session = Object.assign({ locked: false, approval: !DEDICATO, maxPlayers: 0, paused: false }, readJson('session.json', null) || {});
 
 // Le cose che cambiano il mondo: chi è congelato o in pausa non le può fare.
 const MUTATING = new Set(['board', 'token.move', 'scatta', 'token.add', 'token.del', 'fog.set', 'luce.dimentica', 'luce.porta', 'scene.show',
@@ -372,7 +375,8 @@ function sendPlayers() {
   // ai giocatori non serve sapere da quale dispositivo arrivano gli altri, che cosa stanno guardando o
   // che cosa hanno chiesto per ultimo: quello resta al master e al pannello
   const ridotta = list.map(({ peer, percorso, viewScene, viewRect, lastOp, lastAt, ops, client, ...resto }) => resto);
-  for (const c of clients) c.send({ t: 'players', list: c.role === 'master' ? list : ridotta });
+  // (chi non ha ancora salutato, o aspetta alla porta, non è del tavolo: l'elenco non gli arriva)
+  for (const c of clients) if (c.token && !c.pending) c.send({ t: 'players', list: c.role === 'master' ? list : ridotta });
   panelPush({ t: 'players', list });
 }
 
@@ -1680,6 +1684,14 @@ function onMessage(c, raw) {
       ? apiPannello(m.p, m.corpo && typeof m.corpo === 'object' ? m.corpo : {}, c)
       : { codice: 403, dati: 'solo il master' };
     c.send({ t: 'pannello.r', id, codice: r.codice, dati: r.dati });
+    return;
+  }
+
+  // il master fa entrare (o no) chi aspetta alla porta, direttamente dal tavolo: come «Fai entrare» del pannello
+  if (m.t === 'ammetti') {
+    if (c.role !== 'master' || c.pending) return;
+    const token = str(m.token, 64);
+    if (/^[a-f0-9]{24}$/.test(token) && roster[token]) apiPannello('/api/mod', { token, action: m.si === false ? 'refuse' : 'approve' }, c);
     return;
   }
 

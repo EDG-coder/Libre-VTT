@@ -391,7 +391,9 @@ function ricordaUnita(codice, dati) {
 // installare niente. Il server di gioco si collega al relay (server/relay-host.js) e si fa riconoscere con la
 // chiave del codice. L'indirizzo del relay lo dice il sito (relay.json), oppure lo scrive il master (un suo relay).
 const SITO_WEB = String(amb('SITO') || 'https://libre-vtt.pages.dev').replace(/\/+$/, '');
-function relayConf() { const r = conf.relay || {}; return { attiva: !!r.attiva, indirizzo: typeof r.indirizzo === 'string' ? r.indirizzo : '', tipo: ['sito', 'cloudflare', 'proprio', 'terzi'].includes(r.tipo) ? r.tipo : 'sito', appVia: ['iroh', 'auto', 'relay'].includes(r.appVia) ? r.appVia : 'iroh' }; }
+function relayConf() { const r = conf.relay || {}; return { attiva: !!r.attiva, indirizzo: typeof r.indirizzo === 'string' ? r.indirizzo : '', tipo: ['sito', 'cloudflare', 'proprio', 'terzi'].includes(r.tipo) ? r.tipo : 'sito', appVia: ['iroh', 'auto', 'relay'].includes(r.appVia) ? r.appVia : 'iroh', irohRete: RETI_IROH.includes(r.irohRete) ? r.irohRete : 'normale' }; }
+// Quanto si espone il collegamento diretto (uffa-link la legge in UFFA_LINK_RETE): come sempre, senza chiedere porte al router, o solo dai server di passaggio
+const RETI_IROH = ['normale', 'senza-upnp', 'solo-relay'];
 /** L'indirizzo di un relay scritto dall'utente: https:// diventa wss://; vale wss:// (o ws:// solo per questo computer, per le prove). Vuoto = quello del sito. */
 function relayIndirizzoPulito(testo) {
   let x = String(testo == null ? '' : testo).trim().replace(/^https:/i, 'wss:').replace(/^http:\/\/(localhost|127\.0\.0\.1)/i, 'ws://$1').replace(/\/+$/, '').replace(/\/v1(\/stanza)?$/i, '');
@@ -475,7 +477,7 @@ function dalServerDiGioco(cosa, d) {
     state.joinCodice = d.codice;
     const p = state.procs.sessione;
     if (p) { p.sostituito = true; try { p.kill(); } catch {} delete state.procs.sessione; }
-    run('sessione', LINK, ['join', d.codice, '--port', String(state.porte.link)], { keep: true, cwd: USERDIR });
+    run('sessione', LINK, ['join', d.codice, '--port', String(state.porte.link)], { keep: true, cwd: USERDIR, env: { UFFA_LINK_RETE: relayConf().irohRete } });
   }
 }
 /** Il riquadro di una campagna: si chiede all'host com'è (online, quanti dentro, in sessione)
@@ -1075,8 +1077,9 @@ async function avvia(mode, id, campagna, opz = {}) {
     const soloRelay = mode === 'join' && extra.LIBRE_JOIN_VIA === 'relay';     // niente uffa-link: tutto passa dal relay
     if (!soloRelay && (MOBILE ? !LINK_CTRL : !linkBin())) return fallisci(MOBILE ? 'Il collegamento a distanza dell\'app non è partito: chiudi l\'app e riaprila.' : 'Manca il collegamento a distanza: premi «Prepara» e riprova.');
     // uffa-link scrive l'ID nella sua cartella di lavoro: la nostra, dove si può scrivere
-    if (mode === 'host') run('sessione', LINK, ['host', '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR });
-    else if (!soloRelay) run('sessione', LINK, ['join', id, '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR });
+    const reteLink = { UFFA_LINK_RETE: relayConf().irohRete };
+    if (mode === 'host') run('sessione', LINK, ['host', '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR, env: reteLink });
+    else if (!soloRelay) run('sessione', LINK, ['join', id, '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR, env: reteLink });
   }
 
   state.mode = mode; state.busy = null; push();
@@ -1881,6 +1884,7 @@ const server = http.createServer(async (req, res) => {
       if (!x.valore) r.tipo = 'sito';
     }
     if (typeof m.appVia === 'string' && ['iroh', 'auto', 'relay'].includes(m.appVia)) r.appVia = m.appVia;   // come si collegano le app tra loro: iroh (diretto), relay, o prima iroh e poi relay
+    if (typeof m.irohRete === 'string' && RETI_IROH.includes(m.irohRete)) r.irohRete = m.irohRete;       // vale dalla prossima partita che si apre
     if (typeof m.tipo === 'string' && ['sito', 'cloudflare', 'proprio', 'terzi'].includes(m.tipo)) { r.tipo = m.tipo; if (m.tipo === 'sito') r.indirizzo = ''; }
     conf.relay = r; salvaConf();
     if (!r.attiva) state.relay = null;
