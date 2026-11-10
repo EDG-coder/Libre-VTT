@@ -200,7 +200,7 @@ function draw() {
     : 'Sei collegato come giocatore: i permessi li dà il master dalla sua macchina.';
   $('idCard').hidden = !host;
   $('rulesCard').hidden = !host;
-  $('sessId').textContent = S.sessionId || 'Avvia «uffa-link host» per avere l\'ID.';
+  $('sessId').textContent = S.invito || S.sessionId || 'Avvia «uffa-link host» per avere l\'ID.';
   $('idHint').textContent = S.sessionId
     ? 'Resta lo stesso a ogni apertura della campagna, finché non lo cambi. Chi è già entrato non deve più scriverlo.'
     : 'Il codice compare appena il collegamento a distanza è acceso.';
@@ -462,7 +462,7 @@ $('newId').onclick = async () => {
   try { await post('/api/invito/cambia', {}); } finally { setTimeout(() => { $('newId').disabled = false; load(); }, 5000); }
 };
 $('copyId').onclick = async () => {
-  try { await navigator.clipboard.writeText(S.sessionId || ''); $('copyId').textContent = 'Copiato'; setTimeout(() => $('copyId').textContent = 'Copia', 1400); } catch {}
+  try { await navigator.clipboard.writeText(S.invito || S.sessionId || ''); $('copyId').textContent = 'Copiato'; setTimeout(() => $('copyId').textContent = 'Copia', 1400); } catch {}
 };
 
 load();

@@ -97,6 +97,9 @@
     for (const k of Object.keys(d.toppe || {})) {
       const o = P.get(k), t = d.toppe[k];
       if (!o || typeof o !== 'object') continue;
+      // i percorsi arrivano dalla rete: uno che punta al prototipo degli oggetti cambierebbe tutti gli oggetti della pagina
+      const vietato = pp => !Array.isArray(pp) || pp.some(x => x === '__proto__' || x === 'constructor' || x === 'prototype');
+      if ((t.v || []).some(vietato) || (t.p || []).some(x => !Array.isArray(x) || vietato(x[0]))) continue;
       for (const pp of t.v || []) { if (pp.length === 2) { if (o[pp[0]]) delete o[pp[0]][pp[1]]; } else delete o[pp[0]]; }
       for (const [pp, val] of t.p || []) {
         if (pp.length === 2) { if (!o[pp[0]] || typeof o[pp[0]] !== 'object') o[pp[0]] = {}; o[pp[0]][pp[1]] = val; }

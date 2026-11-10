@@ -212,6 +212,22 @@ function chiaveMasterOk(x) {
   if (!/^[a-f0-9]{32}$/.test(k) || v.length !== k.length) return false;
   return crypto.timingSafeEqual(Buffer.from(v), Buffer.from(k));
 }
+// La parola d'invito: la seconda metà del codice che il master manda ai suoi (32 cifre dopo le 64 dell'ID).
+// L'ID del collegamento è una chiave pubblica: chi raggiunge la porta di chi ospita la può leggere, e i server
+// di passaggio la conoscono. La parola no: non esce da qui e dal messaggio del master. La scrive l'avviatore
+// (o il server dedicato) in data/invito.segreto e cambia con «Cambia codice»; la si rilegge ogni volta.
+// Serve solo a chi il tavolo non conosce ancora: chi è già entrato si fa riconoscere con gettone e firma.
+// Senza il file (server acceso a mano) non si controlla niente, come prima.
+const INVITO_SEGRETO_FILE = path.join(DATA, 'invito.segreto');
+function parolaInvito() {
+  try { const t = fs.readFileSync(INVITO_SEGRETO_FILE, 'utf8').trim().toLowerCase(); return /^[a-f0-9]{32}$/.test(t) ? t : ''; } catch { return ''; }
+}
+function invitoOk(x) {
+  const k = parolaInvito();
+  if (!k) return true;
+  const v = typeof x === 'string' ? x.trim().toLowerCase() : '';
+  return v.length === k.length && crypto.timingSafeEqual(Buffer.from(v), Buffer.from(k));
+}
 /** L'identità con cui entra chi saluta: il suo gettone se è buono, altrimenti uno nuovo dato da noi.
  *  Il browser di questo computer (chi conduce) non passa dal tubo: di lui ci si fida come prima.
  *  Sul server dedicato no: lì nessuno conduce da questa macchina, e la firma la mostrano tutti. */
@@ -283,7 +299,10 @@ async function verificaAccount(a) {
 
 const CAMPAGNA_NOME = String(process.env.CAMPAGNA_NOME || '').slice(0, 80);
 // Le regole d'ingresso e la pausa generale: le decide chi conduce, dal pannello.
-let session = Object.assign({ locked: false, approval: false, maxPlayers: 0, paused: false }, readJson('session.json', null) || {});
+// In una campagna nuova chi entra per la prima volta aspetta il sì del master (lo si spegne dal pannello, «Permessi
+// e schede»): il codice può finire in mani sbagliate. Le campagne già giocate tengono la scelta che avevano, e sul
+// server dedicato resta spento (lì il master può non esserci, e nessuno aprirebbe la porta).
+let session = Object.assign({ locked: false, approval: !DEDICATO, maxPlayers: 0, paused: false }, readJson('session.json', null) || {});
 
 // Le cose che cambiano il mondo: chi è congelato o in pausa non le può fare.
 const MUTATING = new Set(['board', 'token.move', 'scatta', 'token.add', 'token.del', 'fog.set', 'luce.dimentica', 'luce.porta', 'scene.show',
@@ -373,7 +392,8 @@ function sendPlayers() {
   // ai giocatori non serve sapere da quale dispositivo arrivano gli altri, che cosa stanno guardando o
   // che cosa hanno chiesto per ultimo: quello resta al master e al pannello
   const ridotta = list.map(({ peer, percorso, viewScene, viewRect, lastOp, lastAt, ops, client, ...resto }) => resto);
-  for (const c of clients) c.send({ t: 'players', list: c.role === 'master' ? list : ridotta });
+  // (chi non ha ancora salutato, o aspetta alla porta, non è del tavolo: l'elenco non gli arriva)
+  for (const c of clients) if (c.token && !c.pending) c.send({ t: 'players', list: c.role === 'master' ? list : ridotta });
   panelPush({ t: 'players', list });
 }
 
@@ -1486,6 +1506,9 @@ function consuma(c, quale, max, alSecondo) {
   b.n -= 1;
   return true;
 }
+const INGRESSI = {};                                              // il secchio dei profili nuovi, uno per tutto il tavolo
+// Quanti collegamenti da fuori si tengono aperti: in tutto, e di quelli che non hanno ancora salutato.
+const MAX_LINK = 200, MAX_LINK_MUTI = 60;
 function troppeRichieste(c, op) {
   if (Date.now() - (c.avvisatoFretta || 0) < 10000) return;      // un avviso ogni 10 secondi basta
   c.avvisatoFretta = Date.now();
@@ -1571,7 +1594,17 @@ function onMessage(c, raw) {
 
   if (m.t === 'hello') {
     // Il gettone è l'identità: il browser se lo tiene e lo rimanda, con la firma. Se non è buono, gliene do uno.
+    // Da fuori (tubo o sito) i saluti si contano: chi ha il codice non deve poter riempire il registro di profili
+    // finti né far lavorare il server a vuoto. Pochi saluti per collegamento (chi ricarica la pagina ne manda uno),
+    // e un tetto ai profili nuovi di tutto il tavolo: una serata vera non ci arriva mai vicino.
+    if (c.kind === 'link' && !consuma(c, 'saluti', 8, 0.1)) { c.send({ t: 'bye', reason: 'Troppi ingressi tutti insieme: riprova tra un momento.' }); setTimeout(() => c.close(), 150); return; }
     const token = identitaDi(m, c);
+    // chi il tavolo non conosce entra solo con il codice intero (ID + parola d'invito); sul server dedicato vale anche la chiave del master
+    if (c.kind === 'link' && !roster[token] && !invitoOk(m.invito) && !(DEDICATO && chiaveMasterOk(m.chiaveMaster))) {
+      c.send({ t: 'bye', reason: 'Questo codice non basta per entrare: chiedi al master il codice intero (quello nuovo è più lungo) e controlla di avere l\'ultima versione di LIBRE VTT.' });
+      setTimeout(() => c.close(), 150); return;
+    }
+    if (c.kind === 'link' && !roster[token] && !consuma(INGRESSI, 'nuovi', 40, 0.1)) { c.send({ t: 'bye', reason: 'Troppi ingressi nuovi tutti insieme: riprova tra un momento.' }); setTimeout(() => c.close(), 150); return; }
     // Un profilo con l'account, dal sito, si prende solo con codice e password (ogni volta): non basta il gettone
     // rimasto nel browser. (Il controllo è prima di tutto il resto: non deve buttare fuori chi c'è davvero.)
     if (c.web && !c.viaAccount && roster[token] && roster[token].account && roster[token].account.impronta) {
@@ -1686,6 +1719,14 @@ function onMessage(c, raw) {
       ? apiPannello(m.p, m.corpo && typeof m.corpo === 'object' ? m.corpo : {}, c)
       : { codice: 403, dati: 'solo il master' };
     c.send({ t: 'pannello.r', id, codice: r.codice, dati: r.dati });
+    return;
+  }
+
+  // il master fa entrare (o no) chi aspetta alla porta, direttamente dal tavolo: come «Fai entrare» del pannello
+  if (m.t === 'ammetti') {
+    if (c.role !== 'master' || c.pending) return;
+    const token = str(m.token, 64);
+    if (/^[a-f0-9]{24}$/.test(token) && roster[token]) apiPannello('/api/mod', { token, action: m.si === false ? 'refuse' : 'approve' }, c);
     return;
   }
 
@@ -1929,6 +1970,11 @@ function onUpgrade(req, sock, head) {
 // ======================= I giocatori che arrivano da iroh (solo modo host) =======================
 function startLinkServer() {
   net.createServer(sock => {
+    // un tetto ai collegamenti: chi ne apre a centinaia (ognuno può tenere da parte una riga lunga) non deve
+    // poter mangiare la memoria di chi ospita
+    let aperti = 0, muti = 0;
+    for (const x of clients) if (x.kind === 'link' && !x.web) { aperti++; if (!x.token) muti++; }
+    if (aperti >= MAX_LINK || muti >= MAX_LINK_MUTI) { sock.destroy(); return; }
     sock.setNoDelay(true);
     let buf = '';
     const c = {
@@ -1940,7 +1986,8 @@ function startLinkServer() {
     attach(c);
     sock.on('data', d => {
       buf += d.toString('utf8');
-      if (buf.length > 2 * 1024 * 1024) { sock.destroy(); return; }   // una riga di un giocatore non arriva a tanto
+      // una riga di un giocatore non arriva a tanto; prima del saluto ancora meno (saluto, «ci sei?», richieste di file)
+      if (buf.length > (c.token ? 2 * 1024 * 1024 : 64 * 1024)) { sock.destroy(); return; }
       let i;
       while ((i = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, i); buf = buf.slice(i + 1);
@@ -2288,7 +2335,7 @@ function statoPannello() {
   let sessionId = null;
   try { sessionId = fs.readFileSync(LINK_ID_FILE, 'utf8').trim() || null; } catch {}
   return {
-    mode: MODE, dedicato: DEDICATO || undefined, sessionId, relay: relay ? relay.stato() : undefined, perms: PERMS, roles: Object.keys(ROLE_DEFAULTS), defaults: ROLE_DEFAULTS,
+    mode: MODE, dedicato: DEDICATO || undefined, sessionId, invito: sessionId ? sessionId + parolaInvito() : null, relay: relay ? relay.stato() : undefined, perms: PERMS, roles: Object.keys(ROLE_DEFAULTS), defaults: ROLE_DEFAULTS,
     session,
     players: playerList(),
     log: actionLog.slice(-120),
@@ -2536,6 +2583,8 @@ function avviatore(cosa, dati) { process.stdout.write('@@LIBRE ' + CANALE + ' ' 
 let identitaSalvata = null;
 const CHIAVE_MASTER = /^[a-f0-9]{32}$/i.test(String(process.env.CHIAVE_MASTER || '').replace(/[\s-]/g, '')) ? String(process.env.CHIAVE_MASTER).replace(/[\s-]/g, '').toLowerCase() : '';
 delete process.env.CHIAVE_MASTER;
+const JOIN_PAROLA = /^[a-f0-9]{32}$/.test(process.env.LIBRE_JOIN_PAROLA || '') ? process.env.LIBRE_JOIN_PAROLA : '';
+delete process.env.LIBRE_JOIN_PAROLA;
 try { const x = JSON.parse(process.env.IDENTITA || 'null'); if (x && /^[a-f0-9]{24}$/.test(x.token)) identitaSalvata = x; } catch {}
 /** La miniatura dell'ultima scena vista, per il riquadro di «Mi unisco» (la tiene l'avviatore). */
 function salvaMiniatura(m) {
@@ -2582,6 +2631,8 @@ if (MODE === 'join') {
     if (m.t === 'hello' && !m.canale && identitaSalvata) m = { ...m, token: identitaSalvata.token, firma: identitaSalvata.firma || undefined };
     // la chiave del master del server dedicato, se chi gioca l'ha scritta entrando (vale solo lì)
     if (m.t === 'hello' && !m.canale && CHIAVE_MASTER) m = { ...m, chiaveMaster: CHIAVE_MASTER };
+    // la parola d'invito (la seconda metà del codice scritto entrando): serve all'host finché non ci conosce
+    if (m.t === 'hello' && !m.canale && JOIN_PAROLA) m = { ...m, invito: JOIN_PAROLA };
     if (m.t === 'hello') lastHello = m;
     if (m.t === 'name' && lastHello) lastHello = { ...lastHello, name: m.name };
     if (m.t === 'leave') { lastHello = null; if (stabile) stabile.destroy(); }   // scollegato a mano: non ripresentarlo

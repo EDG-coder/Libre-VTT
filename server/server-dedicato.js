@@ -85,19 +85,23 @@ function idDaChiave(hex) {
   const k = crypto.createPrivateKey({ key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), Buffer.from(hex, 'hex')]), format: 'der', type: 'pkcs8' });
   return Buffer.from(crypto.createPublicKey(k).export({ format: 'jwk' }).x, 'base64url').toString('hex');
 }
+const PAROLA_FILE = path.join(DATA, 'invito.segreto');
+const parolaInvito = () => { try { const t = fs.readFileSync(PAROLA_FILE, 'utf8').trim(); return /^[a-f0-9]{32}$/.test(t) ? t : ''; } catch { return ''; } };
 function invito(nuovo) {
   let chiave = null;
   if (!nuovo) try { const t = fs.readFileSync(INVITO_FILE, 'utf8').trim(); if (/^[a-f0-9]{64}$/.test(t)) chiave = t; } catch {}
   if (!chiave) { chiave = crypto.randomBytes(32).toString('hex'); scriviSegreto(INVITO_FILE, chiave); }
   scriviSegreto(path.join(LINK_DIR, 'uffa-link.chiave'), chiave);
+  // la parola d'invito: la seconda metà del codice (vedi game-server.js), cambia insieme alla chiave
+  if (nuovo || !parolaInvito()) scriviSegreto(PAROLA_FILE, crypto.randomBytes(16).toString('hex'));
   const codice = idDaChiave(chiave);
   try {
     const mf = path.join(CAMP, 'campagna.json'), meta = leggiJson(mf);
     if (meta && (!meta.invito || meta.invito.codice !== codice)) { meta.invito = { codice, creato: new Date().toISOString() }; fs.writeFileSync(mf, JSON.stringify(meta, null, 2)); }
   } catch {}
-  return codice;
+  return codice + parolaInvito();
 }
-const codiceAttuale = () => { try { const t = fs.readFileSync(INVITO_FILE, 'utf8').trim(); return /^[a-f0-9]{64}$/.test(t) ? idDaChiave(t) : null; } catch { return null; } };
+const codiceAttuale = () => { try { const t = fs.readFileSync(INVITO_FILE, 'utf8').trim(); return /^[a-f0-9]{64}$/.test(t) ? idDaChiave(t) + parolaInvito() : null; } catch { return null; } };
 
 // ---------- la chiave del master ----------
 function chiaveMaster(nuova) {
@@ -254,7 +258,7 @@ async function dalServerDiGioco(l) {
   cambiando = true;
   try {
     const codice = invito(true);
-    try { await api('POST', '/api/invito', { codice }); } catch {}
+    try { await api('POST', '/api/invito', { codice: codice.slice(0, 64) }); } catch {}
     await new Promise(r => setTimeout(r, 1500));
     ferma('collegamento');
     try { fs.unlinkSync(LINK_ID_FILE); } catch {}

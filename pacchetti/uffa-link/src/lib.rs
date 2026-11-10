@@ -29,7 +29,7 @@ use std::sync::Mutex;
 
 use iroh::{
     Endpoint, EndpointId, SecretKey,
-    endpoint::{Connection, RecvStream, SendStream, presets},
+    endpoint::{Builder, Connection, PortmapperConfig, RecvStream, SendStream, presets},
     protocol::{AcceptError, ProtocolHandler, Router},
 };
 use n0_error::{Result, StdResultExt};
@@ -47,6 +47,46 @@ pub trait Voce: Send + Sync + 'static {
     /// Una riga d'errore.
     fn errore(&self, riga: &str);
 }
+
+// ======================= Come ci si affaccia sulla rete =======================
+
+/// Quanto ci si espone, scelto da chi usa il programma (Impostazioni avanzate dell'avviatore), nella variabile
+/// d'ambiente `UFFA_LINK_RETE`:
+///   - niente, o «normale»: come sempre. iroh prova la strada diretta e, per aiutarla, chiede al router di
+///     aprirgli una porta UDP (UPnP, NAT-PMP, PCP) finché la sessione dura;
+///   - «senza-upnp»: la strada diretta si prova lo stesso, ma al router non si chiede niente;
+///   - «solo-relay»: niente strada diretta. Tutto passa dai server di passaggio (porta 443, cifrato da un capo
+///     all'altro): chi sta dall'altra parte non vede il nostro indirizzo IP. Più lento.
+/// È una variabile e non un'opzione della riga di comando perché un programma più vecchio la ignora e basta.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Rete { Normale, SenzaUpnp, SoloRelay }
+
+impl Rete {
+    pub fn da_testo(t: &str) -> Rete {
+        match t.trim() {
+            "senza-upnp" => Rete::SenzaUpnp,
+            "solo-relay" => Rete::SoloRelay,
+            _ => Rete::Normale,
+        }
+    }
+    pub fn scelta() -> Rete { Rete::da_testo(&std::env::var("UFFA_LINK_RETE").unwrap_or_default()) }
+    fn applica(self, b: Builder) -> Builder {
+        match self {
+            Rete::Normale => b,
+            Rete::SenzaUpnp => b.portmapper_config(PortmapperConfig::Disabled),
+            Rete::SoloRelay => b.portmapper_config(PortmapperConfig::Disabled).clear_ip_transports(),
+        }
+    }
+}
+
+// ---------- I limiti di chi ospita ----------
+// Il server di gioco ha i suoi (vedi game-server.js); questi fermano prima chi apre collegamenti a raffica.
+/// Collegamenti aperti insieme, in tutto.
+const MAX_COLLEGAMENTI: usize = 256;
+/// Collegamenti aperti insieme dalla stessa macchina (lo stesso ID): quello vero, e qualcuno che si sta chiudendo.
+const MAX_PER_ID: u32 = 8;
+/// Quanto si aspetta che chi si è collegato apra il canale: chi resta muto se ne va.
+const ATTESA_CANALE: Duration = Duration::from_secs(15);
 
 // ======================= Lato host =======================
 
@@ -74,10 +114,15 @@ impl Percorsi {
             .collect();
         let _ = std::fs::write(&self.file, format!("{{{}}}", righe.join(",")));
     }
-    fn entra(&self, id: &str) {
+    /// Segna il collegamento; `false` se sono già troppi (in tutto, o da questa macchina): non lo si serve.
+    fn entra(&self, id: &str) -> bool {
         let mut m = self.mappa.lock().unwrap();
+        let tutti: usize = m.values().map(|e| e.2 as usize).sum();
+        if tutti >= MAX_COLLEGAMENTI { return false; }
+        if m.get(id).is_some_and(|e| e.2 >= MAX_PER_ID) { return false; }
         let e = m.entry(id.to_string()).or_insert(("sconosciuto".into(), 0, 0));
         e.2 += 1;
+        true
     }
     fn esce(&self, id: &str) {
         {
@@ -152,7 +197,11 @@ impl ProtocolHandler for Pipe {
         let who = connection.remote_id();
         self.voce.di(&format!("→ si è collegato {who}"));
         let chi = who.to_string();
-        self.percorsi.entra(&chi);
+        if !self.percorsi.entra(&chi) {
+            self.voce.errore(&format!("Troppi collegamenti insieme: rifiuto {who}"));
+            connection.close(2u32.into(), b"troppi collegamenti");
+            return Ok(());
+        }
         // da dove passa: si guarda subito e poi ogni tre secondi, finché il collegamento resta aperto
         let sorveglia = {
             let (percorsi, conn, chi) = (self.percorsi.clone(), connection.clone(), chi.clone());
@@ -173,7 +222,10 @@ impl ProtocolHandler for Pipe {
 impl Pipe {
     async fn servi(&self, connection: Connection, who: &str) -> Result<(), AcceptError> {
 
-        let (send, recv) = connection.accept_bi().await?;
+        let (send, recv) = match tokio::time::timeout(ATTESA_CANALE, connection.accept_bi()).await {
+            Ok(x) => x?,
+            Err(_) => { connection.close(3u32.into(), b"nessun canale aperto"); return Ok(()); }
+        };
 
         let tcp = match TcpStream::connect(self.local).await {
             Ok(t) => t,
@@ -206,10 +258,16 @@ impl Pipe {
 /// L'ID da dare ai giocatori finisce anche in `<cartella>/uffa-link.id` (lo legge il pannello).
 pub async fn host(porta: u16, cartella: PathBuf, voce: Arc<dyn Voce>, fermo: impl Future<Output = ()>) -> Result<()> {
     let local: SocketAddr = format!("127.0.0.1:{porta}").parse().anyerr()?;
+    let rete = Rete::scelta();
     let endpoint = match chiave_salvata(&cartella) {
-        Some(k) => Endpoint::builder(presets::N0).secret_key(k).bind().await?,
-        None => Endpoint::bind(presets::N0).await?,
+        Some(k) => rete.applica(Endpoint::builder(presets::N0).secret_key(k)).bind().await?,
+        None => rete.applica(Endpoint::builder(presets::N0)).bind().await?,
     };
+    match rete {
+        Rete::Normale => {}
+        Rete::SenzaUpnp => voce.di("  Rete: non chiedo al router di aprire porte."),
+        Rete::SoloRelay => voce.di("  Rete: solo server di passaggio (il mio indirizzo resta nascosto)."),
+    }
     let percorsi = Percorsi { file: cartella.join("uffa-link.percorsi.json"), mappa: Arc::new(Mutex::new(HashMap::new())) };
     percorsi.scrivi();
     let router = Router::builder(endpoint).accept(ALPN, Pipe { local, voce: voce.clone(), percorsi: percorsi.clone() }).spawn();
@@ -264,7 +322,8 @@ async fn vuole_stabile(tcp: &TcpStream) -> bool {
 /// Apre 127.0.0.1:<porta> e porta all'host ogni connessione che ci arriva, finché `fermo` non si compie.
 pub async fn join(id: &str, porta: u16, voce: Arc<dyn Voce>, fermo: impl Future<Output = ()>) -> Result<()> {
     let remote: EndpointId = id.trim().parse().anyerr()?;
-    let endpoint = Endpoint::bind(presets::N0).await?;
+    let rete = Rete::scelta();
+    let endpoint = rete.applica(Endpoint::builder(presets::N0)).bind().await?;
     // Il canale stabile: un secondo endpoint che passa solo dai relay (niente UDP diretto). È più lento, ma
     // il relay viaggia sulla porta 443 come il web: regge Wi-Fi ballerini, cambi di rete e firewall che
     // bloccano l'UDP. Il server di gioco ci fa passare solo i messaggi piccoli e importanti (chat, dadi,
@@ -293,7 +352,7 @@ pub async fn join(id: &str, porta: u16, voce: Arc<dyn Voce>, fermo: impl Future<
 
         tokio::spawn(async move {
             let ep = if vuole_stabile(&tcp).await {
-                match stabile.get_or_try_init(|| async { Endpoint::builder(presets::N0).clear_ip_transports().bind().await }).await {
+                match stabile.get_or_try_init(|| async { Endpoint::builder(presets::N0).portmapper_config(PortmapperConfig::Disabled).clear_ip_transports().bind().await }).await {
                     Ok(e) => { voce.di("→ apro il canale stabile (solo relay)…"); e.clone() }
                     Err(e) => { voce.errore(&format!("Canale stabile non disponibile: {e}")); return; }
                 }
@@ -431,6 +490,18 @@ mod android {
             unsafe { iroh::dns::install_android_jni_context(vm, ctx) };
         }
         std::panic::catch_unwind(move || super::avvia_controllo(segreto)).unwrap_or(0) as jint
+    }
+}
+
+#[cfg(test)]
+mod prove_rete {
+    use super::Rete;
+    #[test]
+    fn scelta_della_rete() {
+        assert_eq!(Rete::da_testo(""), Rete::Normale);
+        assert_eq!(Rete::da_testo("senza-upnp"), Rete::SenzaUpnp);
+        assert_eq!(Rete::da_testo(" solo-relay\n"), Rete::SoloRelay);
+        assert_eq!(Rete::da_testo("altro"), Rete::Normale);
     }
 }
 

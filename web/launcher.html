@@ -316,6 +316,14 @@
       <button type="button" data-v="iroh">Diretto (iroh)</button><button type="button" data-v="auto">Prima iroh, poi relay</button><button type="button" data-v="relay">Solo relay</button>
     </div>
     <p class="nota" id="impAppViaAiuto"></p>
+    <div id="impIrohReteBox">
+    <h4>Quanto ti esponi con iroh</h4>
+    <p class="nota">Vale per il collegamento diretto (iroh), dalla prossima partita che apri o a cui ti unisci.</p>
+    <div class="seg" id="impIrohRete">
+      <button type="button" data-v="normale">Come sempre</button><button type="button" data-v="senza-upnp">Non aprire porte sul router</button><button type="button" data-v="solo-relay">Nascondi il mio indirizzo</button>
+    </div>
+    <p class="nota" id="impIrohReteAiuto"></p>
+    </div>
   </details>
   <div class="piede"><button class="b go" type="button" id="impChiudi">Fatto</button></div>
 </dialog>
@@ -565,10 +573,10 @@ function disegna() {
       righe.append(lab);
       if (S.sessionId) {
         const inp = document.createElement('input');
-        inp.type = 'text'; inp.readOnly = true; inp.value = S.sessionId; inp.onclick = () => inp.select();
+        inp.type = 'text'; inp.readOnly = true; inp.value = S.invito || S.sessionId; inp.onclick = () => inp.select();
         const cp = document.createElement('button');
         cp.className = 'b go'; cp.textContent = 'Copia';
-        cp.onclick = async () => { try { await navigator.clipboard.writeText(S.sessionId); cp.textContent = 'Copiato'; setTimeout(() => cp.textContent = 'Copia', 1400); } catch {} };
+        cp.onclick = async () => { try { await navigator.clipboard.writeText(S.invito || S.sessionId); cp.textContent = 'Copiato'; setTimeout(() => cp.textContent = 'Copia', 1400); } catch {} };
         const nuovo = document.createElement('button');
         nuovo.className = 'b'; nuovo.textContent = 'Cambia codice';
         nuovo.title = 'Un codice nuovo: chi è dentro adesso lo riceve da solo, a chi è fuori lo mandi tu. Quello vecchio non vale più.';
@@ -581,7 +589,7 @@ function disegna() {
         if (NAT.disponibile) {
           const sh = document.createElement('button');
           sh.className = 'b'; sh.textContent = 'Condividi';
-          sh.onclick = () => NAT.condividiTesto('Ecco il codice per entrare nella partita di LIBRE VTT:\n' + S.sessionId, 'Codice della partita');
+          sh.onclick = () => NAT.condividiTesto('Ecco il codice per entrare nella partita di LIBRE VTT:\n' + (S.invito || S.sessionId), 'Codice della partita');
           righe.append(sh);
         }
       }
@@ -615,7 +623,7 @@ function disegnaPubblica(si) {
   else if (R && R.collegato) { st.textContent = '✅ Aperta: chi ha il codice entra anche dal sito.'; st.classList.add('ok'); }
   else if (R && R.errore) { st.textContent = '⚠️ ' + R.errore; st.classList.add('err'); }
   else st.textContent = 'Mi collego al relay…';
-  const link = P.attiva && S.sessionId && S.sito ? S.sito + '/gioca/' + (P.indirizzo ? '?relay=' + encodeURIComponent(P.indirizzo) : '') + '#' + S.sessionId : '';
+  const link = P.attiva && S.sessionId && S.sito ? S.sito + '/gioca/' + (P.indirizzo ? '?relay=' + encodeURIComponent(P.indirizzo) : '') + '#' + (S.invito || S.sessionId) : '';
   $('pubblicaLinkRiga').classList.toggle('hide', !link);
   $('pubblicaLink').value = link;
 }
@@ -645,12 +653,25 @@ $('impAppVia').onclick = async e => {
   await post('/api/relay', { appVia: b.dataset.v });
   carica();
 };
+const IROHRETE_AIUTO = {
+  normale: 'Il collegamento prova la strada diretta e, se il router lo permette (UPnP), gli chiede di aprire una porta finché la partita è aperta. È il modo più veloce.',
+  'senza-upnp': 'Il collegamento prova lo stesso la strada diretta, ma non chiede al router di aprire porte. Con alcuni router si finisce più spesso sui server di passaggio, un po\' più lenti.',
+  'solo-relay': 'Niente strada diretta: tutto passa dai server di passaggio di iroh, cifrato da un capo all\'altro. Gli altri non vedono il tuo indirizzo IP e sul router non si apre niente. È il modo più lento.'
+};
+$('impIrohRete').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  premuto($('impIrohRete'), b.dataset.v); $('impIrohReteAiuto').textContent = IROHRETE_AIUTO[b.dataset.v];
+  await post('/api/relay', { irohRete: b.dataset.v });
+  carica();
+};
 let relayTipo = 'sito';
 function disegnaRelayImp() {
   const P = S.pubblica || {};
   relayTipo = P.tipo || 'sito';
   premuto($('impRelayTipo'), relayTipo);
   premuto($('impAppVia'), P.appVia || 'iroh'); $('impAppViaAiuto').textContent = APPVIA_AIUTO[P.appVia || 'iroh'];
+  $('impIrohReteBox').classList.toggle('hide', !!S.mobile);      // nelle app per telefono il collegamento è dentro l'app: per ora non si sceglie
+  premuto($('impIrohRete'), P.irohRete || 'normale'); $('impIrohReteAiuto').textContent = IROHRETE_AIUTO[P.irohRete || 'normale'];
   $('impRelayAiuto').textContent = RELAY_AIUTO[relayTipo];
   $('impRelayRiga').classList.toggle('hide', relayTipo === 'sito');
   if (document.activeElement !== $('impRelayIndirizzo')) $('impRelayIndirizzo').value = P.indirizzo || '';

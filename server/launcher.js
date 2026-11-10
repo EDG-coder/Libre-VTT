@@ -141,6 +141,7 @@ async function check() {
 function stato() {
   return {
     mode: state.mode, busy: state.busy, error: state.error, sessionId: state.sessionId,
+    invito: state.sessionId ? state.sessionId + (state.mode === 'host' && state.parola || '') : null,      // il codice intero da mandare: ID + parola d'invito
     link: MOBILE ? !!LINK_CTRL : !!linkBin(), cargo: !!cache.cargo, pronto: !!rilascio(), campagna: state.campagna || null,
     porte: { ui: UI_PORT, ...(state.porte || {}) },
     piattaforma: MOBILE === 'android' ? 'Android' : MOBILE === 'ios' ? 'iPhone e iPad' : WIN ? 'Windows' : MAC ? 'macOS' : 'Linux',
@@ -182,7 +183,7 @@ function argScala() {
 const ENV_VIA = new Set(['NODE_OPTIONS', 'NODE_PATH', 'PORT', 'RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_TARGET_DIR',
   'CARGO_BUILD_TARGET', 'CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN', 'RUSTC', 'RUSTC_WRAPPER', 'RUSTDOC',
   'CC', 'CXX', 'AR', 'LD', 'CFLAGS', 'CXXFLAGS', 'LDFLAGS', 'CPPFLAGS', 'LIBRARY_PATH', 'LD_LIBRARY_PATH',
-  'DATA_DIR', 'CAMPAIGN_DIR', 'LINK_PORT', 'LINK_ID_FILE', 'LIBRE_DEDICATO', 'CHIAVE_MASTER', 'LIBRE_RELAY', 'LIBRE_RELAY_CHIAVE', 'LIBRE_JOIN_RELAY', 'LIBRE_JOIN_VIA', 'LIBRE_JOIN_CODICE']);
+  'DATA_DIR', 'CAMPAIGN_DIR', 'LINK_PORT', 'LINK_ID_FILE', 'LIBRE_DEDICATO', 'CHIAVE_MASTER', 'LIBRE_RELAY', 'LIBRE_RELAY_CHIAVE', 'LIBRE_JOIN_RELAY', 'LIBRE_JOIN_VIA', 'LIBRE_JOIN_CODICE', 'LIBRE_JOIN_PAROLA']);
 function envPulito(extra) {
   const e = {};
   for (const [k, v] of Object.entries(process.env)) {
@@ -321,7 +322,7 @@ function stopAll() {
   for (const [k, p] of Object.entries(state.procs)) { try { p.kill(); } catch {} delete state.procs[k]; }
   try { fs.unlinkSync(LINK_ID_FILE); } catch {}
   try { fs.unlinkSync(LINK_CHIAVE_FILE); } catch {}
-  state.mode = null; state.sessionId = null; state.campagna = null; state.porte = null; state.joinCodice = null; state.relay = null; state.viaRelay = null;
+  state.mode = null; state.sessionId = null; state.campagna = null; state.porte = null; state.joinCodice = null; state.parola = null; state.relay = null; state.viaRelay = null;
   push();
 }
 
@@ -342,11 +343,17 @@ function invitoCampagna(dir, nuova) {
   if (!chiave) { chiave = crypto.randomBytes(32).toString('hex'); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, chiave, { mode: 0o600 }); }
   try { fs.chmodSync(f, 0o600); } catch {}                // la chiave la legge solo chi usa questo account
   const codice = idDaChiave(chiave);
+  // la parola d'invito: la seconda metà del codice da mandare (vedi game-server.js). Cambia insieme alla chiave.
+  const fp = path.join(dir, 'data', 'invito.segreto');
+  let parola = null;
+  if (!nuova) try { const t = fs.readFileSync(fp, 'utf8').trim(); if (/^[a-f0-9]{32}$/.test(t)) parola = t; } catch {}
+  if (!parola) { parola = crypto.randomBytes(16).toString('hex'); fs.writeFileSync(fp, parola, { mode: 0o600 }); }
+  try { fs.chmodSync(fp, 0o600); } catch {}
   try {
     const mf = path.join(dir, 'campagna.json'), meta = leggiJson(mf);
     if (meta && (!meta.invito || meta.invito.codice !== codice)) { meta.invito = { codice, creato: new Date().toISOString() }; fs.writeFileSync(mf, JSON.stringify(meta, null, 2)); }
   } catch {}
-  return { chiave, codice };
+  return { chiave, codice, parola };
 }
 /** «Cambia codice»: chiave nuova; il codice nuovo va subito ai giocatori collegati (lo salvano da
  *  soli), poi la sessione si riapre con la chiave nuova. Il codice vecchio non vale più. */
@@ -356,6 +363,7 @@ async function cambiaCodice() {
   cambiando = true;
   try {
     const inv = invitoCampagna(state.campagna.path, true);
+    state.parola = inv.parola;
     say('Codice nuovo: lo mando ai giocatori collegati e riapro la sessione.', 'ok');
     try {
       await new Promise((res, rej) => {
@@ -367,7 +375,7 @@ async function cambiaCodice() {
     fs.writeFileSync(LINK_CHIAVE_FILE, inv.chiave, { mode: 0o600 }); try { fs.chmodSync(LINK_CHIAVE_FILE, 0o600); } catch {}
     const p = state.procs.sessione;
     if (p) { try { p.kill(); } catch {} }                 // si riaccende da solo, con la chiave nuova
-    return { codice: inv.codice };
+    return { codice: inv.codice + inv.parola };
   } finally { cambiando = false; }
 }
 // Da giocatore: le campagne a cui ci si è uniti, nel file di configurazione (conf.unite), con
@@ -385,7 +393,9 @@ function ricordaUnita(codice, dati) {
 // installare niente. Il server di gioco si collega al relay (server/relay-host.js) e si fa riconoscere con la
 // chiave del codice. L'indirizzo del relay lo dice il sito (relay.json), oppure lo scrive il master (un suo relay).
 const SITO_WEB = String(amb('SITO') || 'https://libre-vtt.pages.dev').replace(/\/+$/, '');
-function relayConf() { const r = conf.relay || {}; return { attiva: !!r.attiva, indirizzo: typeof r.indirizzo === 'string' ? r.indirizzo : '', tipo: ['sito', 'cloudflare', 'proprio', 'terzi'].includes(r.tipo) ? r.tipo : 'sito', appVia: ['iroh', 'auto', 'relay'].includes(r.appVia) ? r.appVia : 'iroh' }; }
+function relayConf() { const r = conf.relay || {}; return { attiva: !!r.attiva, indirizzo: typeof r.indirizzo === 'string' ? r.indirizzo : '', tipo: ['sito', 'cloudflare', 'proprio', 'terzi'].includes(r.tipo) ? r.tipo : 'sito', appVia: ['iroh', 'auto', 'relay'].includes(r.appVia) ? r.appVia : 'iroh', irohRete: RETI_IROH.includes(r.irohRete) ? r.irohRete : 'normale' }; }
+// Quanto si espone il collegamento diretto (uffa-link la legge in UFFA_LINK_RETE): come sempre, senza chiedere porte al router, o solo dai server di passaggio
+const RETI_IROH = ['normale', 'senza-upnp', 'solo-relay'];
 /** L'indirizzo di un relay scritto dall'utente: https:// diventa wss://; vale wss:// (o ws:// solo per questo computer, per le prove). Vuoto = quello del sito. */
 function relayIndirizzoPulito(testo) {
   let x = String(testo == null ? '' : testo).trim().replace(/^https:/i, 'wss:').replace(/^http:\/\/(localhost|127\.0\.0\.1)/i, 'ws://$1').replace(/\/+$/, '').replace(/\/v1(\/stanza)?$/i, '');
@@ -469,7 +479,7 @@ function dalServerDiGioco(cosa, d) {
     state.joinCodice = d.codice;
     const p = state.procs.sessione;
     if (p) { p.sostituito = true; try { p.kill(); } catch {} delete state.procs.sessione; }
-    run('sessione', LINK, ['join', d.codice, '--port', String(state.porte.link)], { keep: true, cwd: USERDIR });
+    run('sessione', LINK, ['join', d.codice, '--port', String(state.porte.link)], { keep: true, cwd: USERDIR, env: { UFFA_LINK_RETE: relayConf().irohRete } });
   }
 }
 /** Il riquadro di una campagna: si chiede all'host com'è (online, quanti dentro, in sessione)
@@ -1031,7 +1041,7 @@ async function avvia(mode, id, campagna, opz = {}) {
     const extra = {};
     if (mode === 'host') {
       // la chiave della campagna: con lei il codice resta lo stesso a ogni apertura
-      try { const inv = invitoCampagna(CAMP); fs.writeFileSync(LINK_CHIAVE_FILE, inv.chiave, { mode: 0o600 }); try { fs.chmodSync(LINK_CHIAVE_FILE, 0o600); } catch {} } catch (e) { say('Il codice d\'invito non si potrà tenere fisso: ' + e.message, 'warn'); }
+      try { const inv = invitoCampagna(CAMP); state.parola = inv.parola; fs.writeFileSync(LINK_CHIAVE_FILE, inv.chiave, { mode: 0o600 }); try { fs.chmodSync(LINK_CHIAVE_FILE, 0o600); } catch {} } catch (e) { say('Il codice d\'invito non si potrà tenere fisso: ' + e.message, 'warn'); }
       extra.CAMPAGNA_NOME = state.campagna ? state.campagna.nome : '';
       // la partita pubblica (relay): la chiave serve per farsi riconoscere, l'indirizzo solo se è accesa
       extra.LIBRE_RELAY_CHIAVE = LINK_CHIAVE_FILE;
@@ -1044,7 +1054,14 @@ async function avvia(mode, id, campagna, opz = {}) {
       }
     } else {
       try { fs.unlinkSync(LINK_CHIAVE_FILE); } catch {}
-      state.joinCodice = /^[a-f0-9]{64}$/.test(id) ? id : null;
+      // il codice intero è ID (64 cifre) + parola d'invito (32): al collegamento va solo l'ID, la parola la presenta
+      // il server di gioco all'host. Chi è già entrato una volta non ne ha più bisogno (ma la si tiene, finché serve).
+      const intero = /^([a-f0-9]{64})([a-f0-9]{32})?$/.exec(String(id || '').trim().toLowerCase());
+      if (intero) id = intero[1];
+      state.joinCodice = intero ? id : null;
+      if (intero && intero[2]) ricordaUnita(id, { parola: intero[2] });
+      const parola = intero && (intero[2] || (unite()[id] || {}).parola);
+      if (parola && /^[a-f0-9]{32}$/.test(parola)) extra.LIBRE_JOIN_PAROLA = parola;
       const e = state.joinCodice && unite()[state.joinCodice];
       if (e && e.idGiocatore) extra.IDENTITA = JSON.stringify({ token: e.idGiocatore, firma: e.firma || null });
       if (state.joinCodice) ricordaUnita(state.joinCodice, {});
@@ -1066,8 +1083,9 @@ async function avvia(mode, id, campagna, opz = {}) {
     const soloRelay = mode === 'join' && extra.LIBRE_JOIN_VIA === 'relay';     // niente uffa-link: tutto passa dal relay
     if (!soloRelay && (MOBILE ? !LINK_CTRL : !linkBin())) return fallisci(MOBILE ? 'Il collegamento a distanza dell\'app non è partito: chiudi l\'app e riaprila.' : 'Manca il collegamento a distanza: premi «Prepara» e riprova.');
     // uffa-link scrive l'ID nella sua cartella di lavoro: la nostra, dove si può scrivere
-    if (mode === 'host') run('sessione', LINK, ['host', '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR });
-    else if (!soloRelay) run('sessione', LINK, ['join', id, '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR });
+    const reteLink = { UFFA_LINK_RETE: relayConf().irohRete };
+    if (mode === 'host') run('sessione', LINK, ['host', '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR, env: reteLink });
+    else if (!soloRelay) run('sessione', LINK, ['join', id, '--port', String(LINK_PORT)], { keep: true, cwd: USERDIR, env: reteLink });
   }
 
   state.mode = mode; state.busy = null; push();
@@ -1872,6 +1890,7 @@ const server = http.createServer(async (req, res) => {
       if (!x.valore) r.tipo = 'sito';
     }
     if (typeof m.appVia === 'string' && ['iroh', 'auto', 'relay'].includes(m.appVia)) r.appVia = m.appVia;   // come si collegano le app tra loro: iroh (diretto), relay, o prima iroh e poi relay
+    if (typeof m.irohRete === 'string' && RETI_IROH.includes(m.irohRete)) r.irohRete = m.irohRete;       // vale dalla prossima partita che si apre
     if (typeof m.tipo === 'string' && ['sito', 'cloudflare', 'proprio', 'terzi'].includes(m.tipo)) { r.tipo = m.tipo; if (m.tipo === 'sito') r.indirizzo = ''; }
     conf.relay = r; salvaConf();
     if (!r.attiva) state.relay = null;

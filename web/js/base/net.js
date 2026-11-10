@@ -127,6 +127,21 @@ function netSay(text, kind = '', act = null) {
   clearTimeout(netBarTimer);
   if (kind !== 'live' && kind !== 'retry' && !act) netBarTimer = setTimeout(() => { netBar.hidden = true; }, 5000);
 }
+// (master) Qualcuno aspetta alla porta («Chiedi a me prima di far entrare»): lo si dice qui sul tavolo, con il
+// pulsante per farlo entrare. Chi non si vuole far entrare si rifiuta dal pannello della sessione.
+const netAvvisati = new Set();
+let netAspettaChi = null;
+function netChiAspetta() {
+  if (!isMaster()) return;
+  const inAttesa = (NET.players || []).filter(p => p.pending && !p.attesaPlugin && p.online !== false && p.token);
+  for (const t of [...netAvvisati]) if (!inAttesa.some(p => p.token === t)) netAvvisati.delete(t);
+  if (netAspettaChi && !inAttesa.some(p => p.token === netAspettaChi)) { netAspettaChi = null; netSayHide(); }
+  const p = inAttesa.find(x => !netAvvisati.has(x.token));
+  if (!p) return;
+  netAvvisati.add(p.token); netAspettaChi = p.token;
+  netSay(tr('{n} chiede di entrare nella partita.', { n: p.name || tr('Qualcuno') }), 'live',
+    { label: tr('Fai entrare'), fn: () => { netSend({ t: 'ammetti', token: p.token }); netAspettaChi = null; netSayHide(); } });
+}
 function netSayHide() { clearTimeout(netBarTimer); netBar.hidden = true; }
 
 // ---------- Collegamento ----------
@@ -165,7 +180,7 @@ function netSaluta(ws = NET.ws) {
   // NET.account (solo dal sito, vedi gioca-web.js): codice e impronta della password, tenuti solo in memoria
   // plugins: sappiamo ricevere i plugin del master; pluginsOk: quelli a cui abbiamo già dato il consenso
   const C = window.LIBRE && window.LIBRE.condivisi;
-  ws.send(JSON.stringify({ t: 'hello', token: netToken(), firma: netFirma(), name: netName(), client: 'LIBRE VTT 2', delta: 1, ver: NET.ver || 0, chatDa: NET.chatUltimo || '', account: NET.account || undefined,
+  ws.send(JSON.stringify({ t: 'hello', token: netToken(), firma: netFirma(), name: netName(), client: 'LIBRE VTT 2', delta: 1, ver: NET.ver || 0, chatDa: NET.chatUltimo || '', account: NET.account || undefined, invito: NET.parolaInvito || undefined,
     plugins: C ? 1 : undefined, pluginsOk: C ? C.perSaluto() : undefined }));
 }
 /** Il collegamento locale è caduto (o lo diamo per morto noi): ci si ricollega. */
@@ -346,7 +361,10 @@ function netHandle(m) {
       if (NET.daAdottare && masterRemoto()) { NET.daAdottare = false; netAdotta(m.world, m.ver); return; }
       netMondoPieno(m.world, m.ver); return;
     case 'delta': netDelta(m); return;
-    case 'players': NET.players = m.list || []; return;
+    case 'players':
+      NET.players = m.list || [];
+      netChiAspetta();
+      return;
     case 'plugins.offerta': case 'plugins.pezzo': case 'plugins.no':     // i plugin che il master condivide
       if (window.LIBRE && window.LIBRE.condivisi) window.LIBRE.condivisi.ricevi(m);
       return;
