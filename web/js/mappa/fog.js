@@ -140,7 +140,9 @@ function fogPaintAt(clientX, clientY) {
   return changed;
 }
 
-let fogDrag = 0, fogDirty = false, fogRect = null, fogPoly = null;
+// fogDrag = il pointerId del tratto in corso, null = nessun tratto. Non 0: Firefox dà al mouse il pointerId 0,
+// e con 0 come «nessuno» ogni movimento del mouse diventava una pennellata (la nebbia si scopriva passandoci sopra).
+let fogDrag = null, fogDirty = false, fogRect = null, fogPoly = null;
 const fogAllowed = () => fogTool.on && (typeof can !== 'function' || can('revealFog'));
 const fogWorld = e => ({ x: (e.clientX - view.x) / view.s, y: (e.clientY - view.y) / view.s });
 const fogColor = () => ({ reveal: '#ffd93d', hide: '#4da6ff', zona: '#ffb000', nozona: '#b0b0b0' })[fogTool.mode] || '#4da6ff';
@@ -185,15 +187,16 @@ viewport.addEventListener('pointerdown', e => {
 
 viewport.addEventListener('pointermove', e => {
   if (fogPoly) { e.stopImmediatePropagation(); drawPolyPreview(fogPoly, fogWorld(e)); return; }
-  if (fogDrag !== e.pointerId) return;
+  if (fogDrag === null || fogDrag !== e.pointerId) return;
+  if (!fogAllowed()) { fogDrag = null; fogRect = null; clearDraw(); return; }
   e.stopImmediatePropagation();
   if (fogRect) { fogRect.b = fogWorld(e); drawRectPreview(fogRect.a, fogRect.b); return; }
   fogDirty = fogPaintAt(e.clientX, e.clientY) || fogDirty;
 }, true);
 
 const fogEnd = e => {
-  if (fogDrag !== e.pointerId) return;
-  fogDrag = 0;
+  if (fogDrag === null || fogDrag !== e.pointerId) return;
+  fogDrag = null;
   if (fogRect) {
     const { a, b } = fogRect; fogRect = null; clearDraw();
     if (Math.hypot(b.x - a.x, b.y - a.y) * view.s > 5 && fogFill(insideRect(a, b))) fogPush();

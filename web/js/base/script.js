@@ -315,7 +315,9 @@ addEventListener('wheel', e => {
   if (!e.ctrlKey) return;
   e.preventDefault();
   const w = e.target.closest && e.target.closest('.stdWin');
-  if (w && typeof stdZoom === 'function') stdZoom(w, Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) / 250));
+  // Firefox con la rotellina conta a righe (deltaMode 1), non a pixel come gli altri: si riporta a pixel
+  const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
+  if (w && typeof stdZoom === 'function') stdZoom(w, Math.exp(-Math.max(-60, Math.min(60, dy)) / 250));
 }, { passive: false, capture: true });
 // Safari / iPad: il pizzico arriva anche come «gesture»
 for (const t of ['gesturestart', 'gesturechange']) addEventListener(t, e => e.preventDefault(), { passive: false });
