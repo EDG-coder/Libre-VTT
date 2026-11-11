@@ -157,6 +157,15 @@
 
 <script>
 const $ = id => document.getElementById(id);
+// Aperto dalla home durante una partita da soli: non c'è un server di gioco, quindi niente da regolare.
+const LOCALE = location.pathname === '/pannello-locale';
+if (LOCALE) {
+  document.querySelectorAll('.card, footer').forEach(el => { el.hidden = true; });
+  $('sub').textContent = 'La partita è in locale: stai giocando da solo su questo computer, quindi il pannello della sessione (giocatori, permessi, codice d\'invito) non è disponibile.';
+  const c = document.createElement('div'); c.className = 'card';
+  c.innerHTML = '<h2>Partita in locale</h2><p class="sub" style="margin:0">Per far entrare altri giocatori chiudi la partita e, dalla home, scegli «Conduco io»: il pannello si riempirà da solo.</p>';
+  $('sub').after(c);
+}
 const post = (p, body) => fetch(p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 const mod = (token, action, extra) => post('/api/mod', { token, action, ...extra }).then(load);
 
@@ -258,7 +267,7 @@ function rowFor(r) {
   dot.className = 'dot' + (L.pending ? ' wait' : r.online ? ' on' + (L.qualita && L.qualita !== 'verde' ? ' ' + L.qualita : '') : '');
   if (r.online && !L.pending) dot.title = { verde: 'Collegamento buono', giallo: 'Collegamento debole', rosso: 'Collegamento pessimo' }[L.qualita || 'verde'];
   const nm = document.createElement('span'); nm.className = 'pName';
-  const ni = document.createElement('input'); ni.value = r.name || '(senza nome)'; ni.title = 'Cambia il nome';
+  const ni = document.createElement('input'); ni.value = r.name || '(senza nome)'; ni.title = 'Cambia il nome in questa campagna (il suo ID resta quello)';
   ni.onchange = () => { ni.blur(); post('/api/perm', { token: r.token, name: ni.value }).then(load); };
   nm.append(dot, ni);
   const sel = document.createElement('select');
@@ -280,7 +289,9 @@ function rowFor(r) {
     const [t, cls, tip] = PERC[L.percorso] || PERC.sconosciuto;
     const ch = chip(t, cls); ch.title = tip; head.append(ch);
   }
-  const idc = chip('ID ' + String(r.token).slice(0, 6)); idc.title = 'Identità: ' + r.token; head.append(idc);
+  // l'ID lo sceglie il giocatore nella sua app ed è uguale in tutte le campagne: qui si vede, non si cambia
+  if (r.idUtente) { const idc = chip('ID ' + r.idUtente); idc.setAttribute('data-noi18n', ''); idc.title = 'ID scelto dal giocatore, uguale in tutte le campagne: tu cambi il nome, non l\'ID. Gettone: ' + r.token; head.append(idc); }
+  else { const idc = chip('ID ' + String(r.token).slice(0, 6)); idc.title = 'Identità: ' + r.token + ' (senza ID: dal sito, o un LIBRE VTT di prima)'; head.append(idc); }
   if (r.banned) head.append(chip(r.account && r.account.bloccato ? 'account bloccato' : 'bandito', 'bad'));
   if (r.account && !r.account.bloccato) {
     const ac = chip('🔑 ' + r.account.codice + (r.account.password ? '' : ' · password da scegliere'), r.account.password ? 'ok' : 'warn');
@@ -320,7 +331,7 @@ function rowFor(r) {
   if (r.role !== 'master') {
     acts.append(btn(r.muted ? '🔊 Ridagli la voce' : '🔇 Silenzia', () => mod(r.token, 'mute', { value: !r.muted })));
     acts.append(btn(r.frozen ? '▶ Scongela' : '❄ Congela', () => mod(r.token, 'freeze', { value: !r.frozen })));
-    acts.append(btn('✎ Cambia nome', () => {
+    acts.append(btn('✎ Chiedigli un altro nome', () => {
       const why = prompt('Che cosa gli dico?', 'Scegli un nome più adatto, per favore.');
       if (why !== null) mod(r.token, 'forceName', { reason: why });
     }));
@@ -439,7 +450,7 @@ for (const id of ['rLock', 'rAppr', 'rPause']) $(id).onchange = sendRules;
 $('rMax').onchange = sendRules;
 
 // ---------- in diretta ----------
-const es = new EventSource('/api/events');
+const es = LOCALE ? {} : new EventSource('/api/events');
 es.onmessage = e => {
   let m; try { m = JSON.parse(e.data); } catch { return; }
   if (m.t === 'log') { logRows.push(m.entry); if (logRows.length > 400) logRows.shift(); drawLog(); return; }
@@ -465,8 +476,7 @@ $('copyId').onclick = async () => {
   try { await navigator.clipboard.writeText(S.invito || S.sessionId || ''); $('copyId').textContent = 'Copiato'; setTimeout(() => $('copyId').textContent = 'Copia', 1400); } catch {}
 };
 
-load();
-setInterval(load, 5000);
+if (!LOCALE) { load(); setInterval(load, 5000); }
 </script>
 </body>
 </html>

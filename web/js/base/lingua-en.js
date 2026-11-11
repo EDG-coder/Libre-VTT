@@ -2707,6 +2707,26 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Messaggio troppo grande.": "Message too large.",
 "Troppi messaggi: rallenta.": "Too many messages: slow down.",
 "Il master si è scollegato.": "The GM disconnected.",
+
+// ---------- ID globale e nome per campagna ----------
+"Scegli il tuo ID": "Choose your ID",
+"Il tuo ID": "Your ID",
+"È il tuo nome utente in LIBRE VTT, uguale in tutte le campagne: il master lo vede ma non lo può cambiare. Il nome con cui ti vedono al tavolo invece è di ogni campagna, e lo cambi lì.": "It's your LIBRE VTT username, the same in every campaign: the GM can see it but can't change it. The name others see at the table belongs to each campaign, and you change it there.",
+"Es. pino_88": "E.g. pino_88",
+"Da 3 a 24 caratteri: lettere, numeri, «_», «-» e «.». Puoi cambiarlo quando vuoi dalla rotellina ⚙.": "3 to 24 characters: letters, numbers, “_”, “-” and “.”. You can change it any time from the ⚙ gear.",
+"Uguale in tutte le campagne; il nome al tavolo è di ogni campagna. Il master vede il tuo ID ma non lo può cambiare. Il nuovo ID vale dalla prossima partita che apri.": "The same in every campaign; your name at the table belongs to each campaign. The GM sees your ID but can't change it. A new ID applies from the next game you open.",
+"Salvato. Vale dalla prossima partita che apri.": "Saved. It applies from the next game you open.",
+"L'ID va da 3 a 24 caratteri: lettere, numeri, «_», «-» e «.» (niente spazi).": "The ID must be 3 to 24 characters: letters, numbers, “_”, “-” and “.” (no spaces).",
+"Non sono riuscito a salvarlo: riprova.": "I couldn't save it: try again.",
+"Come ti chiami in questa campagna?": "What's your name in this campaign?",
+"Il tuo nome in questa campagna": "Your name in this campaign",
+"Ogni campagna ha il suo nome; il tuo ID (dalla rotellina della home) è uguale per tutte": "Each campaign has its own name; your ID (from the home gear) is the same for all",
+"Cambia il nome in questa campagna (il suo ID resta quello)": "Change the name in this campaign (their ID stays the same)",
+"✎ Chiedigli un altro nome": "✎ Ask for another name",
+"La partita è in locale: stai giocando da solo su questo computer, quindi il pannello della sessione (giocatori, permessi, codice d'invito) non è disponibile.": "This game is local: you're playing alone on this computer, so the session panel (players, permissions, invite code) isn't available.",
+"Partita in locale": "Local game",
+"Per far entrare altri giocatori chiudi la partita e, dalla home, scegli «Conduco io»: il pannello si riempirà da solo.": "To let other players in, close the game and choose “I'm the GM” from the home: the panel will fill in by itself.",
+"La partita è in locale: il pannello della sessione serve solo quando giochi con altri.": "This game is local: the session panel is only for playing with others.",
 "Presentazione non valida.": "Invalid handshake.",
 
 // ---------- slot di talenti e abilità nella scheda (slot-capacita.js) ----------
