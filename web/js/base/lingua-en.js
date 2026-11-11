@@ -2707,5 +2707,19 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Messaggio troppo grande.": "Message too large.",
 "Troppi messaggi: rallenta.": "Too many messages: slow down.",
 "Il master si è scollegato.": "The GM disconnected.",
-"Presentazione non valida.": "Invalid handshake."
+"Presentazione non valida.": "Invalid handshake.",
+
+// ---------- slot di talenti e abilità nella scheda (slot-capacita.js) ----------
+"＋ Talento": "＋ Feat",
+"＋ Tratto": "＋ Trait",
+"＋ Abilità": "＋ Feature",
+"Senza titolo": "Untitled",
+"Titolo": "Title",
+"Il testo: cosa fa. Metti [[1d6 | Danni]] per un tiro.": "The text: what it does. Write [[1d6 | Damage]] for a roll.",
+"Sposta su": "Move up",
+"Sposta giù": "Move down",
+"Elimina questo slot": "Delete this slot",
+"Mostra o nascondi il testo": "Show or hide the text",
+"(nessun testo)": "(no text)",
+"Eliminare «{n}»?": "Delete “{n}”?"
 });
