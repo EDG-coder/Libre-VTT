@@ -298,6 +298,13 @@ async function verificaAccount(a) {
 }
 
 const CAMPAGNA_NOME = String(process.env.CAMPAGNA_NOME || '').slice(0, 80);
+// L'ID di chi usa questo LIBRE VTT: lo sceglie una volta (primo avvio, poi dalla rotellina della home) e vale per
+// tutte le campagne. Il nome al tavolo invece è di ogni campagna (sta nel registro: roster[token].name).
+// Il master può cambiare il nome di un giocatore, mai il suo ID.
+const idUtenteValido = s => { const v = String(s == null ? '' : s).trim(); return /^[\p{L}\p{N}_.-]{3,24}$/u.test(v) ? v : null; };
+const ID_UTENTE = idUtenteValido(process.env.LIBRE_ID_UTENTE);
+// (giocatore) il nome che ha in questa campagna, ricordato dall'avviatore: si presenta con quello
+let nomeQui = String(process.env.LIBRE_NOME_CAMPAGNA || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 40);
 // Le regole d'ingresso e la pausa generale: le decide chi conduce, dal pannello.
 // In una campagna nuova chi entra per la prima volta aspetta il sì del master (lo si spegne dal pannello, «Permessi
 // e schede»): il codice può finire in mani sbagliate. Le campagne già giocate tengono la scelta che avevano, e sul
@@ -1422,7 +1429,8 @@ function applyPerm(m) {
     rec.sheets = rec.sheets || {};
     if (!m.access) delete rec.sheets[m.sheet]; else rec.sheets[m.sheet] = m.access === 'rw' ? 'rw' : 'r';
   }
-  if (typeof m.name === 'string') rec.name = str(m.name, 40);
+  // il nome di questa campagna (l'ID globale, rec.idUtente, il master non lo tocca: lo sceglie il giocatore)
+  if (typeof m.name === 'string') { const n = uniqueName(m.token, m.name); if (!n) return false; rec.name = n; }
   for (const c of clients) if (c.token === m.token) {
     c.role = rec.role;
     c.name = rec.name || c.name;
@@ -1645,7 +1653,12 @@ function onMessage(c, raw) {
       }
     } else if (c.kind === 'ws' && MODE === 'host' && !hasMaster()) rec.role = 'master';
     else if (rec.role === 'master' && c.kind === 'link') rec.role = 'player';   // da fuori non si entra da master
-    const want = uniqueName(token, m.name || rec.name);
+    // L'ID globale: dall'app (il proprio, o quello che il ponte del giocatore aggiunge al saluto). Dal sito non c'è.
+    const idU = c.web ? null : (idUtenteValido(m.idUtente) || (c.kind === 'ws' && !DEDICATO ? ID_UTENTE : null));
+    if (idU) rec.idUtente = idU;
+    // Il nome è di questa campagna: se il registro ne ha già uno vale quello (anche se nel frattempo, in un'altra
+    // campagna, ti sei chiamato diversamente). Solo chi è nuovo qui usa il nome che propone, o il suo ID.
+    const want = uniqueName(token, rec.name || m.name || idU);
     rec.name = want || (rec.role === 'master' ? 'Master' : 'Giocatore ' + c.id);
     rec.lastSeen = Date.now();
     c.name = rec.name; c.role = rec.role;
@@ -2146,7 +2159,13 @@ function versoBrowser(msg, giaInOrdine) {
   if (msg.t === 'bye') ruoloQui = null;
   if (msg.t === 'welcome' && msg.you && lastHello) {    // l'identità data dall'host (con la firma): da qui in poi si usa quella
     lastHello.token = msg.you.token; if (msg.you.firma) lastHello.firma = msg.you.firma;
+    if (msg.you.name) { lastHello.name = msg.you.name; nomeQui = msg.you.name; }
     avviatore('identita', { token: msg.you.token, firma: msg.you.firma || null, campagna: msg.you.campagna || null, nome: msg.you.name || null });
+  }
+  // nome cambiato (da te o dal master): l'avviatore lo ricorda per questa campagna
+  if (msg.t === 'you' && msg.you && msg.you.name && lastHello && /^[a-f0-9]{24}$/.test(String(lastHello.token || ''))) {
+    lastHello = { ...lastHello, name: msg.you.name }; nomeQui = msg.you.name;
+    avviatore('identita', { token: lastHello.token, firma: lastHello.firma || null, nome: msg.you.name });
   }
   // il codice nuovo si tiene da parte: si passa lì solo quando chi gioca lo conferma (invito.accetta)
   if (msg.t === 'invito' && /^[a-f0-9]{64}$/.test(String(msg.codice || ''))) invitoInAttesa = msg.codice;
@@ -2638,6 +2657,8 @@ if (MODE === 'join') {
     if (m.t === 'hello' && !m.canale && CHIAVE_MASTER) m = { ...m, chiaveMaster: CHIAVE_MASTER };
     // la parola d'invito (la seconda metà del codice scritto entrando): serve all'host finché non ci conosce
     if (m.t === 'hello' && !m.canale && JOIN_PAROLA) m = { ...m, invito: JOIN_PAROLA };
+    // l'ID di chi gioca (uguale in tutte le campagne) e il nome che ha in questa: il browser non ne sa niente
+    if (m.t === 'hello' && !m.canale) m = { ...m, idUtente: ID_UTENTE || undefined, name: nomeQui || m.name || ID_UTENTE || undefined };
     if (m.t === 'hello') lastHello = m;
     if (m.t === 'name' && lastHello) lastHello = { ...lastHello, name: m.name };
     if (m.t === 'leave') { lastHello = null; if (stabile) stabile.destroy(); }   // scollegato a mano: non ripresentarlo

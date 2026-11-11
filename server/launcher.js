@@ -147,8 +147,26 @@ function stato() {
     piattaforma: MOBILE === 'android' ? 'Android' : MOBILE === 'ios' ? 'iPhone e iPad' : WIN ? 'Windows' : MAC ? 'macOS' : 'Linux',
     mobile: MOBILE, campHome: CAMP_HOME, versione: VERSIONE, arch: process.arch, repo: repoGitHub(),
     relay: state.relay || null, pubblica: relayConf(), sito: SITO_WEB, viaRelay: state.viaRelay || null,
-    node: process.versions.node, pref: prefCorrenti(), finestraScala
+    node: process.versions.node, pref: prefCorrenti(), finestraScala, idUtente: idUtente(),
+    // la prima volta l'ID si propone da solo: l'ultimo nome usato in una campagna a cui ti sei unito
+    idSuggerito: idUtente() ? null : idDaProporre()
   };
+}
+// ---------- l'ID di chi usa questo LIBRE VTT ----------
+// Si sceglie al primo avvio e si cambia dalla rotellina della home. È lo stesso in tutte le campagne (il master
+// lo vede ma non lo può cambiare); il nome al tavolo invece è di ogni campagna.
+const idUtenteValido = s => { const v = String(s == null ? '' : s).trim(); return /^[\p{L}\p{N}_.-]{3,24}$/u.test(v) ? v : null; };
+const idUtente = () => idUtenteValido(conf.idUtente);
+function idDaProporre() {
+  const u = Object.values(unite()).filter(e => e && e.nomeGiocatore).sort((a, b) => (b.ultimoAccesso || 0) - (a.ultimoAccesso || 0));
+  const n = u.length ? String(u[0].nomeGiocatore).normalize('NFC').replace(/\s+/g, '_').replace(/[^\p{L}\p{N}_.-]/gu, '').slice(0, 24) : '';
+  return idUtenteValido(n);
+}
+function salvaIdUtente(m) {
+  const v = idUtenteValido(m && m.id);
+  if (!v) return { errore: 'L\'ID va da 3 a 24 caratteri: lettere, numeri, «_», «-» e «.» (niente spazi).' };
+  conf.idUtente = v; salvaConf();
+  return { ok: true, idUtente: v };
 }
 // Preferenze della home (rotellina): lingua, dimensione dell'interfaccia, tema, regole facoltative.
 // t = quando sono cambiate l'ultima volta: il tavolo le prende solo se sono più nuove delle sue.
@@ -1086,6 +1104,8 @@ async function avvia(mode, id, campagna, opz = {}) {
       if (parola && /^[a-f0-9]{32}$/.test(parola)) extra.LIBRE_JOIN_PAROLA = parola;
       const e = state.joinCodice && unite()[state.joinCodice];
       if (e && e.idGiocatore) extra.IDENTITA = JSON.stringify({ token: e.idGiocatore, firma: e.firma || null });
+      // il nome che hai in questa campagna (ognuna ha il suo): ci si presenta con quello
+      if (e && e.nomeGiocatore) extra.LIBRE_NOME_CAMPAGNA = String(e.nomeGiocatore).slice(0, 40);
       if (state.joinCodice) ricordaUnita(state.joinCodice, {});
       // la chiave del master di un server dedicato: va al server una volta, entrando (non la si salva)
       const chiave = String(opz.chiaveMaster || '').replace(/[\s-]/g, '').toLowerCase();
@@ -1098,6 +1118,7 @@ async function avvia(mode, id, campagna, opz = {}) {
         else say('Collegamento tramite relay: non trovo l\'indirizzo del relay. Uso il collegamento diretto (iroh).', 'warn');
       }
     }
+    if (idUtente()) extra.LIBRE_ID_UTENTE = idUtente();
     run('regole', NODE, [path.join('server', 'game-server.js'), mode === 'host' ? 'host' : 'join'],
       { env: { PORT: String(GAME_PORT), LINK_PORT: String(LINK_PORT), DATA_DIR: path.join(CAMP, 'data'), LINK_ID_FILE, LIBRE_CANALE: CANALE_REGOLE, LIBRE_SEGRETO: SEGRETO, ...extra }, keep: true });
     if (!await aspettaPorta(GAME_PORT)) return fallisci('Il server di gioco non si è acceso.');
@@ -1697,6 +1718,23 @@ function apriFinestra(url) {
   return p;
 }
 
+// Il pannello della sessione in una finestra «da app» (--app: niente schede né barra degli indirizzi), nello
+// stesso browser e profilo della finestra di LIBRE VTT. Se è già aperto, il browser ne apre un'altra: poco male.
+// Senza Chrome (o sul telefono) lo apre la pagina, come prima.
+let ultimoPannello = 0;
+function apriPannello(url) {
+  if (MOBILE) return { ok: false };
+  const b = trovaBrowser();
+  if (!b) return { ok: false };
+  if (Date.now() - ultimoPannello < 1500) return { ok: true };   // doppio clic: una finestra sola
+  ultimoPannello = Date.now();
+  try {
+    spawn(b, ['--app=' + url, '--user-data-dir=' + PROFILE, '--window-size=1180,860'], { detached: true, stdio: 'ignore' }).on('error', () => {}).unref();
+    say('Apro il pannello della sessione in una finestra sua.');
+    return { ok: true };
+  } catch { return { ok: false }; }
+}
+
 // Nel browser normale non si sa quando la scheda viene chiusa: le pagine di LIBRE VTT dicono
 // «ci sono» ogni 20 secondi. Se per qualche minuto non c'è più nessuno, si spegne tutto
 // (altrimenti i server resterebbero accesi per sempre, di nascosto).
@@ -1856,6 +1894,29 @@ const server = http.createServer(async (req, res) => {
     listeners.add(res); finestraVista = true;
     req.on('close', () => listeners.delete(res));
     return;
+  }
+  // Il pannello della sessione: sempre in una finestra sua, come un'app (non una scheda del browser). Lo chiedono la
+  // home e il tavolo (che sta su un'altra porta: da qui il permesso CORS, solo per le pagine di 127.0.0.1).
+  // In una partita da soli non c'è un server di gioco: si apre lo stesso, e dice che la partita è in locale.
+  if (u.pathname === '/api/pannello') {
+    const o = req.headers.origin;
+    if (!origineLocale(o)) return invia(res, 403, 'no');
+    const cors = o ? { 'Access-Control-Allow-Origin': o, 'Vary': 'Origin' } : {};
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, { ...cors, 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'X-Libre-VTT, Content-Type', 'Access-Control-Max-Age': '600' });
+      return res.end();
+    }
+    if (req.method !== 'POST' || req.headers['x-libre-vtt'] !== 'pannello') return invia(res, 403, 'no');
+    const lingua = /^(it|en)$/.test(u.searchParams.get('lang') || '') ? u.searchParams.get('lang') : (prefCorrenti().lingua || 'it');
+    const online = state.mode && state.mode !== 'solo' && state.porte && state.porte.game;
+    const url = online ? `http://127.0.0.1:${state.porte.game}/?lang=${lingua}` : `http://127.0.0.1:${UI_PORT}/pannello-locale?lang=${lingua}`;
+    const r = apriPannello(url);
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...cors });
+    return res.end(JSON.stringify({ ...r, locale: !online, url }));
+  }
+  if (u.pathname === '/pannello-locale') {
+    return fs.readFile(path.join(WEB, 'panel.html'), (e, d) =>
+      e ? invia(res, 500, 'panel.html non trovato') : invia(res, 200, d, 'text/html; charset=utf-8'));
   }
   // Le richieste che cambiano qualcosa arrivano solo da questa finestra: un altro sito aperto nel
   // browser non deve poter creare cartelle o accendere partite al posto tuo.
@@ -2047,6 +2108,7 @@ const server = http.createServer(async (req, res) => {
     return corpo(m => ok(esportaCampagna(String(m.path || ''))));
   }
   if (u.pathname === '/api/pref' && req.method === 'POST') return corpo(m => ok(salvaPref(m || {})));
+  if (u.pathname === '/api/id' && req.method === 'POST') return corpo(m => ok(salvaIdUtente(m || {})));
   if (u.pathname === '/api/aggiornamento') return ok(await controllaAggiornamento(u.searchParams.has('ora')));
   if (u.pathname === '/api/aggiornamento/installa' && req.method === 'POST') {
     return corpo(async () => ok(await installaAggiornamento()));

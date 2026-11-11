@@ -262,6 +262,12 @@
   .avvisoPlg button.rischio { background: transparent; border: 1px solid #b3261e; color: #ef6b62; }
   .avvisoPlg button.rischio:disabled { opacity: .4; }
   #sceltaLingua .lingue button { min-height: 52px; font-size: 1.05rem; }
+  /* ---------- il tuo ID ---------- */
+  .idRiga { display: flex; gap: 8px; }
+  .idRiga input { flex: 1; min-width: 0; min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: inherit; font: inherit; padding: 0 12px; }
+  .idRiga button { min-height: 44px; }
+  dialog.pref .nota.err { color: #ef6b62; }
+  dialog.pref .nota.ok { color: #57c785; }
 </style>
 <script src="/nativo.js"></script>
 </head>
@@ -276,8 +282,24 @@
   <p class="nota">Puoi cambiarla quando vuoi dalla rotellina ⚙ nella home.</p>
 </dialog>
 
+<dialog class="pref" id="sceltaId" aria-labelledby="siTit">
+  <h2 id="siTit">Scegli il tuo ID</h2>
+  <p class="nota">È il tuo nome utente in LIBRE VTT, uguale in tutte le campagne: il master lo vede ma non lo può cambiare. Il nome con cui ti vedono al tavolo invece è di ogni campagna, e lo cambi lì.</p>
+  <form class="idRiga" id="siForm" style="margin-top:12px">
+    <input type="text" id="siId" maxlength="24" autocomplete="off" spellcheck="false" placeholder="Es. pino_88" aria-label="Il tuo ID">
+    <button class="b go" type="submit">Va bene</button>
+  </form>
+  <p class="nota" id="siEsito" role="status">Da 3 a 24 caratteri: lettere, numeri, «_», «-» e «.». Puoi cambiarlo quando vuoi dalla rotellina ⚙.</p>
+</dialog>
+
 <dialog class="pref" id="impostazioni" aria-labelledby="impTit">
   <h2 id="impTit">Impostazioni</h2>
+  <h3>Il tuo ID</h3>
+  <form class="idRiga" id="impIdForm">
+    <input type="text" id="impId" maxlength="24" autocomplete="off" spellcheck="false" aria-label="Il tuo ID">
+    <button class="b" type="submit">Salva</button>
+  </form>
+  <p class="nota" id="impIdEsito" role="status">Uguale in tutte le campagne; il nome al tavolo è di ogni campagna. Il master vede il tuo ID ma non lo può cambiare. Il nuovo ID vale dalla prossima partita che apri.</p>
   <h3>Lingua</h3>
   <div class="seg" id="impLingua"></div>
   <h3>Dimensione dell'interfaccia</h3>
@@ -563,7 +585,7 @@ function disegna() {
 
   if (acceso) {
     $('prontoTit').textContent = S.mode === 'host' ? 'La partita è aperta' : 'Tutto acceso';
-    $('pannello').classList.toggle('hide', S.mode === 'solo');
+    $('pannello').classList.remove('hide');      // anche da soli: lì dice che la partita è in locale
     const righe = $('prontoRighe');
     righe.replaceChildren();
     if (S.mode === 'host') {
@@ -701,6 +723,7 @@ async function carica() {
     const r = await fetch('/api/stato');
     S = await r.json();
     if (S.pref) prefDaServer(S.pref, S.finestraScala);
+    controllaId();
     if (S.log) { $('log').replaceChildren(); S.log.forEach(logLine); }
     disegna();
   } catch {}
@@ -1029,7 +1052,15 @@ const urlTavolo = () => `http://127.0.0.1:${P().web || 3000}/?gs=${S.mode === 's
   + `&lang=${I18N.lingua}&pref=${encodeURIComponent(JSON.stringify(PREF))}`;
 const passa = () => { try { fetch('/api/passaggio', { keepalive: true }).catch(() => {}); } catch {} };
 $('vai').onclick = () => { passa(); location.href = urlTavolo(); };
-$('pannello').onclick = () => window.open(`http://127.0.0.1:${P().game || 4000}/?lang=${I18N.lingua}`, '_blank');
+// Il pannello si apre in una finestra sua, come un'app: la apre l'avviatore (vedi /api/pannello). Senza Chrome o
+// simili (o sul telefono) la apre la pagina, come finestra a sé. Da soli il pannello dice che la partita è in locale.
+$('pannello').onclick = async () => {
+  let r = null;
+  try { r = await fetch('/api/pannello?lang=' + I18N.lingua, { method: 'POST', headers: { 'X-Libre-VTT': 'pannello' } }).then(x => x.ok ? x.json() : null); } catch {}
+  if (r && r.ok) return;
+  const url = r && r.url ? r.url : (S.mode === 'solo' ? `/pannello-locale?lang=${I18N.lingua}` : `http://127.0.0.1:${P().game || 4000}/?lang=${I18N.lingua}`);
+  window.open(url, 'libre-pannello', 'popup,width=1180,height=860');
+};
 $('ferma').onclick = () => { inPartenza = false; window._andato = false; azione({ what: 'ferma' }); setTimeout(carica, 400); };
 
 // --- in diretta ---
@@ -1114,7 +1145,33 @@ function chiediLingua() {
   try { $('sceltaLingua').showModal(); } catch { $('sceltaLingua').setAttribute('open', ''); }
   const b = $('slLingue').querySelector(`[data-v="${I18N.lingua}"]`); if (b) b.focus();
 }
+// ---------- il tuo ID (uno per tutte le campagne) ----------
+let idChiesto = false;
+function controllaId() {
+  if (S.idUtente || idChiesto || !('idUtente' in S)) return;   // (un avviatore di prima non lo conosce)
+  if ($('sceltaLingua').open) { $('sceltaLingua').addEventListener('close', controllaId, { once: true }); return; }
+  idChiesto = true;
+  $('siId').value = S.idSuggerito || '';
+  $('sceltaId').addEventListener('cancel', e => e.preventDefault());     // un ID va scelto
+  try { $('sceltaId').showModal(); } catch { $('sceltaId').setAttribute('open', ''); }
+  setTimeout(() => $('siId').focus(), 0);
+}
+async function salvaId(valore, esito) {
+  const r = await post('/api/id', { id: valore.trim() });
+  if (!r || r.errore) { esito.textContent = '⚠️ ' + (window.tr || (x => x))((r && r.errore) || 'Non sono riuscito a salvarlo: riprova.'); esito.className = 'nota err'; return false; }
+  S.idUtente = r.idUtente;
+  return true;
+}
+$('siForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (await salvaId($('siId').value, $('siEsito'))) $('sceltaId').close();
+});
+$('impIdForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (await salvaId($('impId').value, $('impIdEsito'))) { $('impIdEsito').textContent = (window.tr || (x => x))('Salvato. Vale dalla prossima partita che apri.'); $('impIdEsito').className = 'nota ok'; }
+});
 function disegnaPref() {
+  if (!$('impId').matches(':focus')) $('impId').value = S.idUtente || '';
   premuto($('impLingua'), I18N.lingua);
   $('impScala').value = PREF.scala || 100; $('impScalaOut').value = (PREF.scala || 100) + '%';
   premuto($('impTema'), PREF.tema || 'dark');
