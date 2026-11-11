@@ -567,6 +567,7 @@ tokBox.id = 'tokBox'; document.body.appendChild(tokBox);
 const tok = { name: '', round: true, color: '#d9534f', ring: '#ffffff', noRing: false, img: null, baked: false, size: 1, sheet: '', useIcon: true };
 function applyLook(el) {                                         // bordo colorato dei segnalini con immagine
   if (el.dataset.ring) el.style.setProperty('--ring', el.dataset.ring); else el.style.removeProperty('--ring');
+  if (+el.dataset.rot) el.style.setProperty('--rot', el.dataset.rot + 'deg'); else el.style.removeProperty('--rot');   // la rotazione dell'immagine
 }
 function tokUrl() {
   if (tok.img) return tok.img.url;

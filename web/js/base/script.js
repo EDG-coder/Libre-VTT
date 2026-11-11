@@ -446,11 +446,12 @@ viewport.addEventListener('contextmenu', e => e.preventDefault());
 // impilati sotto il puntatore, il primo che può muovere (così il suo si prende anche se un altro lo copre).
 function fotoDelClic(e) { return e.target.closest('.photo'); }
 
-let mode = null;           // 'pan' | 'photo' | 'frame' | 'resize' | 'ping' | null
+let mode = null;           // 'pan' | 'photo' | 'frame' | 'resize' | 'rotate' | 'ping' | null
 let startX = 0, startY = 0;
 let origX = 0, origY = 0;  // posizione iniziale (vista o elemento)
 let origW = 0, origH = 0;  // dimensioni iniziali dell'elemento
 let dir = '';              // maniglia in uso: n, s, e, w, ne, nw, se, sw
+let origRot = 0, rotCx = 0, rotCy = 0, rotA0 = 0;   // rotazione: gradi di partenza, centro sullo schermo, angolo del puntatore
 let activeEl = null;       // foto, rettangolo o sfondo in uso
 let companion = null;      // spostando il rettangolo, l'immagine lo segue (posizione iniziale)
 let group = [], photoMoved = false;       // altri segnalini selezionati che si muovono insieme
@@ -488,13 +489,32 @@ viewport.addEventListener('pointerdown', e => {
       origX = num(photo, 'left'); origY = num(photo, 'top');
       origW = num(photo, 'width'); origH = num(photo, 'height');
       const handle = e.target.closest('.handle');
-      if (handle && photo.contains(handle)) { mode = 'resize'; dir = handle.dataset.d; }
+      if (handle && photo.contains(handle) && handle.dataset.d === 'rot') {
+        // la maniglia della rotazione: si gira attorno al centro (doppio clic o doppio tocco: dritto, vedi sotto)
+        const r = photo.getBoundingClientRect();
+        rotCx = r.left + r.width / 2; rotCy = r.top + r.height / 2;
+        rotA0 = Math.atan2(e.clientY - rotCy, e.clientX - rotCx);
+        origRot = +photo.dataset.rot || 0;
+        mode = 'rotate'; photo.classList.add('dragging', 'rotating');
+      }
+      else if (handle && photo.contains(handle)) { mode = 'resize'; dir = handle.dataset.d; }
       else { mode = 'photo'; photo.classList.add('dragging'); }
     }
   } else return;
   startX = e.clientX; startY = e.clientY;
   viewport.setPointerCapture(e.pointerId);
 });
+
+// doppio clic (o doppio tocco) sulla maniglia della rotazione: il segnalino torna dritto (e non si apre la scheda)
+viewport.addEventListener('dblclick', e => {
+  // (con il puntatore «catturato» dalla mappa il bersaglio del doppio clic può essere la mappa stessa: conta il punto)
+  const sotto = document.elementFromPoint(e.clientX, e.clientY) || e.target;
+  const hd = sotto.closest && sotto.closest('.handle[data-d="rot"]');
+  if (!hd) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  const p = hd.closest('.photo');
+  if (p && +p.dataset.rot) { ruotaSegnalino(p, 0); scheduleBoardSave(); }
+}, true);
 
 // ---- aggancio dei bordi: il rettangolo si aggancia all'immagine e viceversa ----
 function snapSource(el) {
@@ -577,6 +597,13 @@ viewport.addEventListener('pointermove', e => {
     }
   } else if (mode === 'resize') {
     resizeEl(activeEl, dx / view.s, dy / view.s);
+  } else if (mode === 'rotate') {
+    // gradi interi; con Maiusc a scatti di 15°, e senza si aggancia da solo ai quattro lati se ci si passa vicino
+    let a = origRot + (Math.atan2(e.clientY - rotCy, e.clientX - rotCx) - rotA0) * 180 / Math.PI;
+    a = e.shiftKey ? Math.round(a / 15) * 15 : Math.round(a);
+    const q = Math.round(a / 90) * 90;
+    if (!e.shiftKey && Math.abs(a - q) <= 3) a = q;
+    ruotaSegnalino(activeEl, a);
   }
   if (activeEl === board || activeEl === bgBox) { syncFill(); clipBg(); placeGrid(); }
 });
@@ -592,7 +619,7 @@ function stop() {
   if (livePing) { livePing.held = false; livePing = null; }     // rilasciato: il ping smette di crescere e sbiadisce
   mode = null; companion = null;
   viewport.classList.remove('panning');
-  if (activeEl) activeEl.classList.remove('dragging');
+  if (activeEl) activeEl.classList.remove('dragging', 'rotating');
   activeEl = null;
   if (wasFrame) applyView();     // i limiti della vista e la griglia dipendono dal rettangolo e dallo sfondo
   scheduleBoardSave();
@@ -690,6 +717,19 @@ function pingOnde(wx, wy, max, rate, colore, ping, ripete) {
 const HANDLES = ['n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se'];   // i lati prima, gli angoli sopra
 let added = 0;
 const addHandles = el => { for (const d of HANDLES) { const hd = document.createElement('div'); hd.className = 'handle'; hd.dataset.d = d; el.appendChild(hd); } };
+// La maniglia della rotazione: un pallino sopra il segnalino, collegato da una lineetta (solo per le immagini).
+function addRotHandle(el) {
+  const hd = document.createElement('div');
+  hd.className = 'handle'; hd.dataset.d = 'rot';
+  hd.title = tr('Trascina per ruotare (Maiusc: a scatti di 15°, doppio clic: dritto)');
+  el.appendChild(hd);
+}
+/** Gira l'immagine del segnalino (in gradi, 0-359; 0 = dritto). Il riquadro, le maniglie e le icone restano dritti. */
+function ruotaSegnalino(el, gradi) {
+  const g = ((Math.round(+gradi || 0) % 360) + 360) % 360;
+  if (g) el.dataset.rot = String(g); else delete el.dataset.rot;
+  if (typeof applyLook === 'function') applyLook(el);
+}
 addHandles(bgBox);
 addHandles(board);
 
@@ -710,6 +750,7 @@ function createPhoto(url, w, h, l, t, aid, silent, lay) {
   img.src = url; img.draggable = false;
   photo.appendChild(img);
   addHandles(photo);
+  addRotHandle(photo);
   world.appendChild(photo);
   if (!silent) { select(photo); scheduleBoardSave(); }
   return photo;
@@ -968,7 +1009,7 @@ function captureScene() {
     owner: p.dataset.owner || undefined, gid: p.dataset.gid || undefined,
     url: p._shape ? undefined : rifImmagine(p.querySelector('img').getAttribute('src'), p.dataset.gid), shape: p._shape, layer: p.dataset.layer, aid: p.dataset.aid === undefined ? undefined : +p.dataset.aid,
     l: num(p, 'left'), t: num(p, 'top'), w: num(p, 'width'), h: num(p, 'height'), z: +p.style.zIndex, sheet: p.dataset.sheet, name: p.dataset.name, round: p.dataset.round, ring: p.dataset.ring,
-    fx: p.dataset.fx || undefined, crossed: p.dataset.crossed ? true : undefined, vals: p.dataset.vals || undefined,
+    rot: +p.dataset.rot || undefined, fx: p.dataset.fx || undefined, crossed: p.dataset.crossed ? true : undefined, vals: p.dataset.vals || undefined,
     ...(typeof luceDatiSegnalino === 'function' ? luceDatiSegnalino(p) : {})
   }));
   if (typeof drawSnapshot === 'function') cur.draw = drawSnapshot();
@@ -1015,6 +1056,8 @@ function creaDaDati(p) {
 /** Nome, scheda, proprietario, effetti, immagine condivisa: dai dati al segnalino che c'è già. */
 function datiSuSegnalino(el, p) {
   for (const k of ['sheet', 'name', 'round', 'ring']) if (p[k]) el.dataset[k] = p[k]; else delete el.dataset[k];
+  const gr = ((Math.round(+p.rot || 0) % 360) + 360) % 360;    // la rotazione (gradi)
+  if (gr) el.dataset.rot = String(gr); else delete el.dataset.rot;
   if (p.id) el.dataset.pid = p.id;
   if (p.owner) el.dataset.owner = p.owner; else delete el.dataset.owner;
   if (typeof fxDaDati === 'function') fxDaDati(el, p);

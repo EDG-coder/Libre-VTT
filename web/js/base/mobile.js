@@ -120,6 +120,8 @@
           for (const g of group) { g.el.style.left = g.x + 'px'; g.el.style.top = g.y + 'px'; }
         } else if (mode === 'resize') {
           Object.assign(activeEl.style, { left: origX + 'px', top: origY + 'px', width: origW + 'px', height: origH + 'px' });
+        } else if (mode === 'rotate') {
+          ruotaSegnalino(activeEl, origRot);
         } else if (mode === 'frame') {
           activeEl.style.left = origX + 'px'; activeEl.style.top = origY + 'px';
           if (companion && activeEl === board) { bgBox.style.left = companion.x + 'px'; bgBox.style.top = companion.y + 'px'; }
@@ -412,7 +414,7 @@
     li.className = 'soloTocco';
     li.innerHTML = '<b>Con le dita</b>: un dito su un punto libero sposta la mappa, due dita la ingrandiscono. ' +
       '<b>Tocco lungo</b> su qualsiasi cosa = clic destro (il menu). Tieni premuto su un punto libero: ping. ' +
-      'Tocco con due dita: il menu della mappa. Doppio tocco = doppio clic. ⬚ in basso: selezione di più segnalini. ' +
+      'Tocco con due dita: il menu della mappa. Doppio tocco = doppio clic. Il pallino sopra il segnalino selezionato lo ruota (doppio tocco: dritto). ⬚ in basso: selezione di più segnalini. ' +
       'Negli assets e nelle schede basta un tocco per mettere l\'immagine o il personaggio sulla mappa. ' +
       'Per spostare un pulsante del menu a sinistra <b>tienilo premuto</b> un attimo (si ingrandisce) e poi trascinalo; fuori dal menu si trascina subito.';
     guida.prepend(li);

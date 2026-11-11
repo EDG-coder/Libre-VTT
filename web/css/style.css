@@ -104,6 +104,24 @@ html.mappaSuTela #map, html.mappaSuTela #boardFill { visibility: hidden; }
 .handle[data-d="ne"] { right: calc(-7px * var(--inv, 1)); top:    calc(-7px * var(--inv, 1)); cursor: nesw-resize; }
 .handle[data-d="sw"] { left:  calc(-7px * var(--inv, 1)); bottom: calc(-7px * var(--inv, 1)); cursor: nesw-resize; }
 
+/* Rotazione: gira solo l'immagine (il riquadro, le maniglie, il nome e le icone restano dritti) */
+.photo img { transform: rotate(var(--rot, 0deg)); }
+/* la sua maniglia: un pallino sopra il segnalino, unito al bordo da una lineetta */
+.handle[data-d="rot"] {
+  left: 50%; top: calc(-32px * var(--inv, 1));
+  width: calc(14px * var(--inv, 1)); height: calc(14px * var(--inv, 1));
+  margin-left: calc(-7px * var(--inv, 1));
+  border-radius: 50%; background: #fff; border: calc(2px * var(--inv, 1)) solid #2f8cff; box-sizing: border-box;
+  box-shadow: 0 0 calc(8px * var(--inv, 1)) rgba(47, 140, 255, .9);
+  cursor: grab;
+}
+.handle[data-d="rot"]::after {
+  content: ''; position: absolute; left: 50%; top: 100%;
+  width: calc(2px * var(--inv, 1)); height: calc(18px * var(--inv, 1)); margin-left: calc(-1px * var(--inv, 1));
+  background: #2f8cff; pointer-events: none;
+}
+.photo.rotating, .photo.rotating .handle[data-d="rot"] { cursor: grabbing; }
+
 #toolbar {
   position: fixed; left: 78px; top: 22px;
   display: flex; align-items: center; gap: 12px;
