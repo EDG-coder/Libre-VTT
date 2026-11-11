@@ -131,7 +131,7 @@
       if (typeof shp !== 'undefined' && shp) { if (shp.el) shp.el.remove(); live.remove(); shp = null; }
       if (typeof erasing !== 'undefined') erasing = null;
       if (typeof ruler !== 'undefined' && ruler && ruler.id !== -1) clearRuler();
-      if (typeof fogDrag !== 'undefined' && fogDrag) { fogDrag = 0; fogRect = null; if (typeof clearDraw === 'function') clearDraw(); }
+      if (typeof fogDrag !== 'undefined' && fogDrag !== null) { fogDrag = null; fogRect = null; if (typeof clearDraw === 'function') clearDraw(); }
     } catch (err) { console.warn('annullaGesto', err); }
   }
 
