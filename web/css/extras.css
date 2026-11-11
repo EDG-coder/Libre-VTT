@@ -1186,3 +1186,98 @@ html.ui-tel #turniBarra .tbTesta { font-size: 13px; padding: 6px 10px; gap: 8px;
   filter: drop-shadow(0 6px 24px rgba(0, 0, 0, .6));
   user-select: none;
 }
+
+/* ---------- Slot di talenti e abilità (slot-capacita.js) ---------- */
+.sheetWin .box.capHost { display: flex; flex-direction: column; }
+.sheetWin .box.capHost > h5 { order: 0; }
+.sheetWin .box.capHost > .capList { order: 1; }
+.sheetWin .box.capHost > textarea { order: 2; }
+.sheetWin .box.capHost.capPieno > textarea { min-height: 48px; }
+.sheetWin .capList { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
+.sheetWin .capHead { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.sheetWin .capTit { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;
+  border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; font-weight: 600; padding: 3px 6px; cursor: pointer; transition: background .12s, color .12s; }
+.sheetWin .capTit:hover, .sheetWin .capTit:focus-visible { color: var(--sh-accent); background: color-mix(in srgb, var(--sh-accent) 18%, transparent); outline: none; }
+.sheetWin .capTit:active { background: color-mix(in srgb, var(--sh-accent) 32%, transparent); }
+.sheetWin .capEdit, .sheetWin .capTog { flex: none; width: 24px; height: 24px; padding: 0; border: 1px solid transparent; border-radius: 6px; background: none; color: inherit; cursor: pointer; font-size: .9em; line-height: 1; }
+.sheetWin .capEdit { opacity: .6; }
+.sheetWin .capEdit:hover, .sheetWin .capTog:hover { opacity: 1; border-color: var(--sh-accent); }
+.sheetWin .capTog { color: var(--sh-accent); font-weight: 700; }
+.sheetWin .capTog.has { background: color-mix(in srgb, var(--sh-accent) 14%, transparent); }
+.sheetWin .capCorpo { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .92em; line-height: 1.4; padding: 2px 6px 6px 12px; margin-left: 6px; border-left: 2px solid color-mix(in srgb, var(--sh-accent) 45%, transparent); }
+.sheetWin .capMod { display: flex; flex-direction: column; gap: 4px; padding: 6px; border: 1px solid var(--sh-accent); border-radius: 8px; background: color-mix(in srgb, var(--sh-accent) 6%, transparent); }
+.sheetWin .capMod .capInT { font-weight: 600; }
+.sheetWin .capMod .capInD { min-height: 80px; resize: vertical; }
+.sheetWin .capBtns { display: flex; gap: 4px; flex-wrap: wrap; }
+.sheetWin .capBtns button { border: 1px solid var(--sh-line); border-radius: 6px; background: none; color: inherit; font: inherit; font-size: .9em; padding: 3px 8px; cursor: pointer; }
+.sheetWin .capBtns .capOk { border-color: var(--sh-accent); background: var(--sh-accent); color: var(--sh-on); font-weight: 600; }
+.sheetWin .capBtns .capVia { margin-left: auto; }
+.sheetWin .capBtns .capVia:hover { color: #e5484d; border-color: #e5484d; }
+.sheetWin .capAdd { align-self: flex-start; border: 1px dashed var(--sh-accent); border-radius: 7px; background: transparent; color: var(--sh-accent); padding: 2px 9px; font: inherit; font-size: .9em; font-weight: 600; cursor: pointer; }
+.sheetWin .capAdd:hover { background: color-mix(in srgb, var(--sh-accent) 15%, transparent); }
+.ui-touch .sheetWin .capEdit, .ui-touch .sheetWin .capTog { width: 34px; height: 34px; }
+.ui-touch .sheetWin .capTit { padding: 7px 8px; }
+
+/* scheda Standard: tutto più piccolo, dentro il riquadro disegnato; gli slot sopra, l'area di testo sotto */
+.stdWin .sPage .sTa.capHost { display: flex; flex-direction: column; gap: 2px; }
+.stdWin .sPage .sTa.capHost > .capList { order: 1; flex: 0 1 auto; min-height: 0; max-height: calc(100% - 16px); overflow-y: auto; margin: 0; gap: 1px; font-size: 7.6px; scrollbar-width: thin; }
+.stdWin .sPage .sTa.capHost > textarea { order: 2; position: static; flex: 1 1 auto; height: auto; min-height: 14px; }
+.stdWin .sPage .sTa.capHost > .sendRule { z-index: 1; }
+.stdWin .sPage .capTit { padding: 1px 3px; border-radius: 3px; }
+.stdWin .sPage .capEdit, .stdWin .sPage .capTog { width: 11px; height: 11px; border-radius: 3px; font-size: 7px; }
+.stdWin .sPage .capCorpo { font-size: 7.2px; padding: 0 3px 2px 5px; margin-left: 3px; border-left-width: 1px; }
+.stdWin .sPage .capAdd { font-size: 7px; padding: 0 5px; border-radius: 4px; border: .7px dashed var(--sh-accent); color: var(--sh-accent); font-weight: 600; cursor: pointer; }
+.stdWin .sPage .capAdd:hover { background: color-mix(in srgb, var(--sh-accent) 15%, transparent); }
+.stdWin .sPage .capTog { color: var(--sh-accent); }
+
+/* la tendina per scrivere uno slot della scheda Standard (come quella degli incantesimi) */
+.capPop { position: fixed; z-index: 160000; width: min(420px, 92vw); padding: 12px; background: var(--panel); color: var(--text);
+  border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 50px rgba(0, 0, 0, .5); }
+.capPop[hidden] { display: none; }
+.capPop .capMod { display: flex; flex-direction: column; gap: 8px; }
+.capPop .capInT, .capPop .capInD { font: inherit; color: inherit; border: 1px solid var(--line); background: var(--panel-2); border-radius: 9px; padding: 7px 10px; }
+.capPop .capInT { font-size: 15px; font-weight: 600; }
+.capPop .capInD { font-size: 13px; line-height: 1.5; min-height: 140px; resize: vertical; }
+.capPop .capInT:focus, .capPop .capInD:focus { outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); }
+.capPop .capBtns { display: flex; gap: 6px; flex-wrap: wrap; }
+.capPop .capBtns button { font: inherit; font-size: 13px; padding: 6px 11px; border-radius: 9px; cursor: pointer; border: 1px solid var(--line); background: var(--panel-2); color: inherit; }
+.capPop .capBtns button:hover { border-color: var(--accent); }
+.capPop .capBtns .capOk { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.capPop .capBtns .capVia { margin-left: auto; }
+.capPop .capBtns .capVia:hover { color: #e5484d; border-color: #e5484d; }
+.stdWin .sPage .capSlot.inMod .capTit { color: var(--sh-accent); background: color-mix(in srgb, var(--sh-accent) 18%, transparent); }
+
+/* ---------- Contatori dei consumabili (contatori.js) ---------- */
+.ctPanel { margin: 0 10px 8px; border: 1px solid color-mix(in srgb, currentColor 22%, transparent); border-radius: 12px; background: color-mix(in srgb, currentColor 5%, transparent); color: inherit; font-size: 13px; }
+.ctPanel > summary { list-style: none; padding: 6px 10px; cursor: pointer; font-weight: 600; }
+.ctPanel > summary::-webkit-details-marker { display: none; }
+.ctPanel > summary > span::before { content: "▸ "; opacity: .6; }
+.ctPanel[open] > summary > span::before { content: "▾ "; }
+.ctPanel > .ctHost { padding: 0 10px 8px; }
+.ctGriglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.ctTile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 8px 8px; min-width: 0;
+  border: 1px solid var(--sh-line); border-radius: 10px; background: color-mix(in srgb, var(--sh-soft) 75%, var(--sh-bg)); }
+.ctTop { align-self: stretch; display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.ctTop > span { opacity: .65; }
+.ctTop > b { flex: 1; text-align: center; font-weight: 600; }
+.ctTop > input { flex: 1; min-width: 0; text-align: center; font-size: 12px; padding: 1px 4px; min-height: 0; }
+.ctMid { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; }
+.ctNum { font-size: 28px; font-weight: 700; line-height: 1; min-width: 1.4em; text-align: center; }
+.ctNumIn { width: 70px; font-size: 22px !important; font-weight: 700; text-align: center; padding: 2px 4px; }
+.ctMeno, .ctPiu { width: 26px; height: 26px; padding: 0; border: 1px solid var(--sh-line); border-radius: 50%; background: none; color: inherit; font-size: 16px; line-height: 1; cursor: pointer; opacity: .55; transition: opacity .12s; }
+.ctTile:hover .ctMeno, .ctTile:hover .ctPiu, .ctMeno:focus-visible, .ctPiu:focus-visible { opacity: 1; }
+.ctMeno:hover, .ctPiu:hover { border-color: var(--sh-accent); color: var(--sh-accent); }
+.ctNome { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; font-size: 12px; font-weight: 600; padding: 2px 6px; cursor: pointer; }
+.ctNome:hover { color: var(--sh-accent); background: color-mix(in srgb, var(--sh-accent) 18%, transparent); }
+.ctNomeIn { width: 100%; text-align: center; font-size: 12px; font-weight: 600; padding: 2px 4px; min-height: 0; }
+.ctReset, .ctVia { position: absolute; bottom: 4px; right: 4px; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 5px; background: none; color: inherit; font-size: 11px; line-height: 1; cursor: pointer; opacity: 0; }
+.ctVia { top: -7px; right: -7px; bottom: auto; width: 20px; height: 20px; border-radius: 50%; background: var(--sh-bg); border: 1px solid var(--sh-line); opacity: .7; }
+.ctTile:hover .ctReset, .ctReset:focus-visible { opacity: .7; }
+.ctReset:hover { opacity: 1; color: var(--sh-accent); }
+.ctVia:hover { opacity: 1; color: #e5484d; border-color: #e5484d; }
+.ctVuoto { margin: 0 0 6px; font-size: 12px; opacity: .7; }
+.ctBarra { display: flex; justify-content: space-between; margin-top: 8px; }
+.ctAdd, .ctLock { width: 28px; height: 28px; padding: 0; border: 1px solid var(--sh-line); border-radius: 7px; background: color-mix(in srgb, var(--sh-accent) 14%, transparent); color: var(--sh-accent); font-size: 15px; line-height: 1; cursor: pointer; }
+.ctAdd:hover, .ctLock:hover { border-color: var(--sh-accent); }
+.ui-touch .ctMeno, .ui-touch .ctPiu { width: 36px; height: 36px; opacity: 1; }
+.ui-touch .ctReset { opacity: .7; width: 26px; height: 26px; }

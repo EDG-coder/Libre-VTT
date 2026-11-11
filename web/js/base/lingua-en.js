@@ -2727,5 +2727,33 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Partita in locale": "Local game",
 "Per far entrare altri giocatori chiudi la partita e, dalla home, scegli «Conduco io»: il pannello si riempirà da solo.": "To let other players in, close the game and choose “I'm the GM” from the home: the panel will fill in by itself.",
 "La partita è in locale: il pannello della sessione serve solo quando giochi con altri.": "This game is local: the session panel is only for playing with others.",
-"Presentazione non valida.": "Invalid handshake."
+"Presentazione non valida.": "Invalid handshake.",
+
+// ---------- slot di talenti e abilità nella scheda (slot-capacita.js) ----------
+"＋ Talento": "＋ Feat",
+"＋ Tratto": "＋ Trait",
+"＋ Abilità": "＋ Feature",
+"Senza titolo": "Untitled",
+"Titolo": "Title",
+"Il testo: cosa fa. Metti [[1d6 | Danni]] per un tiro.": "The text: what it does. Write [[1d6 | Damage]] for a roll.",
+"Sposta su": "Move up",
+"Sposta giù": "Move down",
+"Elimina questo slot": "Delete this slot",
+"Mostra o nascondi il testo": "Show or hide the text",
+"(nessun testo)": "(no text)",
+"Eliminare «{n}»?": "Delete “{n}”?",
+
+// ---------- contatori dei consumabili (contatori.js) ----------
+"Consumabili e usi": "Consumables and uses",
+"Usa uno": "Use one",
+"Recupera uno": "Regain one",
+"Senza nome": "Unnamed",
+"Torna al totale": "Back to the total",
+"Quanti ne restano": "How many are left",
+"Nessun contatore. Con ＋ ne aggiungi uno: incantesimi da usare una volta, Imposizione delle mani, dadi vita…": "No counters. Add one with ＋: once-per-day spells, Lay on Hands, hit dice…",
+"Aggiungi un contatore": "Add a counter",
+"Sblocca per modificare nomi e totali": "Unlock to edit names and totals",
+"Blocca: restano solo − e +": "Lock: only − and + remain",
+"Sblocca": "Unlock",
+"Blocca": "Lock"
 });
