@@ -1,30 +1,28 @@
-## Novità della 3.9.0
+## Novità della 3.10.0
 
-**Griglia, ping e segnalini**
-- **Forma delle caselle:** in Impostazioni › Griglia, oltre ai quadrati, esagoni, triangoli, pentagoni, ottagoni con quadratini e dodecagoni con triangolini. Con «Rotazione della casella» la prima casella gira su se stessa e le altre le si sistemano intorno (a 30° gli esagoni hanno la punta in alto, a 45° i quadrati diventano rombi). I segnalini si agganciano al centro di ogni casella.
-- **Nuovo ping a onde**, grande in centimetri o in caselle per tutta la campagna. Il ping di prima resta come «Ping legacy».
-- **Il party:** scheda «Nel party» e, per il master, «Piazza il party» e «Piazza la puntina» col clic destro sulla mappa.
+**Al tavolo**
+- **Segnalini ruotabili:** un pallino sopra il segnalino selezionato lo fa girare (con Maiusc a scatti di 15°, doppio clic per rimetterlo dritto). La rotazione si salva e arriva a tutti.
+- **Vedere un segnalino intero:** tenendo premuto Alt (⌥ su Mac) sopra un segnalino lo si vede a tutto schermo.
+- **Due tiri nascosti:** «🤫 Sussurro» (lo vedono chi tira e il master) e «🔒 Segreto» (solo il master; agli altri compare un rettangolo nero). Il master può usare «👁 Mostra a tutti».
+- **Pannelli degli strumenti:** se sotto non c'è posto, salgono o si spostano di lato invece di restare tagliati.
 
-**Scene**
-- **Sfondi animati:** GIF, WebP animati e video mp4/webm fino a 25 MB, in loop e senza audio. Si possono fermare in Impostazioni › Aspetto.
+**Schede**
+- **Slot per talenti, tratti razziali e privilegi di classe:** titolo e testo, con il clic sul titolo che manda in chat, ⚙ per modificare e ▸ per aprire il testo.
+- **Contatori dei consumabili:** totale, quanti ne restano e nome, con ＋ e lucchetto.
 
-**Plugin**
-- **Il master condivide i suoi plugin con i giocatori:** al giocatore viene proposto, mai scaricato da solo, e può uscire senza accettare. Il master sceglie se è necessario per entrare.
-- **Eliminare un plugin** dalla lista (🗑 in ⚙ › Plugin): va nel Cestino.
+**Identità e campagne**
+- **ID globale** scelto al primo avvio (e dalla rotellina), e **nome al tavolo diverso per ogni campagna**.
+- Il pannello della sessione si apre in una finestra a parte.
 
-**Sito web per i giocatori**
-- **Account con codice per campagna:** il master crea un codice personale («🔑 Crea account») e il giocatore rientra con lo stesso profilo da qualsiasi browser, con codice e password. «⛔ Blocca account» lo chiude per sempre.
-- Il giocatore resta nella schermata d'ingresso finché il master non lo fa entrare, vede un errore chiaro se il master non c'è ed esce quando il master si scollega. Pannello sessione e «Torna alla home» funzionano.
-- Trascinando o con Ctrl+A la pagina non diventa più tutta blu.
+**Manuali che possiedi**
+- I libri che importi restano **solo sul tuo dispositivo**: non vengono mai inviati al master, ai giocatori o al sito, e non si possono esportare. Ogni giocatore importa il proprio.
+- I PDF protetti (password o DRM) vengono sempre rifiutati. All'importazione si chiede conferma che il libro è tuo e per uso personale.
 
-**Più veloce**
-- **Luce dinamica:** il server non si ferma più per un secondo a ogni mossa sulle mappe grandi.
-- **«Grafica leggera»** in Impostazioni › Aspetto, per tablet e telefoni lenti (si accende da sola su quelli con poca memoria).
-- L'elenco delle campagne si apre subito.
-
-**Collegamento**
-- **Relay privato** nelle impostazioni avanzate del menu iniziale: il tuo su Cloudflare, sul tuo server o di altri. Il relay consuma meno.
+**Sicurezza**
+- Il tavolo si difende da chi manda troppi saluti o troppi collegamenti, e il codice d'invito non permette più di far cadere la partita.
+- Il codice d'invito contiene anche una parola segreta: serve solo a chi il tavolo non conosce ancora. **Un giocatore nuovo con una versione vecchia non entra finché non aggiorna.**
+- Nelle impostazioni avanzate «Quanto ti esponi con iroh» (normale, senza UPnP, solo relay), anche sui telefoni. Le campagne nuove chiedono l'approvazione del master per far entrare.
+- Nei telefoni «condividi file» vale solo per i file dell'app.
 
 **Sistemato**
-- Barra degli strumenti a sinistra in una sola colonna, senza buchi.
-- Un'immagine SVG fatta apposta non può più bloccare il server.
+- **Firefox:** passando il mouse sulla mappa la nebbia di guerra non si scopre più da sola, e lo zoom col pizzico sulla scheda Standard funziona anche con la rotellina di Firefox.

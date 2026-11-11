@@ -24,7 +24,7 @@ body:
     attributes:
       label: LIBRE VTT version
       description: "On the home screen, open «What's happening»: it is written at the bottom."
-      placeholder: 3.9.0
+      placeholder: 3.10.0
     validations:
       required: true
   - type: dropdown
