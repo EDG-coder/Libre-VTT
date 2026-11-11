@@ -39,7 +39,13 @@ const netToken = () => {
 };
 // La firma del gettone, data dall'host: senza, il gettone non basta per rientrare con la stessa identità.
 const netFirma = () => { try { const f = localStorage.getItem('uffa-firma') || ''; return /^[a-f0-9]{32}$/.test(f) ? f : undefined; } catch { return undefined; } };
-const netName = () => { try { return localStorage.getItem('uffa-name') || ''; } catch { return ''; } };
+// Il nome al tavolo è di ogni campagna: lo tiene l'host (nel suo registro) e, per chi si unisce, l'avviatore.
+// Nell'app quindi il browser non ne ricorda uno per tutte (prima con «uffa-name» passava da una campagna all'altra):
+// al primo ingresso in una campagna ci si presenta con il proprio ID (lo aggiunge il server di gioco di qui).
+// Sul sito invece non c'è un avviatore: lì il nome resta nel browser, come prima.
+const netNomeNelBrowser = () => !!window.LIBRE_WEB;
+const netName = () => { if (!netNomeNelBrowser()) return ''; try { return localStorage.getItem('uffa-name') || ''; } catch { return ''; } };
+const netRicordaNome = n => { if (netNomeNelBrowser()) try { localStorage.setItem('uffa-name', n); } catch {} };
 
 // Finché non si sa niente, vale la regola di prima: sei solo, quindi comandi tu.
 // Se però la sessione è solo caduta e ci si sta ricollegando, valgono ancora i tuoi permessi:
@@ -348,7 +354,7 @@ function netHandle(m) {
         NET.adotta = true; NET.daAdottare = true;
         setTimeout(() => { if (NET.daAdottare) netSend({ t: 'sync' }); }, 5000);
       }
-      try { localStorage.setItem('uffa-name', m.you.name); } catch {}
+      netRicordaNome(m.you.name);
       applyRole();
       if (before && before.name !== m.you.name) netSay('Adesso ti chiami «' + m.you.name + '».');
       else netSay('I tuoi permessi sono cambiati.', 'warn');
@@ -1058,7 +1064,7 @@ new MutationObserver(() => { clearTimeout(netSegnaAltrui.t); netSegnaAltrui.t = 
 document.body.insertAdjacentHTML('beforeend', `
 <dialog id="nameDialog">
   <form method="dialog" id="nameForm">
-    <h3>Come ti chiami al tavolo?</h3>
+    <h3>Come ti chiami in questa campagna?</h3>
     <p class="note" id="nameWhy">Il nome compare in chat e serve al master per darti le schede.</p>
     <label class="field">Nome <input id="nameInput" type="text" maxlength="40" autocomplete="off" placeholder="Es. Pino"></label>
     <div class="dialogBtns"><button type="submit" class="btn">Va bene</button></div>
@@ -1068,7 +1074,7 @@ document.body.insertAdjacentHTML('beforeend', `
 function askName(why) {
   const dlg = $('nameDialog'), inp = $('nameInput');
   $('nameWhy').textContent = why || 'Il nome compare in chat e serve al master per darti le schede.';
-  inp.value = netName() || (NET.me && NET.me.name) || '';
+  inp.value = (NET.me && NET.me.name) || netName() || '';
   if (!dlg.open) dlg.showModal();
   setTimeout(() => inp.select(), 0);
 }
@@ -1076,7 +1082,7 @@ $('nameForm').addEventListener('submit', e => {
   e.preventDefault();
   const n = $('nameInput').value.trim().slice(0, 40);
   if (n.length < 2) { $('nameWhy').textContent = 'Serve almeno di due lettere.'; return; }
-  try { localStorage.setItem('uffa-name', n); } catch {}
+  netRicordaNome(n);
   netSend({ t: 'name', name: n });
   $('nameDialog').close();
 });
@@ -1174,7 +1180,7 @@ function netSyncForm() {
   if (!pi.matches(':focus')) pi.value = NET.port || '';
   pi.placeholder = 'nessuno (da solo)';
   const pn = $('netPanel'); if (pn && NET.port) pn.href = 'http://127.0.0.1:' + NET.port + '/?lang=' + (window.LIBRE_I18N ? LIBRE_I18N.lingua : 'it');
-  if (!ni.matches(':focus')) ni.value = netName() || (NET.me && NET.me.name) || '';
+  if (!ni.matches(':focus')) ni.value = (NET.me && NET.me.name) || netName() || '';
   st.textContent = NET.retrying
     ? `Collegamento perso: mi sto ricollegando da solo (tentativo ${NET.tries}).`
     : NET.hostDown
@@ -1223,10 +1229,24 @@ if ($('netHome') && !window.LIBRE_WEB) {   // nella versione web non c'è nessun
     try { if (typeof EventSource === 'function') new EventSource('http://127.0.0.1:' + NET.uiPort + '/api/presente'); } catch {}
   }).catch(() => {});
 }
+// Il pannello della sessione: in una finestra sua, come un'app (la apre l'avviatore, vedi /api/pannello), anche in
+// una partita da soli, dove dice che la partita è in locale. Senza avviatore si apre da qui, come finestra a sé.
+if ($('netPanel') && !window.LIBRE_WEB) {
+  $('netPanel').addEventListener('click', async e => {
+    e.preventDefault();
+    const lingua = window.LIBRE_I18N ? LIBRE_I18N.lingua : 'it';
+    let r = null;
+    try { r = await fetch('http://127.0.0.1:' + NET.uiPort + '/api/pannello?lang=' + lingua, { method: 'POST', headers: { 'X-Libre-VTT': 'pannello' } }).then(x => x.ok ? x.json() : null); } catch {}
+    if (r && r.ok) return;
+    if (r && r.url) { window.open(r.url, 'libre-pannello', 'popup,width=1180,height=860'); return; }
+    if (!NET.port) { netSay('La partita è in locale: il pannello della sessione serve solo quando giochi con altri.', 'warn'); return; }
+    window.open($('netPanel').href, 'libre-pannello', 'popup,width=1180,height=860');
+  });
+}
 if ($('netNameIn')) {
   $('netNameIn').addEventListener('change', e => {
     const n = e.target.value.trim().slice(0, 40);
-    try { localStorage.setItem('uffa-name', n); } catch {}
+    netRicordaNome(n);
     netSend({ t: 'name', name: n });
   });
   $('netPortIn').addEventListener('change', e => {
