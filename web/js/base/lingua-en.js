@@ -2721,5 +2721,19 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Elimina questo slot": "Delete this slot",
 "Mostra o nascondi il testo": "Show or hide the text",
 "(nessun testo)": "(no text)",
-"Eliminare «{n}»?": "Delete “{n}”?"
+"Eliminare «{n}»?": "Delete “{n}”?",
+
+// ---------- contatori dei consumabili (contatori.js) ----------
+"Consumabili e usi": "Consumables and uses",
+"Usa uno": "Use one",
+"Recupera uno": "Regain one",
+"Senza nome": "Unnamed",
+"Torna al totale": "Back to the total",
+"Quanti ne restano": "How many are left",
+"Nessun contatore. Con ＋ ne aggiungi uno: incantesimi da usare una volta, Imposizione delle mani, dadi vita…": "No counters. Add one with ＋: once-per-day spells, Lay on Hands, hit dice…",
+"Aggiungi un contatore": "Add a counter",
+"Sblocca per modificare nomi e totali": "Unlock to edit names and totals",
+"Blocca: restano solo − e +": "Lock: only − and + remain",
+"Sblocca": "Unlock",
+"Blocca": "Lock"
 });
