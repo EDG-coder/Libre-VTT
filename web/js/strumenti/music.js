@@ -17,8 +17,18 @@ const music = {
   fadeK: 1, fading: false,       // dissolvenza: il volume si moltiplica per fadeK
   bloccata: false,               // il browser non lascia partire l'audio finché non si tocca la pagina
   battiti: 0, ytFermo: 0,        // per musicRiallinea
-  pinLocale: 0
+  pinLocale: 0,
+  // Quello che abbiamo chiesto noi al lettore di YouTube: le sue risposte (getVideoData, getCurrentTime)
+  // arrivano in ritardo, e chiedere di nuovo la stessa cosa lo fa ricaricare o saltare: è quello che fa
+  // «scattare» la musica. ytId: il video chiesto; ytMira/ytA/ytVa: dove deve essere, da quando e se va;
+  // ytComandoA: l'ultimo caricamento o salto chiesto (per qualche secondo le risposte sono vecchie).
+  ytId: '', ytMira: 0, ytA: 0, ytVa: false, ytComandoA: 0,
+  ytSaltoA: 0, ytRitardo: 0,     // l'ultimo salto per rimettersi in pari e quanto ci mette a ripartire
+  riallineaA: 0,                 // l'ultima correzione di musicRiallinea
+  inviato: '', inviatoA: 0       // l'ultimo stato mandato agli altri: quando torna indietro dal server non si riapplica
 };
+// Le parti dello stato che cambiano cosa si sente (per riconoscere l'eco del server).
+const musicChiave = m => JSON.stringify([m.id, m.src || 'yt', m.file || '', m.gid || '', !!m.playing, m.at, m.t0, m.loop]);
 settings.music.src = settings.music.src || 'yt';
 try {
   const v = JSON.parse(localStorage.getItem(MUSIC_VOL_KEY) || '{}');
@@ -69,7 +79,7 @@ const musicHost = document.getElementById('musicPlayerHost');
 // Quando si vuole vedere il video, lo si mette sopra al pannello seguendone la posizione.
 let musicVideoOn = false, musicFollow = 0;
 function musicPlaceVideo() {
-  if (!musicVideoOn) { musicHost.classList.remove('shown'); return; }
+  if (!musicVideoOn) { musicHost.classList.remove('shown'); Object.assign(musicHost.style, { left: '', top: '', width: '' }); return; }
   const body = musicBox.querySelector('.tbody');
   const r = (musicBox.classList.contains('open') ? body : musicBox).getBoundingClientRect();
   musicHost.classList.add('shown');
@@ -83,7 +93,7 @@ function musicShowVideo(on) {
   musicVideoOn = on === undefined ? !musicVideoOn : !!on;
   clearInterval(musicFollow);
   if (musicVideoOn) { musicPlaceVideo(); musicFollow = setInterval(musicPlaceVideo, 250); }
-  else musicHost.classList.remove('shown');
+  else musicPlaceVideo();
 }
 addEventListener('resize', musicPlaceVideo);
 
@@ -131,6 +141,10 @@ function musicMakePlayer() {
         if (music.pending) { const st = music.pending; music.pending = null; musicApply(st); }
       },
       onStateChange: e => {
+        if (e.data === YT.PlayerState.PLAYING && music.ytSaltoA) {
+          music.ytRitardo = Math.min(5, Math.max(0, (Date.now() - music.ytSaltoA) / 1000));
+          music.ytSaltoA = 0;
+        }
         if (e.data === YT.PlayerState.ENDED && musicIsMaster() && settings.music.src !== 'file') musicEnded();
         musicRefresh();
       },
@@ -295,6 +309,11 @@ const musicSuona = () => settings.music.src === 'file' ? !musicAudio.paused
 // Porta il lettore allo stato descritto (lo chiama anche net.js quando arriva dal server).
 // Con «fade» la canzone che suonava sfuma prima di cambiare, e la nuova entra piano.
 function musicApply(st, primaDi) {
+  // l'eco di quello che abbiamo appena mandato noi: è già applicato, rifarlo farebbe ripartire il brano
+  if (st && 'id' in st && music.inviato && Date.now() - music.inviatoA < 15000 && musicChiave({ ...settings.music, ...st }) === music.inviato
+      && musicChiave(settings.music) === music.inviato) {
+    Object.assign(settings.music, st); musicRefresh(); return;
+  }
   const prima = primaDi || { ...settings.music };
   Object.assign(settings.music, st);
   const m = settings.music;
@@ -320,7 +339,7 @@ function musicApplyNow() {
   if (music.fading) return;
   const want = musicWant;
   if (m.src === 'file') {
-    if (music.ready) { try { music.player.stopVideo(); } catch {} }
+    if (music.ready) { try { music.player.stopVideo(); } catch {} music.ytId = ''; }
     const src = m.id ? musicFileSrc(m) : null;
     if (!src) {
       musicAudio.pause();
@@ -345,21 +364,40 @@ function musicApplyNow() {
   }
   musicAudio.pause();
   if (!music.ready) { music.pending = { ...m }; if (m.id) musicLoadApi(); musicRefresh(); return; }
-  const cur = (music.player.getVideoData && music.player.getVideoData().video_id) || '';
+  const P = YT.PlayerState, ora = Date.now();
+  let st = -1;
+  try { st = music.player.getPlayerState(); } catch {}
   try {
-    if (m.id && cur !== m.id) {
-      if (m.playing) music.player.loadVideoById(m.id, want());
-      else music.player.cueVideoById(m.id, want());
+    if (m.id && music.ytId !== m.id) {
+      music.ytId = m.id; music.ytMira = want(); music.ytA = music.ytComandoA = ora;
+      if (m.playing) music.player.loadVideoById(m.id, music.ytMira);
+      else music.player.cueVideoById(m.id, music.ytMira);
     } else if (m.id) {
-      if (Math.abs((music.player.getCurrentTime() || 0) - want()) > 2.5) music.player.seekTo(want(), true);
-      if (m.playing && music.player.getPlayerState() !== YT.PlayerState.PLAYING) music.player.playVideo();
-      if (!m.playing && music.player.getPlayerState() === YT.PlayerState.PLAYING) music.player.pauseVideo();
+      // dove dovrebbe essere arrivato il lettore con quello che gli abbiamo già chiesto
+      const atteso = music.ytMira + (music.ytVa ? (ora - music.ytA) / 1000 : 0);
+      const parte = st === P.BUFFERING || st === -1 || ora - music.ytComandoA < 4000;   // sta ancora caricando: getCurrentTime è vecchio
+      const pos = parte ? null : (music.player.getCurrentTime() || 0);
+      const lontano = x => Math.abs(x - want()) > 2.5;
+      if (lontano(atteso) && (pos === null || lontano(pos))) musicYtSalta(want());   // chi comanda ha spostato il punto
+      else if (pos !== null && lontano(pos)) musicYtSalta(want() + (m.playing ? music.ytRitardo : 0), true);   // rimasto indietro (o avanti)
+      else { music.ytMira = want(); music.ytA = ora; }
+      if (m.playing && st !== P.PLAYING && st !== P.BUFFERING) music.player.playVideo();
+      if (!m.playing && (st === P.PLAYING || st === P.BUFFERING)) music.player.pauseVideo();
     } else {
+      music.ytId = '';
       music.player.stopVideo();
     }
   } catch {}
+  music.ytVa = !!m.playing;
   musicApplyVolume();
   musicRefresh();
+}
+
+// Salta a un punto del video. «inPari»: per rimettersi in pari (si misura quanto ci mette a ripartire).
+function musicYtSalta(t, inPari) {
+  music.ytMira = Math.max(0, t); music.ytA = music.ytComandoA = Date.now();
+  if (inPari) music.ytSaltoA = Date.now();
+  music.player.seekTo(music.ytMira, true);
 }
 
 // Chi comanda cambia lo stato: qui si salva e (net.js) si manda a tutti.
@@ -373,6 +411,7 @@ function musicSet(patch) {
   // con la dissolvenza la nuova canzone entra quando la vecchia ha finito di sfumare: si parte da lì
   m.t0 = m.playing ? musicOra() + (m.fade && !stesso && suonava ? MUSIC_FADE : 0) : 0;
   scheduleBoardSave();
+  music.inviato = musicChiave(m); music.inviatoA = Date.now();
   if (typeof sendToPlayers === 'function') sendToPlayers('music', { ...m });
   musicApply({}, prima);
 }
@@ -463,7 +502,13 @@ $('musicLoop').addEventListener('click', () => {
   const l = settings.music.loop;
   musicSet({ loop: l === true ? 'one' : l === 'one' ? false : true });
 });
+// Mentre si trascina si guarda solo il tempo; il salto (per tutti) parte quando si lascia il cursore:
+// un salto a ogni passo del trascinamento faceva scattare la musica a chi comanda e a chi ascolta.
 $('musicSeek').addEventListener('input', e => {
+  const dur = musicDur();
+  if (dur > 0) $('musicTime').textContent = mmss(dur * e.target.value / 1000);
+});
+$('musicSeek').addEventListener('change', e => {
   if (!musicIsMaster()) return;
   const dur = musicDur();
   if (dur > 0) musicSet({ at: dur * e.target.value / 1000 });
@@ -562,11 +607,12 @@ function musicTick() {
 function musicRiallinea() {
   const m = settings.music;
   if (musicIsMaster() || !m.id || !m.playing || music.fading || music.bloccata) return;
+  if (Date.now() - music.riallineaA < 15000) return;      // si è appena corretta: lascia che riparta prima di rifarlo
   if (m.src === 'file') {
     if (!musicAudio.getAttribute('src') || musicAudio.readyState < 1 || musicAudio.seeking || musicAudio.ended) return;
     const d = musicAudio.duration;
     if (m.loop !== 'one' && d > 0 && musicWant() >= d) return;          // finita: aspetta la prossima del master
-    if (musicAudio.paused || Math.abs((musicAudio.currentTime || 0) - musicWant()) > 3) musicApplyNow();
+    if (musicAudio.paused || Math.abs((musicAudio.currentTime || 0) - musicWant()) > 3) { music.riallineaA = Date.now(); musicApplyNow(); }
     return;
   }
   if (!music.ready) return;
@@ -579,7 +625,7 @@ function musicRiallinea() {
     return;
   }
   music.ytFermo = 0;
-  try { if (Math.abs((music.player.getCurrentTime() || 0) - musicWant()) > 3) musicApplyNow(); } catch {}
+  try { if (Math.abs((music.player.getCurrentTime() || 0) - musicWant()) > 3) { music.riallineaA = Date.now(); musicApplyNow(); } } catch {}
 }
 
 musicBox.querySelector('.tgrip').addEventListener('click', () => {
