@@ -5,7 +5,9 @@
 // trascinato, il cubo parte con una faccia sull'origine. La misura segue l'unità della mappa (5 ft,
 // 1,5 m o 1 miglio per casella) e va a caselle intere. Se si scrive una
 // misura fissa (es. 15 ft per un soffio), il trascinamento sceglie solo la direzione.
-// Le caselle con il centro dentro l'area si colorano (solo con la griglia a quadrati non ruotata).
+// Le caselle con il centro dentro l'area si colorano (solo con la griglia a quadrati non ruotata); il cono
+// invece prende anche le caselle colpite solo in parte, parte dal centro di una casella (quella di chi
+// lancia, che non è colpita) e si misura da lì.
 // L'area resta sulla mappa finché non se ne fa un'altra, si preme Esc o «Togli l'area»; gli altri al
 // tavolo la vedono col nome di chi l'ha messa (messaggio «area», come il righello: non si salva).
 (function () {
@@ -31,7 +33,7 @@
        <div class="trow" id="areaForme"></div>
        <label class="trow"><span id="areaNomeMisura">Lunghezza</span> <input id="areaFissa" type="number" min="0" step="any" placeholder="trascina" inputmode="decimal"> <span id="areaUnita"></span></label>
        <div class="tnote">Trascina dal punto d'origine. Con una misura scritta, il trascinamento sceglie solo la direzione. Maiusc: direzioni a scatti di 15°. Esc toglie l'area.</div>
-       <div class="trow"><button id="areaTogli" type="button">Togli l'area</button></div>
+       <div class="trow"><button id="areaBlocca" type="button" title="Lascia l'area sulla mappa come un disegno di chi l'ha messa: si sposta e si cancella come un segnalino, ma non entra nell'ordine dei turni">Blocca sulla mappa</button> <button id="areaTogli" type="button">Togli l'area</button></div>
      </div>`);
   box.id = 'areaBox'; document.body.appendChild(box);
   const grip = box.querySelector('.tgrip'), $a = id => box.querySelector('#' + id);
@@ -45,6 +47,7 @@
   $a('areaFissa').addEventListener('input', e => { pref.fissa = e.target.value; salvaPref(); });
   $a('areaFissa').addEventListener('keydown', e => e.stopPropagation());
   $a('areaTogli').addEventListener('click', () => togli());
+  $a('areaBlocca').addEventListener('click', () => blocca());
   function salvaPref() { ls.set('libre-aree', { forma: pref.forma, fissa: pref.fissa }); }
   function sincronizza() {
     for (const b of $a('areaForme').children) b.classList.toggle('on', b.dataset.forma === pref.forma);
@@ -91,7 +94,23 @@
     }
     return s;
   }
-  /** Le caselle (quadrate) con il centro dentro l'area: [{x, y}] angoli in alto a sinistra, nel mondo. */
+  /** Il poligono convesso «poli» copre davvero una parte della casella (angolo in alto a sinistra q, lato s)?
+   *  Assi separatori; la casella è ristretta del 4% per lato, così un bordo che la sfiora o passa per un suo
+   *  angolo non la conta. */
+  function tocca(q, s, poli) {
+    const m = s * 0.04, r = [{ x: q.x + m, y: q.y + m }, { x: q.x + s - m, y: q.y + m }, { x: q.x + s - m, y: q.y + s - m }, { x: q.x + m, y: q.y + s - m }];
+    const assi = [{ x: 1, y: 0 }, { x: 0, y: 1 }];
+    for (let i = 0, j = poli.length - 1; i < poli.length; j = i++) assi.push({ x: poli[j].y - poli[i].y, y: poli[i].x - poli[j].x });
+    for (const a of assi) {
+      let p0 = Infinity, p1 = -Infinity, r0 = Infinity, r1 = -Infinity;
+      for (const p of poli) { const v = p.x * a.x + p.y * a.y; if (v < p0) p0 = v; if (v > p1) p1 = v; }
+      for (const p of r) { const v = p.x * a.x + p.y * a.y; if (v < r0) r0 = v; if (v > r1) r1 = v; }
+      if (p1 <= r0 || r1 <= p0) return false;
+    }
+    return true;
+  }
+  /** Le caselle (quadrate) colpite: [{x, y}] angoli in alto a sinistra, nel mondo. Per il cono anche quelle
+   *  colpite in parte (non quella da cui parte); per le altre forme quelle con il centro dentro. */
   function caselle(a) {
     if (!(grid.size > 0) || !GRIGLIA_FORME.semplice(grid)) return [];
     const poli = sagoma(a), s = grid.size, eps = s * 0.01;
@@ -101,7 +120,10 @@
     const out = [];
     for (let i = c0.i; i <= c1.i; i++) for (let j = c0.j; j <= c1.j; j++) {
       const q = cellPos(i, j), c = { x: q.x + s / 2, y: q.y + s / 2 };
-      if (poli ? dentro(c, poli) : Math.hypot(c.x - a.o.x, c.y - a.o.y) <= a.l + eps) out.push(q);
+      if (a.forma === 'cono') {
+        if (Math.abs(c.x - a.o.x) < s / 2 && Math.abs(c.y - a.o.y) < s / 2) continue;   // la casella di chi lancia
+        if (tocca(q, s, poli)) out.push(q);
+      } else if (poli ? dentro(c, poli) : Math.hypot(c.x - a.o.x, c.y - a.o.y) <= a.l + eps) out.push(q);
     }
     return out;
   }
@@ -150,10 +172,10 @@
     return v > 0 ? v / unitaCasella().per * grid.size : 0;
   }
   // L'origine va sull'angolo o sul centro di casella più vicino (il centro di chi lancia, o un suo angolo);
-  // con le griglie non quadrate, al centro della casella.
-  function origine(w) {
+  // il cono parte sempre dal centro della casella; con le griglie non quadrate, tutto dal centro.
+  function origine(w, forma) {
     if (!(grid.size > 0)) return w;
-    if (!GRIGLIA_FORME.semplice(grid)) return cellCentre(w.x, w.y);
+    if (forma === 'cono' || !GRIGLIA_FORME.semplice(grid)) return cellCentre(w.x, w.y);
     const o = gridOrigin(), m = grid.size / 2;
     return { x: o.x + Math.round((w.x - o.x) / m) * m, y: o.y + Math.round((w.y - o.y) / m) * m };
   }
@@ -175,7 +197,7 @@
     if (!attivo || e.button !== 0 || (typeof rulerOn !== 'undefined' && rulerOn) || (typeof penOn !== 'undefined' && penOn)) return;
     e.stopImmediatePropagation(); e.preventDefault();
     const w = mondo(e);
-    area = { forma: pref.forma, o: origine(w), ang: 0, l: grid.size, scene: cur && cur.id, id: e.pointerId };
+    area = { forma: pref.forma, o: origine(w, pref.forma), ang: 0, l: grid.size, scene: cur && cur.id, id: e.pointerId };
     aggiorna(e);
     try { viewport.setPointerCapture(e.pointerId); } catch {}
   }, true);
@@ -190,6 +212,27 @@
     if (e.key !== 'Escape' || !area || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
     togli();
   });
+  /** Fissa l'area sulla mappa: diventa un disegno (come quelli della penna) sul livello dei segnalini, di chi
+   *  l'ha messa. Resta salvato, si sposta e si cancella come gli altri disegni; i disegni non vanno nei turni. */
+  function blocca() {
+    if (!area || !suQuesta(area)) return;
+    const poli = sagoma(area), cs = caselle(area), s = grid.size;
+    const xs = [], ys = [];
+    if (poli) for (const p of poli) { xs.push(p.x); ys.push(p.y); }
+    else { xs.push(area.o.x - area.l, area.o.x + area.l); ys.push(area.o.y - area.l, area.o.y + area.l); }
+    for (const q of cs) { xs.push(q.x, q.x + s); ys.push(q.y, q.y + s); }
+    const l = Math.min(...xs), t = Math.min(...ys), w = Math.max(1, Math.max(...xs) - l), h = Math.max(1, Math.max(...ys) - t);
+    const f = v => +v.toFixed(1);
+    let d;
+    if (poli) d = poli.map((p, i) => `${i ? 'L' : 'M'}${f(p.x - l)} ${f(p.y - t)}`).join('') + 'Z';
+    else { const cx = f(area.o.x - l), cy = f(area.o.y - t), r = f(area.l); d = `M${f(cx - r)} ${cy}A${r} ${r} 0 1 0 ${f(cx + r)} ${cy}A${r} ${r} 0 1 0 ${f(cx - r)} ${cy}Z`; }
+    const dc = cs.map(q => `M${f(q.x - l)} ${f(q.y - t)}H${f(q.x - l + s)}V${f(q.y - t + s)}H${f(q.x - l)}Z`).join('');
+    const nome = `${tr(NOMI[area.forma])} ${misura(area.l / s)}`;
+    const el = createShape({ t: 'sagoma', c: '#ff8a3d', d, dc: dc || undefined, nome, vw: f(w), vh: f(h), sw: 0 }, w, h, l, t, 'tokens', true);
+    togli();
+    if (typeof select === 'function') select(el);
+    scheduleBoardSave();
+  }
   function togli() { if (!area) return; area = null; disegna(); manda(true); }
 
   // ---------- in rete: gli altri vedono l'area col nome di chi l'ha messa ----------

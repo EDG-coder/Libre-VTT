@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="css/mobile.css">
 <link rel="stylesheet" href="css/plugins.css">
 <link rel="stylesheet" href="css/tutorial.css">
+<link rel="stylesheet" href="css/scheda-finestra.css">
 <script src="js/strumenti/tutorial-passi.js"></script>
 <script src="js/strumenti/tutorial.js"></script>
 <script src="js/base/nativo.js"></script>
@@ -143,7 +144,7 @@
     <section id="tab-chat" class="pane active">
       <div id="chatTabs" class="seg" hidden></div>
       <div id="chatLog"></div>
-      <button id="chatNuovi" type="button" hidden>Nuovi messaggi ↓</button>
+      <button id="chatNuovi" type="button" hidden title="Vai all'ultimo messaggio" aria-label="Vai all'ultimo messaggio"><span class="cnTesto">Nuovi messaggi</span><span class="cnConta"></span><span class="cnFreccia" aria-hidden="true">↓</span></button>
       <div class="chatForm">
         <textarea id="chatInput" rows="1" placeholder="Scrivi un messaggio…" title="Invio manda il messaggio, Maiusc+Invio va a capo" autocomplete="off"></textarea>
         <button id="chatSend" type="button" class="btn">Invia</button>
@@ -162,14 +163,18 @@
         <select id="compTipo" aria-label="Tipo"></select>
         <button id="compFiltriBtn" type="button" class="btn ghost" aria-expanded="false" title="Mostra o nascondi filtri e pulsanti">Filtri ▾</button>
       </div>
-      <div class="compFiltri" id="compFiltri"></div>
-      <div class="row compAzioni">
-        <button id="compNuova" type="button" class="btn ghost">＋ Nuova voce</button>
-        <button id="compImporta" type="button" class="btn ghost">📥 Importa…</button>
-        <button id="compOpen5e" type="button" class="btn ghost">🌐 Open5e…</button>
-        <button id="compPacchetti" type="button" class="btn ghost">📦 Pacchetti…</button>
+      <div class="compPiega" id="compPiega">
+        <div class="compPiegaIn">
+          <div class="compFiltri" id="compFiltri"></div>
+          <div class="row compAzioni">
+            <button id="compNuova" type="button" class="btn ghost">＋ Nuova voce</button>
+            <button id="compImporta" type="button" class="btn ghost">📥 Importa…</button>
+            <button id="compOpen5e" type="button" class="btn ghost">🌐 Open5e…</button>
+            <button id="compPacchetti" type="button" class="btn ghost">📦 Pacchetti…</button>
+          </div>
+          <p class="note" id="compStato"></p>
+        </div>
       </div>
-      <p class="note" id="compStato"></p>
       <div id="compLista" role="list"></div>
     </section>
 
@@ -188,6 +193,8 @@
         <p class="note">GIF e video delle scene. Spento, si vede il primo fotogramma: consuma meno batteria. Vale per questo dispositivo.</p>
         <label class="check"><input id="graficaLeggera" type="checkbox"> Grafica leggera</label>
         <p class="note">Per tablet e telefoni lenti: zoom e spostamenti più fluidi, senza sfocature dietro i pannelli né ombre sotto i segnalini. Si accende da sola sui dispositivi con poca memoria. Vale per questo dispositivo.</p>
+        <label class="check"><input id="mosseAnimate" type="checkbox"> Segnalini che scivolano quando si spostano</label>
+        <p class="note">Quando un altro giocatore (o il master) sposta un segnalino, lo vedi andare fino al nuovo posto invece di saltarci. Vale per questo dispositivo.</p>
       </div>
 
       <div class="sect" data-sect="fog" id="fogSect">
@@ -240,6 +247,13 @@
       <div class="sect" data-sect="grid">
         <h4>Griglia di <span id="gridSceneName">questa scena</span></h4>
         <div id="gridScene" class="gridForm"></div>
+      </div>
+
+      <div class="sect" data-sect="sceneMov" id="scMovSect">
+        <h4>Movimento in <span id="scMovNome">questa scena</span></h4>
+        <label class="check" id="scMovRiga"><input id="scMov" type="checkbox"> Conta la distanza percorsa dal party in un turno</label>
+        <p class="note" id="scMovSpiega">Acceso: in un turno ogni giocatore sposta il suo segnalino al massimo della Velocità della sua scheda (il doppio con «Scatta»). Spento: si muovono quanto vogliono, per esempio in una mappa di viaggio o di guerra. I muri fermano i segnalini lo stesso. È la stessa opzione del pannello Turni.</p>
+        <p class="note" id="scMovCin" hidden>Questa è una scena cinematografica: qui il movimento non si conta mai.</p>
       </div>
 
       <div class="sect" data-sect="sceneMusic" id="scMusSect">
@@ -301,6 +315,8 @@
       <div class="sect" data-sect="tools">
         <h4>Strumenti</h4>
         <label class="check"><input id="rulerCenter" type="checkbox"> Righello: misura da centro a centro delle caselle</label>
+        <label class="check"><input id="misuraTrascina" type="checkbox"> Righello: mentre trascini un segnalino, misura quanto si è spostato</label>
+        <label class="check"><input id="diag5" type="checkbox"> Righello: ogni casella in diagonale vale una casella (5 ft), senza Pitagora</label>
         <label class="row">Righello <select id="unitSel"><option value="ft">5 ft per casella</option><option value="m">1,5 m per casella</option><option value="mi">1 miglio per casella</option></select></label>
         <button id="helpOpen" type="button" class="btn ghost">Mostra la guida dei comandi</button>
       </div>
@@ -448,6 +464,7 @@
 <script src="js/schede/slot-capacita.js"></script>
 <script src="js/schede/contatori.js"></script>
 <script src="js/schede/creazione.js"></script>
+<script src="js/schede/scheda-finestra.js"></script>
 <script src="condiviso/luce-calcolo.js"></script>
 <script src="condiviso/svg-pulito.js"></script>
 <script src="condiviso/versioni.js"></script>

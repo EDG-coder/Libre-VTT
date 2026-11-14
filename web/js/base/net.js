@@ -557,6 +557,79 @@ async function netEnsureWorldAssets(scenes2, sheets2) {
   }
   for (const sh of sheets2 || []) if (sh.icon) mark(sh.icon, sh.name);
   if (jobs.length) await Promise.all(jobs);
+  await netCopieGiocatori(scenes2);
+}
+
+// ---------- La copia della mappa per i giocatori ----------
+// Una mappa enorme (oltre 4096 px di lato, o più di 3 MB) ai giocatori arriva come copia ridotta in WebP,
+// fatta qui una volta sola: si scarica prima e pesa meno su telefoni e computer deboli. Il master tiene
+// l'originale (e il server la manda solo se ce l'ha: altrimenti va l'originale, come prima). Le misure
+// sulla mappa non cambiano: l'immagine si stira nello stesso rettangolo.
+const LATO_GIOCATORI = 4096, BYTE_GIOCATORI = 3 * 1024 * 1024;
+NET.copie = new Map();          // hash dell'originale -> promessa della copia
+NET.copieOk = new Map();        // hash dell'originale -> hash della copia ('' = non serve)
+async function netCopieGiocatori(scenes2) {
+  const pubId = settings.publicScene || (cur && cur.id);
+  const subito = [];
+  for (const sc of scenes2 || []) {
+    const bg = sc.bg;
+    if (!bg || !bg.gid || bg.anim) continue;
+    if (NET.copieOk.has(bg.gid)) { const h = NET.copieOk.get(bg.gid); if (h) bg.gr = h; continue; }
+    const p = copiaGiocatori(bg);
+    // quella che vedono adesso i giocatori si aspetta (poco: una volta sola), le altre arrivano col prossimo invio
+    if (sc.id === pubId) subito.push(Promise.race([p.then(h => { if (h) bg.gr = h; }), new Promise(r => setTimeout(r, 10000))]));
+    else p.then(h => { if (h && isMaster()) scheduleBoardSave(); });
+  }
+  if (subito.length) await Promise.all(subito);
+}
+function copiaGiocatori(bg) {
+  let p = NET.copie.get(bg.gid);
+  if (!p) {
+    // null: non serve (piccola, SVG, Safari…); undefined: non è riuscita adesso (file non ancora sul server,
+    // collegamento giù), e si riprova dopo 30 secondi
+    p = faiCopiaGiocatori(bg).catch(() => undefined).then(h => {
+      if (h === undefined) setTimeout(() => { NET.copie.delete(bg.gid); if (NET.on && isMaster()) scheduleBoardSave(); }, 30000); else NET.copieOk.set(bg.gid, h || '');
+      return h || null;
+    });
+    NET.copie.set(bg.gid, p);
+  }
+  return p;
+}
+async function faiCopiaGiocatori(bg) {
+  if (typeof createImageBitmap !== 'function') return null;
+  // prima il file del master (stessa origine della pagina), poi il deposito della partita
+  const proprio = bg.url && !/^(gs:|blob:)/.test(bg.url) ? resolveUrl({ ...bg, gid: undefined }) : null;
+  const url = proprio || resolveUrl(bg);
+  if (!url) return null;
+  // «no-store»: la mappa già mostrata (con <img>, senza CORS) è nella cache del browser senza il permesso per
+  // un'altra porta, e la fetch da lì verrebbe bloccata
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) return undefined;
+  const blob = await r.blob();
+  // gli SVG restano nitidi a ogni zoom, GIF e video si muovono: si lasciano come sono
+  if (!/^image\/(png|jpeg|webp|avif|bmp)$/i.test(blob.type || '')) return null;
+  const bmp = await createImageBitmap(blob);
+  try {
+    const lato = Math.max(bmp.width, bmp.height);
+    if (lato <= LATO_GIOCATORI && blob.size <= BYTE_GIOCATORI) return null;
+    const k = Math.min(1, LATO_GIOCATORI / lato);
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(bmp, 0, 0, c.width, c.height);
+    const out = await new Promise(res => c.toBlob(res, 'image/webp', 0.85));
+    c.width = c.height = 0;
+    // Safari non sa fare WebP (dà un PNG): niente copia. E se non pesa almeno un quinto in meno, non serve.
+    if (!out || out.type !== 'image/webp' || out.size > blob.size * 0.8) return null;
+    const buf = new Uint8Array(await out.arrayBuffer());
+    const hash = toHex(await crypto.subtle.digest('SHA-256', buf));
+    if (!NET.assetKnown.has(hash)) {
+      if (!await netPutAsset(hash, buf, 'image/webp', 'mappa-giocatori.webp')) return undefined;
+      NET.assetKnown.add(hash);
+    }
+    return hash;
+  } finally { bmp.close(); }
 }
 
 // ---------- Il mondo che arriva dal server: intero o a pezzi (condiviso/versioni.js) ----------
@@ -605,6 +678,8 @@ function normScene(s) {
 async function applyWorld(w, toccati) {
   const t = k => !toccati || toccati.has(k);
   NET.world = w;
+  // le copie per i giocatori che il server ha già (anche da una sessione prima): non si rifanno
+  if (isMaster()) for (const s of w.scenes || []) if (s.bg && s.bg.gid && s.bg.gr && !NET.copieOk.has(s.bg.gid)) NET.copieOk.set(s.bg.gid, s.bg.gr);
   NET.applying = true;
   try {
     if (t('sheets') || t('schedeTolte')) mergeSheets(w.sheets, w.schedeTolte);
@@ -694,7 +769,11 @@ function aggiornaSulPosto(sc) {
     if (!el) { creaDaDati(p); continue; }
     // lo sta spostando chi guarda, o lo ha appena spostato e il server non ha ancora risposto: si lascia stare
     const muove = (el === activeEl && mode) || netMossaInAttesa(p.id);
-    if (!muove) Object.assign(el.style, { left: p.l + 'px', top: p.t + 'px', width: p.w + 'px', height: p.h + 'px' });
+    if (!muove) {
+      // spostato da un altro (stessa misura, altro posto): scivola fin lì, se lo si vuole
+      if (typeof scivola === 'function' && el.style.width === p.w + 'px' && el.style.height === p.h + 'px' && (el.style.left !== p.l + 'px' || el.style.top !== p.t + 'px')) scivola(el);
+      Object.assign(el.style, { left: p.l + 'px', top: p.t + 'px', width: p.w + 'px', height: p.h + 'px' });
+    }
     if (p.z && el.dataset.layer !== 'map') el.style.zIndex = p.z;
     if (!p.shape) {
       // la rotazione appena data qui e non ancora confermata dal server non torna indietro

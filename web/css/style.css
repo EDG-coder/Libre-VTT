@@ -553,11 +553,24 @@ body.menu-open #sideToggle svg { transform: rotate(180deg); }
   .sectBody, .sectHead .chev, #sideGrip::after { transition: none; }
 }
 #tab-chat { position: relative; }
+/* il pulsante per tornare all'ultimo messaggio: tondo con ↓, diventa «Nuovi messaggi N ↓» se ne arrivano */
 #chatNuovi {
-  position: absolute; left: 50%; bottom: 62px; transform: translateX(-50%); z-index: 3;
-  padding: 6px 14px; border-radius: 999px; border: 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600;
-  background: var(--accent, #7c5cff); color: #fff; box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+  position: absolute; right: 14px; bottom: 62px; z-index: 3;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-width: 38px; height: 38px; padding: 0 10px; border-radius: 999px; white-space: nowrap; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600;
+  background: var(--panel-2, #1c2030); color: inherit; border: 1px solid var(--line, rgba(255, 255, 255, .15));
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .35); animation: chatNuoviIn .15s ease-out;
 }
+#chatNuovi .cnFreccia { font-size: 17px; line-height: 1; }
+#chatNuovi .cnTesto, #chatNuovi .cnConta:empty { display: none; }
+#chatNuovi .cnConta { min-width: 18px; padding: 1px 6px; border-radius: 999px; background: rgba(255, 255, 255, .25); font-size: 12px; line-height: 16px; }
+#chatNuovi.conNuovi { left: 50%; right: auto; transform: translateX(-50%); padding: 0 14px; border-color: transparent; background: var(--accent, #7c5cff); color: #fff; }
+#chatNuovi.conNuovi .cnTesto { display: inline; }
+#chatNuovi:hover { filter: brightness(1.12); }
+#chatNuovi:focus-visible { outline: 2px solid var(--accent, #7c5cff); outline-offset: 2px; }
+html.ui-tel #chatNuovi { min-width: 44px; height: 44px; }
+@keyframes chatNuoviIn { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #chatNuovi { animation: none; } }
 #chatNuovi[hidden] { display: none; }
 /* con il pannello di destra aperto, la barra in basso si centra nello spazio che resta (non copre la chat) */
 html:not(.ui-tel) body.menu-open #dock { left: calc((100vw - min(var(--side-w, 340px), 92vw)) / 2); max-width: calc(100vw - min(var(--side-w, 340px), 92vw) - 24px); }

@@ -189,14 +189,26 @@
   // ---------- conteggio del movimento nella scena di adesso (lo stesso interruttore di Visibilità › Muri) ----------
   // Nelle mappe di battaglia il server ferma i segnalini dei giocatori alla Velocità della scheda; qui il master
   // lo spegne per la mappa aperta (per esempio in una mappa di guerra, dove si muovono eserciti e non persone).
+  // La stessa opzione sta anche in Impostazioni › «Movimento in questa scena» (#scMov): le due caselle leggono e
+  // scrivono lo stesso dato (luce.velocita della scena), quindi restano sempre uguali.
   function disegnaMovimento() {
-    const inp = $('turniMov'), riga = $('turniMovRiga');
-    if (!inp || typeof luceVelocita !== 'function') { if (riga) riga.hidden = true; return; }
+    const inp = $('turniMov'), riga = $('turniMovRiga'), imp = $('scMov'), sect = $('scMovSect');
+    const c = typeof luceVelocita === 'function';
+    if (sect) sect.hidden = !c || !conduco();
+    if (!inp || !c) { if (riga) riga.hidden = true; return; }
     const cin = typeof cur !== 'undefined' && cur && cur.type === 'cinematic';
     riga.hidden = !!cin;                                // nelle scene cinematiche non si conta mai
     inp.checked = luceVelocita();
+    if (imp) {
+      imp.checked = inp.checked;
+      $('scMovRiga').hidden = !!cin; $('scMovSpiega').hidden = !!cin; $('scMovCin').hidden = !cin;
+      if (typeof cur !== 'undefined' && cur) $('scMovNome').textContent = '«' + cur.name + '»';
+    }
   }
-  $('turniMov').addEventListener('input', e => { if (typeof luceVelocita === 'function') luceVelocita(e.target.checked); disegnaMovimento(); });
+  const cambiaMovimento = e => { if (typeof luceVelocita === 'function') luceVelocita(e.target.checked); disegnaMovimento(); };
+  $('turniMov').addEventListener('input', cambiaMovimento);
+  if ($('scMov')) $('scMov').addEventListener('input', cambiaMovimento);
+  document.addEventListener('libre:velocita', disegnaMovimento);
   if (typeof showScene === 'function') {
     const prima = showScene;
     showScene = function () {                                       // eslint-disable-line no-global-assign

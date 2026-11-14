@@ -980,7 +980,7 @@
     }
     if (y < 40) return;
     // si comprime solo se, nascosti i filtri, l'elenco scorre ancora: altrimenti tornerebbe in cima e ballerebbe
-    const nasc = ['compFiltri', 'compStato'].map($).concat([pane.querySelector('.compAzioni')]).reduce((t, el) => t + (el ? el.offsetHeight : 0), 0);
+    const nasc = pane.querySelector('.compPiegaIn').scrollHeight;   // filtri, pulsanti e stato (si chiudono con un'animazione: extras.css)
     if (lista.scrollHeight - lista.clientHeight - nasc > 60) comprimi(true);
   }, { passive: true });
   addEventListener('change', e => { if (e.target.closest && e.target.closest('#compFiltri')) etichettaFiltri(); });

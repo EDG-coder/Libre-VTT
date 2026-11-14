@@ -1,0 +1,16 @@
+/* La scheda in una finestra a parte (scheda-finestra.js): il pulsante ⧉ e la scheda che occupa tutta la finestra. */
+.sheetWin .sfin { width: 24px; height: 24px; border: 0; border-radius: 6px; padding: 0; cursor: pointer; background: rgba(255, 255, 255, .2); color: var(--sh-on, #fff); font-size: 15px; line-height: 1; }
+.sheetWin .sfin:hover { background: rgba(255, 255, 255, .4); }
+.sheetWin .sdotSlot, .sheetWin .sxSlot { display: inline-flex; align-items: center; gap: 6px; }
+.sheetWin.min .sfin { display: none; }
+.sheetWin.icon .sfin { display: none; }
+.ui-touch .sheetWin .sfin { display: none; }
+
+html.schedaFuori, body.schedaFuori { margin: 0; height: 100%; overflow: hidden; background: var(--sh-bg); }
+.sheetWin.inFinestra {
+  position: fixed; inset: 0 !important; left: 0 !important; top: 0 !important; width: auto !important; height: auto !important;
+  max-width: none; max-height: none; min-width: 0; min-height: 0; resize: none; border-radius: 0; border: 0; box-shadow: none;
+}
+.sheetWin.inFinestra > .stitle { cursor: default; }
+.sheetWin.inFinestra > .stitle:active { cursor: default; }
+.sheetWin.inFinestra.min > .sbody { display: block; }

@@ -215,7 +215,11 @@ body:has(#sceneMenu:not([hidden])) #dockZone { visibility: hidden; }
 #compFiltriBtn { display: none; }
 @media (max-height: 499px) {
   .ui-tel #compFiltriBtn { display: inline-flex; flex: none; padding: 6px 10px; }
-  .ui-tel #tab-comp:not(.filtriAperti) .compFiltri, .ui-tel #tab-comp:not(.filtriAperti) .compAzioni { display: none; }
+  .ui-tel #tab-comp:not(.filtriAperti) .compPiega {
+    grid-template-rows: 0fr; margin-top: -10px; opacity: 0; transform: translateY(-6px); visibility: hidden;
+    transition: grid-template-rows var(--piega), margin-top var(--piega), opacity .14s ease, transform var(--piega), visibility 0s linear .28s;
+  }
+  @media (prefers-reduced-motion: reduce) { .ui-tel #tab-comp:not(.filtriAperti) .compPiega { transition: none; } }
   .ui-tel #tab-comp .compCerca { flex-wrap: nowrap; }
   .ui-tel #tab-comp #compStato:empty { display: none; }
 }

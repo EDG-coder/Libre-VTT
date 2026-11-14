@@ -109,8 +109,8 @@
 svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
 #viewport.pen-on, #viewport.pen-on * { cursor: crosshair !important; }
 #viewport.ruler-on, #viewport.ruler-on * { cursor: crosshair !important; }
-#rulerSvg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 6; pointer-events: none; }
-#rulerSvg text { font: 600 14px system-ui, sans-serif; paint-order: stroke; stroke: rgba(0, 0, 0, .75); stroke-width: 4px; fill: #fff; }
+#rulerSvg, #trascinaSvg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 6; pointer-events: none; }
+#rulerSvg text, #trascinaSvg text { font: 600 14px system-ui, sans-serif; paint-order: stroke; stroke: rgba(0, 0, 0, .75); stroke-width: 4px; fill: #fff; }
 
 /* ======================= Scena mostrata ai giocatori ======================= */
 .sceneRow .pin { opacity: .45; }
@@ -315,7 +315,7 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 #chatInput { resize: none; max-height: 120px; line-height: 1.35; }
 .chatWin { width: 340px; height: 380px; }
 .chatWin .sbody { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
-.chatWin .clog { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.chatWin .clog { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
 .chatWin .msg { background: color-mix(in srgb, var(--sh-accent) 22%, var(--sh-bg)); color: var(--sh-fg); }
 .chatWin textarea { width: 100%; box-sizing: border-box; resize: none; padding: 6px 8px; border: 1px solid var(--sh-line); border-radius: 8px; background: var(--sh-field, rgba(255, 255, 255, .35)); color: inherit; font: inherit; }
 
@@ -359,6 +359,24 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
   content: "📜"; position: absolute; right: -9px; bottom: -9px; width: 24px; height: 24px; display: grid; place-items: center;
   font-size: 13px; border-radius: 50%; background: var(--sh-accent); box-shadow: 0 0 0 2px #fff; pointer-events: none;
 }
+/* barra: il nome tiene sempre uno spazio libero per il doppio clic (sotto quello la scheda diventa icona) */
+.sheetWin.min .sname { min-width: 44px; }
+/* icona: la linguetta a destra si tira per tornare a barra; mentre si tira, una sagoma tratteggiata mostra la barra */
+.sheetWin .sgrow { display: none; }
+.sheetWin.icon .sgrow {
+  display: block; position: absolute; right: -11px; top: 50%; width: 10px; height: 26px; margin-top: -13px; z-index: 2;
+  border-radius: 0 6px 6px 0; background: var(--sh-accent); box-shadow: 0 0 0 2px #fff; cursor: ew-resize; touch-action: none;
+  opacity: 0; transition: opacity .15s;
+}
+.sheetWin.icon .sgrow::before { content: ""; position: absolute; inset: 8px 3px; border-left: 2px dotted rgba(255, 255, 255, .85); }
+.sheetWin.icon:hover .sgrow, .sheetWin.icon.allarga .sgrow { opacity: 1; }
+@media (hover: none) { .sheetWin.icon .sgrow { opacity: .85; } }
+.sheetWin.icon.allarga::before {
+  content: ""; position: absolute; left: -3px; top: -3px; bottom: -3px; width: calc(100% + 6px + var(--allarga, 0px)); z-index: -1;
+  border: 2px dashed var(--sh-accent); border-radius: 14px; background: color-mix(in srgb, var(--sh-bg) 70%, transparent); pointer-events: none;
+}
+.sheetWin.icon.allarga .sgrow { transform: translateX(var(--allarga, 0px)); }
+.tool.sheetWin.icon .sgrow { display: none; }   /* nel menu a sinistra l'icona non si allarga: prima si tira fuori */
 
 /* ======================= Strumento segnalini ======================= */
 #tokBox { --tw: 290px; }
@@ -434,6 +452,8 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 .mPc { flex: 1; font-size: 12px; padding: 5px 7px; }
 .mVol { display: flex; align-items: center; gap: 7px; font-size: 12px; }
 .mVol input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+.mVol button { flex: none; font-size: 15px; line-height: 1; padding: 4px 7px; }
+#musicBox .mVol button.on { background: var(--accent); color: #fff; border-color: transparent; }
 .mVol output { min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; }
 .mMaster { border-top: 1px solid var(--line); margin-top: 7px; padding-top: 7px; }
 .mMaster[hidden] { display: none; }
@@ -576,7 +596,7 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 .ui-tel .sheetWin:not(.stdWin) .stabs { display: grid; grid-template-columns: 1fr 1fr; margin: -10px -10px 10px; }
 
 /* ======================= Impostazioni: nebbia di guerra (solo chi conduce) ======================= */
-body.net-player #fogSect { display: none; }
+body.net-player #fogSect, body.net-player #scMovSect { display: none; }
 #fogColorIn { width: 42px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: none; cursor: pointer; }
 #fogColorIn.spento { opacity: .35; }
 #fogVeilIn { flex: 1; }
@@ -764,10 +784,26 @@ body.net-player #caselleSect { display: none; }
 .compAzioni .btn { padding: 6px 9px; font-size: 13px; }
 .compAzioni .btn[hidden] { display: none; }
 #compStato[hidden] { display: none; }
-/* scorrendo l'elenco i filtri si comprimono nella barra di ricerca; «Filtri ▾» li riapre (compendio.js) */
-#tab-comp.compatto #compFiltriBtn { display: inline-flex; flex: none; align-items: center; gap: 5px; padding: 6px 10px; }
-#tab-comp.compatto:not(.filtriAperti) .compFiltri, #tab-comp.compatto:not(.filtriAperti) .compAzioni, #tab-comp.compatto:not(.filtriAperti) #compStato { display: none; }
-#tab-comp.compatto .compCerca { flex-wrap: nowrap; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+/* scorrendo l'elenco i filtri si comprimono nella barra di ricerca; «Filtri ▾» li riapre (compendio.js).
+   Filtri, ordine e pulsanti stanno in .compPiega: si chiude e si riapre con un'animazione breve
+   (altezza, trasparenza e un leggero scivolamento verso l'alto) invece di sparire di colpo. */
+#tab-comp { --piega: .28s cubic-bezier(.2, .7, .2, 1); }
+.compPiega { display: grid; grid-template-rows: 1fr; margin-top: 0; opacity: 1; transform: none; visibility: visible;
+  transition: grid-template-rows var(--piega), margin-top var(--piega), opacity .2s ease .06s, transform var(--piega), visibility 0s; }
+.compPiegaIn { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 10px; }
+/* chiusa: niente altezza, e si toglie anche lo spazio fra le righe del pannello; i pulsanti dentro non si raggiungono col Tab */
+#tab-comp.compatto:not(.filtriAperti) .compPiega {
+  grid-template-rows: 0fr; margin-top: -10px; opacity: 0; transform: translateY(-6px); visibility: hidden;
+  transition: grid-template-rows var(--piega), margin-top var(--piega), opacity .14s ease, transform var(--piega), visibility 0s linear .28s;
+}
+#tab-comp.compatto #compFiltriBtn { display: inline-flex; flex: none; align-items: center; gap: 5px; padding: 6px 10px; animation: compBtnEntra .24s cubic-bezier(.2, .7, .2, 1); }
+#tab-comp .compCerca { padding-bottom: 0; border-bottom: 1px solid transparent; transition: padding-bottom var(--piega), border-color .25s ease; }
+#tab-comp.compatto .compCerca { flex-wrap: nowrap; padding-bottom: 6px; border-bottom-color: var(--line); }
+@keyframes compBtnEntra { from { opacity: 0; transform: translateX(8px) scale(.92); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .compPiega, #tab-comp.compatto:not(.filtriAperti) .compPiega, #tab-comp .compCerca { transition: none; }
+  #tab-comp.compatto #compFiltriBtn { animation: none; }
+}
 #compFiltriBtn .compNF { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #3db8ff; color: #04131d; font-size: 11px; font-weight: 700; line-height: 17px; text-align: center; }
 #compLista { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-bottom: 12px; }
 .compVoce { position: relative; display: flex; flex-direction: column; gap: 1px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; }
@@ -816,7 +852,7 @@ body.net-player #caselleSect { display: none; }
 .compEdTesto { margin-top: 10px; }
 .compEdTesto textarea { min-height: 180px; resize: vertical; }
 .compScelte { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
-.compPL { display: flex; flex-direction: column; gap: 8px; }
+.compPL { display: flex; flex-direction: column; gap: 10px; }
 .compP { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
 .compP small { color: var(--muted); }
 .compP .compLic { display: block; font-size: 11px; max-height: 3.2em; overflow: hidden; }
@@ -950,7 +986,7 @@ body:not(.net-on) .soloRete { display: none !important; }
 #luceBox .visTab { display: flex; gap: 2px; border-bottom: 1px solid rgba(255, 255, 255, .15); }
 #luceBox .visTab button { flex: 1 1 auto; border-radius: 8px 8px 0 0; font-size: 12px; padding: 6px 4px; background: transparent; }
 #luceBox .visTab button.on { background: rgba(255, 176, 0, .35); }
-#luceBox .visPane { display: flex; flex-direction: column; gap: 8px; }
+#luceBox .visPane { display: flex; flex-direction: column; gap: 10px; }
 #luceBox .visPane[hidden] { display: none !important; }
 #luceBox .visParty { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
 #luceBox .visParty small { opacity: .7; }
@@ -1072,7 +1108,7 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 .cmCheck label.check { margin-top: 0; font-size: 12.5px; }
 .cmRiga2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .cmQ { max-width: 140px; }
-.cmRighe { display: flex; flex-direction: column; gap: 8px; }
+.cmRighe { display: flex; flex-direction: column; gap: 10px; }
 .cmR { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
 .cmR:not(:has(.cmL)) { grid-template-columns: 1fr auto; }
 .cmR .cmL { width: 62px; }
@@ -1094,7 +1130,7 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 .avPanel[open] > summary > span:first-child::before { content: "▾ "; }
 .avRiposi { margin-left: auto; display: flex; gap: 4px; flex-wrap: wrap; }
 .avRiposi .btn { padding: 3px 8px; font-size: 12px; }
-.avCorpo { padding: 0 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+.avCorpo { padding: 0 10px 10px; display: flex; flex-direction: column; gap: 10px; }
 .avInfo { font-size: 12.5px; opacity: .85; }
 .avGruppo h5 { margin: 4px 0; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; opacity: .75; display: flex; align-items: center; gap: 6px; }
 .avGruppo h5 b { opacity: 1; }
@@ -1124,7 +1160,7 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 .avSez { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
 .avSez button { font: inherit; font-size: 12.5px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); cursor: pointer; }
 .avSez button.on { background: var(--accent); border-color: var(--accent); color: var(--sh-on, #fff); }
-.avSezCorpo { display: flex; flex-direction: column; gap: 8px; }
+.avSezCorpo { display: flex; flex-direction: column; gap: 10px; }
 .avSezCorpo > label:not(.check) { flex-direction: row; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
 .avTab { border-collapse: collapse; width: 100%; font-size: 13px; }
 .avTab td, .avTab th { padding: 3px 6px; border-bottom: 1px solid var(--line); text-align: left; }
@@ -1236,7 +1272,7 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 .capPop { position: fixed; z-index: 160000; width: min(420px, 92vw); padding: 12px; background: var(--panel); color: var(--text);
   border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 50px rgba(0, 0, 0, .5); }
 .capPop[hidden] { display: none; }
-.capPop .capMod { display: flex; flex-direction: column; gap: 8px; }
+.capPop .capMod { display: flex; flex-direction: column; gap: 10px; }
 .capPop .capInT, .capPop .capInD { font: inherit; color: inherit; border: 1px solid var(--line); background: var(--panel-2); border-radius: 9px; padding: 7px 10px; }
 .capPop .capInT { font-size: 15px; font-weight: 600; }
 .capPop .capInD { font-size: 13px; line-height: 1.5; min-height: 140px; resize: vertical; }

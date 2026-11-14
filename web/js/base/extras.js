@@ -211,6 +211,13 @@ function textBox(txt, fs) {
 function shapeSvg(sh) {                                          // disegno vettoriale dentro il riquadro dell'oggetto
   const { vw, vh, sw } = sh, p = sw / 2, c = sh.c;
   if (sh.t === 'pin') return PIN_SVG(c);
+  if (sh.t === 'sagoma') {                                         // un'area d'incantesimo fissata (mappa/aree.js)
+    const ns = 'vector-effect="non-scaling-stroke" stroke-linejoin="round"';
+    return `<svg viewBox="0 0 ${vw} ${vh}" preserveAspectRatio="none">${sh.nome ? `<title>${esc(sh.nome)}</title>` : ''}` +
+      (sh.dc ? `<path d="${sh.dc}" fill="${c}" fill-opacity=".22" stroke="${c}" stroke-opacity=".35" stroke-width="1" ${ns}/>` : '') +
+      `<path d="${sh.d}" fill="${c}" fill-opacity=".18" stroke="#000" stroke-opacity=".5" stroke-width="5" ${ns}/>` +
+      `<path d="${sh.d}" fill="none" stroke="${c}" stroke-width="2.5" ${ns}/></svg>`;
+  }
   if (sh.t === 'text') {
     const lh = sh.fs * 1.25, tx = sh.txt.split('\n').map((l, i) => `<tspan x="0" y="${+(sh.fs * 0.95 + i * lh).toFixed(1)}">${esc(l) || ' '}</tspan>`).join('');
     return `<svg viewBox="0 0 ${vw} ${vh}" preserveAspectRatio="none"><rect width="${vw}" height="${vh}" fill="transparent"/><text font-family="system-ui, sans-serif" font-size="${sh.fs}" font-weight="600" fill="${c}" stroke="rgba(0,0,0,.45)" stroke-width="${+(sh.fs * 0.05).toFixed(2)}" paint-order="stroke" xml:space="preserve">${tx}</text></svg>`;
@@ -454,6 +461,12 @@ const rp = e => { const x = (e.clientX - view.x) / view.s, y = (e.clientY - view
 // Il righello è un percorso: ruler.pts sono i punti fissati (il primo è la partenza, gli altri le
 // giunzioni) e ruler.b è la fine, che segue il puntatore. Il tasto destro (o «+») fissa la fine e
 // ne parte un altro segmento; Backspace toglie l'ultima giunzione, Esc cancella. Il totale è la somma.
+/** Quante caselle fra due punti del mondo. Con «diagonale = 5 ft» (settings.diag5, la regola base del 5e)
+ *  un passo in diagonale vale una casella come uno dritto: conta il lato più lungo, non Pitagora. */
+const distanzaCaselle = (a, b) => {
+  const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y);
+  return (settings.diag5 && GRIGLIA_FORME.semplice(grid) ? Math.max(dx, dy) : Math.hypot(dx, dy)) / grid.size;
+};
 const misura = cells => { const c = unitaCasella(), n = +(cells * c.per).toFixed(c.u === 'mi' ? 2 : 1); return `${n} ${c.u === 'mi' ? (n === 1 ? tr('miglio') : tr('miglia')) : c.u}`; };
 /** Il disegno di un righello (punti nel mondo) per l'SVG sopra la mappa. Con «nome» è quello di un altro:
  *  ha un colore suo e il nome sopra la misura. */
@@ -462,7 +475,7 @@ function rulerSvgDi(mondo, nome) {
   const tratti = [];
   let cells = 0;
   for (let i = 1; i < mondo.length; i++) {
-    const c = Math.hypot(mondo[i].x - mondo[i - 1].x, mondo[i].y - mondo[i - 1].y) / grid.size;
+    const c = distanzaCaselle(mondo[i - 1], mondo[i]);
     cells += c; tratti.push(c);
   }
   const col = nome == null ? '#ffd93d' : coloreDiNome(nome);
@@ -478,6 +491,15 @@ function rulerSvgDi(mondo, nome) {
   if (nome != null) svg += `<text class="chi" x="${fine.x + 12}" y="${fine.y - 31}" style="fill: ${col}">${esc(nome)}</text>`;
   svg += `<text x="${fine.x + 12}" y="${fine.y - 12}">${misura(cells)} · ${+cells.toFixed(1)} ${tr('caselle')}</text>`;
   return svg;
+}
+// Mentre si trascina un segnalino: la distanza dal centro di dove era a quello di dove è adesso (come il
+// righello, con la stessa regola per le diagonali). Sparisce quando lo si lascia. Solo per chi trascina.
+const trascinaSvg = document.createElementNS(SVGNS, 'svg'); trascinaSvg.id = 'trascinaSvg'; document.body.appendChild(trascinaSvg);
+function misuraTrascinamento(el, x0, y0) {
+  if (!el || settings.misuraTrascina === false || el._shape || (el.dataset.layer || 'tokens') === 'map' || !(grid.size > 0)) { if (trascinaSvg.firstChild) trascinaSvg.replaceChildren(); return; }
+  const w = num(el, 'width') / 2, h = num(el, 'height') / 2;
+  const a = { x: x0 + w, y: y0 + h }, b = { x: num(el, 'left') + w, y: num(el, 'top') + h };
+  trascinaSvg.innerHTML = rulerSvgDi([a, b]);
 }
 // un colore fisso per ogni nome, così due righelli insieme non si confondono
 const coloreDiNome = nome => { let h = 0; for (const ch of String(nome)) h = (h * 31 + ch.codePointAt(0)) >>> 0; return `hsl(${h % 360} 85% 62%)`; };
@@ -818,7 +840,9 @@ function toolMenu(el) {
   if (t.id === 'music' && typeof musicMenuExtra === 'function') items.push('-', ...musicMenuExtra());
   if (t.id === 'luce' && typeof fogMenuExtra === 'function') items.push('-', ...fogMenuExtra());
   if (t.id === 'pen') items.push({ label: 'Annulla l\'ultimo tratto', fn: () => $('penUndo').click() }, { label: 'Cancella i disegni del livello', danger: true, fn: () => $('penClear').click() });
-  if (t.id === 'ruler') items.push({ label: settings.rulerCenter ? 'Misura liberamente (non da centro a centro)' : 'Misura da centro a centro delle caselle', fn: () => { settings.rulerCenter = !settings.rulerCenter; syncExtraForm(); scheduleBoardSave(); } }, ...[['ft', 'Usa 5 ft per casella'], ['m', 'Usa 1,5 m per casella'], ['mi', 'Usa 1 miglio per casella']].filter(([u]) => u !== (settings.unit || 'ft')).map(([u, label]) => ({ label, fn: () => { settings.unit = u; rulerTitle(); syncSheetForm(); scheduleBoardSave(); } })));
+  if (t.id === 'ruler') items.push({ label: settings.rulerCenter ? 'Misura liberamente (non da centro a centro)' : 'Misura da centro a centro delle caselle', fn: () => { settings.rulerCenter = !settings.rulerCenter; syncExtraForm(); scheduleBoardSave(); } },
+    { label: settings.misuraTrascina === false ? 'Misura lo spostamento mentre trascini un segnalino' : 'Non misurare lo spostamento dei segnalini', fn: () => { settings.misuraTrascina = settings.misuraTrascina === false; syncExtraForm(); scheduleBoardSave(); } },
+    { label: settings.diag5 ? 'Diagonali col teorema di Pitagora' : 'Diagonali: ogni casella vale 5 ft', fn: () => { settings.diag5 = !settings.diag5; syncExtraForm(); if (ruler) drawRuler(); scheduleBoardSave(); } }, ...[['ft', 'Usa 5 ft per casella'], ['m', 'Usa 1,5 m per casella'], ['mi', 'Usa 1 miglio per casella']].filter(([u]) => u !== (settings.unit || 'ft')).map(([u, label]) => ({ label, fn: () => { settings.unit = u; rulerTitle(); syncSheetForm(); scheduleBoardSave(); } })));
   return items;
 }
 function mapMenu(e) {
@@ -967,10 +991,14 @@ function applyHidden() {
 }
 function syncExtraForm() {
   $('rulerCenter').checked = !!settings.rulerCenter;
+  $('diag5').checked = !!settings.diag5;
+  $('misuraTrascina').checked = settings.misuraTrascina !== false;
   $('hlShow').checked = settings.hiddenLayer.show; $('hlOp').value = settings.hiddenLayer.opacity; $('hlOpOut').textContent = settings.hiddenLayer.opacity;
   $('chTabRolls').checked = settings.chatTabs.rolls; $('chTabRules').checked = settings.chatTabs.rules;
 }
 $('rulerCenter').addEventListener('input', e => { settings.rulerCenter = e.target.checked; scheduleBoardSave(); });
+$('misuraTrascina').addEventListener('input', e => { settings.misuraTrascina = e.target.checked; scheduleBoardSave(); });
+$('diag5').addEventListener('input', e => { settings.diag5 = e.target.checked; if (ruler) drawRuler(); scheduleBoardSave(); });
 $('hlShow').addEventListener('input', e => { settings.hiddenLayer.show = e.target.checked; applyHidden(); scheduleBoardSave(); });
 $('hlOp').addEventListener('input', e => { settings.hiddenLayer.opacity = +e.target.value; applyHidden(); syncExtraForm(); scheduleBoardSave(); });
 $('chTabRolls').addEventListener('input', e => { settings.chatTabs.rolls = e.target.checked; renderChatTabs(); renderChat(); scheduleBoardSave(); });
@@ -1001,7 +1029,7 @@ function renderChatTabs() {
 function renderChat() {
   const giu = chatInFondo(), su = chatLog.scrollTop;
   chatLog.replaceChildren(...chat.filter(chatVisible).map(msgEl));
-  if (giu || renderChat.cambio) chatGiu(); else chatLog.scrollTop = su;      // ridisegnata: resta dove stavi leggendo
+  if (giu || renderChat.cambio) chatGiu(); else { chatLog.scrollTop = su; chatPulsanteGiu(); }      // ridisegnata: resta dove stavi leggendo
   renderChat.cambio = false;
 }
 

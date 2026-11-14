@@ -16,6 +16,16 @@ function graficaLeggeraScelta() {
 }
 document.documentElement.classList.toggle('graficaLeggera', graficaLeggeraScelta());
 const graficaLeggera = () => document.documentElement.classList.contains('graficaLeggera');
+// Movimento animato: un segnalino spostato da un altro (arriva dalla rete) scivola fino al nuovo posto
+// invece di comparirci. Per dispositivo; acceso di base.
+const K_MOSSE = 'libre-mosse-animate';
+const mosseAnimate = () => { try { return localStorage.getItem(K_MOSSE) !== '0'; } catch { return true; } };
+/** Fa scivolare «el» verso la posizione che gli si dà subito dopo (la transizione di .photo.torna). */
+function scivola(el) {
+  if (!mosseAnimate() || !el.isConnected) return;
+  el.classList.add('torna'); clearTimeout(el._scivola);
+  el._scivola = setTimeout(() => el.classList.remove('torna'), 600);
+}
 const dprTela = () => graficaLeggera() ? 1 : Math.min(devicePixelRatio || 1, 2);
 
 const STEP = 1.1;          // fattore di zoom per ogni scatto della rotellina
@@ -48,7 +58,7 @@ const DEFAULT_PING = { color: '#ff4d4d', size: 2, speed: 8, fade: 2500, modo: 'c
 const SECTIONS = { look: true, res: false, grid: true, gridDefault: false, map: false, border: false, ping: false, sheets: false, tools: false, ordineStrumenti: false, hidden: false, chat: false };   // sezioni aperte di default
 const RESOLUTIONS = [[480, '480p'], [720, '720p'], [1080, '1080p'], [1440, '1440p'], [0, 'Originale']];
 const settings = { theme: 'dark', autoBg: true, fogColor: 'auto', fogVeil: 0.55, caratLibere: false, spareggioDes: true, follia: false, prefT: 0, boxLabels: ['', '', ''], resToken: 720, resBg: 1080, gridDefault: { ...DEFAULT_GRID }, border: { ...DEFAULT_BORDER }, ping: { ...DEFAULT_PING }, sections: {},
-  tools: {}, drawerOpen: true, publicScene: null, unit: 'ft', sheetClose: 'x', rulerCenter: false, dockOpen: true, hiddenLayer: { show: true, opacity: 45 }, chatTabs: { rolls: false, rules: false },
+  tools: {}, drawerOpen: true, publicScene: null, unit: 'ft', sheetClose: 'x', rulerCenter: false, diag5: false, misuraTrascina: true, dockOpen: true, hiddenLayer: { show: true, opacity: 45 }, chatTabs: { rolls: false, rules: false },
   sheetStyle: { preset: 'parchment', accent: '', scale: 100, font: 'serif' }, pen: { color: '#ff4d4d', width: 4, tool: 'pen', fill: false } };
 // Le impostazioni scelte nella home (rotellina): arrivano nell'indirizzo e valgono se sono più nuove
 // di quelle salvate nella campagna. La dimensione dell'interfaccia sul telefono è lo zoom della pagina.
@@ -588,6 +598,7 @@ viewport.addEventListener('pointermove', e => {
     activeEl.style.top  = p.y + 'px';
     if (Math.hypot(dx, dy) > 3) photoMoved = true;
     for (const g of group) { g.el.style.left = g.x + (p.x - origX) + 'px'; g.el.style.top = g.y + (p.y - origY) + 'px'; }
+    if (photoMoved && typeof misuraTrascinamento === 'function') misuraTrascinamento(activeEl, origX, origY);
   } else if (mode === 'frame') {
     const nx = origX + dx / view.s, ny = origY + dy / view.s;
     if (activeEl === board) {                 // il rettangolo porta con sé l'immagine
@@ -617,6 +628,7 @@ function stop() {
   // passato per un passaggio (le scale fra due piani)? esce dall'altra parte (per i giocatori in rete decide il server)
   if (mode === 'photo' && photoMoved && activeEl && typeof dopoSpostamento === 'function') dopoSpostamento([[activeEl, origX, origY], ...group.map(g => [g.el, g.x, g.y])]);
   group = [];
+  if (typeof misuraTrascinamento === 'function') misuraTrascinamento(null);
   const wasFrame = activeEl === bgBox || activeEl === board;
   clearTimeout(holdTimer); holdTimer = 0;
   if (livePing) { livePing.held = false; livePing = null; }     // rilasciato: il ping smette di crescere e sbiadisce
@@ -1547,10 +1559,13 @@ $('autoBg').addEventListener('input', e => { settings.autoBg = e.target.checked;
 // per questo dispositivo, non per la campagna: chi ha il telefono scarico ferma gli sfondi animati solo per sé
 $('sfondiAnimati').checked = SFONDO_ANIM.attivo;
 $('sfondiAnimati').addEventListener('input', e => { SFONDO_ANIM.attivo = e.target.checked; });
+$('mosseAnimate').checked = mosseAnimate();
+$('mosseAnimate').addEventListener('input', e => { try { localStorage.setItem(K_MOSSE, e.target.checked ? '1' : '0'); } catch {} });
 $('graficaLeggera').checked = graficaLeggera();
 $('graficaLeggera').addEventListener('input', e => {
   try { localStorage.setItem(K_LEGGERA, e.target.checked ? '1' : '0'); } catch {}
   document.documentElement.classList.toggle('graficaLeggera', e.target.checked);
+  if (typeof luceRidisegna === 'function') luceRidisegna();      // senza la tinta delle luci colorate (o di nuovo con)
   if (typeof ridisegnaTela === 'function') ridisegnaTela();
   if (typeof placeGrid === 'function') placeGrid();
 });
@@ -1944,18 +1959,32 @@ function testoConTiri(t) {
   if (da < String(t).length) out.push(document.createTextNode(String(t).slice(da)));
   return out;
 }
-// La chat scorre da sola solo se eri già in fondo (o quasi); altrimenti compare «Nuovi messaggi ↓».
+// La chat scorre da sola solo se eri già in fondo (o quasi). Se sei più su compare il pulsante ↓ per tornare
+// all'ultimo messaggio; se nel frattempo ne arrivano di nuovi diventa «Nuovi messaggi N ↓».
 const chatInFondo = () => chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 48;
-function chatGiu() { chatLog.scrollTop = chatLog.scrollHeight; $('chatNuovi').hidden = true; }
-$('chatNuovi').addEventListener('click', chatGiu);
-chatLog.addEventListener('scroll', () => { if (chatInFondo()) $('chatNuovi').hidden = true; });
+let chatNonLetti = 0;
+function chatPulsanteGiu() {
+  const b = $('chatNuovi');
+  if (!chatLog.clientHeight || chatInFondo()) { chatNonLetti = 0; b.hidden = true; return; }
+  // appena sopra il fondo della chat (la casella di testo può crescere su più righe)
+  const pane = b.parentElement;
+  b.style.bottom = Math.max(8, pane.clientHeight - (chatLog.offsetTop + chatLog.offsetHeight) + 10) + 'px';
+  b.classList.toggle('conNuovi', chatNonLetti > 0);
+  b.querySelector('.cnConta').textContent = chatNonLetti > 1 ? String(chatNonLetti > 99 ? '99+' : chatNonLetti) : '';
+  b.hidden = false;
+}
+function chatGiu() { chatLog.scrollTop = chatLog.scrollHeight; chatNonLetti = 0; chatPulsanteGiu(); }
+$('chatNuovi').addEventListener('click', () => { chatGiu(); if (!matchMedia('(pointer: coarse)').matches) chatInput.focus({ preventScroll: true }); });
+chatLog.addEventListener('scroll', chatPulsanteGiu, { passive: true });
+// la chat cambia altezza (pannello allargato, telefono ruotato, immagini caricate, scheda Chat riaperta)
+if (typeof ResizeObserver === 'function') new ResizeObserver(() => chatPulsanteGiu()).observe(chatLog);
 function addChat(m) {
   m.id = m.id || Date.now() + '-' + Math.random().toString(36).slice(2, 7);   // quelli del server hanno già il loro (serve per cancellarli)
   chat.push(m);
   if (typeof chatVisible !== 'function' || chatVisible(m)) {
     const giu = chatInFondo();
     chatLog.appendChild(msgEl(m));
-    if (giu) chatGiu(); else $('chatNuovi').hidden = false;      // chi sta leggendo più su non viene spostato
+    if (giu) chatGiu(); else { chatNonLetti++; chatPulsanteGiu(); }      // chi sta leggendo più su non viene spostato
   }
   else if (typeof chatUnread === 'function') chatUnread(m);
   if (chatReady) persist.save('chat', chat);
@@ -2301,7 +2330,7 @@ function applicaImpostazioni(s) {
   settings.border = { ...DEFAULT_BORDER, ...s.border };
   settings.ping = { ...DEFAULT_PING, ...s.ping };
   if (!(settings.ping.fade >= 300)) Object.assign(settings.ping, DEFAULT_PING);      // vecchi valori: il ping spariva subito
-  for (const k of ['drawerOpen', 'publicScene', 'unit', 'sheetClose', 'rulerCenter', 'dockOpen']) if (s[k] !== undefined) settings[k] = s[k];
+  for (const k of ['drawerOpen', 'publicScene', 'unit', 'sheetClose', 'rulerCenter', 'diag5', 'misuraTrascina', 'dockOpen']) if (s[k] !== undefined) settings[k] = s[k];
   if (s.fogColor === 'auto' || /^#[0-9a-f]{6}$/i.test(s.fogColor || '')) settings.fogColor = s.fogColor;
   if (s.fogVeil >= 0.05 && s.fogVeil <= 1) settings.fogVeil = +s.fogVeil;
   if (typeof s.caratLibere === 'boolean') settings.caratLibere = s.caratLibere;

@@ -1,6 +1,11 @@
 // English (file lingua-en.js). La chiave è la frase italiana così com'è nel programma; {nome} è un segnaposto.
 (window.LIBRE_LINGUE = window.LIBRE_LINGUE || {}).en = Object.assign((window.LIBRE_LINGUE || {}).en || {}, {
 
+// ---------- scheda in una finestra a parte ----------
+"Apri la scheda in una finestra a parte": "Open the sheet in a separate window",
+"Rimetti la scheda nel tavolo": "Put the sheet back on the table",
+"Il browser non ha aperto la finestra: permetti le finestre popup per questa pagina e riprova.": "The browser didn't open the window: allow pop-ups for this page and try again.",
+
 // ---------- avvio (home) ----------
 "Incolla qui il codice che ti hanno mandato": "Paste the code you were sent here",
 "Nome della campagna (es. La miniera perduta)": "Campaign name (e.g. The Lost Mine)",
@@ -417,6 +422,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "per un tiro rapido.": "for a quick roll.",
 "Strumenti": "Tools",
 "Righello: misura da centro a centro delle caselle": "Ruler: measure from square center to center",
+"Righello: ogni casella in diagonale vale una casella (5 ft), senza Pitagora": "Ruler: each diagonal square counts as one square (5 ft), no Pythagoras",
 "Righello": "Ruler",
 "Aree degli incantesimi": "Spell areas",
 "Aree degli incantesimi: cono, linea, cerchio, cubo": "Spell areas: cone, line, circle, cube",
@@ -428,6 +434,8 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Lato": "Side",
 "trascina": "drag",
 "Togli l'area": "Remove the area",
+"Blocca sulla mappa": "Pin to the map",
+"Lascia l'area sulla mappa come un disegno di chi l'ha messa: si sposta e si cancella come un segnalino, ma non entra nell'ordine dei turni": "Leave the area on the map as a drawing of whoever placed it: it moves and is deleted like a token, but it is not in the turn order",
 "{n} caselle colpite": "{n} squares hit",
 "Trascina dal punto d'origine. Con una misura scritta, il trascinamento sceglie solo la direzione. Maiusc: direzioni a scatti di 15°. Esc toglie l'area.": "Drag from the point of origin. With a size typed in, dragging only picks the direction. Shift: snap direction to 15° steps. Esc removes the area.",
 "5 ft per casella": "5 ft per square",
@@ -633,6 +641,13 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Cancella i disegni del livello": "Clear the layer's drawings",
 "Misura liberamente (non da centro a centro)": "Measure freely (not center to center)",
 "Misura da centro a centro delle caselle": "Measure from square center to center",
+"Misura lo spostamento mentre trascini un segnalino": "Measure the move while you drag a token",
+"Non misurare lo spostamento dei segnalini": "Don't measure token moves",
+"Righello: mentre trascini un segnalino, misura quanto si è spostato": "Ruler: while you drag a token, measure how far it moved",
+"Segnalini che scivolano quando si spostano": "Tokens glide when they move",
+"Quando un altro giocatore (o il master) sposta un segnalino, lo vedi andare fino al nuovo posto invece di saltarci. Vale per questo dispositivo.": "When another player (or the GM) moves a token, you see it travel to its new spot instead of jumping there. Applies to this device.",
+"Diagonali col teorema di Pitagora": "Diagonals with the Pythagorean theorem",
+"Diagonali: ogni casella vale 5 ft": "Diagonals: every square counts as 5 ft",
 "Usa 5 ft per casella": "Use 5 ft per square",
 "Usa 1,5 m per casella": "Use 1.5 m per square",
 "📍 Ping qui": "📍 Ping here",
@@ -701,6 +716,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Ripristina": "Restore",
 "Riduci a icona": "Minimize",
 "Rimpicciolisci": "Shrink",
+"Tira per allargare in barra": "Drag to widen into a bar",
 });
 
 // ---------- schede ----------
@@ -1208,6 +1224,9 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Togli dalla scaletta": "Remove from the playlist",
 "🔊 Riattiva l'audio": "🔊 Unmute",
 "🔇 Silenzia (solo per te)": "🔇 Mute (only for you)",
+"Silenzia (solo per te)": "Mute (only for you)",
+"Riattiva l'audio": "Unmute",
+"muto": "muted",
 "🙈 Nascondi il video": "🙈 Hide the video",
 "👁 Mostra il video": "👁 Show the video",
 // tocco
@@ -1381,7 +1400,8 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Scrivi un messaggio…": "Write a message…",
 "Scrivi…": "Write…",
 "Invio manda il messaggio, Maiusc+Invio va a capo": "Enter sends the message, Shift+Enter adds a new line",
-"Nuovi messaggi ↓": "New messages ↓",
+"Nuovi messaggi": "New messages",
+"Vai all'ultimo messaggio": "Go to the latest message",
 "puoi cancellare solo i tuoi messaggi": "you can only delete your own messages",
 });
 Object.assign(window.LIBRE_LINGUE.en, {
@@ -2061,6 +2081,10 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Tocca a: {n}": "Turn: {n}",
 "Poi: {n}": "Next: {n}",
 "Conta il movimento in questa mappa (Velocità della scheda)": "Count movement on this map (sheet's Speed)",
+"Movimento in": "Movement in",
+"Conta la distanza percorsa dal party in un turno": "Count the distance the party moves in a turn",
+"Acceso: in un turno ogni giocatore sposta il suo segnalino al massimo della Velocità della sua scheda (il doppio con «Scatta»). Spento: si muovono quanto vogliono, per esempio in una mappa di viaggio o di guerra. I muri fermano i segnalini lo stesso. È la stessa opzione del pannello Turni.": "On: in a turn each player moves their token at most their sheet's Speed (double with «Dash»). Off: they move as far as they like, for example on a travel or war map. Walls still stop tokens. It is the same option as in the Turns panel.",
+"Questa è una scena cinematografica: qui il movimento non si conta mai.": "This is a cinematic scene: movement is never counted here.",
 "Senza la spunta i giocatori muovono i segnalini quanto vogliono (i muri contano lo stesso)": "Unticked, players move their tokens as far as they like (walls still count)",
 "⚙ Avanzate": "⚙ Advanced",
 "Avanzate": "Advanced",
