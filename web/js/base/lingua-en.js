@@ -429,6 +429,8 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Lato": "Side",
 "trascina": "drag",
 "Togli l'area": "Remove the area",
+"Blocca sulla mappa": "Pin to the map",
+"Lascia l'area sulla mappa come un disegno di chi l'ha messa: si sposta e si cancella come un segnalino, ma non entra nell'ordine dei turni": "Leave the area on the map as a drawing of whoever placed it: it moves and is deleted like a token, but it is not in the turn order",
 "{n} caselle colpite": "{n} squares hit",
 "Trascina dal punto d'origine. Con una misura scritta, il trascinamento sceglie solo la direzione. Maiusc: direzioni a scatti di 15°. Esc toglie l'area.": "Drag from the point of origin. With a size typed in, dragging only picks the direction. Shift: snap direction to 15° steps. Esc removes the area.",
 "5 ft per casella": "5 ft per square",

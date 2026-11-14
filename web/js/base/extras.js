@@ -211,6 +211,13 @@ function textBox(txt, fs) {
 function shapeSvg(sh) {                                          // disegno vettoriale dentro il riquadro dell'oggetto
   const { vw, vh, sw } = sh, p = sw / 2, c = sh.c;
   if (sh.t === 'pin') return PIN_SVG(c);
+  if (sh.t === 'sagoma') {                                         // un'area d'incantesimo fissata (mappa/aree.js)
+    const ns = 'vector-effect="non-scaling-stroke" stroke-linejoin="round"';
+    return `<svg viewBox="0 0 ${vw} ${vh}" preserveAspectRatio="none">${sh.nome ? `<title>${esc(sh.nome)}</title>` : ''}` +
+      (sh.dc ? `<path d="${sh.dc}" fill="${c}" fill-opacity=".22" stroke="${c}" stroke-opacity=".35" stroke-width="1" ${ns}/>` : '') +
+      `<path d="${sh.d}" fill="${c}" fill-opacity=".18" stroke="#000" stroke-opacity=".5" stroke-width="5" ${ns}/>` +
+      `<path d="${sh.d}" fill="none" stroke="${c}" stroke-width="2.5" ${ns}/></svg>`;
+  }
   if (sh.t === 'text') {
     const lh = sh.fs * 1.25, tx = sh.txt.split('\n').map((l, i) => `<tspan x="0" y="${+(sh.fs * 0.95 + i * lh).toFixed(1)}">${esc(l) || ' '}</tspan>`).join('');
     return `<svg viewBox="0 0 ${vw} ${vh}" preserveAspectRatio="none"><rect width="${vw}" height="${vh}" fill="transparent"/><text font-family="system-ui, sans-serif" font-size="${sh.fs}" font-weight="600" fill="${c}" stroke="rgba(0,0,0,.45)" stroke-width="${+(sh.fs * 0.05).toFixed(2)}" paint-order="stroke" xml:space="preserve">${tx}</text></svg>`;

@@ -33,7 +33,7 @@
        <div class="trow" id="areaForme"></div>
        <label class="trow"><span id="areaNomeMisura">Lunghezza</span> <input id="areaFissa" type="number" min="0" step="any" placeholder="trascina" inputmode="decimal"> <span id="areaUnita"></span></label>
        <div class="tnote">Trascina dal punto d'origine. Con una misura scritta, il trascinamento sceglie solo la direzione. Maiusc: direzioni a scatti di 15°. Esc toglie l'area.</div>
-       <div class="trow"><button id="areaTogli" type="button">Togli l'area</button></div>
+       <div class="trow"><button id="areaBlocca" type="button" title="Lascia l'area sulla mappa come un disegno di chi l'ha messa: si sposta e si cancella come un segnalino, ma non entra nell'ordine dei turni">Blocca sulla mappa</button> <button id="areaTogli" type="button">Togli l'area</button></div>
      </div>`);
   box.id = 'areaBox'; document.body.appendChild(box);
   const grip = box.querySelector('.tgrip'), $a = id => box.querySelector('#' + id);
@@ -47,6 +47,7 @@
   $a('areaFissa').addEventListener('input', e => { pref.fissa = e.target.value; salvaPref(); });
   $a('areaFissa').addEventListener('keydown', e => e.stopPropagation());
   $a('areaTogli').addEventListener('click', () => togli());
+  $a('areaBlocca').addEventListener('click', () => blocca());
   function salvaPref() { ls.set('libre-aree', { forma: pref.forma, fissa: pref.fissa }); }
   function sincronizza() {
     for (const b of $a('areaForme').children) b.classList.toggle('on', b.dataset.forma === pref.forma);
@@ -211,6 +212,27 @@
     if (e.key !== 'Escape' || !area || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
     togli();
   });
+  /** Fissa l'area sulla mappa: diventa un disegno (come quelli della penna) sul livello dei segnalini, di chi
+   *  l'ha messa. Resta salvato, si sposta e si cancella come gli altri disegni; i disegni non vanno nei turni. */
+  function blocca() {
+    if (!area || !suQuesta(area)) return;
+    const poli = sagoma(area), cs = caselle(area), s = grid.size;
+    const xs = [], ys = [];
+    if (poli) for (const p of poli) { xs.push(p.x); ys.push(p.y); }
+    else { xs.push(area.o.x - area.l, area.o.x + area.l); ys.push(area.o.y - area.l, area.o.y + area.l); }
+    for (const q of cs) { xs.push(q.x, q.x + s); ys.push(q.y, q.y + s); }
+    const l = Math.min(...xs), t = Math.min(...ys), w = Math.max(1, Math.max(...xs) - l), h = Math.max(1, Math.max(...ys) - t);
+    const f = v => +v.toFixed(1);
+    let d;
+    if (poli) d = poli.map((p, i) => `${i ? 'L' : 'M'}${f(p.x - l)} ${f(p.y - t)}`).join('') + 'Z';
+    else { const cx = f(area.o.x - l), cy = f(area.o.y - t), r = f(area.l); d = `M${f(cx - r)} ${cy}A${r} ${r} 0 1 0 ${f(cx + r)} ${cy}A${r} ${r} 0 1 0 ${f(cx - r)} ${cy}Z`; }
+    const dc = cs.map(q => `M${f(q.x - l)} ${f(q.y - t)}H${f(q.x - l + s)}V${f(q.y - t + s)}H${f(q.x - l)}Z`).join('');
+    const nome = `${tr(NOMI[area.forma])} ${misura(area.l / s)}`;
+    const el = createShape({ t: 'sagoma', c: '#ff8a3d', d, dc: dc || undefined, nome, vw: f(w), vh: f(h), sw: 0 }, w, h, l, t, 'tokens', true);
+    togli();
+    if (typeof select === 'function') select(el);
+    scheduleBoardSave();
+  }
   function togli() { if (!area) return; area = null; disegna(); manda(true); }
 
   // ---------- in rete: gli altri vedono l'area col nome di chi l'ha messa ----------
