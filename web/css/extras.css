@@ -313,6 +313,8 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 .msg.link button { width: 100%; text-align: left; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--aura, #7c5cff); background: color-mix(in srgb, var(--aura, #7c5cff) 18%, var(--panel-3)); color: var(--text); font: inherit; cursor: pointer; }
 .chatForm { align-items: flex-end; }
 #chatInput { resize: none; max-height: 120px; line-height: 1.35; }
+/* il testo grigio di aiuto resta su una riga: se non ci sta finisce con «…» invece di andare a capo */
+#chatInput::placeholder, .chatWin textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chatWin { width: 340px; height: 380px; }
 .chatWin .sbody { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
 .chatWin .clog { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }

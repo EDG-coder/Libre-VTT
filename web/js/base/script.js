@@ -2004,6 +2004,26 @@ function sendChat() {
 document.getElementById('chatSend').addEventListener('click', sendChat);
 chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); } });   // Maiusc+Invio va a capo
 chatInput.addEventListener('input', () => { chatInput.style.height = 'auto'; chatInput.style.height = Math.min(120, chatInput.scrollHeight) + 'px'; });
+// Il testo grigio di aiuto resta su una riga: se nella casella non ci sta tutto, usa la versione corta.
+// (Il CSS lo tiene comunque su una riga; qui si sceglie la frase giusta invece di tagliarla a metà.)
+{
+  const LUNGO = 'Scrivi un messaggio…', CORTO = 'Scrivi…';
+  const righello = document.createElement('canvas').getContext('2d');
+  const adatta = () => {
+    const cs = getComputedStyle(chatInput);
+    const spazio = chatInput.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    if (!(spazio > 0)) return;                     // casella nascosta (pannello chiuso): si rifà quando ricompare
+    const t = typeof tr === 'function' ? tr : x => x;
+    righello.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const it = righello.measureText(t(LUNGO)).width <= spazio - 2 ? LUNGO : CORTO;
+    if (chatInput.getAttribute('placeholder') !== t(it)) chatInput.setAttribute('placeholder', it);   // la traduzione la mette i18n
+  };
+  if ('ResizeObserver' in window) new ResizeObserver(adatta).observe(chatInput);
+  addEventListener('resize', adatta);
+  addEventListener('lingua', () => setTimeout(adatta));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(adatta).catch(() => {});
+  adatta();
+}
 
 async function loadChat() {
   const saved = await persist.load('chat');
