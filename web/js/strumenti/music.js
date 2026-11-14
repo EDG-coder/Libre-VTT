@@ -25,6 +25,8 @@ try {
   if (Number.isFinite(v.vol)) music.vol = clamp(v.vol, 0, 100);
   music.muted = !!v.muted;
 } catch {}
+// Un volume salvato a 0 (versioni vecchie) vuol dire «muto»: allo sblocco torna a un volume che si sente.
+if (!music.vol) { music.vol = 60; music.muted = true; }
 // L'ora dell'host (in rete): t0 è un'ora sua, e l'orologio di questo dispositivo può essere avanti o indietro.
 const musicOra = () => Date.now() + (typeof NET !== 'undefined' && Number.isFinite(NET.orologio) ? NET.orologio : 0);
 // Il punto in cui il brano deve essere adesso.
@@ -47,7 +49,7 @@ const musicBox = mk('div', 'tool glass',
        <button id="musicNext" type="button" title="Brano successivo">⏭</button>
        <button id="musicLoop" type="button" title="Ripeti la scaletta" aria-label="Ripeti la scaletta">🔁</button>
      </div>
-     <label class="trow mVol">Volume <input id="musicVol" type="range" min="0" max="100" step="1"> <output id="musicVolOut"></output></label>
+     <div class="trow mVol"><button id="musicMute" type="button" title="Silenzia (solo per te)" aria-label="Silenzia (solo per te)" aria-pressed="false">🔊</button><label for="musicVol">Volume</label> <input id="musicVol" type="range" min="0" max="100" step="1"> <output id="musicVolOut"></output></div>
      <p class="tnote">Il volume è tuo: non cambia quello degli altri.</p>
      <div class="mMaster" id="musicMaster">
        <div class="trow"><input id="musicUrl" type="text" placeholder="Incolla un link di YouTube" autocomplete="off"><button id="musicAdd" type="button">Aggiungi</button></div>
@@ -466,10 +468,23 @@ $('musicSeek').addEventListener('input', e => {
   const dur = musicDur();
   if (dur > 0) musicSet({ at: dur * e.target.value / 1000 });
 });
+// Il cursore a 0 vuol dire «muto»: music.vol tiene il volume di prima, così il pulsante 🔇 lo rimette.
+let musicVolPrima = 0;
+const musicVolInizio = () => { musicVolPrima = music.muted ? 0 : music.vol; };
+$('musicVol').addEventListener('pointerdown', musicVolInizio);
+$('musicVol').addEventListener('keydown', musicVolInizio);
 $('musicVol').addEventListener('input', e => {
-  music.vol = +e.target.value; music.muted = false;
+  const v = +e.target.value;
+  if (v > 0) { music.vol = v; music.muted = false; }
+  else { if (musicVolPrima > 0) music.vol = musicVolPrima; music.muted = true; }
   musicApplyVolume(); musicSaveVol(); musicRefresh();
 });
+function musicMuta(si = !music.muted) {
+  music.muted = si;
+  if (!si && !(music.vol > 0)) music.vol = 60;
+  musicApplyVolume(); musicSaveVol(); musicRefresh();
+}
+$('musicMute').addEventListener('click', () => musicMuta());
 
 function musicRenderList() {
   const m = settings.music;
@@ -506,8 +521,11 @@ function musicRefresh() {
   lb.setAttribute('aria-pressed', lk !== 'false');
   const tag = $('musicLoopTag');
   tag.textContent = m.id ? (L.tag || 'una volta') : ''; tag.hidden = !m.id; tag.classList.toggle('acceso', !!L.tag);
-  $('musicVol').value = music.vol;
+  $('musicVol').value = music.muted ? 0 : music.vol;
   $('musicVolOut').textContent = music.muted ? 'muto' : music.vol + '%';
+  const mb = $('musicMute'), mt = music.muted ? 'Riattiva l\'audio' : 'Silenzia (solo per te)';
+  mb.textContent = music.muted ? '🔇' : '🔊'; mb.title = mt; mb.setAttribute('aria-label', mt);
+  mb.setAttribute('aria-pressed', music.muted); mb.classList.toggle('on', music.muted);
   $('musicMaster').hidden = !master;
   for (const id of ['musicPlay', 'musicNext', 'musicPrev', 'musicLoop', 'musicSeek']) $(id).disabled = !master;
   if (m.src === 'file') {
@@ -573,7 +591,7 @@ registerTool('music', musicBox, musicBox.querySelector('.tgrip'), 'Musica');
 
 function musicMenuExtra() {
   return [
-    { label: music.muted ? '🔊 Riattiva l\'audio' : '🔇 Silenzia (solo per te)', fn: () => { music.muted = !music.muted; musicApplyVolume(); musicSaveVol(); musicRefresh(); } },
+    { label: music.muted ? '🔊 Riattiva l\'audio' : '🔇 Silenzia (solo per te)', fn: () => musicMuta() },
     { label: musicVideoOn ? '🙈 Nascondi il video' : '👁 Mostra il video', fn: () => musicShowVideo() }
   ];
 }

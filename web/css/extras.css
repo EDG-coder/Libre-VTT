@@ -434,6 +434,8 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 .mPc { flex: 1; font-size: 12px; padding: 5px 7px; }
 .mVol { display: flex; align-items: center; gap: 7px; font-size: 12px; }
 .mVol input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+.mVol button { flex: none; font-size: 15px; line-height: 1; padding: 4px 7px; }
+#musicBox .mVol button.on { background: var(--accent); color: #fff; border-color: transparent; }
 .mVol output { min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; }
 .mMaster { border-top: 1px solid var(--line); margin-top: 7px; padding-top: 7px; }
 .mMaster[hidden] { display: none; }
