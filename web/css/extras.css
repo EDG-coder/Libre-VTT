@@ -762,6 +762,11 @@ body.net-player #caselleSect { display: none; }
 .compAzioni .btn { padding: 6px 9px; font-size: 13px; }
 .compAzioni .btn[hidden] { display: none; }
 #compStato[hidden] { display: none; }
+/* scorrendo l'elenco i filtri si comprimono nella barra di ricerca; «Filtri ▾» li riapre (compendio.js) */
+#tab-comp.compatto #compFiltriBtn { display: inline-flex; flex: none; align-items: center; gap: 5px; padding: 6px 10px; }
+#tab-comp.compatto:not(.filtriAperti) .compFiltri, #tab-comp.compatto:not(.filtriAperti) .compAzioni, #tab-comp.compatto:not(.filtriAperti) #compStato { display: none; }
+#tab-comp.compatto .compCerca { flex-wrap: nowrap; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+#compFiltriBtn .compNF { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #3db8ff; color: #04131d; font-size: 11px; font-weight: 700; line-height: 17px; text-align: center; }
 #compLista { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-bottom: 12px; }
 .compVoce { position: relative; display: flex; flex-direction: column; gap: 1px; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; }
 .compVoce:hover, .compVoce:focus-visible { border-color: #3db8ff; outline: none; }
