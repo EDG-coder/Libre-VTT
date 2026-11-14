@@ -328,6 +328,12 @@
       else if (now - tour.okAt > (step.do.pan || step.do.zoom ? 900 : 450)) { tour.done.add(tour.i); return enter(tour.i + 1, 1); }
     }
     const el = find(step.el);
+    // un'altra finestra in primo piano (la scelta della voce, un avviso…): la guida aspetta che si chiuda
+    if (mp !== document.body && !mp.matches('#helpDialog') && !(el && mp.contains(el))) {
+      root.hidden = true; tour.enteredAt = now; tour.okAt = 0; lastSig = '';
+      return;
+    }
+    root.hidden = false;
     // una spiegazione la cui zona non è (più) sullo schermo: si salta, dopo una breve attesa per le animazioni
     if (step.el && !el && !step.do && now - tour.enteredAt > 700) { tour.hist.pop(); return enter(tour.i + 1, 1); }
     const W = innerWidth, H = innerHeight, pad = step.pad != null ? step.pad : 6;
