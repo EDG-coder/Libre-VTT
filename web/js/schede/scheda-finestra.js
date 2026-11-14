@@ -45,13 +45,21 @@
 
   // ---------- aprire, rimettere, chiudere ----------
   function scriviPagina(f, w) {
-    const d = f.document, base = location.href;
-    const fogli = [...document.querySelectorAll('link[rel~="stylesheet"][href], link[rel~="icon"][href]')]
-      .map(l => `<link rel="${l.rel}" href="${new URL(l.getAttribute('href'), base).href.replace(/"/g, '&quot;')}">`).join('');
-    const stili = [...document.querySelectorAll('head style')].map(s => `<style>${s.textContent}</style>`).join('');
+    const d = f.document;
     d.open();
-    d.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title></title>${fogli}${stili}</head><body class="schedaFuori"></body></html>`);
+    d.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title></title></head><body class="schedaFuori"></body></html>');
     d.close();
+    // gli stessi fogli di stile del tavolo, costruiti come elementi (niente testo trasformato in HTML)
+    for (const l of document.querySelectorAll('link[rel~="stylesheet"][href], link[rel~="icon"][href]')) {
+      const n = d.createElement('link');
+      n.rel = l.rel; n.href = l.href;
+      d.head.appendChild(n);
+    }
+    for (const st of document.querySelectorAll('head style')) {
+      const n = d.createElement('style');
+      n.textContent = st.textContent;
+      d.head.appendChild(n);
+    }
     copiaRadice(d);
     d.title = titolo(w);
   }
