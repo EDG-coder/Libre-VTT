@@ -180,7 +180,9 @@ function salvaPref(m) {
   if (typeof m.caratLibere === 'boolean') p.caratLibere = m.caratLibere;
   if (typeof m.spareggioDes === 'boolean') p.spareggioDes = m.spareggioDes;
   if (Number.isFinite(+m.dpr) && +m.dpr >= 0.5 && +m.dpr <= 5) p.dpr = +m.dpr;
-  const { t, dpr, ...resto } = p, { t: t0, dpr: d0, ...resto0 } = JSON.parse(prima);
+  // la voce (voce.js): schermo, chat o no, con il momento della scelta (il tavolo la prende se è più nuova della sua)
+  if (['schermo', 'chat', 'no'].includes(m.voce) && Number.isFinite(+m.voceT)) { p.voce = m.voce; p.voceT = +m.voceT; }
+  const { t, dpr, voce, voceT, ...resto } = p, { t: t0, dpr: d0, voce: v0, voceT: vt0, ...resto0 } = JSON.parse(prima);
   if (JSON.stringify(resto) !== JSON.stringify(resto0)) p.t = Date.now();
   conf.pref = p; salvaConf();
   return p;
@@ -1835,6 +1837,10 @@ const server = http.createServer(async (req, res) => {
   }
   if (u.pathname === '/nativo.js') {                          // il ponte con le app per telefono (sul computer non fa niente)
     return fs.readFile(path.join(WEB, 'js', 'base', 'nativo.js'), (e, d) =>
+      e ? invia(res, 404, 'no') : invia(res, 200, d, 'text/javascript; charset=utf-8'));
+  }
+  if (u.pathname === '/voce.js') {                            // il lettore dello schermo e della chat
+    return fs.readFile(path.join(WEB, 'js', 'base', 'voce.js'), (e, d) =>
       e ? invia(res, 404, 'no') : invia(res, 200, d, 'text/javascript; charset=utf-8'));
   }
   // la pagina sta passando dal menu al tavolo (o al contrario): niente chiusura per 20 s

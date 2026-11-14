@@ -42,6 +42,8 @@ final class Ponte {
     /** La richiesta che aspetta una finestra di Android (scelta del file, salvataggio). */
     private int inAttesa = -1;
     private File daSalvare;
+    /** La voce del lettore dello schermo (voce.js): si crea alla prima frase. */
+    private Voce voce;
 
     Ponte(MainActivity att, WebView web) {
         this.att = att;
@@ -102,6 +104,13 @@ final class Ponte {
                 case "apriEsterno":
                     att.apriFuori(m.optString("url"));
                     break;
+                case "parla":
+                    if (voce == null) voce = new Voce(att);
+                    voce.parla(m.optString("testo"), m.optString("lingua"), (float) m.optDouble("vel", 1), (float) m.optDouble("tono", 1), (float) m.optDouble("vol", 1), m.optBoolean("coda"));
+                    break;
+                case "zitto":
+                    if (voce != null) voce.zitto();
+                    break;
                 default:
                     Log.w(Motore.TAG, "Comando sconosciuto: " + cmd);
             }
@@ -110,6 +119,11 @@ final class Ponte {
             Log.e(Motore.TAG, "Ponte", e);
             rispondi(id, null);
         }
+    }
+
+    /** L'app si chiude: si spegne la voce. */
+    void chiudi() {
+        if (voce != null) { voce.chiudi(); voce = null; }
     }
 
     // ------------------------------------------------------------------ verso la pagina

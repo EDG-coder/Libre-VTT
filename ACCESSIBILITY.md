@@ -16,6 +16,14 @@ today, what does not, and how to report it.
 - Many commands have keyboard shortcuts: arrows to move tokens, Delete, Ctrl/Cmd+C and V, Ctrl/Cmd+Z; dice can
   also be rolled by typing in chat (`/r 1d20+5`).
 - The main buttons and panels have a label readable by screen readers.
+- **Built-in voice** (no service, it uses the device's own speech synthesis): the first time you open the app it
+  asks whether to keep the **screen reader** (it reads what you move to with Tab, tap or rest the mouse on, the
+  windows that open, notices and new chat messages) or only a **chat reader** that reads new messages aloud and
+  can be switched off with the 🔊 button next to «Send». You can change it from the ⚙ gear in the home and in the
+  table's Settings › «Voice and screen reader» (voice, speed, pitch, volume). Shortcuts: Alt+Shift+L reads the
+  screen, Alt+Shift+S the selected text, Alt+Shift+P pauses, Esc stops; in chat `/leggi` and `/silenzio`.
+  If you already use VoiceOver, TalkBack or NVDA, choose «No voice»: the chat is also marked as a live log, so
+  system screen readers announce new messages on their own.
 - Map and text zoom with the browser or system controls.
 
 ## Known limits
