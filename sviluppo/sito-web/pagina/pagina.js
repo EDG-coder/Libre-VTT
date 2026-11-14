@@ -21,13 +21,21 @@
     'Schede e compendio': 'Sheets and compendium',
     'Schede collegate ai segnalini, tiri con un clic e un compendio con le regole SRD 5.1 e 5.2 (licenza Creative Commons), con segnalini già pronti.': 'Sheets linked to tokens, one-click rolls and a compendium with the SRD 5.1 and 5.2 rules (Creative Commons license), with ready-made tokens.',
     'I tuoi file restano tuoi': 'Your files stay yours',
-    'La campagna sta sul computer del master, non su un server di qualcun altro. Si può esportare, copiare e portare dove si vuole.': "The campaign lives on the GM's computer, not on someone else's server. It can be exported, copied and taken anywhere.",
+    "La campagna sta sul computer del master, non su un server di qualcun altro. Si può copiare tutta oppure esportare come modulo leggero da dare a un altro master, senza chiavi né giocatori.": "The campaign lives on the GM's computer, not on someone else's server. It can be copied whole or exported as a light module for another GM, without keys or players.",
+    "Aree e misure": "Areas and measuring",
+    "Coni, linee, cerchi e cubi degli incantesimi sulla mappa, un righello che misura anche mentre trascini e porte che il master chiude a chiave.": "Spell cones, lines, circles and cubes on the map, a ruler that measures while you drag, and doors the GM can lock.",
+    "Schede in ordine": "Tidy sheets",
+    "Le schede si dividono in Base, Bio e Incantesimi, e si possono staccare dal tavolo in una finestra a parte.": "Sheets are split into Basics, Bio and Spells, and can be popped out of the table into their own window.",
+    "Si impara giocando": "Learn as you play",
+    "Un tutorial guidato nella home e al tavolo spiega un passo alla volta come preparare e giocare una partita.": "A guided tutorial on the home screen and at the table explains, one step at a time, how to set up and play a game.",
+    "Anche ad alta voce": "Out loud too",
+    "Un lettore dello schermo e un lettore della chat leggono ad alta voce quello che succede al tavolo.": "A screen reader and a chat reader read out loud what happens at the table.",
     'Libero e aperto': 'Free and open',
     'Il codice è pubblico con licenza AGPL: chiunque può leggerlo, migliorarlo e aggiungere plugin.': 'The code is public under the AGPL license: anyone can read it, improve it and add plugins.',
-    'La cripta con la nebbia di guerra': 'The crypt with fog of war',
-    'La nebbia di guerra: il master vede attraverso il velo.': 'Fog of war: the GM sees through the veil.',
+    'La cripta con la luce dinamica': 'The crypt with dynamic lighting',
+    'La luce dinamica: muri, porte e torce decidono cosa vede il party.': 'Dynamic lighting: walls, doors and torches decide what the party sees.',
     'La scheda di un goblin': 'A goblin sheet',
-    'Le schede, collegate ai segnalini.': 'Sheets, linked to tokens.',
+    'Le schede in tre pagine, collegate ai segnalini.': 'Sheets in three pages, linked to tokens.',
     'Il master apre la partita': 'The GM opens the game',
     "Scarica l'app, sceglie «Conduco io» e la campagna, e accende «Partita pubblica». L'app gli dà un codice.": 'They download the app, choose “I run the game” and the campaign, and turn on “Public game”. The app gives them a code.',
     'Manda il codice ai giocatori': 'They send the code to the players',
@@ -58,9 +66,31 @@
   };
   const $ = id => document.getElementById(id);
   const CHIAVE = 'libre-lingua';                     // la stessa del tavolo (web/js/base/i18n.js)
-  let lingua = '';
-  try { lingua = localStorage.getItem(CHIAVE) || ''; } catch {}
+  let lingua = window.LIBRE_LINGUA || '';             // la decide lingua.js nel <head>, prima delle foto
+  if (lingua !== 'it' && lingua !== 'en') { try { lingua = localStorage.getItem(CHIAVE) || ''; } catch {} }
   if (lingua !== 'it' && lingua !== 'en') lingua = /^it\b/i.test(navigator.language || '') ? 'it' : 'en';
+
+  // Le foto del tavolo hanno una versione per lingua (data-foto = il nome, dall'elenco FOTO; «-en» per l'inglese).
+  // Al cambio di lingua la foto nuova si scarica e si decodifica a parte, e solo quando è pronta prende il posto
+  // della vecchia: non si vede mai una foto vuota o che si ricarica. Le altre si preparano in anticipo, con calma.
+  const FOTO = ['bosco', 'cripta', 'scheda'];
+  const pronte = new Map();
+  const prepara = url => {
+    if (!pronte.has(url)) { const im = new Image(); im.decoding = 'async'; im.src = url; pronte.set(url, (im.decode ? im.decode() : Promise.resolve()).catch(() => {})); }
+    return pronte.get(url);
+  };
+  const fotoDi = (el, l) => { const nome = FOTO.find(f => f === el.dataset.foto); return nome ? `immagini/${nome}${l === 'en' ? '-en' : ''}.webp` : null; };
+  function foto() {
+    for (const el of document.querySelectorAll('img[data-foto]')) {
+      const voluta = fotoDi(el, lingua);
+      if (!voluta || el.getAttribute('src') === voluta) continue;
+      prepara(voluta).then(() => { if (fotoDi(el, lingua) === voluta) { el.src = voluta; el.dataset.lingua = lingua; } });
+    }
+  }
+  addEventListener('load', () => {
+    const dopo = window.requestIdleCallback || (f => setTimeout(f, 1500));
+    dopo(() => { for (const el of document.querySelectorAll('img[data-foto]')) { const u = fotoDi(el, lingua === 'en' ? 'it' : 'en'); if (u) prepara(u); } });
+  });
   const t = s => lingua === 'en' ? (EN[s] || s) : s;
 
   const titoli = { it: document.title, en: 'LIBRE VTT · free and open virtual tabletop' };
@@ -70,6 +100,7 @@
     for (const el of document.querySelectorAll('[data-t]')) el.textContent = t(el.dataset.t);
     for (const el of document.querySelectorAll('[data-ta]')) el.alt = t(el.dataset.ta);
     for (const el of document.querySelectorAll('[data-p]')) el.placeholder = t(el.dataset.p);
+    foto();
     const b = $('lingua');
     b.textContent = lingua === 'en' ? 'IT' : 'EN';
     b.setAttribute('aria-label', lingua === 'en' ? 'Italiano' : 'English');

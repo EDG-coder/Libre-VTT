@@ -35,7 +35,7 @@ dal browser con il suo codice, senza installare niente (vedi [docs/sito-web.md](
 
 | La nebbia di guerra (il master vede attraverso il velo) | Le schede, collegate ai segnalini |
 |---|---|
-| ![La cripta con la nebbia](docs/immagini/cripta.webp) | ![La scheda di un goblin](docs/immagini/scheda.webp) |
+| ![La cripta con la luce dinamica](docs/immagini/cripta.webp) | ![La scheda di un goblin](docs/immagini/scheda.webp) |
 
 <sub>Mappe disegnate per queste immagini; segnalini dell'SRD inclusi nel programma.</sub>
 

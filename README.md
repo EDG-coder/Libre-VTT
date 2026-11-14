@@ -32,11 +32,11 @@ A virtual tabletop that runs on your own computer.
 There is also a **website version**: when the master switches on «🌐 Public game» in their app, players join
 from the browser with the game code, without installing anything (see [docs/sito-web.md](docs/sito-web.md)).
 
-![A session in the woods: tokens on the grid and dice in the chat](docs/immagini/bosco.webp)
+![A session in the woods: tokens on the grid and dice in the chat](docs/immagini/bosco-en.webp)
 
 | Fog of war (the master sees through the veil) | Sheets, linked to the tokens |
 |---|---|
-| ![The crypt with fog](docs/immagini/cripta.webp) | ![A goblin's sheet](docs/immagini/scheda.webp) |
+| ![The crypt with dynamic lighting](docs/immagini/cripta-en.webp) | ![A goblin's sheet](docs/immagini/scheda-en.webp) |
 
 <sub>Maps drawn for these pictures; the SRD tokens are included in the program.</sub>
 

@@ -1750,7 +1750,7 @@ function pulsantiDanni(d, m, critico) {
 // ---------- I messaggi dei danni: un riquadro a sé, ben distinto dai tiri normali ----------
 // «Ari · Danni Spada lunga · perforanti»: chi tira (piccolo), che cosa (grande), il tipo come etichetta,
 // una riga, il totale grande con i dadi piccoli accanto; con più tipi una riga per tipo.
-const RE_DANNO = /(^|·\s*)(danni|damage)\b/i;
+const RE_DANNO = /(^|·\s*)(danni|damage|critical damage)\b/i;      // «Critical damage …»: il critico in inglese
 const eDanno = m => m && m.kind === 'roll' && Array.isArray(m.rolls) && !m.hidden && (Array.isArray(m.parti) && m.parti.length > 0 || RE_DANNO.test(String(m.label || '')));
 function msgDanno(d, m) {
   d.classList.add('danno');
