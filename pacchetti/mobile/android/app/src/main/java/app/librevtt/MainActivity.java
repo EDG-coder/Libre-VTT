@@ -480,6 +480,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         h.removeCallbacksAndMessages(null);
+        if (ponte != null) ponte.chiudi();
         if (Build.VERSION.SDK_INT >= 33 && indietro != null) {
             getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback((android.window.OnBackInvokedCallback) indietro);
         }

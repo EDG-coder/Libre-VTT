@@ -54,7 +54,10 @@
     apriFile: function () { return chiama('apriFile', {}); },
     /** Android: riscrive / rilegge un file scelto prima. */
     scriviFile: function (uri, testo) { return chiama('scriviFile', { uri: String(uri), testo: String(testo) }); },
-    leggiFile: function (uri) { return chiama('leggiFile', { uri: String(uri) }); }
+    leggiFile: function (uri) { return chiama('leggiFile', { uri: String(uri) }); },
+    /** Android: legge ad alta voce con la sintesi vocale del telefono (la WebView non ha speechSynthesis). Vedi voce.js. */
+    parla: function (testo, o) { o = o || {}; return chiama('parla', { testo: String(testo), lingua: o.lingua || '', vel: +o.vel || 1, tono: +o.tono || 1, vol: o.vol == null ? 1 : +o.vol, coda: !!o.coda }); },
+    zitto: function () { return chiama('zitto', {}); }
   };
 
   // le informazioni iniziali: Android le dà subito, iOS le mette in pagina prima che parta
