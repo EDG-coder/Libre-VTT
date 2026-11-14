@@ -515,7 +515,7 @@ function porteVisibili(c, sc) {
       return pts.some(([px, py]) => LUCE.visibile(v, px + nx / L * e, py + ny / L * e) || LUCE.visibile(v, px - nx / L * e, py - ny / L * e));
     }
     return !hiddenByFog(sc, { l: x, t: y, w: 0, h: 0 });
-  }).map(w => ({ id: w.id, x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2, aperta: w.aperta }));
+  }).map(w => ({ id: w.id, x1: w.x1, y1: w.y1, x2: w.x2, y2: w.y2, aperta: w.aperta, chiave: w.chiave || undefined }));
 }
 /** Per chi non vede tutto: il segnalino è nascosto (sotto la nebbia, o al buio dove c'è la luce dinamica)? */
 function nascostoA(c, sc, ph) {
@@ -1107,7 +1107,7 @@ function handleIntent(c, m) {
       return;
     }
 
-    // --- una porta: la apre (o chiude) chi la vede ---
+    // --- una porta: la apre (o chiude) chi la vede; il master la chiude anche a chiave ---
     case 'luce.porta': {
       const sc = findScene(m.scene);
       if (!sc || !sc.luce || !Array.isArray(sc.luce.muri)) return deny(c, m.op, 'scena sconosciuta');
@@ -1115,7 +1115,11 @@ function handleIntent(c, m) {
       if (!porteVisibili(c, sc).some(w => w.id === id)) return deny(c, m.op, 'quella porta non la vedi');
       const w = sc.luce.muri.find(x => x.id === id && x.porta);
       if (!w) return deny(c, m.op, 'porta sconosciuta');
+      // chiusa a chiave: la apre (e la chiude a chiave) solo chi conduce
+      if (w.chiave && !p.revealFog) return deny(c, m.op, 'la porta è chiusa a chiave');
+      if (p.revealFog && typeof m.chiave === 'boolean') w.chiave = m.chiave;
       w.aperta = typeof m.aperta === 'boolean' ? m.aperta : !w.aperta;
+      if (w.chiave) w.aperta = false;
       changed();
       return;
     }

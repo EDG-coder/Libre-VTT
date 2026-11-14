@@ -1,6 +1,6 @@
 // ---------- Illuminazione dinamica: i conti (gli stessi sul server e nel browser del master) ----------
 // La scena ha  sc.luce = { on, ambiente: 'luce'|'penombra'|'buio', ricordo: 'scuro'|'nero',
-//                          muri: [{ id, x1, y1, x2, y2, porta, aperta }], luci: [{ id, x, y, r, rf, col }],
+//                          muri: [{ id, x1, y1, x2, y2, porta, aperta, chiave }], luci: [{ id, x, y, r, rf, col }],
 //                          passaggi: [{ id, a: [x1, y1, x2, y2], b: [x1, y1, x2, y2] }] }
 // Un passaggio collega due tratti della mappa anche lontani (le scale tra due piani disegnati sulla stessa
 // mappa): la vista ci passa attraverso come se fossero attaccati, e un segnalino che attraversa un tratto
@@ -29,7 +29,8 @@
       solidi: !!l.solidi,                          // i muri (e le porte chiuse) fermano i segnalini dei giocatori
       condivisa: l.condivisa !== false,            // tutti vedono quello che vede il party (o ognuno il suo)
       muri: (Array.isArray(l.muri) ? l.muri : []).slice(0, 4000).map(w => ({
-        id: s(w.id, 40), x1: num(w.x1), y1: num(w.y1), x2: num(w.x2), y2: num(w.y2), porta: !!w.porta, aperta: !!w.aperta
+        // una porta chiusa a chiave (dal master) resta chiusa
+        id: s(w.id, 40), x1: num(w.x1), y1: num(w.y1), x2: num(w.x2), y2: num(w.y2), porta: !!w.porta, aperta: !!w.aperta && !(w.porta && w.chiave), chiave: !!(w.porta && w.chiave)
       })).filter(w => Math.hypot(w.x2 - w.x1, w.y2 - w.y1) > 0.5),
       luci: (Array.isArray(l.luci) ? l.luci : []).slice(0, 500).map(x => ({
         id: s(x.id, 40), x: num(x.x), y: num(x.y), r: Math.max(0, Math.min(200, num(x.r, 4))), rf: Math.max(0, Math.min(200, num(x.rf, 4))), col: col(x.col)
@@ -148,21 +149,30 @@
     }
     // con tanti muri, ogni raggio guarda solo i blocchi che attraversa (indice a griglia), non tutti i muri
     const indice = usati.length > 48 ? indiceDi(usati) : null;
-    const angoli = [];
-    for (const s of usati) for (const [px, py] of [[s[0], s[1]], [s[2], s[3]]]) {
-      const a = Math.atan2(py - oy, px - ox);
-      angoli.push(a - EPS, a, a + EPS);
+    const tira = a => { const dx = Math.cos(a), dy = Math.sin(a); return indice ? primoIncrocio(indice, ox, oy, dx, dy) : piuVicino(usati, ox, oy, dx, dy); };
+    // un raggio verso ogni estremo (una volta sola: i muri spezzati in tanti pezzi ne hanno tanti in comune);
+    // i due raggi appena a destra e a sinistra solo se l'estremo si vede: uno nascosto dietro un altro muro
+    // non cambia il contorno (con tanti muri sono quasi tutti nascosti, ed erano due terzi del lavoro)
+    const estremi = new Set(), raggi = [];
+    for (const s of usati) for (let k = 0; k < 4; k += 2) {
+      const px = s[k], py = s[k + 1], chiave = px + ',' + py;
+      if (estremi.has(chiave)) continue;
+      estremi.add(chiave);
+      const a = Math.atan2(py - oy, px - ox), t = tira(a);
+      raggi.push(a, t);
+      if (t >= Math.hypot(px - ox, py - oy) - 0.05) raggi.push(a - EPS, tira(a - EPS), a + EPS, tira(a + EPS));
     }
-    angoli.sort((a, b) => a - b);
+    const ordine = [];
+    for (let i = 0; i < raggi.length; i += 2) ordine.push(i);
+    ordine.sort((i, j) => raggi[i] - raggi[j]);
     const pts = [];
     let ultimo = null;
-    for (const a of angoli) {
+    for (const i of ordine) {
+      const a = raggi[i], t = raggi[i + 1];
       if (ultimo !== null && a - ultimo < 1e-7) continue;
       ultimo = a;
-      const dx = Math.cos(a), dy = Math.sin(a);
-      const t = indice ? primoIncrocio(indice, ox, oy, dx, dy) : piuVicino(usati, ox, oy, dx, dy);
       if (t === Infinity) continue;
-      pts.push(arrot(ox + dx * t), arrot(oy + dy * t));
+      pts.push(arrot(ox + Math.cos(a) * t), arrot(oy + Math.sin(a) * t));
     }
     return semplifica(pts);
   }
@@ -174,6 +184,8 @@
   function visuaSicura(ox, oy, segs, raggio) {
     const normali = [];                                   // le direzioni per staccarsi dalle linee qui sotto
     for (const s of segs) {
+      // prima la prova veloce: il punto non sta nemmeno nel rettangolo del segmento (quasi sempre)
+      if (ox < Math.min(s[0], s[2]) - 0.5 || ox > Math.max(s[0], s[2]) + 0.5 || oy < Math.min(s[1], s[3]) - 0.5 || oy > Math.max(s[1], s[3]) + 0.5) continue;
       const dx = s[2] - s[0], dy = s[3] - s[1], L2 = dx * dx + dy * dy;
       if (!(L2 > 0)) continue;
       const t = Math.max(0, Math.min(1, ((ox - s[0]) * dx + (oy - s[1]) * dy) / L2));
@@ -348,6 +360,15 @@
     }
     return out;
   }
+  /** C'è un tratto di passaggio entro la distanza R da (x, y)? */
+  function vicinoAPassaggio(luce, x, y, R) {
+    for (const p of (luce && luce.passaggi) || []) for (const t of [p.a, p.b]) {
+      const dx = t[2] - t[0], dy = t[3] - t[1], L2 = dx * dx + dy * dy || 1;
+      const k = Math.max(0, Math.min(1, ((x - t[0]) * dx + (y - t[1]) * dy) / L2));
+      if (Math.hypot(x - (t[0] + k * dx), y - (t[1] + k * dy)) <= R) return true;
+    }
+    return false;
+  }
   /**
    * Il tratto da (ax, ay) a (bx, by) attraversa un passaggio? → { t, x, y, uscita } con (x, y) dove si
    * arriva dall'altra parte (il punto b portato oltre), oppure null. Conta il primo che si incontra.
@@ -393,7 +414,9 @@
       const R = (l.r + l.rf) * cs;
       if (!(R > 0)) continue;
       const luce1 = { r: arrot(l.r * cs), rf: arrot(l.rf * cs), col: l.col };
-      const poly = utile(l.x, l.y, R) || conPassaggi ? visuaSicura(l.x, l.y, segs, R + 1) : null;
+      // la luce si calcola solo se illumina qualcosa che il party vede, o se arriva a un passaggio
+      // (attraverso() guarda solo i passaggi entro R): le altre, lontane, non costano niente
+      const poly = utile(l.x, l.y, R) || (conPassaggi && vicinoAPassaggio(luce, l.x, l.y, R)) ? visuaSicura(l.x, l.y, segs, R + 1) : null;
       if (poly && utile(l.x, l.y, R)) out.luci.push({ x: arrot(l.x), y: arrot(l.y), ...luce1, poly });
       // la luce che passa per un passaggio illumina anche dall'altra parte
       if (poly && conPassaggi) for (const q of attraverso(luce, l.x, l.y, poly, segs, R)) if (utile(q.x, q.y, R)) out.luci.push({ x: q.x, y: q.y, ...luce1, poly: q.poly });

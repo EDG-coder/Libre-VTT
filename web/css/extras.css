@@ -884,6 +884,8 @@ html.mappaSuTela #luceTinta { visibility: hidden; }   /* sui dispositivi touch l
 #luceSegni .lPorta { pointer-events: auto; cursor: pointer; }
 #luceSegni .lPorta circle { fill: rgba(18, 21, 28, .85); stroke: #ffb000; stroke-width: 2; }
 #luceSegni .lPorta circle.aperta { stroke: #2ee6a6; }
+#luceSegni .lPortaL.chiave { stroke: #ff4d4d; }
+#luceSegni .lPorta circle.chiave { stroke: #ff4d4d; stroke-width: 2.5; }
 #luceSegni .lPorta text { fill: #fff; font: 600 14px system-ui, sans-serif; pointer-events: none; }
 #luceSegni:not(.modifica) .lPortaL { opacity: .55; }
 /* passaggi (scale fra due piani): due tratti collegati, col numero in mezzo */
