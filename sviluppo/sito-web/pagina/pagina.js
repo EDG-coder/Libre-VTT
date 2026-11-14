@@ -70,26 +70,26 @@
   if (lingua !== 'it' && lingua !== 'en') { try { lingua = localStorage.getItem(CHIAVE) || ''; } catch {} }
   if (lingua !== 'it' && lingua !== 'en') lingua = /^it\b/i.test(navigator.language || '') ? 'it' : 'en';
 
-  // Le foto del tavolo hanno una versione per lingua (data-en; l'italiana resta in data-it). Al cambio di
-  // lingua la foto nuova si scarica e si decodifica a parte, e solo quando è pronta prende il posto della
-  // vecchia: non si vede mai una foto vuota o che si ricarica. Le altre si preparano in anticipo, con calma.
+  // Le foto del tavolo hanno una versione per lingua (data-foto = il nome, dall'elenco FOTO; «-en» per l'inglese).
+  // Al cambio di lingua la foto nuova si scarica e si decodifica a parte, e solo quando è pronta prende il posto
+  // della vecchia: non si vede mai una foto vuota o che si ricarica. Le altre si preparano in anticipo, con calma.
+  const FOTO = ['bosco', 'cripta', 'scheda'];
   const pronte = new Map();
   const prepara = url => {
     if (!pronte.has(url)) { const im = new Image(); im.decoding = 'async'; im.src = url; pronte.set(url, (im.decode ? im.decode() : Promise.resolve()).catch(() => {})); }
     return pronte.get(url);
   };
-  const fotoDi = (el, l) => l === 'en' ? el.dataset.en : (el.dataset.it || el.getAttribute('src'));
+  const fotoDi = (el, l) => { const nome = FOTO.find(f => f === el.dataset.foto); return nome ? `immagini/${nome}${l === 'en' ? '-en' : ''}.webp` : null; };
   function foto() {
-    for (const el of document.querySelectorAll('img[data-en]')) {
-      if (!el.dataset.it) el.dataset.it = el.getAttribute('src');
+    for (const el of document.querySelectorAll('img[data-foto]')) {
       const voluta = fotoDi(el, lingua);
-      if (el.getAttribute('src') === voluta) continue;
-      prepara(voluta).then(() => { if (fotoDi(el, lingua) === voluta) el.src = voluta; });
+      if (!voluta || el.getAttribute('src') === voluta) continue;
+      prepara(voluta).then(() => { if (fotoDi(el, lingua) === voluta) { el.src = voluta; el.dataset.lingua = lingua; } });
     }
   }
   addEventListener('load', () => {
     const dopo = window.requestIdleCallback || (f => setTimeout(f, 1500));
-    dopo(() => { for (const el of document.querySelectorAll('img[data-en]')) prepara(fotoDi(el, lingua === 'en' ? 'it' : 'en')); });
+    dopo(() => { for (const el of document.querySelectorAll('img[data-foto]')) { const u = fotoDi(el, lingua === 'en' ? 'it' : 'en'); if (u) prepara(u); } });
   });
   const t = s => lingua === 'en' ? (EN[s] || s) : s;
 
