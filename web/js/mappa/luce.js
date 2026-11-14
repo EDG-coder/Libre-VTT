@@ -526,6 +526,10 @@
     if ((e.key === 'Escape' || e.key === 'Enter') && (stato.catena || stato.passo)) { e.preventDefault(); fineCatena(); sincronizza(); }
   });
 
+  /** Il conteggio del movimento è cambiato (o è arrivata un'altra scena): le altre caselle che lo mostrano
+   *  (pannello Turni, Impostazioni › Movimento in questa scena) si rimettono in pari. Il dato è uno solo: luce.velocita. */
+  function avvisaVelocita() { document.dispatchEvent(new CustomEvent('libre:velocita')); }
+
   /** Qualcosa è cambiato: si ridisegna e si salva (col server acceso, il salvataggio lo manda anche ai giocatori). */
   function cambiata() {
     disegnaSegni(); disegna(); sincronizza();
@@ -722,7 +726,7 @@
   });
   $l('luceCond').addEventListener('input', e => { luceDi(true).condivisa = e.target.checked; cambiata(); });
   $l('luceSolidi').addEventListener('input', e => { luceDi(true).solidi = e.target.checked; cambiata(); });
-  $l('luceVel').addEventListener('input', e => { luceDi(true).velocita = e.target.checked; cambiata(); });
+  $l('luceVel').addEventListener('input', e => { luceDi(true).velocita = e.target.checked; cambiata(); avvisaVelocita(); });
   $l('luceAmb').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) { luceDi(true).ambiente = b.dataset.v; cambiata(); } });
   $l('luceRic').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) { luceDi(true).ricordo = b.dataset.v; cambiata(); } });
   box.querySelectorAll('[data-modi]').forEach(g => g.addEventListener('click', e => {
@@ -858,7 +862,7 @@
   }
   if (typeof afterBoardLoad === 'function') {
     const prima = afterBoardLoad;
-    afterBoardLoad = function () { const r = prima.apply(this, arguments); disegna(); disegnaSegni(); sincronizza(); return r; };   // eslint-disable-line no-global-assign
+    afterBoardLoad = function () { const r = prima.apply(this, arguments); disegna(); disegnaSegni(); sincronizza(); avvisaVelocita(); return r; };   // eslint-disable-line no-global-assign
   }
   if (typeof map !== 'undefined' && map) map.addEventListener('load', () => { if (luceDi(false)) presto(); });
   if (typeof mapVideo !== 'undefined' && mapVideo) mapVideo.addEventListener('loadedmetadata', () => { if (luceDi(false)) presto(); });
@@ -868,7 +872,7 @@
   window.luceVelocita = function (on) {
     if (on === undefined) { const l = luceDi(false); return !(l && l.velocita === false); }
     if (!conduco()) return;
-    luceDi(true).velocita = !!on; cambiata();
+    luceDi(true).velocita = !!on; cambiata(); avvisaVelocita();
   };
 
   // ======================= Attraversare un passaggio =======================
