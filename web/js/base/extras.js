@@ -138,6 +138,7 @@ function toggleOpen(box, open) {                                 // pannello che
   const body = box.querySelector('.tbody');
   if (open) misuraPannello(box);
   box.classList.toggle('open', open); body.inert = !open;
+  if (!open) box.scrollTop = 0;                                  // chiuso, l'icona torna in cima al suo cerchio
   if (open) chiudiSovrapposti(box);
 }
 // Alto quanto il contenuto, ma mai oltre il fondo della finestra: quello che non ci sta si scorre.
@@ -426,7 +427,7 @@ viewport.addEventListener('dblclick', e => {
 });
 
 // ======================= Righello =======================
-const rulerBox = mk('div', 'tool glass', `<button class="tgrip" type="button" aria-label="Righello">${ICON('<rect x="2.5" y="8" width="19" height="8" rx="1.5"/><path d="M6.5 8v3M10.5 8v4.5M14.5 8v3M18.5 8v4.5"/>')}</button>`);
+const rulerBox = mk('div', 'tool glass', `<button class="tgrip" type="button" aria-label="Righello">${ICON('<rect x="1.5" y="6.5" width="21" height="11" rx="2"/><path d="M6 6.5v4M10 6.5v6M14 6.5v4M18 6.5v6"/>')}</button>`);
 rulerBox.id = 'rulerBox'; document.body.appendChild(rulerBox);
 const rulerGrip = rulerBox.querySelector('.tgrip');
 const rulerSvg = document.createElementNS(SVGNS, 'svg'); rulerSvg.id = 'rulerSvg'; document.body.appendChild(rulerSvg);
@@ -926,7 +927,7 @@ function pasteClip(at) {                                          // conserva mi
     const lay = layer === 'map' ? (r.data.layer || 'tokens') : curLay();
     const el = r.shape ? createShape({ ...r.shape }, r.w, r.h, r.l + ox, r.t + oy, lay, true)
       : createPhoto(r.url, r.w, r.h, r.l + ox, r.t + oy, r.data.aid, true, lay);
-    for (const k of Object.keys(r.data)) if (k !== 'aid' && k !== 'layer') el.dataset[k] = r.data[k];
+    for (const k of Object.keys(r.data)) if (k !== 'aid' && k !== 'layer' && !(k === 'pid' && world.querySelector(`.photo[data-pid="${CSS.escape(r.data.pid)}"]`))) el.dataset[k] = r.data[k];   // incollato due volte: id nuovo
     applyLook(el);
     return el;
   });

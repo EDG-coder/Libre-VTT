@@ -789,7 +789,7 @@ function cloneEl(src, dx, dy) {
   const l = num(src, 'left') + dx, t = num(src, 'top') + dy, w = num(src, 'width'), h = num(src, 'height');
   const el = src._shape ? createShape({ ...src._shape }, w, h, l, t, src.dataset.layer)
     : createPhoto(src.querySelector('img').src, w, h, l, t, src.dataset.aid, false, src.dataset.layer);
-  for (const k of Object.keys(src.dataset)) if (k !== 'aid') el.dataset[k] = src.dataset[k];
+  for (const k of Object.keys(src.dataset)) if (k !== 'aid' && k !== 'pid') el.dataset[k] = src.dataset[k];   // la copia è un segnalino nuovo: id suo (anche nei turni)
   applyLook(el);
   return el;
 }

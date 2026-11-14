@@ -2023,6 +2023,8 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Scegli o scrivi il nome": "Choose or type the name",
 "Tocca a: {n}": "Turn: {n}",
 "Poi: {n}": "Next: {n}",
+"Conta il movimento in questa mappa (Velocità della scheda)": "Count movement on this map (sheet's Speed)",
+"Senza la spunta i giocatori muovono i segnalini quanto vogliono (i muri contano lo stesso)": "Unticked, players move their tokens as far as they like (walls still count)",
 "⚙ Avanzate": "⚙ Advanced",
 "Avanzate": "Advanced",
 "Tuttofare, mezza competenza, intervallo critico, iniziativa": "Jack of All Trades, half proficiency, critical range, initiative",

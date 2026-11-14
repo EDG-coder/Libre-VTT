@@ -784,6 +784,13 @@
   if (typeof map !== 'undefined' && map) map.addEventListener('load', () => { if (luceDi(false)) presto(); });
   if (typeof mapVideo !== 'undefined' && mapVideo) mapVideo.addEventListener('loadedmetadata', () => { if (luceDi(false)) presto(); });
   window.luceRidisegna = () => { disegna(); disegnaSegni(); };
+  /** Il movimento dei giocatori limitato dalla Velocità nella scena di adesso: senza argomento dice se è acceso,
+   *  con true/false lo cambia (lo usa anche il pannello dei turni). */
+  window.luceVelocita = function (on) {
+    if (on === undefined) { const l = luceDi(false); return !(l && l.velocita === false); }
+    if (!conduco()) return;
+    luceDi(true).velocita = !!on; cambiata();
+  };
 
   // ======================= Attraversare un passaggio =======================
   // Il master (o chi gioca da solo) sposta i segnalini qui: se il tragitto taglia un passaggio, il segnalino

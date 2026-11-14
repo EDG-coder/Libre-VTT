@@ -647,7 +647,7 @@ body.net-player #caselleSect { display: none; }
 #turniBox { --tw: 260px; }
 .turniTesta b { font-size: 14px; }
 .turniTesta label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
-.turniLista { max-height: 260px; overflow-y: auto; overscroll-behavior: contain; margin: 4px 0; }
+.turniLista { max-height: 260px; overflow-y: auto; overscroll-behavior: contain; margin: 4px 0; flex: none; }   /* non si schiaccia: il pannello si allunga con le righe */
 #turniTab { width: 100%; border-collapse: separate; border-spacing: 0 3px; font-size: 13px; }
 #turniTab td { padding: 4px 6px; background: rgba(255, 255, 255, .06); }
 #turniTab td:first-child { border-radius: 8px 0 0 8px; }
@@ -662,6 +662,8 @@ body.net-player #caselleSect { display: none; }
 .tnX button:hover { opacity: 1; color: #ff6b6b; }
 #turniBox.daGiocatore .soloMaster { display: none !important; }
 #turniBox .primo { flex: 1; }
+#turniMovRiga { flex-wrap: nowrap; align-items: flex-start; }
+#turniMovRiga input { margin-top: 2px; flex: none; }
 .ui-touch .tnIni input { width: 52px; min-height: 40px; font-size: 16px; }
 .ui-touch .tnX button { min-width: 40px; min-height: 40px; }
 /* il segnalino della riga sotto il cursore (o toccata): cerchio giallo */
@@ -987,6 +989,11 @@ body:not(.net-on) .soloRete { display: none !important; }
 #turniBarra .tbLista li { padding: 3px 0; }
 #turniBarra .tbLista li.ora { color: #ffd23f; font-weight: 700; }
 html.ui-tel #turniBarra .tbTesta { font-size: 13px; padding: 6px 10px; gap: 8px; }
+/* sul telefono non copre i pulsanti negli angoli in alto (pannello laterale, cartella) */
+html.ui-tel #turniBarra { max-width: calc(100vw - 132px); }
+html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
+/* righello: icona più marcata (era la più sottile del menu) */
+#rulerBox > .tgrip svg { stroke-width: 2.4; }
 
 /* ======================= ⚙ Avanzate della scheda (tiri-scheda.js) ======================= */
 .avanzDlg { max-width: min(560px, calc(100vw - 32px)); }
