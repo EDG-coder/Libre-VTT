@@ -466,13 +466,15 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 }
 .mItem.on .mPick { background: color-mix(in srgb, var(--accent) 28%, transparent); border-color: var(--accent); }
 .mItem .mDel { width: 22px; padding: 0; }
-/* Il lettore vive qui, sempre nello stesso posto del documento: spostarlo lo farebbe ricaricare. */
+/* Il lettore vive qui, sempre nello stesso posto del documento: spostarlo lo farebbe ricaricare.
+   Nascosto resta DENTRO la finestra (trasparente, dietro a tutto, non si tocca): fuori dallo schermo
+   il browser rallenta la cornice di YouTube e la musica scatta. */
 #musicPlayerHost {
-  position: fixed; left: -9999px; top: 0; width: 260px; height: 150px;
-  opacity: 0; pointer-events: none; z-index: 150; border-radius: 12px; overflow: hidden;
+  position: fixed; right: 0; bottom: 0; width: 260px; height: 150px;
+  opacity: 0; pointer-events: none; z-index: -1; border-radius: 12px; overflow: hidden;
 }
 #musicPlayerHost.shown {
-  opacity: 1; pointer-events: auto;
+  opacity: 1; pointer-events: auto; z-index: 150; right: auto; bottom: auto;
   box-shadow: 0 12px 34px rgba(0, 0, 0, .45); border: 1px solid var(--line);
 }
 #musicPlayerHost iframe { width: 100%; height: 100%; border: 0; display: block; }
