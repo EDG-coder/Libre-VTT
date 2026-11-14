@@ -14,6 +14,7 @@
   const NS = 'http://www.w3.org/2000/svg';
   const conduco = () => typeof can !== 'function' || can('revealFog');
   const nuovoId = () => 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  let zoomSegni = null;                                // lo zoom dell'ultimo disegno dei segni (gli spessori dipendono da lui)
   const stato = { modo: 'muro', r: 4, rf: 4, col: '#ffd27a', anteprima: false, catena: null, presa: null, cursore: null };
 
   /** I dati della luce della scena di adesso (creati se servono). */
@@ -98,13 +99,29 @@
     disegnaLuce();
     if (typeof ridisegnaTela === 'function') ridisegnaTela();
   }
+  // L'ultimo disegno: se la vista, il rettangolo e le zone sono gli stessi, il canvas è già giusto. Ai giocatori
+  // il mondo arriva a ogni messaggio in chat, tiro o mossa di un altro: prima si ridisegnava tutto ogni volta.
+  let ultimoDisegno = null;
+  /** Il rettangolo [x0, y0, x1, y1] di un poligono. */
+  function scatola(poly) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i < poly.length; i += 2) {
+      const x = poly[i], y = poly[i + 1];
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    return [x0, y0, x1, y1];
+  }
   function disegnaLuce() {
     aggancia();
     const v = vistaOra();
     const fog = cur && cur.fog;
-    if (!v) { tela.hidden = tinta.hidden = true; return; }
+    if (!v) { tela.hidden = tinta.hidden = true; ultimoDisegno = null; return; }
     const b = rectOf(board);
-    if (!(b.w > 0 && b.h > 0)) { tela.hidden = tinta.hidden = true; return; }
+    if (!(b.w > 0 && b.h > 0)) { tela.hidden = tinta.hidden = true; ultimoDisegno = null; return; }
+    const firma = [JSON.stringify(v), b.x, b.y, b.w, b.h, cella(), conduco(), zonaAttiva(fog) ? [fog.x, fog.y, fog.cell, fog.cols, fog.rows].join() : ''].join('|');
+    const zona = zonaAttiva(fog) ? fog.zona : '';
+    if (ultimoDisegno && ultimoDisegno.firma === firma && ultimoDisegno.zona === zona && !tela.hidden) return;
+    ultimoDisegno = { firma, zona };
     const k = Math.min(1.5, 2048 / Math.max(b.w, b.h));
     const W = Math.max(1, Math.ceil(b.w * k)), H = Math.max(1, Math.ceil(b.h * k));
     for (const c of [tela, tinta, aiuto]) if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
@@ -137,12 +154,33 @@
       ctx.drawImage(aiuto, 0, 0);
       ctx.globalAlpha = 1; ctx.setTransform(...T);
     }
-    // 3. per ogni segnalino del party: quello che vede adesso (luce, penombra, luci, scurovisione)
+    // 3. per ogni segnalino del party: quello che vede adesso (luce, penombra, luci, scurovisione).
+    // Si lavora solo nel rettangolo attorno a quello che vede (al buio, solo dove arrivano luci e scurovisione),
+    // e solo con le luci che ci arrivano: il resto della mappa, lontano, non si tocca. Prima ogni segnalino
+    // ripassava tutto il canvas e tutte le luci della scena.
+    const vicine = (l, q) => { const R = l.r + l.rf; return R > 0 && l.x + R >= q[0] && l.x - R <= q[2] && l.y + R >= q[1] && l.y - R <= q[3]; };
     for (const o of v.occhi) {
-      a.setTransform(1, 0, 0, 1, 0, 0); a.globalCompositeOperation = 'source-over'; a.clearRect(0, 0, W, H);
+      if (!Array.isArray(o.poly) || o.poly.length < 6) continue;
+      const q = scatola(o.poly);
+      const luciQui = v.luci.filter(l => vicine(l, q));
+      if (v.amb !== 'luce' && v.amb !== 'penombra') {            // al buio: solo dove c'è qualcosa che illumina
+        let u = null;
+        const unisci = (x0, y0, x1, y1) => { u = u ? [Math.min(u[0], x0), Math.min(u[1], y0), Math.max(u[2], x1), Math.max(u[3], y1)] : [x0, y0, x1, y1]; };
+        for (const l of luciQui) { const R = l.r + l.rf; unisci(l.x - R, l.y - R, l.x + R, l.y + R); }
+        if (o.scuro > 0) unisci(o.x - o.scuro, o.y - o.scuro, o.x + o.scuro, o.y + o.scuro);
+        if (!o.v) { const r = cs * 0.75; unisci(o.x - r, o.y - r, o.x + r, o.y + r); }
+        if (!u) continue;
+        q[0] = Math.max(q[0], u[0]); q[1] = Math.max(q[1], u[1]); q[2] = Math.min(q[2], u[2]); q[3] = Math.min(q[3], u[3]);
+      }
+      // il rettangolo in pixel del canvas (un pixel in più attorno, per lo smussamento)
+      const X0 = Math.max(0, Math.floor((q[0] - b.x) * k) - 2), Y0 = Math.max(0, Math.floor((q[1] - b.y) * k) - 2);
+      const X1 = Math.min(W, Math.ceil((q[2] - b.x) * k) + 2), Y1 = Math.min(H, Math.ceil((q[3] - b.y) * k) + 2);
+      if (X1 <= X0 || Y1 <= Y0) continue;
+      a.setTransform(1, 0, 0, 1, 0, 0); a.globalCompositeOperation = 'source-over'; a.clearRect(X0, Y0, X1 - X0, Y1 - Y0);
+      a.save(); a.beginPath(); a.rect(X0, Y0, X1 - X0, Y1 - Y0); a.clip();
       a.setTransform(...T);
       if (v.amb === 'luce' || v.amb === 'penombra') { a.fillStyle = v.amb === 'luce' ? '#fff' : 'rgba(255,255,255,.62)'; percorso(a, o.poly); a.fill(); }
-      for (const l of v.luci) {
+      for (const l of luciQui) {
         const R = l.r + l.rf; if (!(R > 0)) continue;
         a.save(); percorso(a, l.poly); a.clip();
         const g = a.createRadialGradient(l.x, l.y, 0, l.x, l.y, R), q = l.r / R, fine = Math.max(q, 1 - Math.min(0.5, cs * 0.6 / R));
@@ -165,8 +203,9 @@
         a.fillStyle = g; a.fillRect(o.x - r, o.y - r, r * 2, r * 2);
       }
       a.globalCompositeOperation = 'destination-in'; a.fillStyle = '#fff'; percorso(a, o.poly); a.fill();
+      a.restore();
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'destination-out';
-      ctx.drawImage(aiuto, 0, 0);
+      ctx.drawImage(aiuto, X0, Y0, X1 - X0, Y1 - Y0, X0, Y0, X1 - X0, Y1 - Y0);
       ctx.setTransform(...T);
     }
     // 4. il colore delle luci, solo dove il party vede
@@ -199,6 +238,7 @@
   // ======================= I segni per chi conduce: muri, porte e luci =======================
   function disegnaSegni() {
     aggancia();
+    zoomSegni = typeof view !== 'undefined' ? view.s : 1;
     const l = luceDi(false), io = conduco();
     const nelLivello = io && typeof layer !== 'undefined' && layer === 'luce';
     segni.classList.toggle('modifica', nelLivello);
@@ -241,27 +281,51 @@
     }
     // le porte: si vedono (e si aprono) anche fuori dal livello
     for (const w of porte) {
-      h += `<line x1="${+w.x1 || 0}" y1="${+w.y1 || 0}" x2="${+w.x2 || 0}" y2="${+w.y2 || 0}" class="lPortaL ${w.aperta ? 'aperta' : ''}" stroke-width="${px(5)}"${w.aperta ? ` stroke-dasharray="${px(6)} ${px(6)}"` : ''}/>`;
+      const chiave = !!w.chiave, aperta = !!w.aperta && !chiave, cl = aperta ? 'aperta' : chiave ? 'chiave' : '';
+      h += `<line x1="${+w.x1 || 0}" y1="${+w.y1 || 0}" x2="${+w.x2 || 0}" y2="${+w.y2 || 0}" class="lPortaL ${cl}" stroke-width="${px(5)}"${aperta ? ` stroke-dasharray="${px(6)} ${px(6)}"` : ''}/>`;
       const mx = (w.x1 + w.x2) / 2, my = (w.y1 + w.y2) / 2;
-      h += `<g class="lPorta" data-id="${String(w.id || '').replace(/[^\w-]/g, '')}" transform="translate(${+mx || 0} ${+my || 0}) scale(${px(1)})"><title>${tr(w.aperta ? 'Porta aperta: tocca per chiuderla' : 'Porta chiusa: tocca per aprirla')}</title>
-        <circle r="13" class="${w.aperta ? 'aperta' : ''}"/><text y="5" text-anchor="middle">${w.aperta ? '◫' : '▮'}</text></g>`;
+      const titolo = chiave ? (io ? 'Porta chiusa a chiave: tasto destro (o «Chiave») per toglierla, un tocco la apre' : 'Porta chiusa a chiave')
+        : aperta ? 'Porta aperta: tocca per chiuderla' : io ? 'Porta chiusa: tocca per aprirla, tasto destro (o «Chiave») per chiuderla a chiave' : 'Porta chiusa: tocca per aprirla';
+      h += `<g class="lPorta" data-id="${String(w.id || '').replace(/[^\w-]/g, '')}" transform="translate(${+mx || 0} ${+my || 0}) scale(${px(1)})"><title>${tr(titolo)}</title>
+        <circle r="13" class="${cl}"/><text y="5" text-anchor="middle">${aperta ? '◫' : chiave ? '🔒' : '▮'}</text></g>`;
     }
     segni.innerHTML = h;
+  }
+  const inRete = () => typeof NET !== 'undefined' && NET.on && typeof intent === 'function';
+  /** Chi conduce chiude a chiave una porta (o toglie la chiave): chiusa a chiave è anche chiusa. */
+  function chiaveAllaPorta(w) {
+    w.chiave = !w.chiave;
+    if (w.chiave) w.aperta = false;
+    if (inRete()) intent('luce.porta', { scene: cur.id, id: w.id, aperta: !!w.aperta, chiave: w.chiave });
+    if (typeof netSay === 'function') netSay(tr(w.chiave ? 'Porta chiusa a chiave: i giocatori non la possono aprire.' : 'Porta di nuovo senza chiave.'));
+    cambiata();
   }
   segni.addEventListener('pointerdown', e => {
     const g = e.target.closest('.lPorta'); if (!g) return;
     e.stopPropagation(); e.preventDefault();
-    const l = luceDi(false), id = g.dataset.id, rete = typeof NET !== 'undefined' && NET.on && typeof intent === 'function';
+    if (e.button === 2) return;                        // il tasto destro è per la chiave (contextmenu, più sotto)
+    const l = luceDi(false), id = g.dataset.id, rete = inRete();
     if (!conduco()) {                                  // un giocatore chiede al server, che controlla che la veda davvero
       const w = l && (l.porte || []).find(x => x.id === id);
+      if (w && w.chiave) { if (typeof netSay === 'function') netSay(tr('Questa porta è chiusa a chiave: la può aprire solo il master.'), 'warn'); return; }
       if (w && rete) { w.aperta = !w.aperta; disegnaSegni(); intent('luce.porta', { scene: cur.id, id, aperta: w.aperta }); }
       return;
     }
     const w = l && l.muri.find(x => x.id === id);
     if (!w) return;
+    if (luceAttiva() && stato.modo === 'chiave') { chiaveAllaPorta(w); return; }
     w.aperta = !w.aperta;
-    if (rete) intent('luce.porta', { scene: cur.id, id, aperta: w.aperta });
+    if (w.aperta) w.chiave = false;                    // chi conduce apre anche una porta chiusa a chiave (e la chiave si toglie)
+    if (rete) intent('luce.porta', { scene: cur.id, id, aperta: w.aperta, chiave: !!w.chiave });
     cambiata();
+  });
+  // tasto destro (o tocco lungo, dove il browser lo dà) sul simbolo della porta: chi conduce la chiude a chiave
+  segni.addEventListener('contextmenu', e => {
+    const g = e.target.closest('.lPorta'); if (!g) return;
+    e.preventDefault(); e.stopPropagation();
+    if (!conduco()) return;
+    const l = luceDi(false), w = l && l.muri.find(x => x.id === g.dataset.id);
+    if (w) chiaveAllaPorta(w);
   });
 
   // ======================= Disegnare nel livello «Luci» =======================
@@ -361,6 +425,11 @@
     if (!luceAttiva() || e.button !== 0 || e.target.closest('.lPorta') || (stato.modo === 'passaggio' && e.target.closest('.lPassoNum'))) return;
     e.stopImmediatePropagation(); e.preventDefault();
     const l = luceDi(true), p0 = nelMondo(e);
+    if (stato.modo === 'chiave') {                     // un tocco su una porta: chiusa a chiave, o di nuovo senza
+      const q = sotto(p0);
+      if (q && q.muro && q.muro.porta) chiaveAllaPorta(q.muro);
+      return;
+    }
     if (stato.modo === 'porta' && !stato.catena) {
       // clic su un muro: lì diventa una porta larga una casella (il muro si divide in due pezzi)
       const q = sotto(p0);
@@ -518,6 +587,7 @@
           <button type="button" data-m="muro">🧱 ${tr('Muro')}</button>
           <button type="button" data-m="stanza">▭ ${tr('Stanza')}</button>
           <button type="button" data-m="porta">🚪 ${tr('Porta')}</button>
+          <button type="button" data-m="chiave" title="${tr('Chiudi a chiave una porta: i giocatori non la possono aprire')}">🔒 ${tr('Chiave')}</button>
           <button type="button" data-m="passaggio" title="${tr('Collega due punti lontani della mappa (per esempio le scale fra due piani)')}">🌀 ${tr('Passaggio')}</button>
           <button type="button" data-m="sposta">✋ ${tr('Sposta')}</button>
           <button type="button" data-m="gomma">🧽 ${tr('Gomma')}</button>
@@ -552,11 +622,12 @@
     porta: 'Clicca su un muro: lì diventa una porta larga una casella. Oppure due clic: dove comincia e dove finisce. Un tocco sul simbolo la apre o la chiude, anche dagli altri livelli.',
     luce: 'Un clic dove vuoi la luce (con le misure qui sotto). Trascina una luce per spostarla.',
     passaggio: 'Collega due punti lontani, nei due sensi (per esempio le scale fra due piani sulla stessa mappa): due clic per il primo tratto (la cima delle scale), due clic per il secondo (il fondo delle scale nell\'altro piano). La luce ci passa come se fossero attaccati, e chi ci cammina attraverso esce dall\'altra parte. Se esce dal lato sbagliato, tocca il numero del passaggio per invertirlo.',
+    chiave: 'Tocca una porta per chiuderla a chiave: i giocatori non la possono aprire finché non la tocchi di nuovo. Anche fuori da qui: tasto destro sul simbolo della porta.',
     sposta: 'Trascina un estremo (si spostano insieme tutti i muri che ci arrivano), un muro intero, una luce o l\'estremo di un passaggio.',
     gomma: 'Tocca un muro, una porta, una luce o un passaggio per toglierli.'
   };
   let scheda = 'luci';
-  const MODI_TAB = { luci: ['luce', 'sposta', 'gomma'], muri: ['muro', 'stanza', 'porta', 'passaggio', 'sposta', 'gomma'] };
+  const MODI_TAB = { luci: ['luce', 'sposta', 'gomma'], muri: ['muro', 'stanza', 'porta', 'chiave', 'passaggio', 'sposta', 'gomma'] };
   function modoVista() {
     const l = luceDi(false), f = cur && cur.fog;
     const n = !!(f && f.on), lu = !!(l && l.on);
@@ -775,7 +846,15 @@
   }
   if (typeof applyView === 'function') {
     const prima = applyView;
-    applyView = function () { const r = prima.apply(this, arguments); if (!segni.hidden) presto(); return r; };   // eslint-disable-line no-global-assign
+    // spostando o ingrandendo la mappa il buio e le luci restano come sono (il canvas sta nella mappa e si muove
+    // con lei): cambia solo lo spessore dei segni, e solo se cambia lo zoom. Prima, per un giocatore con una porta
+    // in vista, ogni movimento della mappa ridisegnava tutta la luce dinamica (era il grosso degli scatti).
+    let attS = 0;
+    applyView = function () {                                                   // eslint-disable-line no-global-assign
+      const r = prima.apply(this, arguments);
+      if (!segni.hidden && view.s !== zoomSegni && !attS) attS = requestAnimationFrame(() => { attS = 0; disegnaSegni(); });
+      return r;
+    };
   }
   if (typeof afterBoardLoad === 'function') {
     const prima = afterBoardLoad;
