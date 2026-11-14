@@ -155,11 +155,17 @@ function stato() {
 // ---------- l'ID di chi usa questo LIBRE VTT ----------
 // Si sceglie al primo avvio e si cambia dalla rotellina della home. È lo stesso in tutte le campagne (il master
 // lo vede ma non lo può cambiare); il nome al tavolo invece è di ogni campagna.
-const idUtenteValido = s => { const v = String(s == null ? '' : s).trim(); return /^[\p{L}\p{N}_.-]{3,24}$/u.test(v) ? v : null; };
+// Il Node dentro le app per telefono (nodejs-mobile) non ha le tabelle Unicode: lì \p{L} nella regex è un
+// errore di sintassi che ferma tutto (l'app si chiudeva all'avvio). Si costruisce la regex a parte e, se non
+// riesce, si tengono le lettere latine, greche e cirilliche (come in server.js).
+const LETTERE_ID = (() => { try { new RegExp('\\p{L}', 'u'); return '\\p{L}\\p{N}'; } catch { return 'A-Za-z0-9\\u00C0-\\u024F\\u0370-\\u03FF\\u0400-\\u04FF'; } })();
+const ID_VALIDO = new RegExp('^[' + LETTERE_ID + '_.-]{3,24}$', 'u');
+const NON_ID = new RegExp('[^' + LETTERE_ID + '_.-]', 'gu');
+const idUtenteValido = s => { const v = String(s == null ? '' : s).trim(); return ID_VALIDO.test(v) ? v : null; };
 const idUtente = () => idUtenteValido(conf.idUtente);
 function idDaProporre() {
   const u = Object.values(unite()).filter(e => e && e.nomeGiocatore).sort((a, b) => (b.ultimoAccesso || 0) - (a.ultimoAccesso || 0));
-  const n = u.length ? String(u[0].nomeGiocatore).normalize('NFC').replace(/\s+/g, '_').replace(/[^\p{L}\p{N}_.-]/gu, '').slice(0, 24) : '';
+  const n = u.length ? String(u[0].nomeGiocatore).normalize('NFC').replace(/\s+/g, '_').replace(NON_ID, '').slice(0, 24) : '';
   return idUtenteValido(n);
 }
 function salvaIdUtente(m) {

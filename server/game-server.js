@@ -301,7 +301,12 @@ const CAMPAGNA_NOME = String(process.env.CAMPAGNA_NOME || '').slice(0, 80);
 // L'ID di chi usa questo LIBRE VTT: lo sceglie una volta (primo avvio, poi dalla rotellina della home) e vale per
 // tutte le campagne. Il nome al tavolo invece è di ogni campagna (sta nel registro: roster[token].name).
 // Il master può cambiare il nome di un giocatore, mai il suo ID.
-const idUtenteValido = s => { const v = String(s == null ? '' : s).trim(); return /^[\p{L}\p{N}_.-]{3,24}$/u.test(v) ? v : null; };
+// Il Node dentro le app per telefono (nodejs-mobile) non ha le tabelle Unicode: lì \p{L} nella regex è un
+// errore di sintassi che ferma tutto (l'app si chiudeva all'avvio). Si costruisce la regex a parte e, se non
+// riesce, si tengono le lettere latine, greche e cirilliche (come in server.js).
+const LETTERE_ID = (() => { try { new RegExp('\\p{L}', 'u'); return '\\p{L}\\p{N}'; } catch { return 'A-Za-z0-9\\u00C0-\\u024F\\u0370-\\u03FF\\u0400-\\u04FF'; } })();
+const ID_VALIDO = new RegExp('^[' + LETTERE_ID + '_.-]{3,24}$', 'u');
+const idUtenteValido = s => { const v = String(s == null ? '' : s).trim(); return ID_VALIDO.test(v) ? v : null; };
 const ID_UTENTE = idUtenteValido(process.env.LIBRE_ID_UTENTE);
 // (giocatore) il nome che ha in questa campagna, ricordato dall'avviatore: si presenta con quello
 let nomeQui = String(process.env.LIBRE_NOME_CAMPAGNA || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 40);
