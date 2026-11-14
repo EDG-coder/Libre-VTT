@@ -1223,6 +1223,9 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Togli dalla scaletta": "Remove from the playlist",
 "🔊 Riattiva l'audio": "🔊 Unmute",
 "🔇 Silenzia (solo per te)": "🔇 Mute (only for you)",
+"Silenzia (solo per te)": "Mute (only for you)",
+"Riattiva l'audio": "Unmute",
+"muto": "muted",
 "🙈 Nascondi il video": "🙈 Hide the video",
 "👁 Mostra il video": "👁 Show the video",
 // tocco
