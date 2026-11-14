@@ -329,6 +329,7 @@ function netHandle(m) {
       NET.conferme = Array.isArray(m.sa) && m.sa.includes('ok');   // l'host conferma gli intenti? (dalla 3.7)
       NET.sa = Array.isArray(m.sa) ? m.sa : [];
       netRighelliVia();
+      if (typeof netAreeVia === 'function') netAreeVia();
       const rimandate = netRimanda();
       if (!NET.conferme) NET.coda = [];
       if (back && rimandate) netSay(tr('Ricollegato: ho mandato le {n} cose fatte mentre eri scollegato.', { n: rimandate }), 'live');
@@ -410,6 +411,7 @@ function netHandle(m) {
       return;
     }
     case 'righello': netRighelloAltrui(m); return;
+    case 'area': if (typeof netAreaAltrui === 'function') netAreaAltrui(m); return;
     case 'notes':
       if (typeof noteDalServer === 'function' && m.notes) noteDalServer(m.notes, m.from === (NET.me && NET.me.id));
       return;

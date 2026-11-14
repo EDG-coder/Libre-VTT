@@ -143,7 +143,8 @@
   const sullaMappa = e => e.pointerType === 'touch' && nodo(e) && viewport.contains(e.target);
   const strumentoAttivo = () =>
     (typeof penOn !== 'undefined' && penOn) || (typeof rulerOn !== 'undefined' && rulerOn) ||
-    (typeof fogAllowed === 'function' && fogAllowed()) || (typeof luceAttiva === 'function' && luceAttiva());
+    (typeof fogAllowed === 'function' && fogAllowed()) || (typeof luceAttiva === 'function' && luceAttiva()) ||
+    (typeof areaAttiva === 'function' && areaAttiva());
   function suCornice(e) {                       // livello «Mappa»: si sta spostando il rettangolo o lo sfondo
     if (typeof layer === 'undefined' || layer !== 'map') return false;
     if (e.target.closest('.handle')) return true;

@@ -1,0 +1,9 @@
+/* Aree degli incantesimi (js/mappa/aree.js): cono, linea, cerchio, cubo */
+#areaSvg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
+#areaSvg text { font: 600 14px system-ui, sans-serif; paint-order: stroke; stroke: rgba(0, 0, 0, .75); stroke-width: 4px; fill: #fff; }
+#areaSvg text.chi { font-size: 13px; font-weight: 700; }
+#viewport.area-on, #viewport.area-on * { cursor: crosshair !important; }
+#areaForme { flex-wrap: wrap; gap: 4px; }
+#areaForme button { display: inline-flex; align-items: center; gap: 4px; }
+#areaForme button.on { outline: 2px solid #ff8a3d; }
+#areaFissa { width: 5.5em; }

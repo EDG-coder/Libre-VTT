@@ -1257,6 +1257,23 @@ function handleIntent(c, m) {
       return;
     }
 
+    // --- aree degli incantesimi (cono, linea, cerchio, cubo): come il righello, ma restano finché chi le ha
+    // messe non le toglie; chi entra dopo riceve quelle aperte ---
+    case 'area': {
+      const num = v => Math.max(-1e7, Math.min(1e7, Math.round(+v) || 0));
+      const forma = ['cono', 'linea', 'cerchio', 'cubo'].includes(m.forma) ? m.forma : null;
+      if (m.fine || !forma || !Array.isArray(m.o)) {
+        if (!areeAperte.delete(c.id)) return;
+        broadcast({ t: 'area', id: c.id, fine: true }, k => k !== c && !k.pending);
+        return;
+      }
+      const msg = { t: 'area', id: c.id, by: c.name, scene: str(m.scene, 60) || null, forma, o: [num(m.o[0]), num(m.o[1])],
+        a: Math.max(-7, Math.min(7, +m.a || 0)), l: Math.max(1, Math.min(1e6, num(m.l))) };
+      areeAperte.set(c.id, msg);
+      broadcast(msg, k => k !== c && !k.leggera && !k.pending);
+      return;
+    }
+
     // --- schede ---
     case 'sheet.add': {
       const d = m.sheet && typeof m.sheet === 'object' ? m.sheet : {};
@@ -1516,6 +1533,7 @@ function detach(c) {
   c.codaC = []; clearTimeout(c.timerC); clearTimeout(c.timerB);
   console.log(`- ${c.kind} #${c.id} se n'è andato`);
   broadcast({ t: 'righello', id: c.id, fine: true });          // il suo righello, se stava misurando, sparisce
+  if (areeAperte.delete(c.id)) broadcast({ t: 'area', id: c.id, fine: true });   // e così la sua area
   sendPlayers();
 }
 
@@ -1881,7 +1899,8 @@ function shutOut(c, reason) {
 // («ok», per la coda del browser) e canale stabile. Un giocatore con la versione nuova usa queste cose solo
 // se l'host le annuncia: con un host vecchio il canale stabile sembrerebbe un secondo ingresso (e
 // butterebbe fuori il primo), e le conferme non arriverebbero mai.
-const SA = ['ok', 'stabile', 'righello'];
+const SA = ['ok', 'stabile', 'righello', 'area'];
+const areeAperte = new Map();   // le aree degli incantesimi sulla mappa: id di chi l'ha messa -> messaggio
 // I messaggi di chat cancellati di recente: chi rientra senza ricaricare il mondo li toglie anche da sé.
 const chatTolti = [];
 const chatSvelati = [];   // i tiri segreti mostrati a tutti di recente: chi rientra li riceve scoperti
@@ -1912,6 +1931,7 @@ function sendWelcome(c) {
     c.send({ t: 'welcome', needName: !!c.needName, you, world: w, ver, sa: SA, ora: Date.now() });
   }
   logAction(c, 'ingresso', true, c.role);
+  for (const a of areeAperte.values()) if (a.id !== c.id) c.send(a);   // le aree già sulla mappa
   c.pluginGate = false;
   // i plugin che il master condivide: i necessari li ha già accettati, i facoltativi li sceglie lui
   if (c.role !== 'master' && c.sapluginCondivisi && pluginOfferti().length) offriPlugin(c, false);
