@@ -716,6 +716,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Ripristina": "Restore",
 "Riduci a icona": "Minimize",
 "Rimpicciolisci": "Shrink",
+"Tira per allargare in barra": "Drag to widen into a bar",
 });
 
 // ---------- schede ----------
