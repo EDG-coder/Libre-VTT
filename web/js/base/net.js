@@ -178,6 +178,22 @@ function netConnect() {
   ws.onclose = e => netCaduto(ws, e);
   ws.onerror = () => {};
 }
+/** Da che apparecchio si gioca, per il pannello del master: telefono, tablet o computer, e il sistema.
+ *  (Se si arriva dal sito o dall'app lo decide il server, che lo sa da sé: qui non serve dirlo.) */
+function netDispositivo() {
+  const N = window.LIBRE_NATIVO;
+  const ua = navigator.userAgent || '';
+  const ipad = /iPad/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1);
+  let sistema = N && N.disponibile ? N.piattaforma
+    : /Android/.test(ua) ? 'android' : (/iPhone|iPod/.test(ua) || ipad) ? 'ios' : /CrOS/.test(ua) ? 'chromeos'
+    : /Windows/.test(ua) ? 'windows' : /Mac OS X|Macintosh/.test(ua) ? 'mac' : /Linux/.test(ua) ? 'linux' : '';
+  let apparecchio;
+  if (N && N.disponibile && N.info && (N.info.telefono || N.info.tablet)) apparecchio = N.info.telefono ? 'telefono' : 'tablet';
+  else if (ipad || (/Android/.test(ua) && !/Mobile/.test(ua)) || /Tablet/.test(ua)) apparecchio = 'tablet';
+  else if ((navigator.userAgentData && navigator.userAgentData.mobile) || /Mobi|iPhone|iPod|Android/.test(ua)) apparecchio = 'telefono';
+  else apparecchio = 'computer';
+  return { apparecchio, sistema: sistema || undefined };
+}
 /** Il saluto: chi sono e da dove riparto. Si rimanda (sullo stesso collegamento) quando, davanti alla porta, si
  *  accettano i plugin che il master chiede per entrare (vedi js/plugins/condivisi.js). */
 function netSaluta(ws = NET.ws) {
@@ -187,7 +203,7 @@ function netSaluta(ws = NET.ws) {
   // plugins: sappiamo ricevere i plugin del master; pluginsOk: quelli a cui abbiamo già dato il consenso
   const C = window.LIBRE && window.LIBRE.condivisi;
   ws.send(JSON.stringify({ t: 'hello', token: netToken(), firma: netFirma(), name: netName(), client: 'LIBRE VTT 2', delta: 1, ver: NET.ver || 0, chatDa: NET.chatUltimo || '', account: NET.account || undefined, invito: NET.parolaInvito || undefined,
-    plugins: C ? 1 : undefined, pluginsOk: C ? C.perSaluto() : undefined }));
+    plugins: C ? 1 : undefined, pluginsOk: C ? C.perSaluto() : undefined, dispositivo: netDispositivo() }));
 }
 /** Il collegamento locale è caduto (o lo diamo per morto noi): ci si ricollega. */
 function netCaduto(ws, e) {
