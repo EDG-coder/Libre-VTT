@@ -66,9 +66,31 @@
   };
   const $ = id => document.getElementById(id);
   const CHIAVE = 'libre-lingua';                     // la stessa del tavolo (web/js/base/i18n.js)
-  let lingua = '';
-  try { lingua = localStorage.getItem(CHIAVE) || ''; } catch {}
+  let lingua = window.LIBRE_LINGUA || '';             // la decide lingua.js nel <head>, prima delle foto
+  if (lingua !== 'it' && lingua !== 'en') { try { lingua = localStorage.getItem(CHIAVE) || ''; } catch {} }
   if (lingua !== 'it' && lingua !== 'en') lingua = /^it\b/i.test(navigator.language || '') ? 'it' : 'en';
+
+  // Le foto del tavolo hanno una versione per lingua (data-en; l'italiana resta in data-it). Al cambio di
+  // lingua la foto nuova si scarica e si decodifica a parte, e solo quando è pronta prende il posto della
+  // vecchia: non si vede mai una foto vuota o che si ricarica. Le altre si preparano in anticipo, con calma.
+  const pronte = new Map();
+  const prepara = url => {
+    if (!pronte.has(url)) { const im = new Image(); im.decoding = 'async'; im.src = url; pronte.set(url, (im.decode ? im.decode() : Promise.resolve()).catch(() => {})); }
+    return pronte.get(url);
+  };
+  const fotoDi = (el, l) => l === 'en' ? el.dataset.en : (el.dataset.it || el.getAttribute('src'));
+  function foto() {
+    for (const el of document.querySelectorAll('img[data-en]')) {
+      if (!el.dataset.it) el.dataset.it = el.getAttribute('src');
+      const voluta = fotoDi(el, lingua);
+      if (el.getAttribute('src') === voluta) continue;
+      prepara(voluta).then(() => { if (fotoDi(el, lingua) === voluta) el.src = voluta; });
+    }
+  }
+  addEventListener('load', () => {
+    const dopo = window.requestIdleCallback || (f => setTimeout(f, 1500));
+    dopo(() => { for (const el of document.querySelectorAll('img[data-en]')) prepara(fotoDi(el, lingua === 'en' ? 'it' : 'en')); });
+  });
   const t = s => lingua === 'en' ? (EN[s] || s) : s;
 
   const titoli = { it: document.title, en: 'LIBRE VTT · free and open virtual tabletop' };
@@ -78,6 +100,7 @@
     for (const el of document.querySelectorAll('[data-t]')) el.textContent = t(el.dataset.t);
     for (const el of document.querySelectorAll('[data-ta]')) el.alt = t(el.dataset.ta);
     for (const el of document.querySelectorAll('[data-p]')) el.placeholder = t(el.dataset.p);
+    foto();
     const b = $('lingua');
     b.textContent = lingua === 'en' ? 'IT' : 'EN';
     b.setAttribute('aria-label', lingua === 'en' ? 'Italiano' : 'English');

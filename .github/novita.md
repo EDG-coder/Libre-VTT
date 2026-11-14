@@ -37,3 +37,7 @@
 
 **Sistemato**
 - **Android:** l'app 3.10.0 si chiudeva subito all'avvio. Ora parte di nuovo.
+- **Inglese:** i danni critici in chat hanno di nuovo il loro riquadro dei danni, come in italiano.
+
+**Sito**
+- Le foto del tavolo cambiano con la lingua della pagina (italiano o inglese), senza ricaricarsi.
