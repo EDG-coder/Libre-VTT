@@ -9,7 +9,8 @@
 const http = require('http'), https = require('https'), fs = require('fs'), os = require('os'), net = require('net');
 const path = require('path'), crypto = require('crypto'), { spawn, execFile } = require('child_process');
 const { EventEmitter } = require('events'), { PassThrough } = require('stream');
-const { creaZip, estraiZip } = require('./zip');
+const { estraiZip } = require('./zip');
+const MODULO = require('./modulo.js');
 const { intestazioniPagina } = require('./csp');
 
 const ROOT = path.join(__dirname, '..');                      // la cartella del programma
@@ -754,6 +755,9 @@ function calcolaInfo(dir, D, out) {
 
 /** Mette in una cartella quello che serve a una campagna, senza toccare quello che c'è già. */
 function preparaCartella(dir, nome) {
+  // un modulo arrivato da un altro master (importato, o aperto come cartella): file rimessi a posto e chiavi nuove
+  try { if (MODULO.completaModulo(dir, { programma: ROOT })) say('Campagna arrivata da un altro master: codice e chiavi nuovi, solo tuoi.', 'ok'); }
+  catch (e) { say('Non sono riuscito a finire di importare la campagna: ' + e.message, 'bad'); }
   fs.mkdirSync(path.join(dir, 'data'), { recursive: true });
   fs.mkdirSync(path.join(dir, 'assets'), { recursive: true });
   // lo sfondo di benvenuto che viene col programma, solo per una campagna appena nata
@@ -862,7 +866,9 @@ function elencoCampagne() {
   return { home: CAMP_HOME, ultima: conf.recenti[0] || null, lista, icloud: campagneSuICloud() };
 }
 
-// ---------- campagne in un file .zip: per passarle da un dispositivo all'altro ----------
+// ---------- campagne in un file .zip: da dare a un altro master (vedi modulo.js) ----------
+// Per una copia di sicurezza di tutto basta copiare (o zippare a mano) la cartella della campagna: l'esportazione
+// fa il «modulo», cioè le mappe già pronte per un altro master e il suo gruppo, senza codici, chiavi e giocatori.
 /** Mette la campagna in un .zip. Sul computer lo si mostra nella sua cartella, sul telefono lo condivide l'app. */
 function esportaCampagna(dir) {
   const info = infoCampagna(dir);
@@ -873,14 +879,17 @@ function esportaCampagna(dir) {
   // sul telefono le esportazioni vecchie non servono più: le ha già prese chi le doveva prendere
   if (MOBILE) for (const f of fs.readdirSync(dove)) { try { fs.unlinkSync(path.join(dove, f)); } catch {} }
   const file = path.join(dove, nome + '.zip');
-  // i manuali importati con le versioni di prima (compendio/manuale-…) non escono con la campagna
-  const manuali = require('./manuali-privati.js').manualiNellaCampagna(info.path);
-  const salta = manuali.length ? rel => manuali.some(id => rel.startsWith('compendio/' + id + '/')) : null;
-  const r = creaZip(info.path, file, { radice: nome, salta });
-  if (manuali.length) say(`Le voci importate dai manuali (${manuali.length} pacchetti) restano su questo dispositivo: non sono nel file.`);
-  say(`Campagna «${nome}» esportata: ${file} (${r.voci} file)`, 'ok');
+  const t0 = Date.now();
+  const r = MODULO.esportaModulo(info.path, file, { radice: nome, programma: ROOT });
+  const mb = b => b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(b < 10485760 ? 1 : 0).replace('.', ',') + ' MB';
+  const tolti = [];
+  if (r.personaggiTolti) tolti.push(`${r.personaggiTolti} personaggi dei giocatori`);
+  if (r.segnaliniTolti) tolti.push(`${r.segnaliniTolti} segnalini e disegni dei giocatori`);
+  if (r.depositoTolti) tolti.push(`${r.depositoTolti} immagini che non usava più`);
+  say(`Campagna «${nome}» esportata per un altro master: ${file} (${mb(r.peso)}, ${r.voci} file, ${((Date.now() - t0) / 1000).toFixed(1)} s)` +
+    (tolti.length ? `. Tolti: ${tolti.join(', ')}` : '') + '. Codice, chiavi, giocatori e chat restano qui.', 'ok');
   if (!MOBILE) mostraCartella(dove);
-  return { file, nome: path.basename(file), byte: r.byte };
+  return { file, nome: path.basename(file), byte: r.peso, personaggiTolti: r.personaggiTolti, segnaliniTolti: r.segnaliniTolti };
 }
 
 /**
@@ -1938,7 +1947,7 @@ const server = http.createServer(async (req, res) => {
     if (o && o !== `http://127.0.0.1:${UI_PORT}` && o !== `http://localhost:${UI_PORT}`) return invia(res, 403, 'no');
     // JSON e basta (un altro sito non può mandarlo senza chiedere il permesso al browser); lo zip di un sistema solo dove serve
     const ct = req.headers['content-type'] || '';
-    if (!/^application\/json/.test(ct) && !((u.pathname === '/api/sistema/carica' || u.pathname === '/api/plugins/installa') && /^application\/zip/.test(ct))) return invia(res, 415, 'no');
+    if (!/^application\/json/.test(ct) && !((u.pathname === '/api/sistema/carica' || u.pathname === '/api/plugins/installa' || u.pathname === '/api/campagna/importa-file') && /^application\/zip/.test(ct))) return invia(res, 415, 'no');
   }
   const corpo = fn => {
     let body = '';
@@ -2125,6 +2134,23 @@ const server = http.createServer(async (req, res) => {
   if (u.pathname === '/api/aggiornamento') return ok(await controllaAggiornamento(u.searchParams.has('ora')));
   if (u.pathname === '/api/aggiornamento/installa' && req.method === 'POST') {
     return corpo(async () => ok(await installaAggiornamento()));
+  }
+  // sul computer: lo .zip scelto nella home (un modulo avuto da un altro master) arriva qui, scritto su disco man mano
+  if (u.pathname === '/api/campagna/importa-file' && req.method === 'POST') {
+    const ARRIVI = path.join(USERDIR, 'importa');
+    fs.mkdirSync(ARRIVI, { recursive: true });
+    const f = path.join(ARRIVI, 'arrivo-' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex') + '.zip');
+    const out = fs.createWriteStream(f);
+    let n = 0, troppo = false;
+    req.on('data', d => { n += d.length; if (n > 3.5 * 1024 * 1024 * 1024) { troppo = true; req.destroy(); out.destroy(); fs.rm(f, { force: true }, () => {}); } });
+    req.pipe(out);
+    out.on('finish', () => {
+      if (troppo) return;
+      const r = importaCampagna(f, String(u.searchParams.get('nome') || '').slice(0, 120));
+      ok(r.errore ? r : { ...r, ...elencoCampagne() });
+    });
+    out.on('error', e => { fs.rm(f, { force: true }, () => {}); if (!res.headersSent) ok({ errore: e.message }); });
+    return;
   }
   if (u.pathname === '/api/campagna/importa' && req.method === 'POST') {
     return corpo(m => {

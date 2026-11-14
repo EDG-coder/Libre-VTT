@@ -488,6 +488,8 @@
       <button class="b" id="campNuova">＋ Nuova campagna</button>
       <button class="b soloPc" id="campApri">📂 Apri una cartella…</button>
       <button class="b soloApp" id="campImporta">📥 Importa (.zip)…</button>
+      <button class="b soloPc" id="campImportaPc">📥 Importa (.zip)…</button>
+      <input type="file" id="campImportaFile" accept=".zip,application/zip" class="hide">
       <button class="b soloApp" id="campImportaCartella">📁 Importa una cartella…</button>
       <span class="sp"></span>
       <button class="b" id="campIndietro">Indietro</button>
@@ -821,7 +823,9 @@ const quando = t => {
 const conta = (n, uno, tanti) => (n === 1 ? '1 ' + uno : n + ' ' + tanti);
 const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 const campErr = el('p', 'err hide'); $('campLista').after(campErr);
-const erroreCamp = t => { campErr.textContent = t || ''; campErr.classList.toggle('hide', !t); };
+const erroreCamp = t => { campErr.textContent = t || ''; campErr.classList.toggle('hide', !t); if (t) infoCamp(''); };
+const campInfo = el('p', 'note hide'); campErr.after(campInfo);
+const infoCamp = t => { campInfo.textContent = t || ''; campInfo.classList.toggle('hide', !t); };
 function mostraSolo(id) { for (const b of ['scelte', 'boxJoin', 'boxCamp', 'boxSfoglia', 'boxPrep']) $(b).classList.toggle('hide', b !== id); }
 
 async function apriCampagne(modo) {
@@ -846,9 +850,9 @@ function disegnaCampagne(r) {
   L.replaceChildren();
   const tr = window.tr || (x => x);
   $('campNota').textContent = NAT.disponibile
-    ? tr('Le campagne stanno dentro l\'app. Per portarne una da un computer, o per darla a un amico, usa un file .zip: 📤 la esporta (e la mandi come vuoi), «Importa» la aggiunge qui.') +
+    ? tr('Le campagne stanno dentro l\'app. Per darne una a un altro master usa 📤: fa un file .zip con mappe, segnalini e mostri già pronti per il suo gruppo, senza i tuoi giocatori, la chat e i codici. «Importa» aggiunge qui una campagna avuta così.') +
       (NAT.piattaforma === 'ios' ? ' ' + tr('Le trovi anche nell\'app File, in «Sul mio iPhone/iPad › LIBRE VTT › Campagne».') : '')
-    : tr('Le campagne nuove vanno in «{home}». Una campagna è una cartella: puoi copiarla, tenerla su una chiavetta o darla a un amico, che la apre da qui con «Apri una cartella» e la conduce lui. Con 📤 la metti in un file .zip, comodo da mandare (anche a un telefono).', { home: r.home }) +
+    : tr('Le campagne nuove vanno in «{home}». Una campagna è una cartella: per una copia di tutto (anche giocatori e codici) basta copiarla o zipparla. Con 📤 fai invece un file .zip da dare a un altro master: mappe, segnalini e mostri già pronti per il suo gruppo, senza i tuoi giocatori, la chat e i codici. Lui lo apre con «Importa (.zip)».', { home: r.home }) +
       (r.icloud ? '\n\n⚠ ' + tr('Questa cartella è dentro Documenti, che è sincronizzata con iCloud: se è attivo «Ottimizza spazio», macOS può togliere le immagini dal Mac. LIBRE VTT le riscarica quando apri la campagna, ma per evitarlo: in Finder, clic destro sulla cartella LIBRE VTT → «Mantieni scaricato».') : '');
   $('campNota').style.whiteSpace = 'pre-line';
   if (!r.lista.length) {
@@ -879,7 +883,7 @@ function disegnaCampagne(r) {
       mo.onclick = () => post('/api/campagna/mostra', { path: c.path });
       act.append(mo);
     }
-    const ex = el('button', '', '📤'); ex.type = 'button'; ex.title = 'Esporta in un file .zip (per mandarla a un altro computer o telefono)';
+    const ex = el('button', '', '📤'); ex.type = 'button'; ex.title = 'Esporta per un altro master: un file .zip con mappe e segnalini pronti, senza i tuoi giocatori, la chat e i codici';
     ex.disabled = !c.esiste || !c.campagna;
     ex.onclick = () => esporta(c.path, ex);
     act.append(ex);
@@ -1012,8 +1016,12 @@ async function esporta(path, btn) {
   erroreCamp('');
   if (btn) btn.disabled = true;
   try {
+    infoCamp((window.tr || (x => x))('La preparo per un altro master…'));
     const r = await post('/api/campagna/esporta', { path });
     if (r.errore) return erroreCamp(r.errore);
+    const tr = window.tr || (x => x);
+    const peso = r.byte < 1048576 ? Math.max(1, Math.round(r.byte / 1024)) + ' KB' : (r.byte / 1048576).toLocaleString(undefined, { maximumFractionDigits: r.byte < 10485760 ? 1 : 0 }) + ' MB';
+    infoCamp(tr('Pronta: «{nome}», {peso}. Dentro ci sono mappe, segnalini, mostri e personaggi tuoi; i tuoi giocatori, i loro personaggi, la chat e i codici restano qui.', { nome: r.nome, peso }));
     if (NAT.disponibile) await NAT.condividiFile(r.file, 'application/zip', r.nome);
   } catch (e) { erroreCamp('Non sono riuscito a esportarla: ' + e.message); }
   finally { if (btn) btn.disabled = false; }
@@ -1027,6 +1035,22 @@ async function importa(tipo) {
   disegnaCampagne(r);
 }
 $('campImporta').onclick = () => importa('zip');
+// sul computer: lo .zip si sceglie qui e va all'avviatore così com'è
+$('campImportaPc').onclick = () => $('campImportaFile').click();
+$('campImportaFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  const tr = window.tr || (x => x);
+  erroreCamp(''); infoCamp(tr('Importo «{nome}»…', { nome: f.name }));
+  $('campImportaPc').disabled = true;
+  try {
+    const r = await fetch('/api/campagna/importa-file?nome=' + encodeURIComponent(f.name), { method: 'POST', headers: { 'Content-Type': 'application/zip' }, body: f }).then(x => x.json());
+    if (r.errore) return erroreCamp(r.errore);
+    infoCamp(tr('Importata. Codice d\'invito e chiavi sono nuovi, solo tuoi.'));
+    disegnaCampagne(r);
+  } catch (err) { erroreCamp(tr('Non sono riuscito a importarla: {e}', { e: err.message })); }
+  finally { $('campImportaPc').disabled = false; }
+};
 $('campImportaCartella').onclick = () => importa('cartella');
 
 // la finestra per scegliere una cartella fatta da noi (quando il sistema non ne ha una)
