@@ -162,14 +162,18 @@
         <select id="compTipo" aria-label="Tipo"></select>
         <button id="compFiltriBtn" type="button" class="btn ghost" aria-expanded="false" title="Mostra o nascondi filtri e pulsanti">Filtri ▾</button>
       </div>
-      <div class="compFiltri" id="compFiltri"></div>
-      <div class="row compAzioni">
-        <button id="compNuova" type="button" class="btn ghost">＋ Nuova voce</button>
-        <button id="compImporta" type="button" class="btn ghost">📥 Importa…</button>
-        <button id="compOpen5e" type="button" class="btn ghost">🌐 Open5e…</button>
-        <button id="compPacchetti" type="button" class="btn ghost">📦 Pacchetti…</button>
+      <div class="compPiega" id="compPiega">
+        <div class="compPiegaIn">
+          <div class="compFiltri" id="compFiltri"></div>
+          <div class="row compAzioni">
+            <button id="compNuova" type="button" class="btn ghost">＋ Nuova voce</button>
+            <button id="compImporta" type="button" class="btn ghost">📥 Importa…</button>
+            <button id="compOpen5e" type="button" class="btn ghost">🌐 Open5e…</button>
+            <button id="compPacchetti" type="button" class="btn ghost">📦 Pacchetti…</button>
+          </div>
+          <p class="note" id="compStato"></p>
+        </div>
       </div>
-      <p class="note" id="compStato"></p>
       <div id="compLista" role="list"></div>
     </section>
 
