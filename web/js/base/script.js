@@ -1952,18 +1952,32 @@ function testoConTiri(t) {
   if (da < String(t).length) out.push(document.createTextNode(String(t).slice(da)));
   return out;
 }
-// La chat scorre da sola solo se eri già in fondo (o quasi); altrimenti compare «Nuovi messaggi ↓».
+// La chat scorre da sola solo se eri già in fondo (o quasi). Se sei più su compare il pulsante ↓ per tornare
+// all'ultimo messaggio; se nel frattempo ne arrivano di nuovi diventa «Nuovi messaggi N ↓».
 const chatInFondo = () => chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 48;
-function chatGiu() { chatLog.scrollTop = chatLog.scrollHeight; $('chatNuovi').hidden = true; }
-$('chatNuovi').addEventListener('click', chatGiu);
-chatLog.addEventListener('scroll', () => { if (chatInFondo()) $('chatNuovi').hidden = true; });
+let chatNonLetti = 0;
+function chatPulsanteGiu() {
+  const b = $('chatNuovi');
+  if (!chatLog.clientHeight || chatInFondo()) { chatNonLetti = 0; b.hidden = true; return; }
+  // appena sopra il fondo della chat (la casella di testo può crescere su più righe)
+  const pane = b.parentElement;
+  b.style.bottom = Math.max(8, pane.clientHeight - (chatLog.offsetTop + chatLog.offsetHeight) + 10) + 'px';
+  b.classList.toggle('conNuovi', chatNonLetti > 0);
+  b.querySelector('.cnConta').textContent = chatNonLetti > 1 ? String(chatNonLetti > 99 ? '99+' : chatNonLetti) : '';
+  b.hidden = false;
+}
+function chatGiu() { chatLog.scrollTop = chatLog.scrollHeight; chatNonLetti = 0; chatPulsanteGiu(); }
+$('chatNuovi').addEventListener('click', () => { chatGiu(); if (!matchMedia('(pointer: coarse)').matches) chatInput.focus({ preventScroll: true }); });
+chatLog.addEventListener('scroll', chatPulsanteGiu, { passive: true });
+// la chat cambia altezza (pannello allargato, telefono ruotato, immagini caricate, scheda Chat riaperta)
+if (typeof ResizeObserver === 'function') new ResizeObserver(() => chatPulsanteGiu()).observe(chatLog);
 function addChat(m) {
   m.id = m.id || Date.now() + '-' + Math.random().toString(36).slice(2, 7);   // quelli del server hanno già il loro (serve per cancellarli)
   chat.push(m);
   if (typeof chatVisible !== 'function' || chatVisible(m)) {
     const giu = chatInFondo();
     chatLog.appendChild(msgEl(m));
-    if (giu) chatGiu(); else $('chatNuovi').hidden = false;      // chi sta leggendo più su non viene spostato
+    if (giu) chatGiu(); else { chatNonLetti++; chatPulsanteGiu(); }      // chi sta leggendo più su non viene spostato
   }
   else if (typeof chatUnread === 'function') chatUnread(m);
   if (chatReady) persist.save('chat', chat);
