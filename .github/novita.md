@@ -1,28 +1,39 @@
-## Novità della 3.10.0
+## Novità della 3.11.0
 
 **Al tavolo**
-- **Segnalini ruotabili:** un pallino sopra il segnalino selezionato lo fa girare (con Maiusc a scatti di 15°, doppio clic per rimetterlo dritto). La rotazione si salva e arriva a tutti.
-- **Vedere un segnalino intero:** tenendo premuto Alt (⌥ su Mac) sopra un segnalino lo si vede a tutto schermo.
-- **Due tiri nascosti:** «🤫 Sussurro» (lo vedono chi tira e il master) e «🔒 Segreto» (solo il master; agli altri compare un rettangolo nero). Il master può usare «👁 Mostra a tutti».
-- **Pannelli degli strumenti:** se sotto non c'è posto, salgono o si spostano di lato invece di restare tagliati.
+- **Aree degli incantesimi:** cono, linea, cerchio e cubo direttamente sulla mappa. Il cono parte dal centro della casella e conta anche le caselle colpite solo in parte. Con «Blocca sulla mappa» l'area resta come disegno di chi l'ha messa.
+- **Righello e movimento:** il righello è più visibile, può contare la diagonale come 5 ft e misura anche mentre trascini un segnalino. Il conteggio del movimento nel turno si accende o si spegne per ogni scena (Impostazioni › «Movimento in questa scena»).
+- **Segnalini che scivolano:** quando un altro sposta un segnalino lo vedi scorrere fino al posto nuovo invece di saltare.
+- **Porte chiuse a chiave:** il master chiude una porta con «🔒 Chiave» (o col tasto destro) e i giocatori non la possono aprire.
+- **Mappe grandi più leggere:** ai giocatori arriva una copia ridotta della mappa, e chat e mosse passano prima delle immagini. Anche la luce dinamica pesa meno sui giocatori.
+- **Turni:** niente più righe doppie nell'ordine del turno, e la barra dei turni sta sotto l'avviso della rete.
 
 **Schede**
-- **Slot per talenti, tratti razziali e privilegi di classe:** titolo e testo, con il clic sul titolo che manda in chat, ⚙ per modificare e ▸ per aprire il testo.
-- **Contatori dei consumabili:** totale, quanti ne restano e nome, con ＋ e lucchetto.
+- **Tre pagine ordinate** per le schede Standard e Open: Base, Bio e Incantesimi. Il formato di base si sceglie dal clic destro.
+- **La follia** è facoltativa e parte spenta (Impostazioni avanzate › Funzioni extra).
+- **Scheda in una finestra a parte:** il pulsante ⧉ accanto alla chiusura la stacca dal tavolo, ↙ la rimette dentro.
+- **Schede ridotte:** diventano un'icona appena non c'è più spazio, e la linguetta accanto all'icona le riallarga in barra.
 
-**Identità e campagne**
-- **ID globale** scelto al primo avvio (e dalla rotellina), e **nome al tavolo diverso per ogni campagna**.
-- Il pannello della sessione si apre in una finestra a parte.
+**Chat**
+- **Danni subiti e cure:** in rete li leggono solo il master e chi li ha scritti. I tiri dei danni restano visibili come prima.
+- **Pulsante ↓** per tornare all'ultimo messaggio, con «Nuovi messaggi» e il numero quando sei più in alto.
+- Il testo di aiuto della casella resta su una riga anche quando la chat è stretta.
 
-**Manuali che possiedi**
-- I libri che importi restano **solo sul tuo dispositivo**: non vengono mai inviati al master, ai giocatori o al sito, e non si possono esportare. Ogni giocatore importa il proprio.
-- I PDF protetti (password o DRM) vengono sempre rifiutati. All'importazione si chiede conferma che il libro è tuo e per uso personale.
+**Musica**
+- **Pulsante muta** accanto al volume (il volume a 0 vale come muto).
+- Al ricaricamento la canzone riprende dal punto giusto, e la musica da YouTube non fa più scatti.
 
-**Sicurezza**
-- Il tavolo si difende da chi manda troppi saluti o troppi collegamenti, e il codice d'invito non permette più di far cadere la partita.
-- Il codice d'invito contiene anche una parola segreta: serve solo a chi il tavolo non conosce ancora. **Un giocatore nuovo con una versione vecchia non entra finché non aggiorna.**
-- Nelle impostazioni avanzate «Quanto ti esponi con iroh» (normale, senza UPnP, solo relay), anche sui telefoni. Le campagne nuove chiedono l'approvazione del master per far entrare.
-- Nei telefoni «condividi file» vale solo per i file dell'app.
+**Per cominciare e per tutti**
+- **Tutorial guidato** integrato nella home e al tavolo (⚙ › Tutorial, e al tavolo Impostazioni › Strumenti). Non parte mai da solo.
+- **Voce:** un lettore dello schermo e un lettore della chat ad alta voce, da scegliere al primo avvio o nelle impostazioni.
+
+**Campagne**
+- **📤 Esporta** crea un modulo leggero da dare a un altro master: scene, schede del master, cartelle e impostazioni, ma niente chiavi, giocatori o chat. Chi lo importa riceve chiavi nuove.
+- **🗂 Copia completa** per spostare la tua campagna su un altro computer, e «Importa (.zip)» anche dal computer.
+- Il pannello host mostra per ogni giocatore se entra dal sito o dall'app, e da telefono, tablet o computer.
+
+**Compendio**
+- I filtri si comprimono mentre scorri l'elenco e si riaprono con un'animazione breve.
 
 **Sistemato**
-- **Firefox:** passando il mouse sulla mappa la nebbia di guerra non si scopre più da sola, e lo zoom col pizzico sulla scheda Standard funziona anche con la rotellina di Firefox.
+- **Android:** l'app 3.10.0 si chiudeva subito all'avvio. Ora parte di nuovo.
