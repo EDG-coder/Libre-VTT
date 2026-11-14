@@ -118,7 +118,7 @@
     if (!v) { tela.hidden = tinta.hidden = true; ultimoDisegno = null; return; }
     const b = rectOf(board);
     if (!(b.w > 0 && b.h > 0)) { tela.hidden = tinta.hidden = true; ultimoDisegno = null; return; }
-    const firma = [JSON.stringify(v), b.x, b.y, b.w, b.h, cella(), conduco(), zonaAttiva(fog) ? [fog.x, fog.y, fog.cell, fog.cols, fog.rows].join() : ''].join('|');
+    const firma = [JSON.stringify(v), b.x, b.y, b.w, b.h, cella(), conduco(), typeof graficaLeggera === 'function' && graficaLeggera(), zonaAttiva(fog) ? [fog.x, fog.y, fog.cell, fog.cols, fog.rows].join() : ''].join('|');
     const zona = zonaAttiva(fog) ? fog.zona : '';
     if (ultimoDisegno && ultimoDisegno.firma === firma && ultimoDisegno.zona === zona && !tela.hidden) return;
     ultimoDisegno = { firma, zona };
@@ -208,17 +208,21 @@
       ctx.drawImage(aiuto, X0, Y0, X1 - X0, Y1 - Y0, X0, Y0, X1 - X0, Y1 - Y0);
       ctx.setTransform(...T);
     }
-    // 4. il colore delle luci, solo dove il party vede
+    // 4. il colore delle luci, solo dove il party vede. Il canvas della tinta si fonde con la mappa
+    // («soft-light»): mentre la mappa si sposta il browser rifà la fusione a ogni fotogramma, su tutta la mappa.
+    // Senza luci colorate (o con «Grafica leggera») non serve, e si nasconde.
     ct.setTransform(1, 0, 0, 1, 0, 0); ct.globalCompositeOperation = 'source-over'; ct.clearRect(0, 0, W, H); ct.setTransform(...T);
-    for (const l of v.luci) {
-      const R = l.r + l.rf; if (!(R > 0) || /^#fff/i.test(l.col)) continue;
+    const colorate = typeof graficaLeggera === 'function' && graficaLeggera() ? [] : v.luci.filter(l => l.r + l.rf > 0 && !/^#fff/i.test(l.col));
+    tinta.hidden = !colorate.length;
+    for (const l of colorate) {
+      const R = l.r + l.rf;
       ct.save(); percorso(ct, l.poly); ct.clip();
       const g = ct.createRadialGradient(l.x, l.y, 0, l.x, l.y, R);
       g.addColorStop(0, l.col + 'b0'); g.addColorStop(0.7, l.col + '55'); g.addColorStop(1, l.col + '00');
       ct.fillStyle = g; ct.fillRect(l.x - R, l.y - R, R * 2, R * 2);
       ct.restore();
     }
-    if (v.occhi.length) {
+    if (colorate.length && v.occhi.length) {
       ct.globalCompositeOperation = 'destination-in'; ct.fillStyle = '#fff'; ct.beginPath();
       for (const o of v.occhi) for (let i = 0; i < o.poly.length; i += 2) i ? ct.lineTo(o.poly[i], o.poly[i + 1]) : ct.moveTo(o.poly[i], o.poly[i + 1]);
       ct.fill('nonzero');
@@ -226,7 +230,7 @@
     // 5. fuori dalle zone segnate nella nebbia la luce dinamica non c'è (lì c'è la nebbia di sempre)
     if (zonaAttiva(fog)) {
       const im = immagineDi(fog.cols, fog.rows, i => fog.zona[i] === '1');
-      for (const x of [ctx, ct]) {
+      for (const x of tinta.hidden ? [ctx] : [ctx, ct]) {
         x.globalCompositeOperation = 'destination-in'; x.imageSmoothingEnabled = true;
         x.drawImage(im, fog.x, fog.y, fog.cols * fog.cell, fog.rows * fog.cell);
       }

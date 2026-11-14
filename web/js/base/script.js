@@ -1550,6 +1550,7 @@ $('graficaLeggera').checked = graficaLeggera();
 $('graficaLeggera').addEventListener('input', e => {
   try { localStorage.setItem(K_LEGGERA, e.target.checked ? '1' : '0'); } catch {}
   document.documentElement.classList.toggle('graficaLeggera', e.target.checked);
+  if (typeof luceRidisegna === 'function') luceRidisegna();      // senza la tinta delle luci colorate (o di nuovo con)
   if (typeof ridisegnaTela === 'function') ridisegnaTela();
   if (typeof placeGrid === 'function') placeGrid();
 });
