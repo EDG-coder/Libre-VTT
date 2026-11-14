@@ -36,7 +36,7 @@ from the browser with the game code, without installing anything (see [docs/sito
 
 | Fog of war (the master sees through the veil) | Sheets, linked to the tokens |
 |---|---|
-| ![The crypt with fog](docs/immagini/cripta.webp) | ![A goblin's sheet](docs/immagini/scheda.webp) |
+| ![The crypt with dynamic lighting](docs/immagini/cripta.webp) | ![A goblin's sheet](docs/immagini/scheda.webp) |
 
 <sub>Maps drawn for these pictures; the SRD tokens are included in the program.</sub>
 
