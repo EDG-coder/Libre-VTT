@@ -9,7 +9,7 @@
 const http = require('http'), https = require('https'), fs = require('fs'), os = require('os'), net = require('net');
 const path = require('path'), crypto = require('crypto'), { spawn, execFile } = require('child_process');
 const { EventEmitter } = require('events'), { PassThrough } = require('stream');
-const { estraiZip } = require('./zip');
+const { creaZip, estraiZip } = require('./zip');
 const MODULO = require('./modulo.js');
 const { intestazioniPagina } = require('./csp');
 
@@ -870,7 +870,7 @@ function elencoCampagne() {
 // Per una copia di sicurezza di tutto basta copiare (o zippare a mano) la cartella della campagna: l'esportazione
 // fa il «modulo», cioè le mappe già pronte per un altro master e il suo gruppo, senza codici, chiavi e giocatori.
 /** Mette la campagna in un .zip. Sul computer lo si mostra nella sua cartella, sul telefono lo condivide l'app. */
-function esportaCampagna(dir) {
+function esportaCampagna(dir, completa) {
   const info = infoCampagna(dir);
   if (!info.esiste || !info.campagna) return { errore: 'Non trovo questa campagna.' };
   const nome = pulisciNome(info.nome) || 'Campagna';
@@ -878,6 +878,7 @@ function esportaCampagna(dir) {
   fs.mkdirSync(dove, { recursive: true });
   // sul telefono le esportazioni vecchie non servono più: le ha già prese chi le doveva prendere
   if (MOBILE) for (const f of fs.readdirSync(dove)) { try { fs.unlinkSync(path.join(dove, f)); } catch {} }
+  if (completa) return copiaCompleta(info, nome, dove);
   const file = path.join(dove, nome + '.zip');
   const t0 = Date.now();
   const r = MODULO.esportaModulo(info.path, file, { radice: nome, programma: ROOT });
@@ -890,6 +891,20 @@ function esportaCampagna(dir) {
     (tolti.length ? `. Tolti: ${tolti.join(', ')}` : '') + '. Codice, chiavi, giocatori e chat restano qui.', 'ok');
   if (!MOBILE) mostraCartella(dove);
   return { file, nome: path.basename(file), byte: r.peso, personaggiTolti: r.personaggiTolti, segnaliniTolti: r.segnaliniTolti };
+}
+
+/** La copia completa (🗂): tutta la cartella così com'è, giocatori, codice e chiavi compresi. È per spostare la
+ *  PROPRIA campagna su un altro dispositivo (sul telefono la cartella non la si può zippare a mano); importata,
+ *  resta la stessa partita, con lo stesso codice. Solo i manuali importati restano qui. */
+function copiaCompleta(info, nome, dove) {
+  const file = path.join(dove, nome + ' (copia completa).zip');
+  const manuali = require('./manuali-privati.js').manualiNellaCampagna(info.path);
+  const salta = rel => rel.split('/').some(p => p.startsWith('.')) || manuali.some(id => rel.startsWith('compendio/' + id + '/'));
+  const r = creaZip(info.path, file, { radice: nome, salta, livello: 9 });
+  if (manuali.length) say(`Le voci importate dai manuali (${manuali.length} pacchetti) restano su questo dispositivo: non sono nel file.`);
+  say(`Copia completa di «${nome}»: ${file} (${r.voci} file). Dentro ci sono anche codice, chiavi e giocatori: non darla ad altri.`, 'ok');
+  if (!MOBILE) mostraCartella(dove);
+  return { file, nome: path.basename(file), byte: r.peso, completa: true };
 }
 
 /**
@@ -2127,7 +2142,7 @@ const server = http.createServer(async (req, res) => {
     return corpo(m => { const i = infoCampagna(m.path); if (i.esiste) mostraCartella(i.path); ok({ ok: i.esiste }); });
   }
   if (u.pathname === '/api/campagna/esporta' && req.method === 'POST') {
-    return corpo(m => ok(esportaCampagna(String(m.path || ''))));
+    return corpo(m => ok(esportaCampagna(String(m.path || ''), m.completa === true)));
   }
   if (u.pathname === '/api/pref' && req.method === 'POST') return corpo(m => ok(salvaPref(m || {})));
   if (u.pathname === '/api/id' && req.method === 'POST') return corpo(m => ok(salvaIdUtente(m || {})));

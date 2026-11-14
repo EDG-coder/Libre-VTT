@@ -850,9 +850,9 @@ function disegnaCampagne(r) {
   L.replaceChildren();
   const tr = window.tr || (x => x);
   $('campNota').textContent = NAT.disponibile
-    ? tr('Le campagne stanno dentro l\'app. Per darne una a un altro master usa 📤: fa un file .zip con mappe, segnalini e mostri già pronti per il suo gruppo, senza i tuoi giocatori, la chat e i codici. «Importa» aggiunge qui una campagna avuta così.') +
+    ? tr('Le campagne stanno dentro l\'app. Per darne una a un altro master usa 📤: fa un file .zip con mappe, segnalini e mostri già pronti per il suo gruppo, senza i tuoi giocatori, la chat e i codici. «Importa» aggiunge qui una campagna avuta così. Con 🗂 fai una copia completa (anche giocatori e codici), per spostarla su un tuo altro dispositivo.') +
       (NAT.piattaforma === 'ios' ? ' ' + tr('Le trovi anche nell\'app File, in «Sul mio iPhone/iPad › LIBRE VTT › Campagne».') : '')
-    : tr('Le campagne nuove vanno in «{home}». Una campagna è una cartella: per una copia di tutto (anche giocatori e codici) basta copiarla o zipparla. Con 📤 fai invece un file .zip da dare a un altro master: mappe, segnalini e mostri già pronti per il suo gruppo, senza i tuoi giocatori, la chat e i codici. Lui lo apre con «Importa (.zip)».', { home: r.home }) +
+    : tr('Le campagne nuove vanno in «{home}». Una campagna è una cartella: per una copia di tutto (anche giocatori e codici) basta copiarla o zipparla. Con 📤 fai invece un file .zip da dare a un altro master: mappe, segnalini e mostri già pronti per il suo gruppo, senza i tuoi giocatori, la chat e i codici. Lui lo apre con «Importa (.zip)». Con 🗂 fai una copia completa (anche giocatori e codici), per spostarla su un tuo altro dispositivo.', { home: r.home }) +
       (r.icloud ? '\n\n⚠ ' + tr('Questa cartella è dentro Documenti, che è sincronizzata con iCloud: se è attivo «Ottimizza spazio», macOS può togliere le immagini dal Mac. LIBRE VTT le riscarica quando apri la campagna, ma per evitarlo: in Finder, clic destro sulla cartella LIBRE VTT → «Mantieni scaricato».') : '');
   $('campNota').style.whiteSpace = 'pre-line';
   if (!r.lista.length) {
@@ -886,7 +886,11 @@ function disegnaCampagne(r) {
     const ex = el('button', '', '📤'); ex.type = 'button'; ex.title = 'Esporta per un altro master: un file .zip con mappe e segnalini pronti, senza i tuoi giocatori, la chat e i codici';
     ex.disabled = !c.esiste || !c.campagna;
     ex.onclick = () => esporta(c.path, ex);
-    act.append(ex);
+    // la copia completa: per spostare la propria campagna su un altro dispositivo (giocatori e codice compresi)
+    const cc = el('button', '', '🗂'); cc.type = 'button'; cc.title = 'Copia completa in un file .zip: tutta la campagna, anche giocatori e codice, per spostarla su un tuo altro dispositivo. Non darla ad altri.';
+    cc.disabled = !c.esiste || !c.campagna;
+    cc.onclick = () => esporta(c.path, cc, true);
+    act.append(ex, cc);
     const nrm = x => String(x || '').replace(/\\/g, '/').replace(/\/+$/, '');
     const inCampagne = !!r.home && nrm(c.path).startsWith(nrm(r.home) + '/');
     if (!c.vecchia && !inCampagne) {                 // fuori dalla cartella Campagne: si può solo togliere dall'elenco
@@ -1012,16 +1016,17 @@ $('campApri').onclick = async () => {
   } finally { $('campApri').disabled = false; }
 };
 // --- esportare e importare (file .zip) ---
-async function esporta(path, btn) {
+async function esporta(path, btn, completa) {
   erroreCamp('');
   if (btn) btn.disabled = true;
   try {
-    infoCamp((window.tr || (x => x))('La preparo per un altro master…'));
-    const r = await post('/api/campagna/esporta', { path });
+    infoCamp((window.tr || (x => x))(completa ? 'Preparo la copia completa…' : 'La preparo per un altro master…'));
+    const r = await post('/api/campagna/esporta', { path, completa: !!completa });
     if (r.errore) return erroreCamp(r.errore);
     const tr = window.tr || (x => x);
     const peso = r.byte < 1048576 ? Math.max(1, Math.round(r.byte / 1024)) + ' KB' : (r.byte / 1048576).toLocaleString(undefined, { maximumFractionDigits: r.byte < 10485760 ? 1 : 0 }) + ' MB';
-    infoCamp(tr('Pronta: «{nome}», {peso}. Dentro ci sono mappe, segnalini, mostri e personaggi tuoi; i tuoi giocatori, i loro personaggi, la chat e i codici restano qui.', { nome: r.nome, peso }));
+    if (completa) infoCamp(tr('Copia completa pronta: «{nome}», {peso}. Dentro c\'è tutto, anche giocatori, codice e chiavi: tienila per te.', { nome: r.nome, peso }));
+    else infoCamp(tr('Pronta: «{nome}», {peso}. Dentro ci sono mappe, segnalini, mostri e personaggi tuoi; i tuoi giocatori, i loro personaggi, la chat e i codici restano qui.', { nome: r.nome, peso }));
     if (NAT.disponibile) await NAT.condividiFile(r.file, 'application/zip', r.nome);
   } catch (e) { erroreCamp('Non sono riuscito a esportarla: ' + e.message); }
   finally { if (btn) btn.disabled = false; }

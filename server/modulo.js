@@ -3,7 +3,8 @@
 // mano): fa un file da mandare a un altro master, che la conduce con il suo gruppo. Dentro ci sono
 // mappe, segnalini già piazzati, mostri e personaggi del master, musica, sistema e compendio. Restano
 // fuori le cose di chi l'ha giocata: codice d'invito e chiavi, i giocatori e i loro personaggi, chat,
-// turni, sessione, quello che il gruppo ha già scoperto della nebbia.
+// turni, quello che il gruppo ha già scoperto della nebbia. Le impostazioni della campagna, le cartelle (delle
+// scene e delle schede) e le schede del master restano tutte.
 //
 // Per pesare poco:
 //  · del deposito (data/assets) si portano solo i file che il mondo usa ancora;
@@ -25,12 +26,12 @@ const MANUALI = require('./manuali-privati.js');
 
 const MANIFESTO = 'modulo-libre-vtt.json';
 const FORMATO = 'libre-vtt-modulo';
-// Di data/ si porta solo questo (più il deposito, data/assets/). Tutto il resto è di chi l'ha giocata:
-// invito.chiave, invito.segreto, identita.chiave, master.chiave, players.json, session.json, chat.json,
-// chats.json, server.json, collegamento/, miniature/...
-const DATI_DA_PORTARE = new Set(['world.json', 'board.json', 'sheets.json', 'notes.json', 'predefinite.json']);
+// Di data/ si portano solo world.json, board.json, sheets.json, notes.json, predefinite.json, session.json (solo le
+// regole d'ingresso) e il deposito (data/assets/). Tutto il resto è di chi l'ha giocata: invito.chiave,
+// invito.segreto, identita.chiave, master.chiave, players.json, chat.json, chats.json, server.json,
+// collegamento/, miniature/...
 // i file che chi importa deve avere nuovi, suoi (se per caso ci sono, si buttano)
-const SEGRETI = ['invito.chiave', 'invito.segreto', 'identita.chiave', 'master.chiave', 'players.json', 'session.json', 'server.json', 'chat.json', 'chats.json'];
+const SEGRETI = ['invito.chiave', 'invito.segreto', 'identita.chiave', 'master.chiave', 'players.json', 'server.json', 'chat.json', 'chats.json'];
 
 const sha = b => crypto.createHash('sha256').update(b).digest('hex');
 const leggiJson = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
@@ -135,7 +136,17 @@ function pulisciMondo(w, g, conto) {
 function pulisciTavolo(b, g, conto) {
   if (!b || typeof b !== 'object') return b;
   const o = { ...b, scenes: pulisciScene(b.scenes, g, conto) };
-  if (o.settings && typeof o.settings === 'object') { o.settings = { ...o.settings }; delete o.settings.turni; }
+  delete o.giocatore;             // una copia di giocatore, data a un altro master, la conduce lui
+  // le impostazioni della campagna restano tutte (cartelle delle scene e delle schede, modelli di scheda, griglia,
+  // tema, musica...): via solo i turni, e dalle cartelle delle schede i personaggi dei giocatori che non ci sono più
+  if (o.settings && typeof o.settings === 'object') {
+    o.settings = { ...o.settings };
+    delete o.settings.turni;
+    const cs = o.settings.cartelleSchede;
+    if (cs && typeof cs === 'object' && cs.dove && typeof cs.dove === 'object') {
+      o.settings.cartelleSchede = { ...cs, dove: Object.fromEntries(Object.entries(cs.dove).filter(([id]) => !g.pg.has(id))) };
+    }
+  }
   return o;
 }
 
@@ -162,6 +173,14 @@ function esportaModulo(dir, fileZip, { radice = '', programma = null } = {}) {
   if (note) {                     // le note del master restano; quelle del gruppo erano del gruppo
     if (note.gruppo && typeof note.gruppo === 'object') note.gruppo = { text: '', editable: !!note.gruppo.editable };
     json.set('data/notes.json', JSON.stringify(note));
+  }
+  // le regole d'ingresso del tavolo (approvazione, quanti giocatori) restano; la porta chiusa e la pausa no
+  const sessione = leggiJson(path.join(D, 'session.json'));
+  if (sessione && typeof sessione === 'object') {
+    const s2 = {};
+    if (typeof sessione.approval === 'boolean') s2.approval = sessione.approval;
+    if (Number.isFinite(sessione.maxPlayers)) s2.maxPlayers = sessione.maxPlayers;
+    json.set('data/session.json', JSON.stringify(s2));
   }
   const predef = leggiJson(path.join(D, 'predefinite.json'));
   if (predef) json.set('data/predefinite.json', JSON.stringify(predef));
