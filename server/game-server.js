@@ -637,11 +637,18 @@ function sheetVisible(c, s) {
 // Un disegno arrivato da un giocatore: solo i campi che servono, con valori controllati
 // (finisce dentro un SVG sugli schermi di tutti).
 function formaPulita(x) {
-  if (!x || typeof x !== 'object' || !['rect', 'ellipse', 'tri', 'line', 'path', 'text', 'pin'].includes(x.t)) return null;
+  if (!x || typeof x !== 'object' || !['rect', 'ellipse', 'tri', 'line', 'path', 'text', 'pin', 'sagoma'].includes(x.t)) return null;
   const n = (v, max) => { const k = +v; return Number.isFinite(k) ? Math.max(0, Math.min(max, k)) : 0; };
   const c = /^#[0-9a-f]{3,8}$/i.test(String(x.c)) ? String(x.c) : '#ff4d4d';
   const sh = { t: x.t, c, sw: n(x.sw, 100), vw: n(x.vw, 20000), vh: n(x.vh, 20000) };
   if (x.t === 'text') { sh.fs = n(x.fs, 400) || 24; sh.txt = String(x.txt || '').slice(0, 2000); }
+  else if (x.t === 'sagoma') {
+    // l'area di un incantesimo fissata sulla mappa: il contorno (d) e le caselle colpite (dc), solo comandi di percorso
+    const ok = v => typeof v === 'string' && v.length <= 200000 && /^[MLHVAZ0-9.\s-]*$/.test(v);
+    if (!ok(x.d) || !x.d || (x.dc != null && !ok(x.dc))) return null;
+    sh.d = x.d; if (x.dc) sh.dc = x.dc;
+    if (typeof x.nome === 'string') sh.nome = x.nome.slice(0, 80);
+  }
   else if (x.t === 'path') { const d = String(x.d || ''); if (d.length > 200000 || !/^[MLl0-9.\s-]+$/.test(d)) return null; sh.d = d; }
   else { sh.fill = !!x.fill; sh.fx = !!x.fx; sh.fy = !!x.fy; }
   return sh;
