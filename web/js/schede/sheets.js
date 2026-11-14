@@ -429,12 +429,68 @@ function setWinState(w, st) {
     const r = w.getBoundingClientRect(); floatTool(w._tool, r.left + 80, r.top);
   }
   if (w._state === 'open') w._full = { w: w.style.width, h: w.style.height };
-  if (w._state === 'min') w._barW = w.style.width;
+  // la larghezza della barra si ricorda solo se era ancora comoda: una barra stretta fino a diventare icona
+  // non deve tornare tale e quale (rientrerebbe subito in icona)
+  if (w._state === 'min') w._barW = parseFloat(w.style.width) >= barraMinima(w) ? w.style.width : '';
   w.classList.remove('min', 'icon');
+  w.style.minWidth = '';
   w._state = st;
   if (st === 'open') { w.style.width = w._full ? w._full.w : ''; w.style.height = w._full ? w._full.h : ''; }
-  else if (st === 'min') { w.classList.add('min'); w.style.width = w._barW || ''; w.style.height = ''; }
+  else if (st === 'min') {
+    w.classList.add('min'); w.style.width = w._barW || ''; w.style.height = '';
+    if (!w._sheet) w.style.minWidth = barraMinima(w) + 'px';   // la chat non diventa icona: si ferma prima
+  }
   else { w.classList.add('icon'); w.style.width = w.style.height = ''; }
+}
+// Larghezza sotto cui una finestra ridotta a barra non si può più prendere bene: tutto ciò che sta nella barra
+// (pallino o ×, segnalino, altri pulsanti) più uno spazio libero di SPAZIO_DOPPIO_CLIC per il doppio clic.
+const SPAZIO_DOPPIO_CLIC = 44;
+function barraMinima(w) {
+  const bar = w.querySelector('.stitle');
+  if (!bar) return 120;
+  const cs = getComputedStyle(bar), gap = parseFloat(cs.columnGap) || 0;
+  const pezzi = [...bar.children].filter(el => getComputedStyle(el).display !== 'none');
+  let l = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + gap * Math.max(0, pezzi.length - 1);
+  for (const el of pezzi) if (el !== w._name) l += el.offsetWidth;
+  const bordi = w.offsetWidth - w.clientWidth;
+  return Math.ceil(l + SPAZIO_DOPPIO_CLIC + bordi);
+}
+// Dall'icona si torna alla barra tirando la linguetta a destra: oltre la larghezza minima diventa una barra
+// e si continua ad allargarla finché non si lascia.
+function linguettaIcona(w) {
+  const g = document.createElement('span');
+  g.className = 'sgrow'; g.title = 'Tira per allargare in barra'; g.setAttribute('aria-hidden', 'true');
+  g.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || w._state !== 'icon') return;
+    e.preventDefault(); e.stopPropagation();
+    const sx = e.clientX, base = w.offsetWidth, min = barraMinimaIcona(w), bordi = () => w.offsetWidth - w.clientWidth;
+    try { g.setPointerCapture(e.pointerId); } catch {}
+    w.classList.add('allarga');
+    const move = ev => {
+      if (ev.pointerId !== e.pointerId) return;
+      const larga = Math.min(Math.max(base, base + ev.clientX - sx), innerWidth - w.getBoundingClientRect().left - 8);
+      if (w._state === 'icon') {
+        if (larga >= min) { w.style.removeProperty('--allarga'); setWinState(w, 'min'); w.style.width = (larga - bordi()) + 'px'; }
+        else w.style.setProperty('--allarga', (larga - base) + 'px');
+      } else w.style.width = (Math.max(min, larga) - bordi()) + 'px';
+    };
+    const up = ev => {
+      if (ev.pointerId !== e.pointerId) return;
+      g.removeEventListener('pointermove', move); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', up);
+      w.classList.remove('allarga'); w.style.removeProperty('--allarga');
+      if (w._state === 'min') dentroLoSchermo(w);
+    };
+    g.addEventListener('pointermove', move); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
+  });
+  g.addEventListener('dblclick', e => e.stopPropagation());
+  return g;
+}
+// in forma d'icona la barra è nascosta: per misurarla la si rimette un attimo a barra (senza che si veda)
+function barraMinimaIcona(w) {
+  w.classList.replace('icon', 'min');
+  const l = barraMinima(w);
+  w.classList.replace('min', 'icon');
+  return l;
 }
 const toggleMin = w => setWinState(w, w._state === 'open' ? 'min' : 'open');
 
@@ -448,7 +504,7 @@ function makeFrame(id, cls) {
   const mkEl = (tag, c) => { const e = document.createElement(tag); e.className = c; return e; };
   const bar = mkEl('div', 'stitle'), left = mkEl('span', 'sdotSlot'), right = mkEl('span', 'sxSlot'), nm = mkEl('span', 'sname'), ic = new Image(), body = mkEl('div', 'sbody');
   ic.className = 'sicon'; ic.alt = ''; ic.draggable = false;
-  bar.append(left, ic, nm, right); w.append(bar, body);
+  bar.append(left, ic, nm, right); w.append(bar, body, linguettaIcona(w));
   Object.assign(w, { _left: left, _right: right, _ic: ic, _name: nm, _body: body, _state: 'open' });
   document.body.appendChild(w); allWins.add(w); bringWin(w); winControls(w);
   w.addEventListener('pointerdown', () => bringWin(w), true);
@@ -472,8 +528,8 @@ function makeFrame(id, cls) {
     };
     addEventListener('pointermove', move); addEventListener('pointerup', up);
   });
-  if (typeof ResizeObserver === 'function') {              // barra rimpicciolita al massimo: diventa un'icona
-    new ResizeObserver(() => { if (w._state === 'min' && w._sheet && w.offsetWidth < 96) setWinState(w, 'icon'); }).observe(w);
+  if (typeof ResizeObserver === 'function') {              // barra stretta al punto di non lasciare spazio per il doppio clic: diventa subito un'icona
+    new ResizeObserver(() => { if (w._state === 'min' && w._sheet && w.offsetWidth < barraMinima(w)) setWinState(w, 'icon'); }).observe(w);
   }
   return w;
 }
