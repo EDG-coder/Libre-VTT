@@ -454,6 +454,12 @@ const rp = e => { const x = (e.clientX - view.x) / view.s, y = (e.clientY - view
 // Il righello è un percorso: ruler.pts sono i punti fissati (il primo è la partenza, gli altri le
 // giunzioni) e ruler.b è la fine, che segue il puntatore. Il tasto destro (o «+») fissa la fine e
 // ne parte un altro segmento; Backspace toglie l'ultima giunzione, Esc cancella. Il totale è la somma.
+/** Quante caselle fra due punti del mondo. Con «diagonale = 5 ft» (settings.diag5, la regola base del 5e)
+ *  un passo in diagonale vale una casella come uno dritto: conta il lato più lungo, non Pitagora. */
+const distanzaCaselle = (a, b) => {
+  const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y);
+  return (settings.diag5 && GRIGLIA_FORME.semplice(grid) ? Math.max(dx, dy) : Math.hypot(dx, dy)) / grid.size;
+};
 const misura = cells => { const c = unitaCasella(), n = +(cells * c.per).toFixed(c.u === 'mi' ? 2 : 1); return `${n} ${c.u === 'mi' ? (n === 1 ? tr('miglio') : tr('miglia')) : c.u}`; };
 /** Il disegno di un righello (punti nel mondo) per l'SVG sopra la mappa. Con «nome» è quello di un altro:
  *  ha un colore suo e il nome sopra la misura. */
@@ -462,7 +468,7 @@ function rulerSvgDi(mondo, nome) {
   const tratti = [];
   let cells = 0;
   for (let i = 1; i < mondo.length; i++) {
-    const c = Math.hypot(mondo[i].x - mondo[i - 1].x, mondo[i].y - mondo[i - 1].y) / grid.size;
+    const c = distanzaCaselle(mondo[i - 1], mondo[i]);
     cells += c; tratti.push(c);
   }
   const col = nome == null ? '#ffd93d' : coloreDiNome(nome);
@@ -818,7 +824,8 @@ function toolMenu(el) {
   if (t.id === 'music' && typeof musicMenuExtra === 'function') items.push('-', ...musicMenuExtra());
   if (t.id === 'luce' && typeof fogMenuExtra === 'function') items.push('-', ...fogMenuExtra());
   if (t.id === 'pen') items.push({ label: 'Annulla l\'ultimo tratto', fn: () => $('penUndo').click() }, { label: 'Cancella i disegni del livello', danger: true, fn: () => $('penClear').click() });
-  if (t.id === 'ruler') items.push({ label: settings.rulerCenter ? 'Misura liberamente (non da centro a centro)' : 'Misura da centro a centro delle caselle', fn: () => { settings.rulerCenter = !settings.rulerCenter; syncExtraForm(); scheduleBoardSave(); } }, ...[['ft', 'Usa 5 ft per casella'], ['m', 'Usa 1,5 m per casella'], ['mi', 'Usa 1 miglio per casella']].filter(([u]) => u !== (settings.unit || 'ft')).map(([u, label]) => ({ label, fn: () => { settings.unit = u; rulerTitle(); syncSheetForm(); scheduleBoardSave(); } })));
+  if (t.id === 'ruler') items.push({ label: settings.rulerCenter ? 'Misura liberamente (non da centro a centro)' : 'Misura da centro a centro delle caselle', fn: () => { settings.rulerCenter = !settings.rulerCenter; syncExtraForm(); scheduleBoardSave(); } },
+    { label: settings.diag5 ? 'Diagonali col teorema di Pitagora' : 'Diagonali: ogni casella vale 5 ft', fn: () => { settings.diag5 = !settings.diag5; syncExtraForm(); if (ruler) drawRuler(); scheduleBoardSave(); } }, ...[['ft', 'Usa 5 ft per casella'], ['m', 'Usa 1,5 m per casella'], ['mi', 'Usa 1 miglio per casella']].filter(([u]) => u !== (settings.unit || 'ft')).map(([u, label]) => ({ label, fn: () => { settings.unit = u; rulerTitle(); syncSheetForm(); scheduleBoardSave(); } })));
   return items;
 }
 function mapMenu(e) {
@@ -967,10 +974,12 @@ function applyHidden() {
 }
 function syncExtraForm() {
   $('rulerCenter').checked = !!settings.rulerCenter;
+  $('diag5').checked = !!settings.diag5;
   $('hlShow').checked = settings.hiddenLayer.show; $('hlOp').value = settings.hiddenLayer.opacity; $('hlOpOut').textContent = settings.hiddenLayer.opacity;
   $('chTabRolls').checked = settings.chatTabs.rolls; $('chTabRules').checked = settings.chatTabs.rules;
 }
 $('rulerCenter').addEventListener('input', e => { settings.rulerCenter = e.target.checked; scheduleBoardSave(); });
+$('diag5').addEventListener('input', e => { settings.diag5 = e.target.checked; if (ruler) drawRuler(); scheduleBoardSave(); });
 $('hlShow').addEventListener('input', e => { settings.hiddenLayer.show = e.target.checked; applyHidden(); scheduleBoardSave(); });
 $('hlOp').addEventListener('input', e => { settings.hiddenLayer.opacity = +e.target.value; applyHidden(); syncExtraForm(); scheduleBoardSave(); });
 $('chTabRolls').addEventListener('input', e => { settings.chatTabs.rolls = e.target.checked; renderChatTabs(); renderChat(); scheduleBoardSave(); });

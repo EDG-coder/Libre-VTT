@@ -48,7 +48,7 @@ const DEFAULT_PING = { color: '#ff4d4d', size: 2, speed: 8, fade: 2500, modo: 'c
 const SECTIONS = { look: true, res: false, grid: true, gridDefault: false, map: false, border: false, ping: false, sheets: false, tools: false, ordineStrumenti: false, hidden: false, chat: false };   // sezioni aperte di default
 const RESOLUTIONS = [[480, '480p'], [720, '720p'], [1080, '1080p'], [1440, '1440p'], [0, 'Originale']];
 const settings = { theme: 'dark', autoBg: true, fogColor: 'auto', fogVeil: 0.55, caratLibere: false, spareggioDes: true, prefT: 0, boxLabels: ['', '', ''], resToken: 720, resBg: 1080, gridDefault: { ...DEFAULT_GRID }, border: { ...DEFAULT_BORDER }, ping: { ...DEFAULT_PING }, sections: {},
-  tools: {}, drawerOpen: true, publicScene: null, unit: 'ft', sheetClose: 'x', rulerCenter: false, dockOpen: true, hiddenLayer: { show: true, opacity: 45 }, chatTabs: { rolls: false, rules: false },
+  tools: {}, drawerOpen: true, publicScene: null, unit: 'ft', sheetClose: 'x', rulerCenter: false, diag5: false, dockOpen: true, hiddenLayer: { show: true, opacity: 45 }, chatTabs: { rolls: false, rules: false },
   sheetStyle: { preset: 'parchment', accent: '', scale: 100, font: 'serif' }, pen: { color: '#ff4d4d', width: 4, tool: 'pen', fill: false } };
 // Le impostazioni scelte nella home (rotellina): arrivano nell'indirizzo e valgono se sono più nuove
 // di quelle salvate nella campagna. La dimensione dell'interfaccia sul telefono è lo zoom della pagina.
@@ -2294,7 +2294,7 @@ function applicaImpostazioni(s) {
   settings.border = { ...DEFAULT_BORDER, ...s.border };
   settings.ping = { ...DEFAULT_PING, ...s.ping };
   if (!(settings.ping.fade >= 300)) Object.assign(settings.ping, DEFAULT_PING);      // vecchi valori: il ping spariva subito
-  for (const k of ['drawerOpen', 'publicScene', 'unit', 'sheetClose', 'rulerCenter', 'dockOpen']) if (s[k] !== undefined) settings[k] = s[k];
+  for (const k of ['drawerOpen', 'publicScene', 'unit', 'sheetClose', 'rulerCenter', 'diag5', 'dockOpen']) if (s[k] !== undefined) settings[k] = s[k];
   if (s.fogColor === 'auto' || /^#[0-9a-f]{6}$/i.test(s.fogColor || '')) settings.fogColor = s.fogColor;
   if (s.fogVeil >= 0.05 && s.fogVeil <= 1) settings.fogVeil = +s.fogVeil;
   if (typeof s.caratLibere === 'boolean') settings.caratLibere = s.caratLibere;
