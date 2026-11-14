@@ -1,50 +1,15 @@
-// ---------- Modello «Standard»: la scheda 5e in italiano, 3 pagine ----------
-// Ogni campo sta esattamente dove sta sulla scheda di carta: le coordinate sono quelle
-// del PDF originale (pagina A4 di 595.276 x 841.89 punti), con l'origine in alto a sinistra.
-// Le cornici, gli ornamenti e le intestazioni disegnate sono invece originali di questo file.
+// ---------- Modello «Standard»: la scheda 5e in italiano, 3 pagine ordinate ----------
+// Base (tutto quello che serve per giocare), Bio e Incantesimi: le colonne si adattano alla finestra.
+// Il disegno (cornici, riquadri delle caratteristiche) è originale di questo file.
 //
 // Si appoggia a sheets.js: usa le stesse convenzioni (data-f per i campi, data-c per i valori
 // calcolati, data-r per i tiri, .stabs/.spage per le pagine), quindi bindSheet() funziona già.
 
-const PG_W = 595.276, PG_H = 841.89;
-
-// ---------- Mattoncini ----------
-const px = n => +(+n).toFixed(2);
-const at = (x, y, w, h) => `left:${px(x)}px;top:${px(y)}px` + (w != null ? `;width:${px(w)}px` : '') + (h != null ? `;height:${px(h)}px` : '');
 const eh = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
-// riquadro con la didascalia in basso, come sulla scheda di carta
-const box = (x, y, w, h, cap, cls = '') =>
-  `<div class="sB ${cls}" style="${at(x, y, w, h)}">${cap ? `<span class="sCap">${cap}</span>` : ''}</div>`;
-// etichetta libera: a = allineamento (l, c, r)
-const lab = (t, x, y, w, a = 'c', cls = '') =>
-  `<div class="sL ${cls}" style="${at(x, y, w)};text-align:${a === 'l' ? 'left' : a === 'r' ? 'right' : 'center'}">${t}</div>`;
-// campo di testo / numero
-const inp = (k, x, y, w, h, cls = '', type = 'text') =>
-  `<input class="sF ${cls}" type="${type}" data-f="${k}" style="${at(x, y, w, h)}" autocomplete="off">`;
-const nmb = (k, x, y, w, h, cls = '') => inp(k, x, y, w, h, cls, 'number');
-// casella da spuntare: tonda o quadrata
-const chk = (k, x, y, s = 8.5, cls = '') =>
-  `<input class="sK ${cls}" type="checkbox" data-f="${k}" style="${at(x, y, s, s)}">`;
-// valore calcolato: se ha un tiro diventa un pulsante
-const out = (c, x, y, w, h, roll, cls = '') => roll
-  ? `<button type="button" class="sO sRoll ${cls}" data-c="${c}" data-r="${roll}" style="${at(x, y, w, h)}"></button>`
-  : `<output class="sO ${cls}" data-c="${c}" style="${at(x, y, w, h)}"></output>`;
-// area di testo con il pulsante «manda in chat»
-const txa = (k, x, y, w, h, cls = '') =>
-  `<div class="sTa ${cls}" style="${at(x, y, w, h)}"><textarea data-f="${k}"></textarea>` +
-  `<button type="button" class="sendRule" data-send="${k}" title="Manda questo testo in chat">💬</button></div>`;
-// Riga di incantesimo: il titolo si scrive qui, la descrizione si apre con ▾.
-// Il dado tira le espressioni [[...]] scritte nel titolo o nella descrizione.
-const line = (k, x, y, w, h, ph = '') =>
-  `<span class="sLine" style="${at(x, y, w, h)}">` +
-  `<input type="text" data-f="${k}" placeholder="${ph}" autocomplete="off">` +
-  `<button type="button" class="sMore" data-more="${k}" title="Scrivi la descrizione">▾</button>` +
-  `<button type="button" class="sDie" data-die="${k}" title="Tira, oppure manda in chat">🎲</button></span>`;
 const rep = (n, fn) => Array.from({ length: n }, (_, i) => fn(i)).join('');
 
 // spiegazioni brevi per i campi meno ovvi
-const INFO_FOLLIA = 'Regola facoltativa (Guida del Dungeon Master, «Follia»): quando un personaggio vive qualcosa di sconvolgente il master può dargli un livello di follia, con i suoi effetti (breve, lunga, indefinita). «CD prova abilità» è la difficoltà del tiro salvezza o della prova per resistere. Se al vostro tavolo non la usate, lasciate i campi vuoti.';
+const INFO_FOLLIA = 'Regola facoltativa (Guida del Dungeon Master, «Follia»): quando un personaggio vive qualcosa di sconvolgente il master può dargli un livello di follia, con i suoi effetti (breve, lunga, indefinita). «CD prova abilità» è la difficoltà del tiro salvezza o della prova per resistere. Si accende da ⚙ Impostazioni › Regole (o, nella home, ⚙ › Impostazioni avanzate).';
 
 // ---------- Elenchi ----------
 // Le abilità nell'ordine della scheda italiana (alfabetico), con la caratteristica abbreviata.
@@ -56,7 +21,6 @@ const STD_SK = [
   ['perception', 'Percezione', 'Sag'], ['pers', 'Persuasione', 'Car'], ['slei', 'Rapidità di Mano', 'Des'],
   ['reli', 'Religione', 'Int'], ['surv', 'Sopravvivenza', 'Sag'], ['hist', 'Storia', 'Int']
 ];
-const STD_AB = [['str', 'FORZA'], ['dex', 'DESTREZZA'], ['con', 'COSTITUZIONE'], ['int', 'INTELLIGENZA'], ['wis', 'SAGGEZZA'], ['cha', 'CARISMA']];
 const COINS = [['mr', 'MR'], ['ma', 'MA'], ['me', 'ME'], ['mo', 'MO'], ['mp', 'MP']];
 const SPELL_LINES = [8, 13, 13, 13, 9, 9, 9, 9, 7, 7];   // righe per livello, dai trucchetti al 9°
 
@@ -73,302 +37,132 @@ var calcValue = (prev => function (s, key) {
   return prev(s, key);
 })(calcValue);
 
-// ======================= Pagina 1 =======================
-function stdPage1() {
-  let h = '';
+// ======================= Le tre pagine =======================
+// La scheda in tre pagine ordinate che si adattano alla finestra (3, 2 o 1 colonna):
+//   Base         tutto quello che serve per giocare, nello stesso ordine in cui lo si cerca
+//   Bio          aspetto, ritratto, personalità, fazione, tratti aggiuntivi (e la follia, se è accesa)
+//   Incantesimi  classe, CD e bonus di attacco, slot e righe per ogni livello
+// I campi (data-f), i valori calcolati (data-c) e i tiri (data-r) sono quelli di sempre: le schede
+// già fatte si aprono uguali, e la scheda Open (sheet-open.js) ha le stesse pagine nello stesso ordine.
+const ZS_AB = [['str', 'Forza'], ['dex', 'Destrezza'], ['con', 'Costituzione'], ['int', 'Intelligenza'], ['wis', 'Saggezza'], ['cha', 'Carisma']];
+const ZS_INV = 45, ZS_ATK = 5;
 
-  // --- testata ---
-  h += box(24, 46, 206, 36, '', 'sBanner');
-  h += `<input class="sF sBig" type="text" data-sname maxlength="40" style="${at(30, 52, 194, 22)}" autocomplete="off">`;
-  h += lab('NOME PERSONAGGIO', 30, 74, 194, 'c', 'sTiny');
-  h += box(256, 44, 312, 46, '', 'sBanner');
-  h += inp('class', 264, 48, 106, 16) + inp('level', 375, 48, 86, 16) + inp('player', 468, 48, 90, 16);
-  h += lab('CLASSE', 264, 65, 106, 'l', 'sTiny') + lab('LIVELLO', 375, 65, 86, 'l', 'sTiny') + lab('NOME GIOCATORE', 468, 65, 90, 'l', 'sTiny');
-  h += inp('race', 264, 74, 107, 16) + inp('bg', 374, 74, 78, 16) + inp('align', 456, 74, 46, 16) + inp('sex', 509, 74, 45, 16);
-  h += lab('RAZZA', 264, 91, 107, 'l', 'sTiny') + lab('BACKGROUND', 374, 91, 78, 'l', 'sTiny') + lab('ALLINEAMENTO', 456, 92, 46, 'l', 'sMicro') + lab('SESSO', 509, 92, 45, 'l', 'sMicro');
+const zsInp = (k, cls = '', type = 'text') => `<input class="zsF ${cls}" type="${type}" data-f="${k}" autocomplete="off">`;
+const zsNum = (k, cls = '') => zsInp(k, cls, 'number');
+const zsChk = (k, cls = '', t = '') => `<input class="zsK ${cls}" type="checkbox" data-f="${k}"${t ? ` title="${t}" aria-label="${t}"` : ''}>`;
+const zsVal = (c, roll, cls = '') => roll
+  ? `<button type="button" class="zsV zsRoll ${cls}" data-c="${c}" data-r="${roll}"></button>`
+  : `<output class="zsV ${cls}" data-c="${c}"></output>`;
+const zsLab = (t, cls = '') => `<span class="zsLab ${cls}">${t}</span>`;
+const zsFld = (t, body, cls = '') => `<label class="zsFld ${cls}">${zsLab(t)}${body}</label>`;
+const zsCard = (t, body, cls = '') => `<section class="zsCard ${cls}"><h3>${t}</h3>${body}</section>`;
+const zsBox = (t, body) => `<div class="zsBox">${body}${zsLab(t)}</div>`;
+// area di testo: il titolo è il primo figlio (il 💬 lo usa come titolo del messaggio in chat)
+const zsTa = (k, t, cls = '') => `<div class="sTa zsTa ${cls}">${zsLab(t)}<textarea data-f="${k}"></textarea><button type="button" class="sendRule" data-send="${k}" title="Manda questo testo in chat">💬</button></div>`;
+const zsDado = (r, t, s = '◎') => `<button type="button" class="zsDie" data-r="${r}" title="${t}" aria-label="${t}">${s}</button>`;
+const zsName = () => `<div class="zsName"><input class="zsF zsBig" type="text" data-sname maxlength="40" autocomplete="off" aria-label="Nome del personaggio">${zsLab('Nome del personaggio')}</div>`;
 
-  // --- colonna 1: le sei caratteristiche ---
-  h += box(28, 140, 62, 420, '', 'sCol');
-  STD_AB.forEach(([k, nm], i) => {
-    const y = 148 + i * 70;
-    h += box(32, y, 54, 60, '', 'sShield');
-    h += lab(nm, 32, y + 2, 54, 'c', 'sTiny sStrong');
-    h += nmb(k, 35, y + 11, 48, 22, 'sScore');
-    h += out('mod:' + k, 42, y + 40, 34, 16, 'mod:' + k, 'sOval');
-  });
+const zsAtkRow = i => `<div class="zsAtkRow">${zsInp('an' + i)}${zsInp('ab' + i, 'zsC')}${zsInp('ad' + i)}${zsDado('atk:' + i, 'Tira per colpire')}${zsDado('dmg:' + i, 'Tira i danni', '◆')}</div>`;
+const zsInvRow = i => `<div class="zsInvRow">${zsInp('iv' + i + 'n')}${zsInp('iv' + i + 'w', 'zsC')}</div>`;
 
-  // --- colonna 2: ispirazione, competenza, TS, abilità ---
-  h += box(92, 132, 114, 30, '', 'sPanel');
-  h += rep(4, i => chk('insp' + (i + 1), 96 + (i % 2) * 9.5, 137 + Math.floor(i / 2) * 9.5, 8.5, 'sSq'));
-  h += lab('ISPIRAZIONE', 118, 142, 84, 'c', 'sHead');
-  h += box(92, 166, 114, 28, '', 'sPanel');
-  h += box(94, 168, 28, 21, '', 'sOvalFrame');
-  h += `<input class="sF sScore" type="number" data-f="profb" data-ph="prof" style="${at(96, 170, 24, 17)}" title="Lascialo vuoto per calcolarlo dal livello" autocomplete="off">`;
-  h += lab('BONUS DI COMPETENZA', 124, 172, 78, 'c', 'sTiny');
+function stdPagBase() {
+  const head = `<header class="zsHead">${zsName()}
+    <div class="zsMeta">${[['class', 'Classe'], ['level', 'Livello'], ['race', 'Razza'], ['bg', 'Background'], ['align', 'Allineamento'], ['player', 'Giocatore']].map(([k, t]) => zsFld(t, zsInp(k))).join('')}</div></header>`;
 
-  h += box(92, 200, 114, 100, 'TIRI SALVEZZA', 'sPanel');
-  STD_AB.forEach(([k, nm], i) => {
-    const y = 209 + i * 13.3;
-    h += chk('sp_' + k, 98, y + 1, 7.5) + out('save:' + k, 109, y, 20, 11, 'save:' + k, 'sVal');
-    h += lab(nm[0] + nm.slice(1).toLowerCase(), 133, y + 0.5, 70, 'l', 'sSk');
-  });
+  const colA = `<div class="zsCol">
+    <div class="zsAbs">${ZS_AB.map(([k, t]) => `<div class="zsAb">${zsLab(t)}${zsNum(k, 'zsScore')}${zsVal('mod:' + k, 'mod:' + k, 'zsMod')}</div>`).join('')}</div>
+    <div class="zsDue">${zsBox('Ispirazione', `<span class="zsInsp">${rep(4, i => zsChk('insp' + (i + 1), '', 'Ispirazione'))}</span>`)}${zsBox('Bonus competenza', `<input class="zsF zsScore" type="number" data-f="profb" data-ph="prof" title="Lascialo vuoto per calcolarlo dal livello" autocomplete="off">`)}</div>
+    ${zsCard('Tiri salvezza', ZS_AB.map(([k, t]) => `<div class="zsLine">${zsChk('sp_' + k, '', 'Competenza')}${zsVal('save:' + k, 'save:' + k)}<span>${t}</span></div>`).join(''))}
+    ${zsCard('Abilità', STD_SK.map(([k, t, a]) => `<div class="zsLine">${zsChk('ke_' + k, 'zsMini', 'Maestria (competenza doppia)')}${zsChk('kp_' + k, '', 'Competenza')}${zsVal('skill:' + k, 'skill:' + k)}<span>${t} <i>(${a})</i></span></div>`).join('') +
+      `<div class="zsLine zsPass">${zsVal('pp', null)}<span>Saggezza (Percezione) passiva</span></div>`)}
+    ${zsCard('Competenze e linguaggi', `<div class="zsLine zsTicks">${zsLab('Armature')}${[['pa_l', 'Leggere'], ['pa_m', 'Medie'], ['pa_p', 'Pesanti'], ['pa_s', 'Scudi']].map(([k, t]) => `<label class="zsTick">${zsChk(k)}${t}</label>`).join('')}</div>
+      <div class="zsLine zsTicks">${zsLab('Armi')}${[['pw_s', 'Semplici'], ['pw_g', 'Da guerra'], ['pw_a', 'Altro']].map(([k, t]) => `<label class="zsTick">${zsChk(k)}${t}</label>`).join('')}${zsInp('pw_other')}</div>
+      ${zsFld('Altre competenze', zsInp('prof_text1') + zsInp('prof_text2'))}${zsFld('Strumenti', zsInp('tools1') + zsInp('tools2') + zsInp('tools3'))}${zsFld('Linguaggi', zsInp('langs1') + zsInp('langs2'))}`)}
+  </div>`;
 
-  h += box(92, 306, 114, 266, 'ABILITÀ', 'sPanel');
-  STD_SK.forEach(([k, nm, ab], i) => {
-    const y = 315 + i * 13.53;
-    h += chk('ke_' + k, 95.5, y + 1.5, 5.5, 'sMini') + chk('kp_' + k, 102, y + 0.5, 7.5);
-    h += out('skill:' + k, 110, y, 20, 11, 'skill:' + k, 'sVal');
-    h += lab(`${nm} <i>(${ab})</i>`, 132, y + 0.5, 72, 'l', 'sSk');
-  });
-  h += box(28, 578, 178, 28, '', 'sPanel');
-  h += out('pp', 32, 581, 22, 20, null, 'sOvalSm');
-  h += lab('SAGGEZZA (PERCEZIONE) PASSIVA', 56, 586, 146, 'c', 'sMicro');
+  const colB = `<div class="zsCol">
+    <div class="zsQuattro">${zsBox('Classe armatura', zsNum('ac', 'zsScore'))}${zsBox('CA temp.', zsNum('actemp', 'zsScore'))}${zsBox('Iniziativa', zsVal('init', 'init', 'zsScore'))}${zsBox('Velocità', zsInp('speed', 'zsScore'))}</div>
+    ${zsCard('Punti ferita', `<div class="zsTre">${zsBox('Attuali', zsNum('hp', 'zsScore'))}${zsBox('Massimi', zsNum('hpmax', 'zsScore'))}${zsBox('Temporanei', zsNum('hpt', 'zsScore'))}</div>`)}
+    <div class="zsDue">${zsCard('Dadi vita', `<div class="zsDvHead">${zsLab('Dado')}${zsLab('Totali')}${zsLab('Usati')}</div>` +
+      ['', '2'].map(x => `<div class="zsDv">${zsInp('hd' + x, 'zsC')}${zsNum('hdt' + x, 'zsC')}${zsNum('hdu' + x, 'zsC')}</div>`).join(''))}
+      ${zsCard('TS contro morte', `<div class="zsMorte">${zsLab('Successi')}<span>${rep(3, i => zsChk('ds' + (i + 1), '', 'Successo'))}</span>${zsLab('Fallimenti')}<span>${rep(3, i => zsChk('df' + (i + 1), '', 'Fallimento'))}</span></div>`)}</div>
+    <div class="zsTre">${zsBox('Affaticamento', zsInp('fatigue', 'zsScore'))}${zsBox('Scurovisione', zsInp('scuroV', 'zsScore scuroStd'))}${zsBox('Visione', zsInp('vision', 'zsScore'))}</div>
+    ${zsCard('Attacchi', `<div class="zsAtkHead">${zsLab('Arma')}${zsLab('Bonus')}${zsLab('Danni / tipo')}</div><div class="zsAtk">${rep(ZS_ATK, zsAtkRow)}</div>
+      <button type="button" class="zsPlus" data-zs="atk">＋ Attacco</button>
+      <div class="zsAmmoHead">${zsLab('Munizioni')}${zsLab('Q.tà')}</div>${rep(3, i => `<div class="zsInvRow">${zsInp('am' + i + 'n')}${zsNum('am' + i + 'q', 'zsC')}</div>`)}`)}
+    ${zsCard('Equipaggiamento', `<div class="zsArm">${zsFld('Armatura', zsInp('ar_name'))}${zsFld('CA', zsNum('ar_ca', 'zsC'))}${zsFld('Des max', zsInp('ar_dexmax', 'zsC'))}${zsFld('For', zsInp('ar_for', 'zsC'))}${zsFld('Scudo', zsInp('ar_shield', 'zsC'))}</div>
+      <label class="zsLine zsSvant">${zsChk('ar_dis')}<span>Svantaggio in Furtività</span></label>
+      <div class="zsCinque">${COINS.map(([k, t]) => zsBox(t, zsNum(k, 'zsScore'))).join('')}</div>`)}
+    ${zsCard('Inventario', `<div class="zsInvHead">${zsLab('Oggetto')}${zsLab('Peso')}</div><div class="zsInv" data-list="iv">${rep(ZS_INV, zsInvRow)}</div>
+      <button type="button" class="zsPlus" data-zs="more" data-for="iv">＋ Righe</button>
+      <div class="zsPeso">${zsLab('Peso trasportato')}${zsVal('wsum', null)}${zsLab('Massimo')}${zsVal('wmax', null)}${zsLab('kg')}</div>`)}
+  </div>`;
 
-  // --- colonna 1-2 in basso: competenze, linguaggi, talenti ---
-  h += box(28, 610, 178, 90, 'COMPETENZE', 'sPanel');
-  h += lab('ARMATURA', 30, 615, 30, 'r', 'sNano');
-  [['pa_l', 'Leggere', 62, 26], ['pa_m', 'Medie', 98, 22], ['pa_p', 'Pesanti', 129, 26], ['pa_s', 'Scudi', 166, 22]].forEach(([k, t, x, w]) => {
-    h += chk(k, x, 614, 7) + lab(t, x + 8.5, 615, w, 'l', 'sNano sNoWrap');
-  });
-  h += lab('ARMI', 30, 626, 30, 'r', 'sNano');
-  [['pw_s', 'Semplici', 62, 26], ['pw_g', 'Da guerra', 98, 30], ['pw_a', 'Altro', 138, 18]].forEach(([k, t, x, w]) => {
-    h += chk(k, x, 625, 7) + lab(t, x + 8.5, 626, w, 'l', 'sNano sNoWrap');
-  });
-  h += inp('pw_other', 162, 623.5, 40, 10.5, 'sRule');
-  h += inp('prof_text1', 34, 635, 168, 10.5, 'sRule') + inp('prof_text2', 34, 646.5, 168, 10.5, 'sRule');
-  h += lab('STRUMENTI', 34, 659, 32, 'l', 'sNano');
-  h += inp('tools1', 68, 658, 134, 10.5, 'sRule') + inp('tools2', 34, 669.5, 83, 10.5, 'sRule') + inp('tools3', 119, 669.5, 83, 10.5, 'sRule');
+  const colC = `<div class="zsCol">
+    ${zsCard('Privilegi e tratti limitati', `<div class="zsLfHead">${zsLab('Nome')}${zsLab('Recupero')}${zsLab('Tot.')}${zsLab('Usi')}</div>` +
+      rep(6, i => `<div class="zsLf">${zsInp('lf' + i + 'n')}<span class="zsRec">${zsChk('lf' + i + 'b', '', 'Riposo breve')}${zsChk('lf' + i + 'l', '', 'Riposo lungo')}${zsChk('lf' + i + 'a', '', 'Alba')}</span>${zsNum('lf' + i + 't', 'zsC')}${zsNum('lf' + i + 'u', 'zsC')}</div>`) +
+      `<div class="zsHint">Si recuperano con: RB riposo breve · RL riposo lungo · AL all'alba</div>`, 'zsLimitati')}
+    ${zsTa('classf', 'Privilegi di classe')}${zsTa('racial', 'Tratti razziali e privilegi da background')}${zsTa('feats', 'Talenti')}
+    ${zsCard('Consumabili e oggetti magici', `<div class="zsInvHead">${zsLab('Consumabile')}${zsLab('Usi')}</div>` + rep(6, i => `<div class="zsInvRow">${zsInp('cn' + i + 'n')}${zsNum('cn' + i + 'u', 'zsC')}</div>`) +
+      `<div class="zsHint">Oggetti magici armonizzati (massimo 3)</div>` + rep(3, i => zsInp('mi' + i)))}
+  </div>`;
 
-  h += box(28, 704, 178, 34, 'LINGUAGGI', 'sPanel');
-  h += inp('langs1', 32, 707, 152, 11, 'sRule') + inp('langs2', 32, 718, 152, 11, 'sRule');
-  h += box(28, 742, 178, 66, 'TALENTI', 'sPanel');
-  h += txa('feats', 32, 746, 150, 52);
-
-  // --- colonna 3: combattimento ---
-  h += box(212, 132, 174, 240, '', 'sPanel');
-  h += box(222, 142, 42, 42, '', 'sShield') + nmb('ac', 227, 148, 32, 29, 'sScore');
-  h += lab('CA', 222, 178, 42, 'c', 'sNano');
-  h += box(278, 150, 40, 34, '', 'sShieldSm') + nmb('actemp', 283, 155, 29, 23, 'sScore');
-  h += lab('CA TEMP.', 276, 143, 44, 'c', 'sNano');
-  h += box(330, 140, 48, 46, '', 'sBox') + out('init', 336, 145, 36, 33, 'init', 'sScore sRoll');
-  h += lab('INIZIATIVA', 328, 178, 52, 'c', 'sNano');
-
-  h += box(220, 204, 46, 48, '', 'sDrop') + nmb('hpmax', 225, 210, 34, 31, 'sScore');
-  h += lab('PF MAX', 220, 244, 46, 'c', 'sNano');
-  h += box(276, 198, 102, 24, '', 'sBox') + nmb('hp', 280, 203, 94, 15, 'sScore');
-  h += lab('PF ATTUALI', 280, 190, 94, 'l', 'sTiny');
-  h += box(276, 228, 102, 22, '', 'sBox') + nmb('hpt', 279, 232, 95, 14, 'sScore');
-  h += lab('PF TEMPORANEI', 279, 221, 95, 'l', 'sTiny');
-
-  h += box(222, 260, 44, 46, '', 'sBox') + inp('fatigue', 227, 266, 36, 33, 'sScore');
-  h += lab('AFFATICAMENTO', 216, 300, 56, 'c', 'sNano');
-  // scurovisione: un campo che si scrive come si vuole («60 ft», «18 m», «no»); sotto, la visione normale
-  h += box(274, 260, 50, 46, '', 'sBox') + lab('SCUROVISIONE', 274, 262, 50, 'c', 'sNano') + inp('scuroV', 277, 267, 44, 12, 'sCell scuroStd');
-  h += inp('vision', 277, 283, 44, 15, 'sCell') + lab('VISIONE', 274, 300, 50, 'c', 'sNano');
-  h += box(330, 260, 48, 46, '', 'sBox') + inp('speed', 337, 266, 36, 33, 'sScore');
-  h += lab('VELOCITÀ', 330, 300, 48, 'c', 'sNano');
-
-  h += box(220, 310, 76, 58, 'DADI VITA', 'sPanel');
-  h += lab('DV', 226, 313, 20, 'c', 'sNano') + lab('TOTALI', 248, 313, 22, 'c', 'sNano') + lab('USATI', 270, 313, 22, 'c', 'sNano');
-  h += inp('hd', 226, 320, 22, 13, 'sScore sDv sFit') + nmb('hdt', 251, 320, 16, 13, 'sScore sDv sFit') + nmb('hdu', 272, 320, 16, 13, 'sScore sDv sFit');
-  h += inp('hd2', 226, 336, 22, 13, 'sScore sDv sFit') + nmb('hdt2', 251, 336, 16, 13, 'sScore sDv sFit') + nmb('hdu2', 272, 336, 16, 13, 'sScore sDv sFit');
-  h += box(302, 310, 80, 58, 'TS CONTRO MORTE', 'sPanel');
-  h += lab('SUCCESSI', 303, 320, 35, 'r', 'sNano') + rep(3, i => chk('ds' + (i + 1), 340 + i * 12.5, 319, 9.5));
-  h += lab('FALLIMENTI', 302, 336, 36, 'r', 'sNano') + rep(3, i => chk('df' + (i + 1), 340 + i * 12.5, 335, 9.5));
-
-  // attacchi
-  h += box(212, 376, 174, 206, 'ATTACCHI & INCANTESIMI', 'sPanel');
-  h += lab('ARMA', 218, 385, 58, 'c', 'sNano') + lab('BONUS ATT.', 279, 385, 26, 'c', 'sNano') + lab('DANNI / TIPO', 308, 385, 50, 'c', 'sNano');
-  // le righe stanno in un riquadro che scorre: sotto l'ultima piena ce n'è sempre una vuota
-  h += `<div class="sAtk" style="${at(ATK_X, ATK_Y, 168, 108)}">${rep(5, stdRigaAttacco)}</div>`;
-  h += lab('MUNIZIONI', 219, 502, 51, 'c', 'sMicro') + lab('Q.TÀ', 275, 502, 19, 'c', 'sMicro');
-  h += rep(3, i => inp('am' + i + 'n', 219, 509.89 + i * 18, 51, 14, 'sCell') + nmb('am' + i + 'q', 275, 509.89 + i * 18, 19, 14, 'sCell'));
-  h += box(300, 520, 82, 34, '', 'sBox');
-  h += nmb('spcd', 306, 527, 31, 18, 'sScore') + nmb('spatk', 346, 527, 31, 18, 'sScore');
-  h += lab('CD TS<br>INCANTESIMI', 299, 546, 40, 'c', 'sNano') + lab('BONUS ATT.<br>INCANTESIMI', 341, 546, 42, 'c', 'sNano');
-  h += `<button type="button" class="sHit" data-r="spatk" style="${at(371, 507)}" title="Tira l'attacco con incantesimo">◎</button>`;
-
-  // armatura + consumabili + monete + oggetti magici
-  h += box(212, 588, 174, 220, 'EQUIPAGGIAMENTO', 'sPanel');
-  h += lab('ARMATURA', 219, 593, 42, 'l', 'sNano') + chk('ar_dis', 264, 592, 7.5) + lab('SVANTAGGIO<br>FURTIVITÀ', 273, 590, 30, 'l', 'sNano');
-  h += lab('CA', 306, 593, 16, 'c', 'sNano') + lab('DES MAX', 325, 593, 22, 'c', 'sNano') + lab('FOR', 349, 593, 16, 'c', 'sNano') + lab('SCUDO', 367, 593, 18, 'c', 'sNano');
-  h += inp('ar_name', 219, 601, 82, 14, 'sCell') + nmb('ar_ca', 306, 601, 16, 14, 'sCell') + inp('ar_dexmax', 325, 601, 22, 14, 'sCell') + inp('ar_for', 349, 601, 16, 14, 'sCell') + inp('ar_shield', 367, 601, 18, 14, 'sCell');
-  h += lab('CONSUMABILI', 265, 620, 75, 'c', 'sNano') + lab('Nr. USI', 348, 620, 32, 'c', 'sNano');
-  h += rep(6, i => inp('cn' + i + 'n', 265, 628.89 + i * 18.2, 75, 14, 'sCell') + nmb('cn' + i + 'u', 348, 628.89 + i * 18.2, 32, 14, 'sCell'));
-  h += rep(5, i => box(216, 618 + i * 23.5, 44, 21, '', 'sCoin') + lab(COINS[i][1], 218, 624 + i * 23.5, 15, 'c', 'sNano sStrong') + nmb(COINS[i][0], 235, 621 + i * 23.5, 23, 16, 'sScore'));
-  h += lab('OGGETTI MAGICI ARMONIZZATI <i>(massimo 3)</i>', 216, 740, 166, 'c', 'sNano');
-  h += rep(3, i => inp('mi' + i, 220, 748.89 + i * 17.5, 159, 14, 'sCell'));
-
-  // --- colonna 4: follia, privilegi limitati, tratti razziali, privilegi di classe ---
-  h += box(394, 132, 178, 40, '', 'sPanel');
-  h += box(398, 137, 30, 28, '', 'sBox') + inp('madness', 401, 140, 24, 21, 'sScore');
-  h += lab('LIVELLO DI FOLLIA', 432, 142, 80, 'c', 'sTiny');
-  h += `<button type="button" class="sInfo" style="${at(458, 154, 28, 9)}" data-info="follia" title="${eh(INFO_FOLLIA)}">che cos'è?</button>`;
-  h += box(518, 133, 52, 38, '', 'sBox') + nmb('madcd', 524, 137, 40, 20, 'sScore');
-  h += lab('CD PROVA ABILITÀ', 518, 159, 52, 'c', 'sNano');
-
-  h += box(394, 176, 178, 138, 'PRIVILEGI & TRATTI LIMITATI', 'sPanel');
-  h += lab('NOME', 405, 178, 81, 'l', 'sNano') + lab('RECUPERO', 491, 178, 29, 'c', 'sNano') + lab('TOTALE', 524, 178, 22, 'c', 'sNano') + lab('USI', 547, 178, 18, 'c', 'sNano');
-  h += rep(6, i => {
-    const y = 192.39 + i * 17.3;
-    return inp('lf' + i + 'n', 405, y, 81, 16, 'sCell') +
-      lab('RB', 493, y - 4.5, 9, 'c', 'sNano') + lab('RL', 500, y - 4.5, 9, 'c', 'sNano') + lab('AL', 507.5, y - 4.5, 10, 'c', 'sNano') +
-      chk('lf' + i + 'b', 494.5, y + 5, 6.5) + chk('lf' + i + 'l', 501.5, y + 5, 6.5) + chk('lf' + i + 'a', 508.5, y + 5, 6.5) +
-      nmb('lf' + i + 't', 527, y, 17, 16, 'sCell') + nmb('lf' + i + 'u', 548, y, 17, 16, 'sCell');
-  });
-  h += lab('RB: riposo breve · RL: riposo lungo · AL: alba', 396, 298, 174, 'c', 'sNano');
-
-  h += box(394, 320, 178, 100, 'TRATTI RAZZIALI & PRIVILEGI DA BACKGROUND', 'sPanel');
-  h += txa('racial', 400, 325, 166, 76);
-  h += box(394, 426, 178, 382, 'PRIVILEGI DI CLASSE', 'sPanel');
-  h += txa('classf', 400, 431, 166, 366);
-  return h;
+  return `${head}<div class="zsCols">${colA}${colB}${colC}</div>`;
 }
 
-// ======================= Pagina 2 =======================
-function stdPage2() {
-  let h = '';
-  h += box(24, 46, 232, 36, '', 'sBanner');
-  h += `<input class="sF sBig" type="text" data-sname maxlength="40" style="${at(30, 52, 220, 22)}" autocomplete="off">`;
-  h += lab('NOME PERSONAGGIO', 30, 74, 220, 'c', 'sTiny');
-  h += box(250, 44, 318, 46, '', 'sBanner');
-  [['age', 'ETÀ', 257, 108], ['height', 'ALTEZZA', 367, 92], ['weight', 'PESO', 462, 95]].forEach(([k, t, x, w]) => {
-    h += inp(k, x, 50, w, 17) + lab(t, x, 68, w, 'l', 'sTiny');
-  });
-  [['eyes', 'OCCHI', 257, 108], ['skin', 'CARNAGIONE', 367, 92], ['hair', 'CAPELLI', 462, 95]].forEach(([k, t, x, w]) => {
-    h += inp(k, x, 75, w, 17) + lab(t, x, 93, w, 'l', 'sTiny');
-  });
-
-  // ritratto + aspetto
-  h += box(24, 122, 178, 240, 'ASPETTO DEL PERSONAGGIO', 'sPanel');
-  h += `<div class="sImg" data-img="portrait" style="${at(28, 127, 169, 181)}"><span>Clic per scegliere un'immagine</span></div>`;
-  h += txa('look', 28, 310, 169, 46);
-  h += box(24, 370, 178, 438, 'TRATTI & PRIVILEGI AGGIUNTIVI', 'sPanel');
-  h += txa('extra', 32, 376, 162, 424);
-
-  // fazione
-  h += box(208, 122, 184, 302, 'FAZIONE', 'sPanel');
-  h += lab('NOME', 228, 146, 30, 'l', 'sMicro') + inp('faction', 228, 153, 142, 16, 'sCell');
-  h += `<div class="sImg" data-img="symbol" style="${at(226, 172, 145, 117)}"><span>Clic per scegliere</span></div>`;
-  h += lab('SIMBOLO', 226, 291, 145, 'c', 'sTiny');
-  h += txa('faction_text', 214, 306, 171, 109);
-
-  // personalità
-  h += box(398, 122, 174, 302, '', 'sCol');
-  [['traits', 'TRATTI CARATTERIALI', 142.89, 44], ['ideals', 'IDEALI', 206.89, 36], ['bonds', 'LEGAMI', 261.89, 36],
-   ['flaws', 'DIFETTI', 316.89, 35], ['enemies', 'NEMICI', 370.89, 37]].forEach(([k, t, y, hh]) => {
-    h += box(402, y - 4, 166, hh + 20, t, 'sPanel');
-    h += txa(k, 405, y, 155, hh);
-  });
-
-  // inventario
-  h += box(208, 432, 364, 376, '', 'sPanel');
-  h += lab('INVENTARIO', 213, 799, 120, 'l', 'sTiny');
-  h += lab('EQUIPAGGIAMENTO', 213, 440, 161, 'c', 'sMicro') + lab('PESO', 374, 440, 15, 'c', 'sNano');
-  h += lab('EQUIPAGGIAMENTO', 390, 440, 160, 'c', 'sMicro') + lab('PESO', 551, 440, 15, 'c', 'sNano');
-  h += rep(24, i => inp('iv' + i + 'n', 213, 454.89 + i * 14.6, 161, 13, 'sRule') + inp('iv' + i + 'w', 374, 454.89 + i * 14.6, 15, 13, 'sRule sNum'));
-  h += rep(21, i => inp('iv' + (i + 24) + 'n', 390, 454.89 + i * 14.6, 160, 13, 'sRule') + inp('iv' + (i + 24) + 'w', 551, 454.89 + i * 14.6, 15, 13, 'sRule sNum'));
-  h += lab('PESO TRASPORTATO Kg:', 392, 768, 128, 'r', 'sTiny sStrong') + out('wsum', 524, 762, 24, 19, null, 'sScore sBoxed');
-  h += lab('PESO MASSIMO TRASPORTABILE Kg:', 366, 790, 154, 'r', 'sTiny sStrong') + out('wmax', 524, 784, 24, 19, null, 'sScore sBoxed');
-  return h;
+function stdPagBio() {
+  return `<header class="zsHead">${zsName()}
+      <div class="zsMeta zsMeta7">${[['age', 'Età'], ['sex', 'Sesso'], ['height', 'Altezza'], ['weight', 'Peso'], ['eyes', 'Occhi'], ['skin', 'Carnagione'], ['hair', 'Capelli']].map(([k, t]) => zsFld(t, zsInp(k))).join('')}</div></header>
+    <div class="zsCols zsColsPari">
+      <div class="zsCol">${zsCard('Aspetto', `<div class="sImg zsImg" data-img="portrait"><span>Clic per scegliere un'immagine</span></div>`)}${zsTa('look', 'Descrizione dell’aspetto')}</div>
+      <div class="zsCol">${[['traits', 'Tratti caratteriali'], ['ideals', 'Ideali'], ['bonds', 'Legami'], ['flaws', 'Difetti']].map(([k, t]) => zsTa(k, t)).join('')}</div>
+      <div class="zsCol">${zsCard('Fazione', `${zsFld('Nome', zsInp('faction'))}<div class="sImg zsImg zsImgSm" data-img="symbol"><span>Simbolo</span></div>`)}${zsTa('faction_text', 'Note sulla fazione')}${zsTa('enemies', 'Nemici')}</div>
+    </div>
+    <div class="zsCols zsCols2">
+      ${zsTa('extra', 'Tratti e privilegi aggiuntivi', 'zsAlto')}
+      ${zsCard('Livello di follia', `<div class="zsDue">${zsBox('Livello', zsInp('madness', 'zsScore'))}${zsBox('CD prova abilità', zsNum('madcd', 'zsScore'))}</div>
+        <button type="button" class="sInfo zsPlus" data-info="follia" title="${eh(INFO_FOLLIA)}">che cos'è?</button>`, 'folliaBox')}
+    </div>`;
 }
 
-// ======================= Pagina 3 =======================
-function stdPage3() {
-  let h = '';
-  h += box(24, 46, 248, 44, '', 'sBanner');
-  h += inp('sc_class', 40, 52, 212, 24, 'sBig');
-  h += lab('CLASSE DA INCANTATORE', 30, 76, 232, 'c', 'sTiny');
-  h += box(264, 44, 304, 48, '', 'sBanner');
-  [['sc_ab', 'CARATTERISTICA<br>DA INCANTATORE', 273, 68], ['spcd', 'CD TIRO SALVEZZA<br>INCANTESIMI', 373, 68], ['spatk', 'BONUS DI ATTACCO<br>INCANTESIMI', 477, 67]]
-    .forEach(([k, t, x, w]) => { h += box(x - 4, 52, w + 8, 32, '', 'sBox') + inp(k, x, 56, w, 28, 'sScore') + lab(t, x - 6, 84, w + 12, 'c', 'sMicro'); });
-
-  // tre colonne: 0-1-2 | 3-4-5 | 6-7-8-9
-  const COLS = [
-    { x: 24, w: 178, lx: 27, lw: 170, lvl: [0, 1, 2] },
-    { x: 208, w: 180, lx: 213, lw: 170, lvl: [3, 4, 5] },
-    { x: 392, w: 180, lx: 397, lw: 170, lvl: [6, 7, 8, 9] }
-  ];
-  // posizioni prese dal PDF: inizio di ogni blocco e inizio delle righe
-  const BLOCK = {
-    0: { top: 145, slots: null, first: 181.89 },
-    1: { top: 318, slots: [47, 333.89, 98], first: 362.89 },
-    2: { top: 561, slots: [46, 576.89, 98], first: 603.89 },
-    3: { top: 140, slots: [233, 155.89, 285], first: 182.89 },
-    4: { top: 379, slots: [233, 394.89, 284], first: 422.89 },
-    5: { top: 619, slots: [233, 634.89, 284], first: 663.89 },
-    6: { top: 139, slots: [418, 154.89, 469], first: 182.89 },
-    7: { top: 320, slots: [417, 335.89, 468], first: 362.89 },
-    8: { top: 501, slots: [418, 516.89, 469], first: 543.89 },
-    9: { top: 649, slots: [417, 664.89, 468], first: 693.89 }
+function stdPagIncantesimi() {
+  const livello = L => {
+    const slot = L ? `<div class="zsSlot">${zsLab('Slot totali')}${zsNum('sl' + L + 't', 'zsC')}${zsLab('spesi')}${zsNum('sl' + L + 'u', 'zsC')}</div>` : '';
+    const righe = rep(SPELL_LINES[L], i => `<div class="zsSp">${L ? zsChk(`spk_${L}_${i}`, '', 'Preparato') : ''}<span class="zsSpLine"><input class="zsF" type="text" data-f="sp${L}_${i}" autocomplete="off"><button type="button" class="sMore" data-more="sp${L}_${i}" title="Scrivi la descrizione">▾</button><button type="button" class="sDie" data-die="sp${L}_${i}" title="Tira, oppure manda in chat">🎲</button></span></div>`);
+    return zsCard(L ? `Livello ${L}` : 'Trucchetti', `${slot}<div class="zsSpList" data-list="sp${L}">${righe}</div><button type="button" class="zsPlus" data-zs="more" data-for="sp${L}">＋ Righe</button>`, 'zsSpCard');
   };
-  for (const col of COLS) {
-    const last = col.lvl[col.lvl.length - 1], b = BLOCK[last];
-    h += box(col.x, 134, col.w, 674, '', 'sCol');
-    for (const L of col.lvl) {
-      const bl = BLOCK[L], n = SPELL_LINES[L], end = bl.first + n * 15 + 2;
-      h += box(col.lx, bl.top, col.lw, end - bl.top, '', 'sPanel');
-      if (L === 0) {
-        h += box(col.lx + 14, bl.top + 10, col.lw - 24, 26, '', 'sScroll');
-        h += lab('0', col.lx + 4, bl.top + 14, 22, 'c', 'sLvl') + lab('TRUCCHETTI', col.lx + 30, bl.top + 16, col.lw - 50, 'c', 'sHead');
-      } else {
-        const sy = bl.slots[1], x0 = col.lx;
-        h += lab('SLOT TOTALI', x0 + 50, sy - 11, 54, 'c', 'sMicro') + lab('SLOT SPESI', x0 + 110, sy - 11, 54, 'c', 'sMicro');
-        h += box(x0 + 14, sy - 1, col.lw - 28, 23, '', 'sScroll');
-        h += lab(String(L), x0 + 2, sy + 2, 22, 'c', 'sLvl');
-        h += nmb('sl' + L + 't', x0 + 56, sy + 2, 42, 17, 'sScore') + nmb('sl' + L + 'u', x0 + 110, sy + 2, 54, 17, 'sScore');
-      }
-      h += rep(n, i => {
-        const y = bl.first + i * 15;
-        return (L ? chk('spk_' + L + '_' + i, col.lx, y + 3, 8) : '') + line('sp' + L + '_' + i, col.lx + (L ? 10 : 1), y, col.lw - (L ? 10 : 1), 14);
-      });
-    }
-    if (col.lvl[0] === 1 || col.lvl[0] === 0) h += lab('INCANTESIMI CONOSCIUTI', -70, 480, 180, 'c', 'sVert');
-  }
-  return h;
+  return `<header class="zsHead zsSpHead">${zsFld('Classe da incantatore', zsInp('sc_class', 'zsBig'))}
+      <div class="zsQuattro zsQuattroSp">${zsBox('Caratteristica', zsInp('sc_ab', 'zsScore'))}${zsBox('CD tiro salvezza', zsNum('spcd', 'zsScore'))}
+      <div class="zsBox"><span class="zsRiga">${zsNum('spatk', 'zsScore')}${zsDado('spatk', 'Tira l’attacco con incantesimo')}</span>${zsLab('Bonus di attacco')}</div></div></header>
+    <div class="zsSpGrid">${rep(10, livello)}</div>`;
 }
 
-// ======================= Montaggio ======================
 function standardHtml() {
-  const pages = [stdPage1(), stdPage2(), stdPage3()];
-  return `<div class="stabs">
-      <button type="button" class="on" data-pg="1">Scheda</button>
-      <button type="button" data-pg="2">Personaggio</button>
-      <button type="button" data-pg="3">Incantesimi</button>
+  const pagine = [['Base', stdPagBase()], ['Bio', stdPagBio()], ['Incantesimi', stdPagIncantesimi()]];
+  return `<div class="stabs">${pagine.map(([t], i) => `<button type="button"${i ? '' : ' class="on"'} data-pg="${i + 1}">${t}</button>`).join('')}
       <span class="sZoomWrap"><button type="button" class="sZoom" data-z="-" title="Rimpicciolisci" aria-label="Rimpicciolisci"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="sZoom" data-z="+" title="Ingrandisci" aria-label="Ingrandisci"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6h8M6 2v8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></span>
     </div>` +
-    pages.map((p, i) => `<div class="spage stdSheet" data-pg="${i + 1}"${i ? ' hidden' : ''}>
-      <div class="sPaper"><div class="sPage">${p}</div></div></div>`).join('');
+    pagine.map(([, h], i) => `<div class="spage zsPage" data-pg="${i + 1}"${i ? ' hidden' : ''}><div class="zsIn">${h}</div></div>`).join('');
 }
 
 // ======================= Comportamenti in più ======================
-// Scala la pagina A4 alla larghezza disponibile (e tiene conto dello zoom scelto a mano).
+// Ingrandire o rimpicciolire (pulsanti − +, pizzico col touchpad o con due dita): con lo zoom le
+// colonne si ridispongono da sole, come se la finestra fosse più stretta.
 function stdFit(win) {
-  const extra = win._sZoom || 1;
-  win.querySelectorAll('.sPaper').forEach(paper => {
-    const w = paper.clientWidth;
-    if (!w) return;
-    const k = (w / PG_W) * extra;
-    paper.style.setProperty('--k', k);
-    paper.style.height = PG_H * k + 'px';
-  });
+  const k = win._sZoom || 1;
+  win.querySelectorAll('.zsPage').forEach(p => { p.style.zoom = k === 1 ? '' : String(k); });
 }
-const stdObserver = typeof ResizeObserver === 'function'
-  ? new ResizeObserver(es => es.forEach(e => { const w = e.target.closest('.sheetWin') || e.target; stdFit(w); }))
-  : null;
-
-/** Ingrandisce o rimpicciolisce il foglio (pulsanti − +, pizzico col touchpad o con due dita). */
 function stdZoom(win, fattore) {
-  win._sZoom = clamp((win._sZoom || 1) * fattore, 0.6, 3);
+  win._sZoom = clamp((win._sZoom || 1) * fattore, 0.6, 2.5);
   stdFit(win);
 }
-// Due dita sul foglio: lo zoom è quello del foglio, non della pagina.
+// Due dita sulla scheda: lo zoom è quello della scheda, non della pagina.
 function stdBindPinch(win, root) {
   const dita = new Map();
   let d0 = 0;
   const dist = () => { const [a, b] = [...dita.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
   root.addEventListener('pointerdown', e => {
-    if (e.pointerType !== 'touch' || !e.target.closest('.sPaper')) return;
+    if (e.pointerType !== 'touch' || !e.target.closest('.zsPage')) return;
     dita.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (dita.size === 2) d0 = dist();
   });
@@ -381,9 +175,38 @@ function stdBindPinch(win, root) {
   root.addEventListener('pointerup', via); root.addEventListener('pointercancel', via);
 }
 
-// I campi stretti (dadi vita): se il testo non ci sta, il carattere si rimpicciolisce invece di tagliarlo.
+// ---------- Elenchi lunghi: si vede solo quello che serve ----------
+// Inventario e incantesimi hanno tante righe: quelle vuote in fondo restano nascoste, se ne vedono un paio
+// dopo l'ultima scritta e «＋ Righe» ne mostra altre. Vale per ogni [data-list] (anche nella scheda Open).
+function schedaListe(root, s) {
+  const extra = root._listeExtra || (root._listeExtra = {});
+  root.querySelectorAll('[data-list]').forEach(list => {
+    const id = list.dataset.list, righe = [...list.children];
+    const piena = r => [...r.querySelectorAll('[data-f]')].some(el => {
+      const k = el.dataset.f;
+      return String(s.f[k] ?? '').trim() || String(s.f[k + '_d'] ?? '').trim() || el === document.activeElement;
+    });
+    let ultima = -1;
+    righe.forEach((r, i) => { if (piena(r)) ultima = i; });
+    const quante = Math.min(righe.length, ultima + 1 + (extra[id] ?? 2));
+    righe.forEach((r, i) => r.classList.toggle('zsHide', i >= quante));
+    const piu = root.querySelector(`[data-zs="more"][data-for="${id}"]`);
+    if (piu) piu.hidden = quante >= righe.length;
+  });
+}
+function schedaBindListe(root, s) {
+  root.addEventListener('click', e => {
+    const b = e.target.closest('[data-zs="more"]');
+    if (!b) return;
+    const ex = root._listeExtra || (root._listeExtra = {});
+    ex[b.dataset.for] = (ex[b.dataset.for] ?? 2) + 4;
+    schedaListe(root, s);
+  });
+  root.addEventListener('input', e => { if (e.target.closest('[data-list]')) schedaListe(root, s); });
+  schedaListe(root, s);
+}
+
 // ---------- Attacchi: quanti ne servono ----------
-const ATK_X = 216, ATK_Y = 391;
 const ATK_RE = /^a[nbd](\d+)$/;
 function quantiAttacchi(s) {                       // righe usate: l'ultima che ha qualcosa scritto
   let n = 0;
@@ -393,58 +216,23 @@ function quantiAttacchi(s) {                       // righe usate: l'ultima che 
   }
   return Math.min(n, 200);
 }
-function stdRigaAttacco(i) {
-  const y = 0.89 + i * 18.2, x = -ATK_X;
-  // tutto dentro il riquadro (che va da 212 a 386): i due dadi finiscono a 379
-  return inp('an' + i, 218 + x, y, 58, 14, 'sCell') + inp('ab' + i, 279 + x, y, 26, 14, 'sCell sNum') + inp('ad' + i, 308 + x, y, 50, 14, 'sCell') +
-    `<button type="button" class="sHit" data-r="atk:${i}" style="${at(360.5 + x, y, 8.5, 14)}" title="Tira per colpire">◎</button>` +
-    `<button type="button" class="sHit sDmg" data-r="dmg:${i}" style="${at(370.5 + x, y, 8.5, 14)}" title="Tira i danni">◆</button>`;
-}
 function stdBindAttacchi(root, s) {
-  const box = root.querySelector('.sAtk');
-  if (!box) return;
-  const righe = () => box.querySelectorAll('[data-f^="an"]').length;
-  // «＋» subito sotto l'ultima riga: aggiunge una riga (il riquadro scorre quando sono più di sei)
-  const piu = document.createElement('button');
-  piu.type = 'button'; piu.className = 'sAtkPiu'; piu.textContent = '＋'; piu.title = 'Aggiungi un attacco';
-  piu.setAttribute('aria-label', 'Aggiungi un attacco');
-  const metti = () => { piu.style.cssText = at(2, 0.89 + righe() * 18.2, 161, 13); box.appendChild(piu); };
+  const lista = root.querySelector('.zsAtk');
+  if (!lista) return;
   const aggiungi = fino => {
-    const n = righe();
-    if (n < fino) {
-      piu.remove();
-      box.insertAdjacentHTML('beforeend', rep(fino - n, j => stdRigaAttacco(n + j)));
-      box.querySelectorAll('[data-f]').forEach(el => { if (!el._legato) bindField(el, root, s); el._legato = 1; });
-    }
-    metti();
+    const n = lista.children.length;
+    if (n >= fino) return;
+    lista.insertAdjacentHTML('beforeend', rep(fino - n, j => zsAtkRow(n + j)));
+    [...lista.children].slice(n).forEach(r => r.querySelectorAll('[data-f]').forEach(el => bindField(el, root, s)));
   };
-  box.querySelectorAll('[data-f]').forEach(el => { el._legato = 1; });
-  aggiungi(Math.max(5, quantiAttacchi(s)));          // 5 righe + il «＋»: stanno nel riquadro senza scorrere
-  piu.addEventListener('click', () => {
-    const n = righe();
+  aggiungi(quantiAttacchi(s));                      // tutte quelle già scritte, almeno cinque
+  root.addEventListener('click', e => {
+    if (!e.target.closest('[data-zs="atk"]')) return;
+    const n = lista.children.length;
     if (n >= 200) return;
     aggiungi(n + 1);
-    const nuovo = box.querySelector(`[data-f="an${n}"]`);
-    nuovo.focus();
-    box.scrollTop = box.scrollHeight;
+    lista.lastElementChild.querySelector('input').focus();
   });
-}
-
-function stdAdatta(inp) {
-  inp.style.fontSize = '';
-  const base = parseFloat(getComputedStyle(inp).fontSize) || 9;
-  let f = base;
-  while (f > 4.5 && inp.scrollWidth > inp.clientWidth + 0.5) { f -= 0.5; inp.style.fontSize = f + 'px'; }
-}
-function stdBindFit(root) {
-  // nelle celle strette (armi, munizioni) il testo lungo finisce con «…»: passandoci sopra si legge tutto
-  const titolo = i => { if (i.type === 'text') i.title = i.value; };
-  requestAnimationFrame(() => root.querySelectorAll('.sCell').forEach(titolo));
-  root.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('sCell')) titolo(e.target); });
-  const tutti = () => root.querySelectorAll('.sFit').forEach(i => { if (i.offsetParent) stdAdatta(i); });
-  root.addEventListener('input', e => { if (e.target.classList && e.target.classList.contains('sFit')) stdAdatta(e.target); });
-  root.addEventListener('click', e => { if (e.target.closest('.stabs')) requestAnimationFrame(tutti); });
-  requestAnimationFrame(() => requestAnimationFrame(tutti));
 }
 
 // Immagini (ritratto e simbolo) della seconda pagina: vengono dagli assets.
@@ -610,7 +398,7 @@ function stdSetup(win, root, s) {
   stdBindAttacchi(root, s);
   stdBindLines(root, s);
   stdBindExpertise(root, s);
-  stdBindFit(root);
+  schedaBindListe(root, s);
   stdBindPinch(win, root);
   root.addEventListener('click', e => {
     const b = e.target.closest('.sInfo');
@@ -621,6 +409,5 @@ function stdSetup(win, root, s) {
     if (!z) return;
     stdZoom(win, z.dataset.z === '+' ? 1.15 : 1 / 1.15);
   });
-  if (stdObserver) root.querySelectorAll('.sPaper').forEach(p => stdObserver.observe(p));
-  requestAnimationFrame(() => stdFit(win));
+  stdFit(win);
 }

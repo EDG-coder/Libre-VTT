@@ -322,6 +322,9 @@
   <p class="nota">Temi, regole e funzioni nuove fatti dalla community. Si applicano al tavolo subito, senza riavviare.</p>
   <details class="avanzate" id="impAvanzate">
     <summary><h3 style="display:inline">Impostazioni avanzate</h3></summary>
+    <h4>Funzioni extra</h4>
+    <label class="spunta"><input type="checkbox" id="impFollia"> <span>Livello di follia nelle schede</span></label>
+    <p class="nota">Una regola facoltativa: spenta, nelle schede il riquadro della follia non c'è. Vale per le campagne che apri da qui; si cambia anche dal tavolo (⚙ › Regole).</p>
     <h4>Relay per il collegamento</h4>
     <p class="nota">Il relay è il «postino» che fa entrare i giocatori dal sito nella tua «Partita pubblica». Di solito non serve toccarlo: si usa quello del sito. Se vuoi, usane uno tuo.</p>
     <div class="seg" id="impRelayTipo">
@@ -1097,7 +1100,7 @@ window.LIBRE_INDIETRO = () => {
 };
 // ---------- lingua e impostazioni della home ----------
 const I18N = window.LIBRE_I18N;
-let PREF = { lingua: I18N.lingua, scala: 100, tema: 'dark', caratLibere: false, spareggioDes: true, t: 0 };
+let PREF = { lingua: I18N.lingua, scala: 100, tema: 'dark', caratLibere: false, spareggioDes: true, follia: false, t: 0 };
 let prefPrima = true, finScala = null;
 const mandaPref = m => fetch('/api/pref', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(m) })
   .then(r => r.json()).then(p => { PREF = p; applicaPref(); }).catch(() => {});
@@ -1181,6 +1184,7 @@ function disegnaPref() {
   premuto($('impTema'), PREF.tema || 'dark');
   $('impCarat').checked = !!PREF.caratLibere;
   $('impSpareggio').checked = PREF.spareggioDes !== false;
+  $('impFollia').checked = !!PREF.follia;
 }
 bottoniLingua($('impLingua'), scegliLingua);
 $('ingranaggio').onclick = () => { disegnaPref(); $('impostazioni').showModal(); };
@@ -1191,6 +1195,7 @@ $('impScala').onchange = () => mandaPref({ scala: +$('impScala').value });
 $('impTema').onclick = e => { const b = e.target.closest('button'); if (b) { PREF.tema = b.dataset.v; applicaPref(); mandaPref({ tema: b.dataset.v }); } };
 $('impCarat').onchange = () => mandaPref({ caratLibere: $('impCarat').checked });
 $('impSpareggio').onchange = () => mandaPref({ spareggioDes: $('impSpareggio').checked });
+$('impFollia').onchange = () => mandaPref({ follia: $('impFollia').checked });
 addEventListener('lingua', () => carica());     // i testi composti qui si rifanno nella lingua nuova
 
 // ---------- plugin (⚙ › Plugin) ----------

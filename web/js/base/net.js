@@ -620,6 +620,7 @@ async function applyWorld(w, toccati) {
     // la scena mostrata cambiata dal pannello (non da qui): parte la sua musica, come dal 📌
     if (isMaster() && NET.mondoVisto && pubPrima !== settings.publicScene && settings.publicScene && typeof musicaDellaScena === 'function') musicaDellaScena(settings.publicScene, true);
     if (!isMaster()) settings.fogColor = w.fogColor || 'auto';     // il colore della nebbia lo decide chi conduce
+    if (!isMaster() && 'follia' in w && !!w.follia !== !!settings.follia) { settings.follia = !!w.follia; if (typeof applicaFollia === 'function') applicaFollia(); }   // anche la follia nelle schede
     if (!isMaster() && t('turni') && typeof turniDaMondo === 'function') turniDaMondo(w.turni);
     // la musica cambiata mentre eri scollegato (o con la linea debole): arriva con il mondo.
     // Anche all'ingresso (pagina ricaricata): si riprende dal punto giusto, calcolato dall'ora di partenza,
@@ -820,7 +821,7 @@ async function netPushBoard() {
     // il master entrato da fuori non ha qui il compendio della campagna (sta sul server): quello resta com'è
     const compendio = !masterRemoto() && typeof COMPENDIO !== 'undefined' && COMPENDIO.perRete ? await COMPENDIO.perRete().catch(() => null) : null;
     const sistema = masterRemoto() && NET.world && NET.world.sistema ? null : typeof SISTEMA !== 'undefined' && SISTEMA.perRete ? SISTEMA.perRete() : null;
-    intent('board', { board: { compendio, active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, dadiProvvisori: !!settings.dadiProvvisori, unita: settings.unit, turni: settings.turni || null, scenes: b.scenes, sheets, sistema } });
+    intent('board', { board: { compendio, active: b.active, publicScene: settings.publicScene, fogColor: settings.fogColor, dadiProvvisori: !!settings.dadiProvvisori, follia: !!settings.follia, unita: settings.unit, turni: settings.turni || null, scenes: b.scenes, sheets, sistema } });
   } finally { NET.pushing = false; }
 }
 

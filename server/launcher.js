@@ -171,7 +171,7 @@ function salvaIdUtente(m) {
 // Preferenze della home (rotellina): lingua, dimensione dell'interfaccia, tema, regole facoltative.
 // t = quando sono cambiate l'ultima volta: il tavolo le prende solo se sono più nuove delle sue.
 let finestraScala = null;                // il fattore con cui è stata aperta la finestra (sul computer)
-function prefCorrenti() { return { lingua: /^(it|en)$/.test(amb('LINGUA') || '') ? amb('LINGUA') : null, scala: 100, tema: 'dark', caratLibere: false, spareggioDes: true, dpr: null, t: 0, ...(conf.pref || {}) }; }
+function prefCorrenti() { return { lingua: /^(it|en)$/.test(amb('LINGUA') || '') ? amb('LINGUA') : null, scala: 100, tema: 'dark', caratLibere: false, spareggioDes: true, follia: false, dpr: null, t: 0, ...(conf.pref || {}) }; }
 function salvaPref(m) {
   const p = prefCorrenti(), prima = JSON.stringify(p);
   if (m.lingua === 'it' || m.lingua === 'en') p.lingua = m.lingua;
@@ -179,6 +179,7 @@ function salvaPref(m) {
   if (['dark', 'light', 'system'].includes(m.tema)) p.tema = m.tema;
   if (typeof m.caratLibere === 'boolean') p.caratLibere = m.caratLibere;
   if (typeof m.spareggioDes === 'boolean') p.spareggioDes = m.spareggioDes;
+  if (typeof m.follia === 'boolean') p.follia = m.follia;
   if (Number.isFinite(+m.dpr) && +m.dpr >= 0.5 && +m.dpr <= 5) p.dpr = +m.dpr;
   // la voce (voce.js): schermo, chat o no, con il momento della scelta (il tavolo la prende se è più nuova della sua)
   if (['schermo', 'chat', 'no'].includes(m.voce) && Number.isFinite(+m.voceT)) { p.voce = m.voce; p.voceT = +m.voceT; }

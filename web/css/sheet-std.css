@@ -1,8 +1,8 @@
-/* ---------- Scheda «Standard»: pagina A4 in scala ---------- */
-/* La pagina ha sempre le stesse misure interne (595.276 x 841.89, i punti di un A4):
-   viene solo ingrandita o rimpicciolita, così il foglio resta identico a qualsiasi dimensione. */
+/* ---------- Scheda «Standard»: tre pagine ordinate (Base, Bio, Incantesimi) ---------- */
+/* Le colonne si adattano alla larghezza della finestra: 3, poi 2, poi 1. I colori sono quelli dello stile
+   delle schede (--sh-*), quindi seguono anche i temi e i plugin tema. */
 
-.stdWin .sbody { padding: 0; background: var(--panel-2); }
+.stdWin .sbody { padding: 0; }
 
 .stabs {
   position: sticky; top: 0; z-index: 5;
@@ -21,180 +21,180 @@
 .stabs .sZoom { width: 24px; height: 24px; padding: 0; border-radius: 6px; font-size: 15px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; font-family: system-ui, sans-serif; }
 .stabs .sZoomWrap { align-self: center; }
 
-.spage.stdSheet { padding: 10px; }
-.sPaper { position: relative; width: 100%; overflow: hidden; }
+.stabs .sZoom svg { display: block; width: 12px; height: 12px; }
+/* con due dita la scheda si ingrandisce da sola (non la pagina): il browser può solo scorrere */
+.stdWin .sbody { touch-action: pan-x pan-y; }
 
-.sPage {
-  --sh-ink: color-mix(in srgb, var(--sh-line), var(--sh-fg) 30%);
-  position: absolute; left: 0; top: 0;
-  width: 595.276px; height: 841.89px;
-  transform: scale(var(--k, 1)); transform-origin: top left;
-  background: var(--sh-bg);
-  color: var(--sh-fg);
-  font-family: var(--sh-font);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, .45);
-  /* venatura leggera della carta, disegnata qui */
-  background-image:
-    radial-gradient(120% 90% at 12% 4%, color-mix(in srgb, var(--sh-soft) 55%, transparent), transparent 60%),
-    radial-gradient(100% 80% at 90% 96%, color-mix(in srgb, var(--sh-soft) 45%, transparent), transparent 62%);
-}
-.sPage *, .sPage *::before, .sPage *::after { box-sizing: border-box; }
-.sPage > * { position: absolute; margin: 0; }
+/* ---------- Le pagine ---------- */
+.zsPage { padding: 12px 14px 16px; }
+.zsPage .zsIn { container-type: inline-size; font-size: .93em; line-height: 1.3; }
+.zsPage *, .zsPage *::before, .zsPage *::after { box-sizing: border-box; }
+.zsHide, .zsPage [hidden] { display: none !important; }
 
-/* ---------- Cornici ---------- */
-.sB {
-  border: 1.3px solid var(--sh-line);
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--sh-soft) 72%, transparent);
-  pointer-events: none;
+/* campi: una riga sottile sotto, come la carta */
+.sheetWin .zsPage .zsF, .sheetWin .zsPage .zsSpLine input {
+  width: 100%; min-width: 0; margin: 0; padding: 3px 4px; font: inherit; color: inherit;
+  background: transparent; border: 0; border-bottom: 1px solid var(--sh-line); border-radius: 0;
 }
-.sB::before {                                   /* seconda linea interna: il «doppio filetto» */
-  content: ''; position: absolute; inset: 2px;
-  border: .6px solid color-mix(in srgb, var(--sh-line) 85%, transparent);
-  border-radius: 2px;
+.sheetWin .zsPage .zsF:hover { background: color-mix(in srgb, var(--sh-accent) 10%, transparent); }
+.sheetWin .zsPage .zsF:focus, .sheetWin .zsPage .zsTa textarea:focus {
+  outline: 0; border-color: var(--sh-accent); background: color-mix(in srgb, var(--sh-accent) 13%, transparent);
 }
-.sB .sCap {
-  position: absolute; left: 6px; right: 6px; bottom: 1.5px;
-  text-align: center; font-size: 6.2px; font-weight: 700; letter-spacing: .09em;
-  text-transform: uppercase; color: color-mix(in srgb, var(--sh-fg) 78%, transparent);
-  line-height: 1.1;
-}
-.sPanel { background: color-mix(in srgb, var(--sh-soft) 92%, transparent); }
-.sCol { background: color-mix(in srgb, var(--sh-soft) 45%, transparent); border-style: solid; }
-.sBox { border-radius: 4px; }
-.sBanner {                                      /* le fasce della testata, con gli angoli tagliati */
-  border-radius: 0;
-  clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
-  background: color-mix(in srgb, var(--sh-soft) 95%, transparent);
-}
-.sBanner::before { border-radius: 0; }
-.sShield {                                      /* lo scudo delle caratteristiche */
-  border-radius: 10px 10px 16px 16px / 10px 10px 26px 26px;
-  background: color-mix(in srgb, var(--sh-soft) 100%, transparent);
-}
-.sShieldSm { border-radius: 8px 8px 14px 14px / 8px 8px 20px 20px; }
-.sDrop { border-radius: 50% 50% 14px 14px / 42% 42% 16px 16px; }
-.sScroll {                                      /* la banda allungata dei livelli di incantesimo */
-  border-radius: 11px;
-  clip-path: polygon(0 50%, 7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%);
-  background: color-mix(in srgb, var(--sh-soft) 100%, transparent);
-}
-.sScroll::before { display: none; }
-.sCoin { border-radius: 4px 12px 12px 4px; }
-.sOvalFrame { border-radius: 50%; }
+.sheetWin .zsPage .zsF::placeholder { color: color-mix(in srgb, var(--sh-fg) 40%, transparent); font-style: italic; }
+.sheetWin .zsPage :is([data-f="ac"], [data-f="spcd"], [data-f="spatk"], [data-f="profb"])::placeholder { font-style: normal; color: color-mix(in srgb, var(--sh-fg) 50%, transparent); }
+.zsPage input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+.zsPage input[type=number]::-webkit-inner-spin-button, .zsPage input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.sheetWin .zsPage .zsBig { font-size: 1.5em; font-weight: 700; padding: 2px 4px; }
+.sheetWin .zsPage .zsScore { text-align: center; font-size: 1.3em; font-weight: 700; border: 0; border-radius: 6px; padding: 3px 2px; background: color-mix(in srgb, var(--sh-fg) 6%, transparent); }
+.sheetWin .zsPage .zsC { text-align: center; }
+.zsLab { font-size: .76em; line-height: 1.15; letter-spacing: .05em; text-transform: uppercase; color: color-mix(in srgb, var(--sh-fg) 70%, transparent); }
 
-/* ---------- Scritte ---------- */
-.sL {
-  font-size: 6.4px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
-  line-height: 1.15; color: color-mix(in srgb, var(--sh-fg) 80%, transparent); pointer-events: none;
-}
-.sTiny { font-size: 6.4px; }
-.sMicro { font-size: 5.4px; letter-spacing: .05em; }
-.sNano { font-size: 4.4px; letter-spacing: .03em; }
-.sHead { font-size: 7.4px; letter-spacing: .1em; }
-.sStrong { color: var(--sh-fg); }
-.sSk { font-size: 6.2px; text-transform: none; letter-spacing: 0; font-weight: 600; }
-.sSk i { font-style: normal; font-size: .85em; opacity: .6; }
-.sLvl {
-  font-size: 13px; font-weight: 800; letter-spacing: 0; text-transform: none;
-  color: var(--sh-accent); line-height: 1.5;
-}
-.sVert { transform: rotate(-90deg); transform-origin: center; font-size: 5.4px; letter-spacing: .14em; }
+/* caselle da spuntare: tonde, del colore della scheda */
+.sheetWin .zsPage .zsK { appearance: none; -webkit-appearance: none; flex: none; width: 14px; height: 14px; margin: 0; padding: 0; border: 1.5px solid color-mix(in srgb, var(--sh-line), var(--sh-fg) 35%); border-radius: 50%; background: transparent; cursor: pointer; }
+.sheetWin .zsPage .zsK:hover { border-color: var(--sh-accent); }
+.sheetWin .zsPage .zsK:checked { background: var(--sh-accent); border-color: var(--sh-accent); box-shadow: inset 0 0 0 2px var(--sh-bg); }
+.sheetWin .zsPage .zsK.zsMini { width: 10px; height: 10px; border-width: 1px; }
+.zsInsp { display: flex; justify-content: center; gap: 6px; padding: 4px 0 2px; }
 
-/* ---------- Campi ---------- */
-/* La specificità alta serve a scavalcare gli stili generici delle finestre delle schede. */
-.stdWin .sPage input, .stdWin .sPage textarea, .stdWin .sPage output, .stdWin .sPage button {
-  border: 0; background: transparent; color: var(--sh-fg);
-  font-family: inherit; padding: 0; border-radius: 2px; box-shadow: none;
-  -webkit-appearance: none; appearance: none;
-}
-.stdWin .sPage .sF, .stdWin .sPage .sLine input {
-  font-size: 8px; line-height: 1.1;
-  border-bottom: .9px solid var(--sh-ink);
-  background: color-mix(in srgb, var(--sh-fg) 4%, transparent);
-}
-.stdWin .sPage .sF:hover, .stdWin .sPage .sLine input:hover { background: color-mix(in srgb, var(--sh-accent) 16%, transparent); }
-.stdWin .sPage .sF:focus, .stdWin .sPage .sLine input:focus, .stdWin .sPage .sTa textarea:focus {
-  outline: 0; background: color-mix(in srgb, var(--sh-accent) 15%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--sh-accent) 55%, transparent);
-}
-.stdWin .sPage .sF::placeholder { color: color-mix(in srgb, var(--sh-fg) 30%, transparent); font-style: italic; }
-.stdWin .sPage input[type=number] { -moz-appearance: textfield; }
-.stdWin .sPage input[type=number]::-webkit-inner-spin-button { display: none; }
+/* valori calcolati e pulsanti dei tiri */
+.sheetWin .zsPage .zsV { display: inline-block; flex: none; min-width: 2.8em; padding: 1px 5px; font: inherit; font-weight: 700; text-align: center; color: inherit; border: 1px solid var(--sh-line); border-radius: 999px; background: transparent; }
+.sheetWin .zsPage .zsRoll { cursor: pointer; }
+.sheetWin .zsPage .zsRoll:hover, .sheetWin .zsPage .zsDie:hover { background: var(--sh-accent); border-color: var(--sh-accent); color: var(--sh-on, #fff); }
+.sheetWin .zsPage .zsRoll:active { transform: scale(.95); }
+.sheetWin .zsPage .zsDie { flex: none; width: 24px; height: 24px; padding: 0; font: inherit; line-height: 1; color: var(--sh-accent); cursor: pointer; border: 1px solid var(--sh-line); border-radius: 50%; background: transparent; }
+.sheetWin .zsPage .zsPlus { display: block; margin: 6px auto 0; padding: 3px 12px; font: inherit; font-size: .85em; color: inherit; cursor: pointer; border: 1px dashed var(--sh-line); border-radius: 999px; background: transparent; }
+.sheetWin .zsPage .zsPlus:hover { border-color: var(--sh-accent); color: var(--sh-accent); }
 
-.stdWin .sPage .sBig { font-size: 13px; font-weight: 700; border-bottom: 0; }
-.stdWin .sPage .sScore { text-align: center; font-size: 12px; font-weight: 700; border-bottom: 0; background: color-mix(in srgb, var(--sh-fg) 6%, transparent); border-radius: 3px; }
-.stdWin .sPage .sCell { font-size: 7.4px; padding: 0 2px; text-overflow: ellipsis; }   /* testo lungo: «…» e il nome intero nel suggerimento */
-.stdWin .sPage .sRule { border-bottom: .9px solid var(--sh-ink); font-size: 7.4px; padding: 0 2px; }
-.sNum { text-align: center; }
-.stdWin .sPage .sBoxed { border: 1px solid var(--sh-line); border-radius: 3px; }
+/* ---------- Strutture ---------- */
+.zsCard { min-width: 0; margin: 0 0 12px; padding: 8px 10px 10px; border: 1px solid var(--sh-line); border-radius: 10px; background: color-mix(in srgb, var(--sh-soft, var(--sh-fg)) 40%, transparent); }
+.zsCard > h3 { margin: 0 0 7px; font-size: .82em; letter-spacing: .09em; text-transform: uppercase; text-align: center; color: var(--sh-accent); }
+.zsHead { display: grid; grid-template-columns: minmax(180px, 1fr) 2fr; gap: 10px 16px; align-items: end; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid var(--sh-accent); }
+.zsName { display: flex; flex-direction: column; gap: 2px; }
+.zsMeta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 14px; }
+.zsMeta7 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.zsMeta7 > :last-child { grid-column: span 2; }
+.zsFld { display: flex; flex-direction: column; gap: 1px; min-width: 0; margin: 0 0 4px; }
+.zsFld .zsF + .zsF { margin-top: 3px; }
+.zsLine { display: flex; align-items: center; gap: 7px; min-height: 23px; }
+.zsLine > span:not(.zsLab) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zsLine i { opacity: .6; font-size: .85em; }
+.zsPass { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--sh-line); }
+.zsHint { margin: 7px 0 3px; font-size: .78em; text-align: center; opacity: .7; }
+.zsTick { display: inline-flex; align-items: center; gap: 4px; font-size: .88em; white-space: nowrap; }
+.zsTicks { flex-wrap: wrap; row-gap: 3px; margin-bottom: 4px; }
+.zsTicks > .zsLab { width: 5.6em; }
+.zsTicks .zsF { flex: 1 1 5em; }
 
-/* valori calcolati */
-.stdWin .sPage .sO {
-  display: flex; align-items: center; justify-content: center;
-  font-size: 9px; font-weight: 700; color: var(--sh-fg);
-  border: 0; background: transparent; font-family: inherit;
-}
-.stdWin .sPage .sVal {
-  font-size: 8.5px; border: .9px solid var(--sh-ink); border-radius: 3px;
-  background: color-mix(in srgb, var(--sh-fg) 7%, transparent);
-}
-.stdWin .sPage .sOval, .stdWin .sPage .sOvalSm {
-  border: 1.4px solid var(--sh-ink); border-radius: 50%;
-  background: color-mix(in srgb, var(--sh-fg) 10%, var(--sh-bg));
-}
-.stdWin .sPage .sOval { font-size: 10px; }
-.stdWin .sPage button.sO { cursor: pointer; }
-.stdWin .sPage button.sO:hover { background: var(--sh-accent); color: var(--sh-on, #fff); border-color: var(--sh-accent); }
-.stdWin .sPage button.sO:active { transform: scale(.94); }
+/* riquadri numerici in fila: due, tre, quattro o cinque uguali */
+.zsDue, .zsTre, .zsQuattro, .zsCinque { display: grid; gap: 8px; margin-bottom: 12px; }
+.zsDue { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.zsTre { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.zsQuattro { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.zsCinque { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; margin: 8px 0 0; }
+.zsCard .zsDue, .zsCard .zsTre { margin-bottom: 0; }
+.zsDue > .zsCard { margin: 0; }
+.zsBox { display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 3px; min-width: 0; padding: 6px 4px 5px; text-align: center; border: 1px solid var(--sh-line); border-radius: 9px; background: color-mix(in srgb, var(--sh-soft, var(--sh-fg)) 40%, transparent); }
+.zsBox > .zsLab { display: flex; align-items: center; justify-content: center; min-height: 2.4em; font-size: .7em; }
+.sheetWin .zsPage .zsBox .zsScore { width: 100%; background: transparent; }
+.sheetWin .zsPage .zsBox .zsRoll.zsScore { border: 0; border-radius: 6px; }
+.zsRiga { display: flex; align-items: center; gap: 4px; width: 100%; }
 
-/* pulsanti dei tiri appiccicati alle righe degli attacchi */
-.stdWin .sPage .sHit {
-  width: 9px; height: 12px; display: flex; align-items: center; justify-content: center;
-  border: .7px solid color-mix(in srgb, var(--sh-accent) 55%, transparent);
-  border-radius: 3px; cursor: pointer; padding: 0;
-  font-size: 7px; line-height: 1;
-  background: color-mix(in srgb, var(--sh-accent) 28%, transparent); color: var(--sh-accent);
+/* ---------- Le colonne: 3, 2 o 1 a seconda della larghezza ---------- */
+.zsCols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.zsCol { min-width: 0; }
+/* colonne che finiscono alla stessa altezza: l'ultima area di testo di ognuna si allunga fino in fondo */
+.zsColsPari { align-items: stretch; margin-bottom: 12px; }
+.zsColsPari > .zsCol { display: flex; flex-direction: column; }
+.zsColsPari > .zsCol > .zsTa:last-child { flex: 1; display: flex; flex-direction: column; margin-bottom: 0; }
+.sheetWin .zsPage .zsColsPari > .zsCol > .zsTa:last-child > textarea { flex: 1; }
+.zsCols2 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 2px; }
+@container (max-width: 860px) {
+  .zsCols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .zsCols > .zsCol:nth-child(3) { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; align-items: start; }
+  .zsHead { grid-template-columns: 1fr; }
 }
-.stdWin .sPage .sHit:hover { background: var(--sh-accent); color: var(--sh-on, #fff); }
-.stdWin .sPage .sBig2 { width: 12px; height: 18px; font-size: 9px; }
+@container (max-width: 560px) {
+  .zsCols, .zsCols > .zsCol:nth-child(3) { grid-template-columns: minmax(0, 1fr); }
+  .zsMeta, .zsMeta7 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .zsQuattro { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
-/* caselle da spuntare */
-.stdWin .sPage .sK {
-  -webkit-appearance: none; appearance: none; cursor: pointer;
-  border: 1.2px solid var(--sh-ink); border-radius: 50%;
-  background: color-mix(in srgb, var(--sh-fg) 8%, var(--sh-bg));
-}
-.stdWin .sPage .sK.sSq { border-radius: 2px; }
-.stdWin .sPage .sK.sMini { border-width: .8px; }
-.stdWin .sPage .sK:hover { border-color: var(--sh-accent); }
-.stdWin .sPage .sK:checked { background: var(--sh-accent); border-color: var(--sh-accent); box-shadow: inset 0 0 0 1.2px var(--sh-bg); }
+/* caratteristiche: sei scudi, tre per riga */
+.zsAbs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.zsAb { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; padding: 7px 5px 8px; border: 1px solid var(--sh-line); border-radius: 10px 10px 22px 22px; background: color-mix(in srgb, var(--sh-soft, var(--sh-fg)) 40%, transparent); }
+.zsAb > .zsLab { font-size: .66em; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sheetWin .zsPage .zsAb .zsScore { width: 100%; background: transparent; font-size: 1.45em; }
+.zsPage .zsMod { font-size: .95em; }
 
-/* aree di testo */
-.sTa { border: 0; background: transparent; }
-.stdWin .sPage .sTa textarea {
-  position: absolute; inset: 0; width: 100%; height: 100%; resize: none;
-  font-size: 7.4px; line-height: 1.35; padding: 2px 3px; min-height: 0;
-  background: color-mix(in srgb, var(--sh-fg) 4%, transparent);
-  border: .7px solid color-mix(in srgb, var(--sh-ink) 65%, transparent); border-radius: 3px;
-}
-.stdWin .sPage .sTa .sendRule {
-  position: absolute; right: 1px; top: -2px; width: 10px; height: 10px; padding: 0;
-  border: 0; border-radius: 3px; cursor: pointer; font-size: 6.5px; line-height: 1;
-  background: color-mix(in srgb, var(--sh-accent) 22%, transparent); opacity: .85;
-}
-.sTa:hover .sendRule { opacity: 1; background: var(--sh-accent); }
+/* dadi vita e tiri contro morte */
+.zsDvHead, .zsDv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; text-align: center; }
+.zsDv { margin-top: 3px; }
+.zsMorte { display: grid; grid-template-columns: auto 1fr; gap: 7px 8px; align-items: center; padding-top: 3px; }
+.zsMorte > span:not(.zsLab) { display: flex; gap: 6px; }
 
-/* righe con il dado (incantesimi) */
-.sLine { display: block; }
-.stdWin .sPage .sLine input { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0 11px 0 2px; }
-.stdWin .sPage .sLine .sDie {
-  position: absolute; right: 0; top: 1px; width: 10px; height: 10px; padding: 0;
-  border: 0; border-radius: 3px; cursor: pointer; font-size: 6.5px; line-height: 1;
-  background: color-mix(in srgb, var(--sh-accent) 20%, transparent); opacity: .75;
-}
-.sLine:hover .sDie, .sLine input:focus ~ .sDie { opacity: 1; }
-.sLine .sDie:hover { background: var(--sh-accent); }
+/* attacchi, inventario, munizioni, privilegi limitati: righe a colonne fisse */
+.zsAtkHead, .zsAtkRow { display: grid; grid-template-columns: minmax(0, 1.5fr) 3.4em minmax(0, 1.6fr) 24px 24px; gap: 4px; align-items: center; }
+.zsAtkHead { margin-bottom: 2px; }
+.zsAtkHead > :nth-child(3) { grid-column: 3 / -1; }
+.zsAtkRow { margin-bottom: 3px; }
+.zsInvHead, .zsInvRow, .zsAmmoHead { display: grid; grid-template-columns: minmax(0, 1fr) 4em; gap: 6px; align-items: end; }
+.zsAmmoHead { margin-top: 10px; }
+.zsInvHead > :last-child, .zsAmmoHead > :last-child, .zsLfHead > :not(:first-child) { text-align: center; }
+.zsPeso { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--sh-line); }
+.zsLfHead, .zsLf { display: grid; grid-template-columns: minmax(0, 1fr) 5.2em 2.8em 2.8em; gap: 5px; align-items: center; }
+.zsLf { margin-bottom: 3px; }
+.zsRec { display: flex; justify-content: center; gap: 2px; }
+.zsArm { display: grid; grid-template-columns: minmax(0, 2.2fr) repeat(4, minmax(0, 1fr)); gap: 4px 6px; }
+.zsSvant { justify-content: center; margin-top: 2px; }
+.zsSvant > span { flex: none !important; }
+
+/* testi lunghi */
+.zsTa { position: relative; min-width: 0; margin: 0 0 12px; }
+.zsTa > .zsLab { display: block; margin: 0 26px 4px; text-align: center; font-weight: 700; color: var(--sh-accent); opacity: 1; }
+.sheetWin .zsPage .zsTa textarea { display: block; width: 100%; min-height: 104px; margin: 0; padding: 7px 9px; font: inherit; line-height: 1.4; color: inherit; resize: vertical; border: 1px solid var(--sh-line); border-radius: 10px; background: color-mix(in srgb, var(--sh-soft, var(--sh-fg)) 40%, transparent); }
+.sheetWin .zsPage .zsTa.zsAlto textarea { min-height: 150px; }
+.zsTa > .sendRule { position: absolute; top: -3px; right: 0; padding: 0 4px; border: 0; background: transparent; cursor: pointer; opacity: .55; font-size: .95em; }
+.zsTa > .sendRule:hover { opacity: 1; }
+.zsTa .chips { margin-top: 4px; }
+
+/* gli slot di talenti e abilità (slot-capacita.js) dentro le aree di testo */
+.zsTa.capHost { display: flex; flex-direction: column; }
+.zsTa.capHost > .zsLab { order: 0; }
+.zsTa.capHost > .capList { order: 1; margin: 0 0 4px; }
+.zsTa.capHost > textarea { order: 2; }
+.zsTa.capHost > .chips { order: 3; }
+.sheetWin .zsPage .zsTa.capHost.capPieno > textarea { min-height: 52px; }
+
+/* immagini */
+.zsPage .zsImg { min-height: 240px; border-radius: 10px; }
+.zsPage .zsImg.zsImgSm { min-height: 130px; margin-top: 6px; }
+.zsPage .zsImg > span { font-size: .78em; }
+
+/* livello di follia: solo se acceso in ⚙ Impostazioni (regole facoltative) */
+html:not(.conFollia) .folliaBox { display: none !important; }
+.zsPage .sInfo { font-style: italic; color: var(--sh-accent); }
+
+/* ---------- Incantesimi ---------- */
+.zsSpHead { grid-template-columns: minmax(180px, 1fr) minmax(0, 1.6fr); }
+.zsQuattroSp { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+@container (max-width: 560px) { .zsQuattroSp { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.zsSpGrid, .oSpGrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+/* dieci riquadri: 5, 2 o 1 per riga, così le righe sono sempre piene */
+@container (max-width: 1150px) { .zsSpGrid, .oSpGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (max-width: 480px) { .zsSpGrid, .oSpGrid { grid-template-columns: minmax(0, 1fr); } }
+.zsSpGrid > .zsCard { display: flex; flex-direction: column; margin: 0; }
+.zsSpGrid > .zsCard > .zsSpList { flex: 1; }
+.zsSlot { display: grid; grid-template-columns: auto 3.2em auto 3.2em; justify-content: center; align-items: center; gap: 6px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--sh-line); }
+.zsSp { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+.zsSpLine { flex: 1; display: flex; align-items: center; gap: 2px; min-width: 0; }
+.zsSpLine .sMore, .zsSpLine .sDie { flex: none; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; opacity: .55; font: inherit; line-height: 1; }
+.zsSpLine .sMore:hover, .zsSpLine .sDie:hover { opacity: 1; background: color-mix(in srgb, var(--sh-accent) 18%, transparent); }
+.zsSpLine .sMore.has { opacity: 1; background: var(--sh-accent); color: var(--sh-on, #fff); }
+
+/* sul telefono i pulsanti si toccano col dito */
+.ui-touch .sheetWin .zsPage .zsDie, .ui-touch .zsSpLine .sMore, .ui-touch .zsSpLine .sDie { width: 32px; height: 32px; }
+.ui-touch .zsAtkHead, .ui-touch .zsAtkRow { grid-template-columns: minmax(0, 1.5fr) 3.4em minmax(0, 1.6fr) 32px 32px; }
+.ui-touch .sheetWin .zsPage .zsK { width: 18px; height: 18px; }
 
 /* immagini (ritratto e simbolo) */
 .sImg {
@@ -246,34 +246,64 @@
 #spellPop footer button:hover { border-color: var(--accent); }
 #spellPop .spellHint { margin-left: auto; font-size: 11.5px; color: var(--muted); }
 
-/* il tastino ▾ della riga */
-.stdWin .sPage .sLine .sMore {
-  position: absolute; right: 11px; top: 1px; width: 9px; height: 10px; padding: 0;
-  border: 0; border-radius: 3px; cursor: pointer; font-size: 6px; line-height: 1;
-  background: color-mix(in srgb, var(--sh-ink) 45%, transparent); color: var(--sh-fg); opacity: .8;
+/* ---------- La tendina dell'incantesimo ---------- */
+#spellPop {
+  position: fixed; z-index: 160000; width: min(420px, 92vw);
+  display: flex; flex-direction: column; gap: 8px; padding: 12px;
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .5);
 }
-.stdWin .sPage .sLine .sMore:hover { opacity: 1; background: var(--sh-accent); color: var(--sh-on, #fff); }
-.stdWin .sPage .sLine .sMore.has { background: var(--sh-accent); color: var(--sh-on, #fff); opacity: 1; }
-.stdWin .sPage .sLine input { padding: 0 22px 0 2px; }
-
-/* dadi vita: il carattere più piccolo delle caselle grandi, come le intestazioni DV / TOTALI / USATI */
-.stdWin .sPage .sDv { font-size: 9px; padding: 0 1px; }
-/* etichette che non vanno mai a capo (armature, armi) */
-.stdWin .sPage .sNoWrap { white-space: nowrap; overflow: visible; }
-/* «che cos'è?» accanto ai campi meno ovvi */
-.stdWin .sPage .sInfo { position: absolute; padding: 0; border: 0; background: none; cursor: help; font-family: inherit; font-size: 5.5px; font-style: italic; line-height: 1; white-space: nowrap; color: var(--sh-accent); text-decoration: underline dotted; }
-.stabs .sZoom svg { display: block; width: 12px; height: 12px; }
-/* con due dita il foglio si ingrandisce da solo (non la pagina): il browser può solo scorrere */
-.stdWin .sbody { touch-action: pan-x pan-y; }
-
-/* attacchi: il riquadro scorre quando le righe sono più di sei */
-.sPage .sAtk { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; overscroll-behavior: contain; }
-.sPage .sAtk::-webkit-scrollbar { display: none; }   /* la barra coprirebbe i dadi: si scorre con rotella o dito */
-.sPage .sAtk > * { position: absolute; margin: 0; }
-/* valori calcolati (CA senza armatura, CD e attacco degli incantesimi): si leggono, ma più chiari */
-.stdWin .sPage .sF[data-f="ac"]::placeholder, .stdWin .sPage .sF[data-f="spcd"]::placeholder, .stdWin .sPage .sF[data-f="spatk"]::placeholder {
-  color: color-mix(in srgb, var(--sh-fg) 55%, transparent); font-style: normal;
+#spellPop[hidden] { display: none; }
+#spellPop header { display: flex; gap: 8px; align-items: center; }
+#spellPop header input {
+  flex: 1; min-width: 0; font: inherit; font-size: 15px; font-weight: 600;
+  padding: 7px 10px; border-radius: 9px;
+  border: 1px solid var(--line); background: var(--panel-2); color: inherit;
 }
-.sPage .sAtk .sAtkPiu { border: 1px dashed color-mix(in srgb, var(--sh-accent) 60%, transparent); border-radius: 4px; background: transparent;
-  color: var(--sh-accent); font-size: 10px; line-height: 1; padding: 0; cursor: pointer; }
-.sPage .sAtk .sAtkPiu:hover { background: color-mix(in srgb, var(--sh-accent) 15%, transparent); }
+#spellPop header button {
+  border: 0; background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 15px; line-height: 1; padding: 4px 6px; border-radius: 7px;
+}
+#spellPop header button:hover { background: var(--panel-2); color: var(--text); }
+#spellPop textarea {
+  font: inherit; font-size: 13px; line-height: 1.5; min-height: 140px; resize: vertical;
+  padding: 9px 11px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--panel-2); color: inherit;
+}
+#spellPop textarea:focus, #spellPop header input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+#spellPop footer { display: flex; gap: 8px; align-items: center; }
+#spellPop footer button {
+  font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 9px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel-2); color: inherit;
+}
+#spellPop footer button:hover { border-color: var(--accent); }
+#spellPop .spellHint { margin-left: auto; font-size: 11.5px; color: var(--muted); }
+
+
+/* ---------- Scheda Open: le stesse tre pagine, con i riquadri dell'app ---------- */
+.oPage .zsIn { container-type: inline-size; }
+.oPage .zsCol > .box, .oPage .zsCols2 > .box { margin-bottom: 12px; }
+.oPage .oHead { margin-bottom: 12px; }
+.sheetWin .oPage .oHdr4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.sheetWin .oPage .oHdr7 > :last-child { grid-column: span 2; }
+.sheetWin .oPage .oHdr3 { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; }
+.sheetWin .oPage .oAbil { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sheetWin .oPage .oArm { grid-template-columns: minmax(0, 2.2fr) repeat(4, minmax(0, 1fr)); gap: 4px 6px; }
+.sheetWin .oPage .oSvant { justify-content: center; }
+.sheetWin .oPage .oSvant > span { flex: none; }
+.sheetWin .oPage .oTicks { flex-wrap: wrap; row-gap: 2px; }
+.sheetWin .oPage .oTicks > span { flex: none; width: 5.2em; }
+.oPage .oAdd[data-zs] { display: block; margin: 6px auto 0; }
+.oPage .zsColsPari > .zsCol > .box:last-child { flex: 1; display: flex; flex-direction: column; margin-bottom: 0; }
+.sheetWin .oPage .zsColsPari > .zsCol > .box:last-child > textarea { flex: 1; }
+.oPage .oLungo .oImg { height: 240px; }
+.oSpGrid { margin-bottom: 12px; }
+.oSpGrid > .oLiv { display: flex; flex-direction: column; }
+.oSpGrid > .oLiv > .oSpells { flex: 1; }
+.oSpGrid > .oLiv > .oAdd { align-self: center; }
+@container (max-width: 560px) {
+  .sheetWin .oPage .oHdr4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

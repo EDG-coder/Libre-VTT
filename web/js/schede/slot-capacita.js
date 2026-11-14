@@ -54,8 +54,9 @@
     </div>`;
   }
 
-  // Nella scheda Standard i riquadri sono piccoli: titolo e testo si scrivono in una tendina sopra la scheda.
-  const fluttua = host => !!host.closest('.stdWin');
+  // Dove i riquadri sono piccoli (un foglio disegnato in scala) titolo e testo si scrivono in una tendina
+  // sopra la scheda; nelle schede Standard e Open si scrivono nel riquadro.
+  const fluttua = host => !!host.closest('.sPage');
   const editor = host => (host._pop && !host._pop.hidden ? host._pop : host).querySelector('.capMod');
 
   function disegna(host, s) {

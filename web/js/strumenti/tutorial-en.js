@@ -386,7 +386,7 @@
     "Risorse e riquadri": "Resources and boxes",
     "Punti ferita con **Danni subiti** e **Cura**, riposo breve e lungo, e le risorse del personaggio (caselle incantesimo, ira…). Si aggiungono con ⚙.": "Hit points with **Damage taken** and **Heal**, short and long rest, and the character's resources (spell slots, rage…). They are added with ⚙.",
     "Le pagine": "The pages",
-    "Scheda, Personaggio, Incantesimi: le pagine della scheda. − e + cambiano lo zoom della pagina.": "Sheet, Character, Spells: the sheet's pages. − and + change the page's zoom.",
+    "Base, Bio, Incantesimi: le pagine della scheda. Base ha tutto quello che serve per giocare. − e + cambiano lo zoom della pagina.": "Base, Bio, Spells: the sheet's pages. Base has everything you need to play. − and + change the page's zoom.",
     "Tirare dalla scheda": "Rolling from the sheet",
     "I valori tondi, le abilità, i tiri salvezza e le armi si cliccano: il tiro parte subito e va in chat.": "The round values, skills, saving throws and weapons can be clicked: the roll goes at once and lands in the chat.",
     "Tutte le scorciatoie in una pagina. Si riapre da Impostazioni › Strumenti.": "All the shortcuts on one page. It opens again from Settings › Tools.",

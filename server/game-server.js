@@ -679,7 +679,7 @@ function viewFor(c) {
     return acc ? { ...s, icon: outUrl(s.icon), _access: acc } : null;
   }).filter(Boolean);
   return {
-    v: world.v, active: p.seeAllScenes ? world.active : pubId, publicScene: world.publicScene, fogColor: world.fogColor || 'auto', dadiProvvisori: !!world.dadiProvvisori,
+    v: world.v, active: p.seeAllScenes ? world.active : pubId, publicScene: world.publicScene, fogColor: world.fogColor || 'auto', dadiProvvisori: !!world.dadiProvvisori, follia: !!world.follia,
     scenes: scenes.map(s => sceneFor(c, s)),
     sheets, chat: (world.chat || []).slice(-250).map(m => chatFor(c, m)).filter(Boolean), music: world.music,
     notes: world.notes || { text: '', editable: false },
@@ -981,6 +981,7 @@ function handleIntent(c, m) {
       if ('turni' in b) world.turni = turniPuliti(b.turni);
       if (b.unita === 'm' || b.unita === 'ft') world.unita = b.unita;   // piedi o metri: per leggere «60» nella scurovisione
       if ('dadiProvvisori' in b) world.dadiProvvisori = !!b.dadiProvvisori;   // chi è scollegato può tirare «in provvisorio»?
+      if ('follia' in b) world.follia = !!b.follia;                     // il livello di follia nelle schede (regola facoltativa)
       if ('fogColor' in b) world.fogColor = /^#[0-9a-f]{6}$/i.test(String(b.fogColor || '')) ? String(b.fogColor) : 'auto';
       scheduleSave(); schedulePush();
       return;
@@ -1298,6 +1299,9 @@ function handleIntent(c, m) {
       if (!s) return deny(c, m.op, 'scheda sconosciuta');
       if (sheetVisible(c, s) !== 'rw') return deny(c, m.op, 'questa scheda non è tua');
       if (typeof m.name === 'string') s.name = str(m.name, 60);
+      // il formato di base (clic destro sulla scheda › Mostra come): solo tra Standard e Open 5e, che hanno gli stessi campi
+      const DUE = ['standard', 'dnd5e'];
+      if (DUE.includes(m.tpl) && DUE.includes(s.tpl)) s.tpl = m.tpl;
       if (m.f !== undefined) {
         const f = campiScheda(m.f);
         if (!f) return deny(c, m.op, 'scheda troppo grande o non valida');

@@ -15,7 +15,7 @@
   const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const nid = () => Math.random().toString(36).slice(2, 9);
   const MAX = 60;
-  const K = 'contatori', KB = 'contatoriChiusi', APERTO = 'libre-contatori-';
+  const K = 'contatori', KB = 'contatoriChiusi';
 
   const leggi = s => {
     try { const v = JSON.parse(s.f[K] || '[]'); return Array.isArray(v) ? v.filter(x => x && typeof x === 'object').slice(0, MAX) : []; }
@@ -113,25 +113,14 @@
     if (!w || !w._body || !s || (s.tpl !== 'standard' && s.tpl !== 'dnd5e') || w._body.querySelector('.ctHost')) return;
     const host = document.createElement('div');
     host.className = 'ctHost';
-    if (w.classList.contains('stdWin')) {
-      // Standard: un pannello che si apre e si chiude, sopra le pagine
-      const d = document.createElement('details');
-      d.className = 'ctPanel';
-      try { d.open = localStorage.getItem(APERTO + s.id) !== '0'; } catch { d.open = true; }
-      d.addEventListener('toggle', () => { try { localStorage.setItem(APERTO + s.id, d.open ? '1' : '0'); } catch {} });
-      d.innerHTML = `<summary><span>🧪 ${esc(tr('Consumabili e usi'))}</span></summary>`;
-      d.appendChild(host);
-      const dopo = w._body.querySelector(':scope > .avPanel') || w._body.querySelector(':scope > .tiroBar');
-      if (dopo) dopo.after(d); else w._body.prepend(d);
-    } else {
-      // Open 5e: un riquadro della prima pagina, subito dopo «Privilegi & tratti limitati»
-      const box = document.createElement('div');
-      box.className = 'box full ctBox';
-      box.innerHTML = `<h5>${esc(tr('Consumabili e usi'))}</h5>`;
-      box.appendChild(host);
-      const lim = w._body.querySelector('[data-f="lf0n"]')?.closest('.box');
-      if (lim) lim.after(box); else (w._body.querySelector('.spage .sgrid') || w._body).appendChild(box);
-    }
+    // un riquadro della pagina Base, subito dopo «Privilegi & tratti limitati» (Standard e Open)
+    const std = w.classList.contains('stdWin');
+    const box = document.createElement(std ? 'section' : 'div');
+    box.className = std ? 'zsCard ctBox' : 'box full ctBox';
+    box.innerHTML = std ? `<h3>${esc(tr('Consumabili e usi'))}</h3>` : `<h5>${esc(tr('Consumabili e usi'))}</h5>`;
+    box.appendChild(host);
+    const lim = w._body.querySelector('[data-f="lf0n"]')?.closest('.box, .zsCard');
+    if (lim) lim.after(box); else (w._body.querySelector('.spage .sgrid, .spage .zsCol') || w._body).appendChild(box);
     monta(host, s);
   }
   function ridisegna(s) {

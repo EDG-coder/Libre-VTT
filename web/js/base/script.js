@@ -47,7 +47,7 @@ const DEFAULT_BORDER = { color: '#000000', transparent: false, width: 3 };
 const DEFAULT_PING = { color: '#ff4d4d', size: 2, speed: 8, fade: 2500, modo: 'cm', caselle: 2, legacy: false };
 const SECTIONS = { look: true, res: false, grid: true, gridDefault: false, map: false, border: false, ping: false, sheets: false, tools: false, ordineStrumenti: false, hidden: false, chat: false };   // sezioni aperte di default
 const RESOLUTIONS = [[480, '480p'], [720, '720p'], [1080, '1080p'], [1440, '1440p'], [0, 'Originale']];
-const settings = { theme: 'dark', autoBg: true, fogColor: 'auto', fogVeil: 0.55, caratLibere: false, spareggioDes: true, prefT: 0, boxLabels: ['', '', ''], resToken: 720, resBg: 1080, gridDefault: { ...DEFAULT_GRID }, border: { ...DEFAULT_BORDER }, ping: { ...DEFAULT_PING }, sections: {},
+const settings = { theme: 'dark', autoBg: true, fogColor: 'auto', fogVeil: 0.55, caratLibere: false, spareggioDes: true, follia: false, prefT: 0, boxLabels: ['', '', ''], resToken: 720, resBg: 1080, gridDefault: { ...DEFAULT_GRID }, border: { ...DEFAULT_BORDER }, ping: { ...DEFAULT_PING }, sections: {},
   tools: {}, drawerOpen: true, publicScene: null, unit: 'ft', sheetClose: 'x', rulerCenter: false, dockOpen: true, hiddenLayer: { show: true, opacity: 45 }, chatTabs: { rolls: false, rules: false },
   sheetStyle: { preset: 'parchment', accent: '', scale: 100, font: 'serif' }, pen: { color: '#ff4d4d', width: 4, tool: 'pen', fill: false } };
 // Le impostazioni scelte nella home (rotellina): arrivano nell'indirizzo e valgono se sono più nuove
@@ -66,6 +66,7 @@ function prefDallaHome() {
   if (['dark', 'light', 'system'].includes(p.tema)) settings.theme = p.tema;
   if (typeof p.caratLibere === 'boolean') settings.caratLibere = p.caratLibere;
   if (typeof p.spareggioDes === 'boolean') settings.spareggioDes = p.spareggioDes;
+  if (typeof p.follia === 'boolean') settings.follia = p.follia;
   settings.prefT = +p.t;
   return true;
 }
@@ -1557,6 +1558,11 @@ $('spareggioDes').addEventListener('input', e => { settings.spareggioDes = e.tar
 ['caselleG', 'caselleR', 'caselleB'].forEach((id, i) => $(id).addEventListener('input', e => {
   settings.boxLabels[i] = e.target.value.slice(0, 14); scheduleBoardSave(); if (typeof hudDisegna === 'function') hudDisegna();
 }));
+// Il livello di follia (regola facoltativa): spento, nelle schede non c'è. In partita lo decide chi conduce.
+function applicaFollia() { document.documentElement.classList.toggle('conFollia', !!settings.follia); }
+$('follia').addEventListener('input', e => {
+  settings.follia = e.target.checked; settings.prefT = Date.now(); applicaFollia(); scheduleBoardSave();   // in partita arriva anche ai giocatori
+});
 $('caratLibere').addEventListener('input', e => {
   settings.caratLibere = e.target.checked; settings.prefT = Date.now(); scheduleBoardSave();
   document.querySelectorAll('.sheetWin input[type=number]').forEach(i => {
@@ -1620,6 +1626,7 @@ function syncSettings() {
   $('autoBg').checked = settings.autoBg;
   $('caratLibere').checked = !!settings.caratLibere;
   $('spareggioDes').checked = settings.spareggioDes !== false;
+  $('follia').checked = !!settings.follia; applicaFollia();
   ['caselleG', 'caselleR', 'caselleB'].forEach((id, i) => { if (document.activeElement !== $(id)) $(id).value = settings.boxLabels[i] || ''; });
   syncFog();
   $('resToken').value = settings.resToken; $('resBg').value = settings.resBg;
@@ -2299,6 +2306,7 @@ function applicaImpostazioni(s) {
   if (s.fogVeil >= 0.05 && s.fogVeil <= 1) settings.fogVeil = +s.fogVeil;
   if (typeof s.caratLibere === 'boolean') settings.caratLibere = s.caratLibere;
   if (typeof s.spareggioDes === 'boolean') settings.spareggioDes = s.spareggioDes;
+  if (typeof s.follia === 'boolean') settings.follia = s.follia;
   if (typeof s.dadiProvvisori === 'boolean') settings.dadiProvvisori = s.dadiProvvisori;
   if (s.turni && Array.isArray(s.turni.righe)) settings.turni = s.turni;
   if (Array.isArray(s.boxLabels)) settings.boxLabels = [0, 1, 2].map(i => String(s.boxLabels[i] || '').slice(0, 14));
