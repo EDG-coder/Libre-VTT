@@ -1,6 +1,11 @@
 // English (file lingua-en.js). La chiave è la frase italiana così com'è nel programma; {nome} è un segnaposto.
 (window.LIBRE_LINGUE = window.LIBRE_LINGUE || {}).en = Object.assign((window.LIBRE_LINGUE || {}).en || {}, {
 
+// ---------- scheda in una finestra a parte ----------
+"Apri la scheda in una finestra a parte": "Open the sheet in a separate window",
+"Rimetti la scheda nel tavolo": "Put the sheet back on the table",
+"Il browser non ha aperto la finestra: permetti le finestre popup per questa pagina e riprova.": "The browser didn't open the window: allow pop-ups for this page and try again.",
+
 // ---------- avvio (home) ----------
 "Incolla qui il codice che ti hanno mandato": "Paste the code you were sent here",
 "Nome della campagna (es. La miniera perduta)": "Campaign name (e.g. The Lost Mine)",
