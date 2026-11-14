@@ -218,6 +218,21 @@ function draw() {
   for (const p of S.players || []) if (p.kind === 'link' && !p.pending) conti[p.percorso || 'sconosciuto'] = (conti[p.percorso || 'sconosciuto'] || 0) + 1;
   const parole = { diretto: ['diretto', 'diretti'], relay: ['relay', 'relay'], misto: ['misto', 'misti'], sconosciuto: ['da capire', 'da capire'] };
   $('giro').textContent = Object.keys(conti).length ? 'Collegamenti: ' + Object.entries(conti).map(([k, n]) => `${n} ${parole[k] ? parole[k][n === 1 ? 0 : 1] : k}`).join(', ') : '';
+  // e da che cosa giocano: dal sito (browser) o dall'app, e su che apparecchio
+  const vie = { sito: {}, app: {} };
+  for (const p of S.players || []) {
+    if (p.pending || !p.dispositivo) continue;
+    const v = vie[p.dispositivo.via] || vie.app, a = p.dispositivo.apparecchio || 'sconosciuto';
+    v[a] = (v[a] || 0) + 1;
+  }
+  const riassunto = (titolo, v) => {
+    const tot = Object.values(v).reduce((x, y) => x + y, 0);
+    if (!tot) return '';
+    const parti = Object.entries(v).sort((x, y) => y[1] - x[1]).map(([a, n]) => n + ' ' + T(APPARECCHIO[a] ? APPARECCHIO[a][1] : a));
+    return T(titolo, { n: tot }) + ' (' + parti.join(', ') + ')';
+  };
+  const dove = [riassunto('Dal sito: {n}', vie.sito), riassunto('Dall\'app: {n}', vie.app)].filter(Boolean).join(' · ');
+  if (dove) { const d = document.createElement('div'); d.setAttribute('data-noi18n', ''); d.textContent = dove; $('giro').append(d); }
 
   const se = S.session || {};
   $('rLock').checked = !!se.locked; $('rAppr').checked = !!se.approval;
@@ -248,6 +263,21 @@ function draw() {
 let whoInSospeso = false;
 const apertiPermessi = new Set();     // di chi hai aperto «Permessi e schede»: restano aperti quando l'elenco si aggiorna
 $('who').addEventListener('focusout', () => setTimeout(() => { if (whoInSospeso && S) draw(); }, 0));
+
+// traduce subito (i pezzi composti qui non li riconoscerebbe la traduzione automatica della pagina)
+const T = (x, v) => window.tr ? tr(x, v) : String(x).replace(/\{(\w+)\}/g, (m, k) => v && v[k] !== undefined ? v[k] : m);
+const APPARECCHIO = { telefono: ['📱', 'telefono'], tablet: ['📱', 'tablet'], computer: ['💻', 'computer'], sconosciuto: ['❔', 'apparecchio sconosciuto'] };
+const SISTEMA = { android: 'Android', ios: 'iPhone/iPad', mac: 'Mac', windows: 'Windows', linux: 'Linux', chromeos: 'ChromeOS' };
+/** «🌐 Sito · telefono» o «💻 App · computer»: da dove gioca. */
+function chipDispositivo(d) {
+  const [ic, nome] = APPARECCHIO[d.apparecchio] || APPARECCHIO.sconosciuto;
+  const sito = d.via === 'sito';
+  const ch = chip((sito ? '🌐 ' : ic + ' ') + T(sito ? 'Sito' : 'App') + ' · ' + T(nome), sito ? '' : 'ok');
+  ch.setAttribute('data-noi18n', '');
+  ch.title = T(sito ? 'Gioca dal sito, nel browser' : 'Gioca dall\'app LIBRE VTT') + (SISTEMA[d.sistema] ? ' · ' + SISTEMA[d.sistema] : '') +
+    (d.apparecchio === 'sconosciuto' ? ' · ' + T('versione di prima: non dice che apparecchio usa') : '');
+  return ch;
+}
 
 function chip(text, cls) {
   const t = document.createElement('span');
@@ -289,6 +319,7 @@ function rowFor(r) {
     const [t, cls, tip] = PERC[L.percorso] || PERC.sconosciuto;
     const ch = chip(t, cls); ch.title = tip; head.append(ch);
   }
+  if (r.online && !L.pending && L.dispositivo) head.append(chipDispositivo(L.dispositivo));
   // l'ID lo sceglie il giocatore nella sua app ed è uguale in tutte le campagne: qui si vede, non si cambia
   if (r.idUtente) { const idc = chip('ID ' + r.idUtente); idc.setAttribute('data-noi18n', ''); idc.title = 'ID scelto dal giocatore, uguale in tutte le campagne: tu cambi il nome, non l\'ID. Gettone: ' + r.token; head.append(idc); }
   else { const idc = chip('ID ' + String(r.token).slice(0, 6)); idc.title = 'Identità: ' + r.token + ' (senza ID: dal sito, o un LIBRE VTT di prima)'; head.append(idc); }
@@ -316,7 +347,7 @@ function rowFor(r) {
     add('Ultima azione', L.lastOp ? L.lastOp + ' (' + durata(Math.round((Date.now() - L.lastAt) / 1000)) + ' fa)' : '—');
     add('Richieste', String(L.ops || 0));
     add('Programma', L.client || '?');
-    add('Arrivo', L.kind === 'link' ? 'da fuori (iroh)' : 'da questo computer');
+    add('Arrivo', L.dispositivo && L.dispositivo.via === 'sito' ? 'dal sito (relay)' : L.kind === 'link' ? 'da fuori (iroh)' : 'da questo computer');
     row.append(meta);
   }
 

@@ -2016,6 +2016,18 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Passa da un server intermedio: più lento": "Goes through an intermediate server: slower",
 "C'è una strada diretta ma per ora passa ancora dal relay": "There's a direct route but for now it still goes through the relay",
 "Non si sa ancora (o il collegamento è di una versione di prima)": "Not known yet (or the connection is from an older version)",
+"Dal sito: {n}": "From the website: {n}",
+"Dall'app: {n}": "From the app: {n}",
+"Sito": "Website",
+"App": "App",
+"telefono": "phone",
+"tablet": "tablet",
+"computer": "computer",
+"apparecchio sconosciuto": "unknown device",
+"Gioca dal sito, nel browser": "Playing from the website, in the browser",
+"Gioca dall'app LIBRE VTT": "Playing from the LIBRE VTT app",
+"versione di prima: non dice che apparecchio usa": "older version: doesn't say which device it uses",
+"dal sito (relay)": "from the website (relay)",
 
 // ---------- 3.7.4 ----------
 "+{b} a {n} caratteristiche diverse a scelta": "+{b} to {n} different ability scores of your choice",

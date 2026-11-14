@@ -383,7 +383,7 @@ function playerList() {
       perms: permsFor(c), sheets: rec.sheets || {},
       muted: !!rec.muted, frozen: !!rec.frozen, banned: !!rec.banned, pending: !!c.pending, attesaPlugin: !!c.pluginGate,
       plugins: Array.isArray(c.pluginsOk) ? c.pluginsOk.length : 0,
-      client: c.client || '?', peer: c.peer || null, percorso: c.kind === 'link' ? (c.percorso || 'sconosciuto') : 'locale',
+      client: c.client || '?', dispositivo: c.dispositivo || { via: c.web ? 'sito' : 'app', apparecchio: 'sconosciuto', sistema: '' }, peer: c.peer || null, percorso: c.kind === 'link' ? (c.percorso || 'sconosciuto') : 'locale',
       since: c.since || now, onFor: Math.round((now - (c.since || now)) / 1000),
       rtt: c.rtt == null ? null : c.rtt, qualita: c.qualita || 'verde', leggera: !!c.leggera, stabile: stabili.has(c.token),
       lastOp: c.lastOp || null, lastAt: c.lastAt || null, ops: c.ops || 0,
@@ -398,7 +398,7 @@ function sendPlayers() {
   const list = playerList();
   // ai giocatori non serve sapere da quale dispositivo arrivano gli altri, che cosa stanno guardando o
   // che cosa hanno chiesto per ultimo: quello resta al master e al pannello
-  const ridotta = list.map(({ peer, percorso, viewScene, viewRect, lastOp, lastAt, ops, client, ...resto }) => resto);
+  const ridotta = list.map(({ peer, percorso, viewScene, viewRect, lastOp, lastAt, ops, client, dispositivo, ...resto }) => resto);
   // (chi non ha ancora salutato, o aspetta alla porta, non è del tavolo: l'elenco non gli arriva)
   for (const c of clients) if (c.token && !c.pending) c.send({ t: 'players', list: c.role === 'master' ? list : ridotta });
   panelPush({ t: 'players', list });
@@ -1663,6 +1663,14 @@ function onMessage(c, raw) {
     rec.lastSeen = Date.now();
     c.name = rec.name; c.role = rec.role;
     c.client = str(m.client, 40) || '?';
+    // Da dove gioca, per il pannello: sito o app lo sa il server (il sito passa dal relay, l'app dal suo ponte o
+    // da questo computer); telefono/tablet/computer e il sistema li dice il client. Chi è di prima: «sconosciuto».
+    const disp = m.dispositivo && typeof m.dispositivo === 'object' ? m.dispositivo : {};
+    c.dispositivo = {
+      via: c.web ? 'sito' : 'app',
+      apparecchio: ['telefono', 'tablet', 'computer'].includes(disp.apparecchio) ? disp.apparecchio : 'sconosciuto',
+      sistema: ['android', 'ios', 'mac', 'windows', 'linux', 'chromeos'].includes(disp.sistema) ? disp.sistema : ''
+    };
     // il browser sa ricevere le differenze? a che versione del mondo è rimasto? qual è l'ultimo messaggio di chat che ha?
     c.delta = m.delta === 1;
     c.verCliente = Number.isInteger(m.ver) ? m.ver : 0;
