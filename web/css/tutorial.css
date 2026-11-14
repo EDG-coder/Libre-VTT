@@ -1,0 +1,88 @@
+/* Tutorial guidato (js/strumenti/tutorial.js): il velo scuro con il buco sulla zona spiegata, l'anello, la freccia e il riquadro.
+   Lo usano sia il tavolo (index.html) sia la home (launcher.html, che lo chiede come /tutorial.css). */
+#tutGuida { position: fixed; inset: 0; pointer-events: none; z-index: 2147483000; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+#tutGuida .tutBlk { position: fixed; background: rgba(6, 8, 14, .62); pointer-events: auto; }
+#tutGuida .tutProbe { position: fixed; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+#tutGuida .tutHole { position: fixed; pointer-events: auto; background: transparent; }
+#tutGuida .tutHole[hidden], #tutGuida .tutRing[hidden], #tutGuida .tutArrow[hidden] { display: none; }
+#tutGuida .tutRing {
+  position: fixed; border-radius: 10px; pointer-events: none;
+  box-shadow: 0 0 0 3px #ffd23f, 0 0 0 7px rgba(255, 210, 63, .35);
+  animation: tutPulse 1.4s ease-in-out infinite;
+}
+#tutGuida.tutDo .tutRing { box-shadow: 0 0 0 3px #2ee6a6, 0 0 0 8px rgba(46, 230, 166, .35); }
+@keyframes tutPulse { 50% { box-shadow: 0 0 0 3px #ffd23f, 0 0 0 12px rgba(255, 210, 63, .12); } }
+#tutGuida.tutDo .tutRing { animation-name: tutPulseDo; }
+@keyframes tutPulseDo { 50% { box-shadow: 0 0 0 3px #2ee6a6, 0 0 0 14px rgba(46, 230, 166, .1); } }
+#tutGuida .tutArrow { position: fixed; pointer-events: none; overflow: visible; }
+#tutGuida .tutArrow path { fill: none; stroke: #ffd23f; stroke-width: 4; stroke-linecap: round; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+#tutGuida .tutArrow marker path { fill: #ffd23f; stroke: none; }
+#tutGuida.tutDo .tutArrow path { stroke: #2ee6a6; }
+#tutGuida.tutDo .tutArrow marker path { fill: #2ee6a6; }
+#tutGuida .tutBox {
+  position: fixed; pointer-events: auto; box-sizing: border-box; width: 380px;
+  background: #1c2130; color: #eef1f7; border: 1px solid #3b4460; border-radius: 14px;
+  padding: 14px 16px 10px; box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
+}
+#tutGuida .tutHead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+#tutGuida .tutIc { font-size: 1.2rem; }
+#tutGuida .tutTit { flex: 1; font-size: 1.02rem; }
+#tutGuida .tutNum { font-size: .75rem; color: #9aa4ba; white-space: nowrap; }
+#tutGuida .tutTxt { font-size: .93rem; color: #dfe4ef; }
+#tutGuida .tutTxt b, #tutGuida .tutTask b { color: #fff; }
+#tutGuida .tutTask {
+  margin-top: 10px; padding: 8px 10px; border-radius: 9px; font-size: .9rem;
+  background: rgba(46, 230, 166, .12); border: 1px solid rgba(46, 230, 166, .45); color: #c9fbe8;
+}
+#tutGuida .tutTask[hidden] { display: none; }
+#tutGuida .tutTask.ok { background: rgba(124, 92, 255, .14); border-color: rgba(124, 92, 255, .5); color: #e1dbff; }
+#tutGuida .tutConfirm { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: .88rem; }
+#tutGuida .tutConfirm span { flex: 1 1 100%; }
+#tutGuida .tutConfirm[hidden] { display: none; }
+#tutGuida .tutBtns { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
+#tutGuida .tutSp { flex: 1; }
+#tutGuida button {
+  font: inherit; font-size: .88rem; padding: 7px 12px; border-radius: 9px; cursor: pointer;
+  border: 1px solid #3b4460; background: #262d40; color: inherit; min-height: 36px;
+}
+#tutGuida button:hover:not(:disabled) { border-color: #7c5cff; }
+#tutGuida button:disabled { opacity: .5; cursor: default; }
+#tutGuida button[hidden] { display: none; }
+#tutGuida .tutNext, #tutGuida .tutYes { background: #7c5cff; border-color: transparent; color: #fff; font-weight: 600; }
+#tutGuida .tutSkip { background: none; border-color: transparent; color: #9aa4ba; padding-left: 4px; }
+#tutGuida .tutOff { display: block; margin: 6px auto 0; background: none; border: 0; color: #8b95ab; font-size: .78rem; min-height: 0; padding: 2px 4px; text-decoration: underline; }
+#tutGuida .tutOff[hidden] { display: none; }
+.tutMenu {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(340px, calc(100vw - 24px));
+  display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 14px;
+  background: #1c2130; color: #eef1f7; border: 1px solid #3b4460; box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.tutMenu button { font: inherit; font-size: .9rem; text-align: left; padding: 9px 12px; border-radius: 9px; border: 1px solid #3b4460; background: #262d40; color: inherit; cursor: pointer; }
+.tutMenu button:hover { border-color: #7c5cff; }
+.tutMenu .tutMenuX { text-align: center; background: none; }
+@media (max-width: 520px) {
+  #tutGuida .tutBox { padding: 12px 12px 8px; }
+  #tutGuida .tutTxt { font-size: .88rem; }
+}
+@media (prefers-reduced-motion: reduce) { #tutGuida .tutRing { animation: none; } }
+#tutToast {
+  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); max-width: min(460px, calc(100vw - 32px));
+  padding: 10px 14px; border-radius: 12px; background: #1c2130; color: #eef1f7; border: 1px solid #3b4460;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .5); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+}
+#tutToast.on { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { #tutToast { transition: none; } }
+
+/* ---------- la home: la card sotto le tre scelte e la sezione nelle impostazioni ---------- */
+.cards .tutCard { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 14px; padding: 14px 16px; border-style: dashed; }
+.cards .tutCard:hover:not(:disabled) { border-style: solid; }
+.tutCard .tutCardTesto { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 2px; }
+.tutCard .tutCardTesto small { flex-basis: 100%; }
+.tutCard .tutCardNuovo {
+  font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  padding: 1px 7px; border-radius: 99px; background: var(--accent, #7c5cff); color: #fff;
+}
+.tutCard .tutCardNuovo[hidden] { display: none; }
+#tutImpSez #tutImpAvvia { margin-bottom: 8px; }
