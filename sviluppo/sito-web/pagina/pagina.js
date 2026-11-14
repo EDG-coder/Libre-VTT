@@ -35,7 +35,7 @@
     'La cripta con la nebbia di guerra': 'The crypt with fog of war',
     'La nebbia di guerra: il master vede attraverso il velo.': 'Fog of war: the GM sees through the veil.',
     'La scheda di un goblin': 'A goblin sheet',
-    'Le schede, collegate ai segnalini.': 'Sheets, linked to tokens.',
+    'Le schede in tre pagine, collegate ai segnalini.': 'Sheets in three pages, linked to tokens.',
     'Il master apre la partita': 'The GM opens the game',
     "Scarica l'app, sceglie «Conduco io» e la campagna, e accende «Partita pubblica». L'app gli dà un codice.": 'They download the app, choose “I run the game” and the campaign, and turn on “Public game”. The app gives them a code.',
     'Manda il codice ai giocatori': 'They send the code to the players',
