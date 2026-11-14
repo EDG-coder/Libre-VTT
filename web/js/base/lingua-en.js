@@ -1418,6 +1418,8 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "il risultato è troppo grande": "the result is too large",
 "non ha un risultato": "it has no result",
 "Lo vedete solo voi due e il master": "Only the two of you and the GM see it",
+"🔒 solo master": "🔒 GM only",
+"Lo vedono solo il master e chi l'ha scritto": "Only the GM and whoever wrote it can see it",
 "I sussurri servono quando giochi in rete: da solo non c'è nessuno a cui sussurrare.": "Whispers are for online play: on your own there's nobody to whisper to.",
 "Per sussurrare scrivi: /w Nome messaggio": "To whisper, type: /w Name message",
 "Tocca per aprire, tieni premuto per le altre opzioni": "Tap to open, press and hold for more options",

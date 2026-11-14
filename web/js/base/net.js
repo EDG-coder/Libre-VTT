@@ -841,7 +841,7 @@ var scheduleBoardSave = (prev => function () {
 var addChat = (prev => function (m) {
   if (netAs() && !netFromServer && (m.kind === 'text' || m.kind === 'rule')) {
     const op = m.kind === 'text' ? 'chat' : 'rule';
-    const x = m.kind === 'text' ? (m.to ? { text: m.text, to: m.to } : { text: m.text }) : { title: m.title, text: m.text };
+    const x = m.kind === 'text' ? (m.to ? { text: m.text, to: m.to } : { text: m.text }) : (m.soloMaster ? { title: m.title, text: m.text, soloMaster: true } : { title: m.title, text: m.text });
     const via = NET.on && !NET.hostDown;
     intent(op, x);
     if (via) return;

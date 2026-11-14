@@ -834,7 +834,14 @@ function seesWhisper(c, m) {
   if (!c.token) return false;
   return c.token === m.byId || c.token === m.whisper.to || recOf(c.token).role === 'master';
 }
+// I messaggi «solo master» (danni subiti e cure, con i PF): li vedono chi conduce e chi li ha scritti.
+// Agli altri non arrivano proprio, nemmeno nascosti.
+function seesSoloMaster(c, m) {
+  if (!c.token) return false;
+  return c.token === m.byId || recOf(c.token).role === 'master';
+}
 function chatFor(c, m) {
+  if (m.soloMaster) return seesSoloMaster(c, m) ? m : null;
   if (m.whisper) return seesWhisper(c, m) ? m : null;
   if (!m.secret || seesSecret(c, m)) return m;
   return { id: m.id, ts: m.ts, kind: 'roll', secret: true, cieco: m.cieco || undefined, hidden: true, label: 'tiro segreto', by: m.by, byId: m.byId };
@@ -1226,7 +1233,9 @@ function handleIntent(c, m) {
     }
     case 'rule': {
       if (!p.chat) return deny(c, m.op, 'non puoi scrivere');
-      addChat({ kind: 'rule', title: str(m.title, 120), text: str(m.text, 4000), by: c.name, byId: c.token });
+      const msg = { kind: 'rule', title: str(m.title, 120), text: str(m.text, 4000), by: c.name, byId: c.token };
+      if (m.soloMaster) msg.soloMaster = true;             // danni e cure: solo il master (e chi scrive)
+      addChat(msg);
       return;
     }
 

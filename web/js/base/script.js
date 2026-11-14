@@ -1885,6 +1885,13 @@ function msgElBase(m) {
     const h = document.createElement('b'), t = document.createElement('div');
     h.textContent = m.title; t.textContent = m.text;
     if (who) d.append(who);
+    if (m.soloMaster && typeof netAs === 'function' && netAs()) {   // danni e cure: in rete li legge solo il master
+      d.classList.add('whisper');
+      const w = document.createElement('span'); w.className = 'wh';
+      w.textContent = tr('🔒 solo master');
+      w.title = tr('Lo vedono solo il master e chi l\'ha scritto');
+      d.append(w, ' ');
+    }
     d.append(h, t);
   } else if (m.kind === 'calc') {                     // «2+2=» scritto in chat: il risultato, subito sotto
     d.className = 'msg calc';
