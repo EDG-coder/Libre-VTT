@@ -609,11 +609,19 @@ const gradiRotazione = v => { const n = Math.round(+v); return Number.isFinite(n
 /** Il percorso locale del master non vale per gli altri: fuori va «gs:<hash>». */
 const outUrl = o => (o && o.gid) ? { ...o, url: 'gs:' + o.gid, aid: undefined } : o;
 
+/** Lo sfondo per chi guarda: ai giocatori la copia ridotta della mappa («gr», la fa il master), se il deposito
+ *  ce l'ha; al master l'originale. Una «gr» che qui non c'è non esce: al suo posto va l'originale. */
+function sfondoPer(c, bg) {
+  if (!bg) return outUrl(bg);
+  const gr = isHash(bg.gr) && haveAsset(bg.gr) ? bg.gr : null;
+  if (recOf(c.token).role === 'master') { const o = outUrl(bg); return gr ? o : { ...o, gr: undefined }; }
+  return gr ? { ...bg, url: 'gs:' + gr, gid: gr, gr: undefined, aid: undefined } : { ...outUrl(bg), gr: undefined };
+}
 function sceneFor(c, sc) {
   const p = permsFor(c);
   const out = { ...sc };
   if (recOf(c.token).role !== 'master') { delete out.cartella; delete out.musica; }    // come il master ordina le scene (e che musica ci mette) resta suo
-  out.bg = outUrl(sc.bg);
+  out.bg = sfondoPer(c, sc.bg);
   out.photos = (sc.photos || []).filter(ph => {
     if ((ph.layer || 'tokens') === 'hidden' && !p.seeHiddenLayer) return false;
     // il proprio personaggio si vede sempre, anche se è entrato nella nebbia o è al buio
@@ -1404,6 +1412,7 @@ function handleIntent(c, m) {
       const h = str(m.hash, 64);
       if (c.kind === 'ws' && !c.token) return;
       if (!isHash(h) || !haveAsset(h)) { c.send({ t: 'asset.miss', hash: h }); return; }
+      if (m.conferma === 1) c.conferme = true;                    // conferma i pezzi: ne teniamo in viaggio pochi
       sendAsset(c, h, Number.isInteger(m.da) && m.da > 0 ? m.da : 0);
       return;
     }
@@ -1423,8 +1432,12 @@ function handleIntent(c, m) {
 /** Manda un file a chi lo ha chiesto, a pezzi da 48 kB, da «da» in poi (un'immagine interrotta riprende da dove
  *  si era fermata). I pezzi sono corsia C: aspettano in fila (c.codaC) e partono quando il tubo non è
  *  intasato, così chat, dadi e segnalini (che si mandano subito) non restano dietro a una mappa; in modalità
- *  leggera ne parte uno ogni tanto. */
+ *  leggera ne parte uno ogni tanto.
+ *  Chi conferma i pezzi (i ponti e il sito nuovi: chiedono con «conferma», rispondono con «asset.preso»)
+ *  ne ha in viaggio solo quanti ne passano in ~0,3 secondi alla velocità misurata con le conferme: prima, su un relay lento, fino a 256 kB di mappa
+ *  stavano davanti a ogni mossa, cioè secondi di ritardo per tutto il tempo dello scaricamento. */
 const PEZZO = 48 * 1024;
+const IN_VIAGGIO_S = 0.3;                         // quanti secondi di file possono stare davanti a un messaggio
 function sendAsset(c, hash, da) {
   const f = assetFile(hash);
   let buf;
@@ -1432,6 +1445,7 @@ function sendAsset(c, hash, da) {
   const info = assetIndex[hash] || {};
   const inizio = Math.max(0, Math.min(buf.length, +da || 0));
   c.codaC = (c.codaC || []).filter(j => j.hash !== hash);        // richiesta di nuovo: si riparte da dove dice
+  (c.volo ||= new Map()).set(hash, { inviati: inizio, presi: inizio, fine: buf.length });
   for (let off = inizio; off < buf.length || off === inizio; off += PEZZO) {
     const last = off + PEZZO >= buf.length;
     c.codaC.push({ hash, buf, off, last, mime: info.mime, name: info.name });
@@ -1439,9 +1453,24 @@ function sendAsset(c, hash, da) {
   }
   pompaC(c);
 }
+/** I byte mandati e non ancora confermati. */
+function inVolo(c) { let n = 0; if (c.volo) for (const v of c.volo.values()) n += v.inviati - v.presi; return n; }
+/** Quanti byte possono essere in viaggio: ~0,3 s alla velocità misurata, tra uno e otto pezzi. */
+const finestraC = c => Math.max(PEZZO, Math.min(8 * PEZZO, c.velocitaC ? c.velocitaC * IN_VIAGGIO_S : 2 * PEZZO));
 function pompaC(c) {
   clearTimeout(c.timerC); c.timerC = 0;
   while (c.codaC && c.codaC.length) {
+    if (c.conferme) {
+      const n = inVolo(c);
+      if (n > 0 && n + PEZZO > finestraC(c)) {
+        // le conferme non arrivano più (perse, o il ponte si è riavviato): dopo 5 secondi si riparte
+        c.bloccatoDa ||= Date.now();
+        if (Date.now() - c.bloccatoDa < 5000) { c.timerC = setTimeout(() => pompaC(c), 250); return; }
+        for (const v of c.volo.values()) v.presi = v.inviati;
+        c.bloccatoDa = 0; c.velocitaC = 0;
+        if (!c.ultimaConferma) c.conferme = false;              // non ha mai confermato niente: come prima
+      }
+    } else if (c.ingorgo && c.ingorgo() > 128 * 1024) { c.timerC = setTimeout(() => pompaC(c), 60); return; }
     if (c.ingorgo && c.ingorgo() > 256 * 1024) { c.timerC = setTimeout(() => pompaC(c), 60); return; }
     if (c.leggera) {
       const att = (c.prossimoC || 0) - Date.now();
@@ -1449,8 +1478,26 @@ function pompaC(c) {
       c.prossimoC = Date.now() + 500 + Math.min(3000, c.rtt || 0);
     }
     const j = c.codaC.shift();
-    c.send({ t: 'asset.data', hash: j.hash, mime: j.mime, name: j.name, off: j.off, data: j.buf.subarray(j.off, j.off + PEZZO).toString('base64'), last: j.last });
+    const parte = j.buf.subarray(j.off, j.off + PEZZO);
+    const v = c.volo && c.volo.get(j.hash);
+    if (v) v.inviati = Math.max(v.inviati, j.off + parte.length);
+    // «conferma»: chi lo sa fare risponde con «asset.preso» (da un host vecchio non arriva, e nessuno risponde)
+    c.send({ t: 'asset.data', hash: j.hash, mime: j.mime, name: j.name, off: j.off, data: parte.toString('base64'), last: j.last, conferma: 1 });
   }
+}
+/** Il ponte (o il sito) ha messo da parte «byte» di quel file: si misura la velocità e parte il pezzo dopo. */
+function assetPreso(c, hash, byte) {
+  const v = c.volo && c.volo.get(hash);
+  if (!v || !Number.isFinite(byte)) return;
+  const b = Math.min(v.inviati, Math.max(v.presi, byte)), nuovi = b - v.presi, ora = Date.now();
+  v.presi = b;
+  c.conferme = true; c.bloccatoDa = 0;
+  // la velocità: byte confermati al secondo, con una media che si muove (solo tra conferme vicine)
+  const dt = (ora - (c.ultimaConferma || 0)) / 1000;
+  if (nuovi > 0 && dt > 0 && dt < 2) { const x = nuovi / dt; c.velocitaC = c.velocitaC ? c.velocitaC * 0.7 + x * 0.3 : x; }
+  c.ultimaConferma = ora;
+  if (v.presi >= v.fine) c.volo.delete(hash);
+  if (c.codaC && c.codaC.length) pompaC(c);
 }
 
 function applyPerm(m) {
@@ -1769,6 +1816,10 @@ function onMessage(c, raw) {
     return;
   }
   // Le richieste di file arrivano dal ponte del giocatore, non da una persona: non aspettano il saluto.
+  if (m.t === 'intent' && m.op === 'asset.preso') {               // il ponte ha ricevuto un pezzo: si manda il prossimo
+    if (consuma(c, 'preso', 600, 300)) assetPreso(c, str(m.hash, 64), +m.byte);
+    return;
+  }
   if (m.t === 'intent' && (m.op === 'asset.get' || m.op === 'asset.have')) {
     if (c.kind === 'link' && !consuma(c, 'file', 400, 40)) return;   // un ponte che chiede file a raffica aspetta
     try { handleIntent(c, m); } catch (e) { console.error('intento', m.op, e.message); }
@@ -2320,7 +2371,7 @@ function wantAsset(hash) {
   w = { parts: [], bytes: 0, mime: '', name: '', inizio: Date.now(), ultimo: Date.now() };
   w.promise = new Promise(resolve => { w.done = resolve; });
   waiting.set(hash, w);
-  bridgeSend({ t: 'intent', op: 'asset.get', hash });
+  bridgeSend({ t: 'intent', op: 'asset.get', hash, conferma: 1 });
   return w.promise;
 }
 // Si rinuncia a un'immagine se l'host, con il tubo aperto, non ne manda un pezzo da 30 secondi (o dopo 3 minuti
@@ -2329,7 +2380,7 @@ setInterval(() => {
   for (const [h, w] of waiting) if ((hostUp && Date.now() - w.ultimo > 30000) || Date.now() - w.inizio > 180000) { waiting.delete(h); w.done(null); }
 }, 5000);
 function bridgeRiprendiImmagini() {
-  for (const [hash, w] of waiting) { w.ultimo = Date.now(); bridgeSend({ t: 'intent', op: 'asset.get', hash, da: w.bytes }); }
+  for (const [hash, w] of waiting) { w.ultimo = Date.now(); bridgeSend({ t: 'intent', op: 'asset.get', hash, da: w.bytes, conferma: 1 }); }
 }
 function bridgeAsset(msg) {
   const w = waiting.get(msg.hash);
@@ -2339,6 +2390,7 @@ function bridgeAsset(msg) {
   if (msg.t === 'asset.miss') { clearTimeout(w.timer); waiting.delete(msg.hash); w.done(null); return; }
   const part = Buffer.from(String(msg.data || ''), 'base64');
   w.parts.push(part); w.bytes += part.length;
+  if (msg.conferma) bridgeSend({ t: 'intent', op: 'asset.preso', hash: msg.hash, byte: w.bytes });   // l'host manda il prossimo
   w.mime = w.mime || msg.mime; w.name = w.name || msg.name;
   if (w.bytes > maxPer(w.mime)) { clearTimeout(w.timer); waiting.delete(msg.hash); w.done(null); return; }
   if (!msg.last) return;

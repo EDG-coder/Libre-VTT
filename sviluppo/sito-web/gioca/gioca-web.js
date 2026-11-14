@@ -46,7 +46,7 @@
     clearTimeout(w.timer);
     if (!NET.on) { w.timer = setTimeout(() => chiedi(hash, w), 2000); return; }   // scollegati: si aspetta il ritorno
     if (++w.prove > 4) { attese.delete(hash); w.done(false); return; }
-    netSend({ t: 'intent', op: 'asset.get', hash, da: w.byte });
+    netSend({ t: 'intent', op: 'asset.get', hash, da: w.byte, conferma: 1 });
     w.timer = setTimeout(() => chiedi(hash, w), 30000);
   }
   function fine(hash, w, ok) { clearTimeout(w.timer); attese.delete(hash); w.done(ok); }
@@ -58,6 +58,7 @@
     let bin;
     try { bin = Uint8Array.from(atob(String(m.data || '')), c => c.charCodeAt(0)); } catch { return fine(m.hash, w, false); }
     w.parti.push(bin); w.byte += bin.length; w.mime = w.mime || String(m.mime || '').toLowerCase();
+    if (m.conferma) netSend({ t: 'intent', op: 'asset.preso', hash: m.hash, byte: w.byte });   // il master manda il prossimo pezzo
     w.prove = 0; clearTimeout(w.timer); w.timer = setTimeout(() => chiedi(m.hash, w), 30000);
     if (w.byte > massimo(w.mime) || (w.mime && !MIME_OK.test(w.mime))) return fine(m.hash, w, false);
     if (!m.last) return;
