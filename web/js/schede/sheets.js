@@ -321,6 +321,12 @@ const sheetItemMenu = id => {
   return [
     { label: '📜 Apri', fn: () => openSheet(id) },
     ...(s && mia ? [{ label: (nelParty(s) ? '✓ ' : '') + '🧑‍🤝‍🧑 Nel party', fn: () => impostaParty(s, !nelParty(s)) }] : []),
+    // Standard e Open 5e hanno gli stessi campi: da qui si sceglie come si apre sempre (anche per gli altri);
+    // «Vedi come…» nel menu della finestra invece la mostra nell'altro formato solo questa volta
+    ...(s && mia && (s.tpl === 'standard' || s.tpl === 'dnd5e') ? [
+      { label: (s.tpl === 'standard' ? '✓ ' : '') + '📜 Mostra come scheda Standard', fn: () => cambiaTipoScheda(s, 'standard') },
+      { label: (s.tpl === 'dnd5e' ? '✓ ' : '') + '📋 Mostra come scheda Open', fn: () => cambiaTipoScheda(s, 'dnd5e') }
+    ] : []),
     { label: '🖼 Cambia icona…', fn: () => (typeof scegliIconaScheda === 'function' ? scegliIconaScheda(s) : pickAsset(a => setSheetIcon(s, a))) },
     { label: 'Duplica', fn: () => duplicateSheet(id) },
     ...(typeof menuCartellaPerScheda === 'function' ? menuCartellaPerScheda(id) : []),
@@ -539,7 +545,7 @@ const sheetWinMenu = w => {
     st === 'open' ? { label: 'Riduci a barra', fn: () => setWinState(w, 'min') } : { label: 'Ripristina', fn: () => setWinState(w, 'open') },
     ...(w._sheet && st !== 'icon' ? [{ label: 'Riduci a icona', fn: () => setWinState(w, 'icon') }] : []),
     ...(w._sheet ? [{ label: '🖼 Cambia icona…', fn: () => (typeof scegliIconaScheda === 'function' ? scegliIconaScheda(w._sheet) : pickAsset(a => setSheetIcon(w._sheet, a))) }] : []),
-    ...(w._sheet && w._sheet.tpl !== 'simple' && w._sheet.tpl !== 'generica' ? [{ label: (vistaScheda.get(w._sheet.id) || w._sheet.tpl) === 'standard' ? '📋 Vedi come scheda Open' : '📜 Vedi come scheda Standard', fn: () => cambiaVista(w) }] : []),
+    ...(w._sheet && w._sheet.tpl !== 'simple' && w._sheet.tpl !== 'generica' ? [{ label: (vistaScheda.get(w._sheet.id) || w._sheet.tpl) === 'standard' ? '📋 Vedi come scheda Open (solo ora)' : '📜 Vedi come scheda Standard (solo ora)', fn: () => cambiaVista(w) }] : []),
     ...(w._sheet && typeof vociFileScheda === 'function' ? vociFileScheda(w) : []),
     ...(w._sheet && typeof vociSaliLivello === 'function' ? vociSaliLivello(w) : []),
     '-', { label: 'Chiudi', fn: () => closeWin(w) }
@@ -610,6 +616,22 @@ function cambiaVista(w) {
   closeWin(w);
   const n = openSheet(s.id);
   if (n) { n.style.left = r.left + 'px'; n.style.top = r.top + 'px'; }
+}
+
+// Il formato di base della scheda (clic destro nell'elenco › Mostra come): resta salvato nella scheda.
+function cambiaTipoScheda(s, tpl) {
+  if (!s || s.tpl === tpl) return;
+  s.tpl = tpl;
+  vistaScheda.delete(s.id);                       // la vista «solo questa volta» non serve più
+  const w = wins.get(s.id);
+  if (w) {
+    const r = w.getBoundingClientRect(), stato = w._state;
+    closeWin(w);
+    const n = openSheet(s.id);
+    if (n) { n.style.left = r.left + 'px'; n.style.top = r.top + 'px'; if (stato !== 'open') setWinState(n, stato); }
+  }
+  renderSheetList();
+  if (typeof schedaCambiata === 'function') schedaCambiata(s); else scheduleSheets();
 }
 
 // ---------- Contenuto: calcoli e tiri ----------

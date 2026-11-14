@@ -1268,18 +1268,6 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 .ui-touch .sheetWin .capEdit, .ui-touch .sheetWin .capTog { width: 34px; height: 34px; }
 .ui-touch .sheetWin .capTit { padding: 7px 8px; }
 
-/* scheda Standard: tutto più piccolo, dentro il riquadro disegnato; gli slot sopra, l'area di testo sotto */
-.stdWin .sPage .sTa.capHost { display: flex; flex-direction: column; gap: 2px; }
-.stdWin .sPage .sTa.capHost > .capList { order: 1; flex: 0 1 auto; min-height: 0; max-height: calc(100% - 16px); overflow-y: auto; margin: 0; gap: 1px; font-size: 7.6px; scrollbar-width: thin; }
-.stdWin .sPage .sTa.capHost > textarea { order: 2; position: static; flex: 1 1 auto; height: auto; min-height: 14px; }
-.stdWin .sPage .sTa.capHost > .sendRule { z-index: 1; }
-.stdWin .sPage .capTit { padding: 1px 3px; border-radius: 3px; }
-.stdWin .sPage .capEdit, .stdWin .sPage .capTog { width: 11px; height: 11px; border-radius: 3px; font-size: 7px; }
-.stdWin .sPage .capCorpo { font-size: 7.2px; padding: 0 3px 2px 5px; margin-left: 3px; border-left-width: 1px; }
-.stdWin .sPage .capAdd { font-size: 7px; padding: 0 5px; border-radius: 4px; border: .7px dashed var(--sh-accent); color: var(--sh-accent); font-weight: 600; cursor: pointer; }
-.stdWin .sPage .capAdd:hover { background: color-mix(in srgb, var(--sh-accent) 15%, transparent); }
-.stdWin .sPage .capTog { color: var(--sh-accent); }
-
 /* la tendina per scrivere uno slot della scheda Standard (come quella degli incantesimi) */
 .capPop { position: fixed; z-index: 160000; width: min(420px, 92vw); padding: 12px; background: var(--panel); color: var(--text);
   border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 50px rgba(0, 0, 0, .5); }
@@ -1295,15 +1283,8 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 .capPop .capBtns .capOk { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 .capPop .capBtns .capVia { margin-left: auto; }
 .capPop .capBtns .capVia:hover { color: #e5484d; border-color: #e5484d; }
-.stdWin .sPage .capSlot.inMod .capTit { color: var(--sh-accent); background: color-mix(in srgb, var(--sh-accent) 18%, transparent); }
 
 /* ---------- Contatori dei consumabili (contatori.js) ---------- */
-.ctPanel { margin: 0 10px 8px; border: 1px solid color-mix(in srgb, currentColor 22%, transparent); border-radius: 12px; background: color-mix(in srgb, currentColor 5%, transparent); color: inherit; font-size: 13px; }
-.ctPanel > summary { list-style: none; padding: 6px 10px; cursor: pointer; font-weight: 600; }
-.ctPanel > summary::-webkit-details-marker { display: none; }
-.ctPanel > summary > span::before { content: "▸ "; opacity: .6; }
-.ctPanel[open] > summary > span::before { content: "▾ "; }
-.ctPanel > .ctHost { padding: 0 10px 8px; }
 .ctGriglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
 .ctTile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 8px 8px; min-width: 0;
   border: 1px solid var(--sh-line); border-radius: 10px; background: color-mix(in srgb, var(--sh-soft) 75%, var(--sh-bg)); }

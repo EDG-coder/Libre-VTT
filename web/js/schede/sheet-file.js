@@ -22,7 +22,7 @@ function schedaCambiata(s) {
   if (isMaster()) { if (typeof netPushBoard === 'function') netPushBoard(); return; }
   const srv = sheets.find(x => x.id === s.id);
   const mia = o => o && (o._access === 'rw' || (NET.me && o.owner === NET.me.token) || o._mia);
-  if (mia(s) || mia(srv)) intent('sheet.save', { id: s.id, name: s.name, f: s.f, icon: s.icon });
+  if (mia(s) || mia(srv)) intent('sheet.save', { id: s.id, name: s.name, tpl: s.tpl, f: s.f, icon: s.icon });
 }
 
 // ---------- Il contenuto del file ----------

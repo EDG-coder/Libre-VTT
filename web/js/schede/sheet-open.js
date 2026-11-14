@@ -1,13 +1,14 @@
 // ---------- Modello «Open 5e»: tutto quello della scheda ufficiale, in un formato libero ----------
 // Ha gli stessi campi (le stesse chiavi data-f) della scheda Standard di sheet-std.js: quello che
-// scrivi in una lo ritrovi nell'altra (menu della finestra → «Vedi come scheda Standard/Open»).
+// scrivi in una lo ritrovi nell'altra (menu della finestra → «Vedi come scheda Standard/Open»), e le
+// pagine sono le stesse tre, con le cose negli stessi posti.
 // In più gli incantesimi sono un elenco che si allunga quanto serve: ogni incantesimo ha il suo
 // titolo e, aprendolo, la descrizione, che si può mandare in chat.
 //
 // Si appoggia a sheets.js (fld, area, ck, rows, ABIL, SKILLS, bindField, chipsFor) e a
-// sheet-std.js (COINS, stdSend, stdFire, stdBindImages, stdMigrate).
+// sheet-std.js (COINS, stdSend, stdFire, stdBindImages, stdMigrate, schedaBindListe).
 
-const OPEN_INV = 45;                       // righe dell'inventario, come sulla scheda di carta
+const OPEN_INV = 45;                       // righe dell'inventario (quelle vuote in fondo restano nascoste)
 const MAX_INCANTESIMI = 200;               // per livello: un limite solo per sicurezza
 
 // ---------- Pezzi ----------
@@ -15,96 +16,98 @@ const oBox = (titolo, dentro, cls = '') => `<div class="box ${cls}"><h5>${titolo
 const oArea = (titolo, k, ph = '') => area(titolo, k, ph);
 const oStat = (lab, dentro) => `<div class="stat"><span class="lab">${lab}</span>${dentro}</div>`;
 
-function openPagina1() {
+// Le stesse tre pagine della scheda Standard, nello stesso ordine (Base · Bio · Incantesimi): cambiando
+// formato le cose restano dove le cerchi. Le colonne si adattano alla finestra (3, 2 o 1).
+const oCol = (...box) => `<div class="zsCol">${box.join('')}</div>`;
+
+function openPagBase() {
   const abil = ABIL.map(([k, , nm]) => `<div class="ab"><b title="${nm}">${nm.toUpperCase()}</b><input type="number" data-f="${k}" aria-label="Punteggio di ${nm}"><button type="button" class="rb" data-r="mod:${k}" data-c="mod:${k}" title="Prova di ${nm}"></button></div>`).join('');
   const saves = ABIL.map(([k, , nm]) => `<div class="rl2">${ck('sp_' + k, 'Competenza')}<span>${nm}</span><button type="button" class="rb" data-r="save:${k}" data-c="save:${k}"></button></div>`).join('');
   const skills = SKILLS.slice().sort((a, b) => a[1].localeCompare(b[1], 'it')).map(([k, nm, a]) => {
     const sh = ABIL.find(x => x[0] === a)[1];
     return `<div class="rl2">${ck('kp_' + k, 'Competenza')}${ck('ke_' + k, 'Maestria (competenza doppia)')}<span>${nm} <small>(${sh[0] + sh.slice(1).toLowerCase()})</small></span><button type="button" class="rb" data-r="skill:${k}" data-c="skill:${k}"></button></div>`;
   }).join('');
-  const atk = `<div class="oAtk">${rows(8, rigaAttacco)}</div><button type="button" class="oAdd oAtkAdd">＋ Aggiungi un attacco</button>`;
+  const atk = `<div class="oAtk">${rows(5, rigaAttacco)}</div><button type="button" class="oAdd oAtkAdd">＋ Aggiungi un attacco</button>`;
   const lim = rows(6, i => `<div class="lf"><input type="text" data-f="lf${i}n" placeholder="Nome"><span class="rest" title="Si recupera con: riposo breve, riposo lungo, all'alba">${ck('lf' + i + 'b', 'Riposo breve')}${ck('lf' + i + 'l', 'Riposo lungo')}${ck('lf' + i + 'a', 'Alba')}</span><input type="number" data-f="lf${i}t" placeholder="Tot."><input type="number" data-f="lf${i}u" placeholder="Usi"></div>`);
-  return `<div class="sgrid">
-    <div class="box full"><div class="hdr">${fld('Classe', 'class')}${fld('Livello', 'level', 'number')}${fld('Razza', 'race')}${fld('Background', 'bg')}${fld('Allineamento', 'align')}${fld('Sesso', 'sex')}${fld('Punti esperienza', 'xp')}${fld('Nome giocatore', 'player')}</div></div>
-    ${oBox('Caratteristiche', `<div class="abil">${abil}</div>
-      <div class="hdr" style="margin-top:8px">
-        <div class="stat"><span class="lab">Ispirazione</span><span class="oInsp">${rows(4, i => ck('insp' + (i + 1), 'Ispirazione'))}</span></div>
-        ${oStat('Bonus di competenza', '<output data-c="prof"></output>')}
-        <label class="lab">Competenza a mano<input type="number" data-f="profb" placeholder="dal livello"></label></div>`)}
-    ${oBox('Tiri salvezza', saves)}
-    ${oBox('Abilità <small>(☐ competenza · ☐ maestria)</small>', skills + `<div class="stat" style="margin-top:6px"><span class="lab">Saggezza (Percezione) passiva</span><output data-c="pp"></output></div>`)}
-    ${oBox('Combattimento', `
-      <div class="hdr">${fld('Classe armatura', 'ac', 'number')}${fld('CA temporanea', 'actemp', 'number')}${fld('Velocità', 'speed')}</div>
-      <div class="hdr" style="margin-top:8px">${fld('Bonus iniziativa', 'initb', 'number')}${oStat('Iniziativa', '<button type="button" class="rb" data-r="init" data-c="init"></button>')}</div>
-      <div class="hp" style="margin-top:8px">${fld('PF massimi', 'hpmax', 'number')}${fld('PF attuali', 'hp', 'number')}${fld('PF temporanei', 'hpt', 'number')}</div>
-      <div class="hp" style="margin-top:8px">${fld('Dadi vita', 'hd')}${fld('Totali', 'hdt', 'number')}${fld('Usati', 'hdu', 'number')}</div>
-      <div class="hp" style="margin-top:4px">${fld('Altri dadi vita', 'hd2')}${fld('Totali', 'hdt2', 'number')}${fld('Usati', 'hdu2', 'number')}</div>
-      <div class="hdr" style="margin-top:8px">${fld('Affaticamento', 'fatigue')}${fld('Visione', 'vision')}<label class="lab scuroLab">Scurovisione<input type="text" data-f="scuroV" placeholder="es. 60 ft, 18 m, no"><small class="scuroNota" aria-live="polite"></small></label></div>
-      <div class="ds"><span>Successi</span>${ck('ds1')}${ck('ds2')}${ck('ds3')}<span>Fallimenti</span>${ck('df1')}${ck('df2')}${ck('df3')}<small>Tiri salvezza contro la morte</small></div>`)}
-    ${oBox('Livello di follia <button type="button" class="oInfo" title="' + eh(INFO_FOLLIA) + '">che cos\'è?</button>', `<div class="row2">${fld('Livello', 'madness')}${fld('CD prova abilità', 'madcd', 'number')}</div>`)}
-    ${oBox('Attacchi', atk + `<h5 style="margin-top:8px">Munizioni</h5>` +
-      rows(3, i => `<div class="am"><input type="text" data-f="am${i}n" placeholder="Munizione"><input type="number" data-f="am${i}q" placeholder="Q.tà"></div>`), 'full')}
-    ${oBox('Privilegi &amp; tratti limitati <small>(si recuperano con: riposo breve · lungo · all\'alba)</small>', lim, 'full')}
-    ${oArea('Privilegi di classe', 'classf', 'Es. Ira [[1d12 | Dado ira]]')}
-    ${oArea('Tratti razziali &amp; privilegi da background', 'racial')}
-    ${oArea('Talenti', 'feats')}
-    ${oArea('Altri privilegi e tratti', 'features', 'Es. Attacco furtivo [[2d6 | Furtivo]]')}
-    ${oBox('Competenze', `
-      <div class="rl2"><span>Armature:</span>${ck('pa_l')} leggere ${ck('pa_m')} medie ${ck('pa_p')} pesanti ${ck('pa_s')} scudi</div>
-      <div class="rl2"><span>Armi:</span>${ck('pw_s')} semplici ${ck('pw_g')} da guerra ${ck('pw_a')} altro</div>
-      <input type="text" data-f="pw_other" placeholder="Altre armi">
-      <input type="text" data-f="prof_text1" placeholder="Altre competenze" style="margin-top:4px">
-      <input type="text" data-f="prof_text2" placeholder="Altre competenze" style="margin-top:4px">
-      <h5 style="margin-top:8px">Strumenti</h5>${rows(3, i => `<input type="text" data-f="tools${i + 1}" style="margin-bottom:4px">`)}
-      <h5 style="margin-top:8px">Linguaggi</h5><input type="text" data-f="langs1"><input type="text" data-f="langs2" style="margin-top:4px">`)}
+  const inv = rows(OPEN_INV, i => `<div class="iv"><input type="text" data-f="iv${i}n" placeholder="Oggetto"><input type="text" inputmode="decimal" data-f="iv${i}w" placeholder="kg"></div>`);
+  return `<div class="box oHead"><div class="hdr oHdr4 oHdr7">${fld('Classe', 'class')}${fld('Livello', 'level', 'number')}${fld('Razza', 'race')}${fld('Background', 'bg')}${fld('Allineamento', 'align')}${fld('Punti esperienza', 'xp')}${fld('Nome giocatore', 'player')}</div></div>
+  <div class="zsCols">
+    ${oCol(
+      oBox('Caratteristiche', `<div class="abil oAbil">${abil}</div>
+        <div class="hdr oHdr3" style="margin-top:8px">
+          <div class="stat"><span class="lab">Ispirazione</span><span class="oInsp">${rows(4, i => ck('insp' + (i + 1), 'Ispirazione'))}</span></div>
+          ${oStat('Bonus di competenza', '<output data-c="prof"></output>')}
+          <label class="lab">Competenza a mano<input type="number" data-f="profb" placeholder="dal livello"></label></div>`),
+      oBox('Tiri salvezza', saves),
+      oBox('Abilità <small>(☐ competenza · ☐ maestria)</small>', skills + `<div class="stat" style="margin-top:6px"><span class="lab">Saggezza (Percezione) passiva</span><output data-c="pp"></output></div>`),
+      oBox('Competenze e linguaggi', `
+        <div class="rl2 oTicks"><span>Armature:</span>${ck('pa_l')} leggere ${ck('pa_m')} medie ${ck('pa_p')} pesanti ${ck('pa_s')} scudi</div>
+        <div class="rl2 oTicks"><span>Armi:</span>${ck('pw_s')} semplici ${ck('pw_g')} da guerra ${ck('pw_a')} altro</div>
+        <input type="text" data-f="pw_other" placeholder="Altre armi">
+        <input type="text" data-f="prof_text1" placeholder="Altre competenze" style="margin-top:4px">
+        <input type="text" data-f="prof_text2" placeholder="Altre competenze" style="margin-top:4px">
+        <h5 style="margin-top:8px">Strumenti</h5>${rows(3, i => `<input type="text" data-f="tools${i + 1}" style="margin-bottom:4px">`)}
+        <h5 style="margin-top:8px">Linguaggi</h5><input type="text" data-f="langs1"><input type="text" data-f="langs2" style="margin-top:4px">`))}
+    ${oCol(
+      oBox('Combattimento', `
+        <div class="hdr oHdr3">${fld('Classe armatura', 'ac', 'number')}${fld('CA temporanea', 'actemp', 'number')}${fld('Velocità', 'speed')}</div>
+        <div class="hdr oHdr3" style="margin-top:8px">${fld('Bonus iniziativa', 'initb', 'number')}${oStat('Iniziativa', '<button type="button" class="rb" data-r="init" data-c="init"></button>')}<span></span></div>
+        <div class="hp" style="margin-top:8px">${fld('PF attuali', 'hp', 'number')}${fld('PF massimi', 'hpmax', 'number')}${fld('PF temporanei', 'hpt', 'number')}</div>
+        <div class="hp" style="margin-top:8px">${fld('Dadi vita', 'hd')}${fld('Totali', 'hdt', 'number')}${fld('Usati', 'hdu', 'number')}</div>
+        <div class="hp" style="margin-top:4px">${fld('Altri dadi vita', 'hd2')}${fld('Totali', 'hdt2', 'number')}${fld('Usati', 'hdu2', 'number')}</div>
+        <div class="hdr oHdr3" style="margin-top:8px">${fld('Affaticamento', 'fatigue')}<label class="lab scuroLab">Scurovisione<input type="text" data-f="scuroV" placeholder="es. 60 ft, 18 m, no"><small class="scuroNota" aria-live="polite"></small></label>${fld('Visione', 'vision')}</div>
+        <div class="ds"><span>Successi</span>${ck('ds1')}${ck('ds2')}${ck('ds3')}<span>Fallimenti</span>${ck('df1')}${ck('df2')}${ck('df3')}<small>Tiri salvezza contro la morte</small></div>`),
+      oBox('Attacchi', atk + `<h5 style="margin-top:8px">Munizioni</h5>` +
+        rows(3, i => `<div class="am"><input type="text" data-f="am${i}n" placeholder="Munizione"><input type="number" data-f="am${i}q" placeholder="Q.tà"></div>`)),
+      oBox('Equipaggiamento', `<div class="hdr oArm">${fld('Armatura', 'ar_name')}${fld('CA', 'ar_ca', 'number')}${fld('Des max', 'ar_dexmax')}${fld('For', 'ar_for')}${fld('Scudo', 'ar_shield')}</div>
+        <label class="rl2 oSvant">${ck('ar_dis')}<span>Svantaggio in Furtività</span></label>
+        <div class="coins" style="margin-top:8px">${COINS.map(([k, l]) => fld(l, k, 'number')).join('')}</div>`),
+      oBox('Inventario', `<div data-list="iv">${inv}</div><button type="button" class="oAdd" data-zs="more" data-for="iv">＋ Altre righe</button>
+        <div class="hdr" style="margin-top:8px">${oStat('Peso trasportato (kg)', '<output data-c="wsum"></output>')}${oStat('Peso massimo (kg)', '<output data-c="wmax"></output>')}</div>`),
+      oArea('Altro equipaggiamento', 'equip'))}
+    ${oCol(
+      oBox('Privilegi &amp; tratti limitati <small>(riposo breve · lungo · all\'alba)</small>', lim),
+      oArea('Privilegi di classe', 'classf', 'Es. Ira [[1d12 | Dado ira]]'),
+      oArea('Tratti razziali &amp; privilegi da background', 'racial'),
+      oArea('Talenti', 'feats'),
+      oArea('Altri privilegi e tratti', 'features', 'Es. Attacco furtivo [[2d6 | Furtivo]]'),
+      oBox('Consumabili e oggetti magici', rows(6, i => `<div class="am"><input type="text" data-f="cn${i}n" placeholder="Consumabile"><input type="number" data-f="cn${i}u" placeholder="Nr. usi"></div>`) +
+        `<h5 style="margin-top:8px">Oggetti magici armonizzati <small>(massimo 3)</small></h5>` + rows(3, i => `<input type="text" data-f="mi${i}" style="margin-bottom:4px">`)))}
   </div>`;
 }
 
-function openPagina2() {
-  const inv = Array.from({ length: OPEN_INV }, (_, i) => `<div class="iv"><input type="text" data-f="iv${i}n" placeholder="Oggetto"><input type="text" inputmode="decimal" data-f="iv${i}w" placeholder="kg"></div>`);
-  const meta = Math.ceil(OPEN_INV / 2);
-  return `<div class="sgrid">
-    ${oBox('Armatura', `<div class="hdr">${fld('Armatura', 'ar_name')}${fld('CA', 'ar_ca', 'number')}${fld('Des max', 'ar_dexmax')}${fld('For', 'ar_for')}${fld('Scudo', 'ar_shield')}<label class="rl2">${ck('ar_dis')}<span>Svantaggio in furtività</span></label></div>`, 'full')}
-    ${oBox('Monete', `<div class="coins">${COINS.map(([k, l]) => fld(l, k, 'number')).join('')}</div>`)}
-    ${oBox('Consumabili', rows(6, i => `<div class="am"><input type="text" data-f="cn${i}n" placeholder="Consumabile"><input type="number" data-f="cn${i}u" placeholder="Nr. usi"></div>`))}
-    ${oBox('Oggetti magici armonizzati <small>(massimo 3)</small>', rows(3, i => `<input type="text" data-f="mi${i}" style="margin-bottom:4px">`))}
-    ${oArea('Equipaggiamento', 'equip')}
-    <div class="box full"><h5>Inventario</h5><div class="invgrid"><div>${inv.slice(0, meta).join('')}</div><div>${inv.slice(meta).join('')}</div></div>
-      <div class="hdr" style="margin-top:8px">${oStat('Peso trasportato (kg)', '<output data-c="wsum"></output>')}${oStat('Peso massimo trasportabile (kg)', '<output data-c="wmax"></output>')}</div></div>
-  </div>`;
-}
-
-function openPagina3() {
-  return `<div class="sgrid">
-    <div class="box full"><div class="hdr">${fld('Età', 'age')}${fld('Altezza', 'height')}${fld('Peso', 'weight')}${fld('Occhi', 'eyes')}${fld('Carnagione', 'skin')}${fld('Capelli', 'hair')}</div></div>
-    ${oBox('Aspetto del personaggio', `<div class="sImg oImg" data-img="portrait"><span>Tocca per scegliere un'immagine</span></div><textarea data-f="look" placeholder="Com'è fatto"></textarea>`)}
-    ${oBox('Fazione', `${fld('Nome', 'faction')}<div class="sImg oImg oImgSm" data-img="symbol"><span>Simbolo</span></div><textarea data-f="faction_text"></textarea>`)}
-    ${oArea('Tratti caratteriali', 'traits')}${oArea('Ideali', 'ideals')}${oArea('Legami', 'bonds')}${oArea('Difetti', 'flaws')}${oArea('Nemici', 'enemies')}
+function openPagBio() {
+  return `<div class="box oHead"><div class="hdr oHdr4 oHdr7">${fld('Età', 'age')}${fld('Sesso', 'sex')}${fld('Altezza', 'height')}${fld('Peso', 'weight')}${fld('Occhi', 'eyes')}${fld('Carnagione', 'skin')}${fld('Capelli', 'hair')}</div></div>
+  <div class="zsCols zsColsPari">
+    ${oCol(oBox('Aspetto del personaggio', `<div class="sImg oImg" data-img="portrait"><span>Tocca per scegliere un'immagine</span></div><textarea data-f="look" placeholder="Com'è fatto"></textarea>`, 'oLungo'))}
+    ${oCol(oArea('Tratti caratteriali', 'traits'), oArea('Ideali', 'ideals'), oArea('Legami', 'bonds'), oArea('Difetti', 'flaws'))}
+    ${oCol(oBox('Fazione', `${fld('Nome', 'faction')}<div class="sImg oImg oImgSm" data-img="symbol"><span>Simbolo</span></div><textarea data-f="faction_text" placeholder="Note sulla fazione"></textarea>`), oArea('Nemici', 'enemies'))}
+  </div>
+  <div class="zsCols zsCols2">
     ${oArea('Tratti &amp; privilegi aggiuntivi', 'extra')}
     ${oArea('Note', 'notes')}
+    ${oBox('Livello di follia <button type="button" class="oInfo" title="' + eh(INFO_FOLLIA) + '">che cos\'è?</button>', `<div class="row2">${fld('Livello', 'madness')}${fld('CD prova abilità', 'madcd', 'number')}</div>`, 'folliaBox')}
   </div>`;
 }
 
-function openPagina4() {
-  const livelli = Array.from({ length: 10 }, (_, L) => `<div class="box full oLiv" data-liv="${L}">
+function openPagIncantesimi() {
+  const livelli = Array.from({ length: 10 }, (_, L) => `<div class="box oLiv" data-liv="${L}">
       <h5>${L ? `Livello ${L}` : 'Trucchetti'}<small class="oConta"></small></h5>
       ${L ? `<div class="oSlot">${fld('Slot totali', 'sl' + L + 't', 'number')}${fld('Slot spesi', 'sl' + L + 'u', 'number')}</div>` : ''}
       <div class="oSpells"></div>
       <button type="button" class="oAdd">＋ ${L ? 'Aggiungi un incantesimo' : 'Aggiungi un trucchetto'}</button>
     </div>`).join('');
-  return `<div class="sgrid">
-    <div class="box full"><div class="hdr">${fld('Classe da incantatore', 'sc_class')}${fld('Caratteristica', 'sc_ab')}${fld('CD tiro salvezza', 'spcd', 'number')}
+  return `<div class="box oHead"><div class="hdr oHdr4">${fld('Classe da incantatore', 'sc_class')}${fld('Caratteristica', 'sc_ab')}${fld('CD tiro salvezza', 'spcd', 'number')}
       <div class="stat"><span class="lab">Bonus di attacco</span><span class="row2"><input type="number" data-f="spatk"><button type="button" class="rb" data-r="spatk" title="Tira l'attacco con incantesimo">Tira</button></span></div></div>
       <p class="oHint">Scrivi il nome di ogni incantesimo nella sua riga; tocca ▸ per scriverne la descrizione. Con 💬 la mandi in chat, con 🎲 tiri i dadi scritti come <b>[[8d6 | Danni]]</b>. La casella a sinistra segna gli incantesimi preparati.</p></div>
-    ${livelli}
-    ${oArea('Altri appunti sugli incantesimi', 'spells', 'Es. Dardo incantato [[3d4+3 | Dardo]]')}
-  </div>`;
+    <div class="oSpGrid">${livelli}</div>
+    <div class="oSpNote">${oArea('Altri appunti sugli incantesimi', 'spells', 'Es. Dardo incantato [[3d4+3 | Dardo]]')}</div>`;
 }
 
 function dndHtml() {
-  return `<div class="stabs"><button type="button" class="on" data-pg="1">Scheda</button><button type="button" data-pg="2">Equipaggiamento</button><button type="button" data-pg="3">Personaggio</button><button type="button" data-pg="4">Incantesimi</button></div>` +
-    [openPagina1(), openPagina2(), openPagina3(), openPagina4()]
-      .map((h, i) => `<div class="spage" data-pg="${i + 1}"${i ? ' hidden' : ''}>${h}</div>`).join('');
+  const pagine = [['Base', openPagBase()], ['Bio', openPagBio()], ['Incantesimi', openPagIncantesimi()]];
+  return `<div class="stabs">${pagine.map(([t], i) => `<button type="button"${i ? '' : ' class="on"'} data-pg="${i + 1}">${t}</button>`).join('')}</div>` +
+    pagine.map(([, h], i) => `<div class="spage oPage" data-pg="${i + 1}"${i ? ' hidden' : ''}><div class="zsIn">${h}</div></div>`).join('');
 }
 
 // una riga di attacco (le stesse chiavi an/ab/ad della scheda Standard)
@@ -171,7 +174,7 @@ function openSetup(w, root, s) {
   }
   root.querySelectorAll('.oLiv').forEach(disegnaLivello);
 
-  // attacchi: almeno 8 righe, e tutte quelle già scritte (anche oltre)
+  // attacchi: almeno 5 righe, e tutte quelle già scritte (anche oltre)
   const atkBox = root.querySelector('.oAtk');
   const atkRighe = fino => {
     const n = atkBox.querySelectorAll('.atk').length;
@@ -182,6 +185,7 @@ function openSetup(w, root, s) {
     return nuove[0];
   };
   if (atkBox) atkRighe(quantiAttacchi(s));
+  schedaBindListe(root, s);                          // inventario: le righe vuote in fondo restano nascoste
 
   root.addEventListener('click', e => {
     const info = e.target.closest('.oInfo');

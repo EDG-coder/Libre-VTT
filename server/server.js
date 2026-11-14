@@ -514,7 +514,7 @@ const PREDEF_ENV = process.env.LIBRE_PREDEFINITE || process.env.MYVTT_PREDEFINIT
 const PREDEF = PREDEF_ENV ? path.resolve(PREDEF_ENV) : null;
 const CAMP_HOME = CAMP_HOME_ENV ? path.resolve(CAMP_HOME_ENV) : null;
 const CHIAVI_COMUNI = ['theme', 'autoBg', 'resToken', 'resBg', 'gridDefault', 'border', 'ping', 'unit', 'sheetClose', 'rulerCenter', 'diag5', 'misuraTrascina', 'fogColor', 'fogVeil',
-  'caratLibere', 'spareggioDes', 'dadiProvvisori', 'boxLabels', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'modelliScheda'];
+  'caratLibere', 'spareggioDes', 'follia', 'dadiProvvisori', 'boxLabels', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'modelliScheda'];
 const soloComuni = s => Object.fromEntries(CHIAVI_COMUNI.filter(k => s && s[k] !== undefined).map(k => [k, s[k]]));
 function leggiPredefinite(res, q) {
   const f = q.get('campagna') ? path.join(DATA, 'predefinite.json') : PREDEF;

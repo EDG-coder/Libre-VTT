@@ -707,7 +707,7 @@ window.LIBRE_TUTORIAL_PASSI = (function () {
     "v.scheda.risorse.t": "Risorse e riquadri",
     "v.scheda.risorse": "Punti ferita con **Danni subiti** e **Cura**, riposo breve e lungo, e le risorse del personaggio (caselle incantesimo, ira…). Si aggiungono con ⚙.",
     "v.scheda.pagine.t": "Le pagine",
-    "v.scheda.pagine": "Scheda, Personaggio, Incantesimi: le pagine della scheda. − e + cambiano lo zoom della pagina.",
+    "v.scheda.pagine": "Base, Bio, Incantesimi: le pagine della scheda. Base ha tutto quello che serve per giocare. − e + cambiano lo zoom della pagina.",
     "v.scheda.tiri.t": "Tirare dalla scheda",
     "v.scheda.tiri": "I valori tondi, le abilità, i tiri salvezza e le armi si cliccano: il tiro parte subito e va in chat.",
     "v.aiuto.t": "La guida dei comandi",
