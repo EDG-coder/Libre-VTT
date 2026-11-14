@@ -16,6 +16,7 @@ const music = {
   ticking: 0,
   fadeK: 1, fading: false,       // dissolvenza: il volume si moltiplica per fadeK
   bloccata: false,               // il browser non lascia partire l'audio finché non si tocca la pagina
+  battiti: 0, ytFermo: 0,        // per musicRiallinea
   pinLocale: 0
 };
 settings.music.src = settings.music.src || 'yt';
@@ -24,6 +25,10 @@ try {
   if (Number.isFinite(v.vol)) music.vol = clamp(v.vol, 0, 100);
   music.muted = !!v.muted;
 } catch {}
+// L'ora dell'host (in rete): t0 è un'ora sua, e l'orologio di questo dispositivo può essere avanti o indietro.
+const musicOra = () => Date.now() + (typeof NET !== 'undefined' && Number.isFinite(NET.orologio) ? NET.orologio : 0);
+// Il punto in cui il brano deve essere adesso.
+const musicWant = () => { const m = settings.music; return Math.max(0, m.at + (m.playing && m.t0 ? (musicOra() - m.t0) / 1000 : 0)); };
 const musicSaveVol = () => { try { localStorage.setItem(MUSIC_VOL_KEY, JSON.stringify({ vol: music.vol, muted: music.muted })); } catch {} };
 
 // ---------- Finestra dello strumento ----------
@@ -311,7 +316,7 @@ function musicApply(st, primaDi) {
 function musicApplyNow() {
   const m = settings.music;
   if (music.fading) return;
-  const want = () => Math.max(0, m.at + (m.playing && m.t0 ? (Date.now() - m.t0) / 1000 : 0));
+  const want = musicWant;
   if (m.src === 'file') {
     if (music.ready) { try { music.player.stopVideo(); } catch {} }
     const src = m.id ? musicFileSrc(m) : null;
@@ -364,7 +369,7 @@ function musicSet(patch) {
   Object.assign(m, { fade: false, scena: false }, patch);
   if (!('at' in patch)) m.at = stesso ? pos : 0;
   // con la dissolvenza la nuova canzone entra quando la vecchia ha finito di sfumare: si parte da lì
-  m.t0 = m.playing ? Date.now() + (m.fade && !stesso && suonava ? MUSIC_FADE : 0) : 0;
+  m.t0 = m.playing ? musicOra() + (m.fade && !stesso && suonava ? MUSIC_FADE : 0) : 0;
   scheduleBoardSave();
   if (typeof sendToPlayers === 'function') sendToPlayers('music', { ...m });
   musicApply({}, prima);
@@ -528,10 +533,35 @@ function musicRefresh() {
   musicRenderList();
 }
 
-// un battito al secondo per la barra del tempo
+// un battito al secondo per la barra del tempo (e ogni 5 chi ascolta controlla di essere al punto giusto)
 function musicTick() {
   if (musicBox.classList.contains('open')) musicRefresh();
+  if (++music.battiti % 5 === 0) musicRiallinea();
   music.ticking = setTimeout(musicTick, 1000);
+}
+// Chi ascolta (non chi comanda) e si è perso: il salto al punto giusto non è riuscito (linea debole, canzone
+// ancora in arrivo), l'audio si è fermato da solo, o il browser non ha lasciato partire YouTube.
+function musicRiallinea() {
+  const m = settings.music;
+  if (musicIsMaster() || !m.id || !m.playing || music.fading || music.bloccata) return;
+  if (m.src === 'file') {
+    if (!musicAudio.getAttribute('src') || musicAudio.readyState < 1 || musicAudio.seeking || musicAudio.ended) return;
+    const d = musicAudio.duration;
+    if (m.loop !== 'one' && d > 0 && musicWant() >= d) return;          // finita: aspetta la prossima del master
+    if (musicAudio.paused || Math.abs((musicAudio.currentTime || 0) - musicWant()) > 3) musicApplyNow();
+    return;
+  }
+  if (!music.ready) return;
+  let st;
+  try { st = music.player.getPlayerState(); } catch { return; }
+  if (st === YT.PlayerState.BUFFERING || st === YT.PlayerState.ENDED) { music.ytFermo = 0; return; }
+  if (st !== YT.PlayerState.PLAYING) {
+    // ferma da due controlli: il browser non la fa partire da sola, serve un tocco sulla pagina
+    if (++music.ytFermo >= 2) { music.ytFermo = 0; musicBloccata(); } else musicApplyNow();
+    return;
+  }
+  music.ytFermo = 0;
+  try { if (Math.abs((music.player.getCurrentTime() || 0) - musicWant()) > 3) musicApplyNow(); } catch {}
 }
 
 musicBox.querySelector('.tgrip').addEventListener('click', () => {

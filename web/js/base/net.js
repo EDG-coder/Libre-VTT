@@ -298,7 +298,17 @@ function netReconnectNow() {
 }
 
 // ---------- Messaggi dal server ----------
+// L'orologio dell'host: chi ha l'orologio del telefono o del computer avanti o indietro sentirebbe la musica
+// nel punto sbagliato (t0 è un'ora dell'host). Ogni messaggio arriva un po' dopo essere partito, quindi la
+// stima migliore è la più alta vista da quando si è entrati.
+function netOrologio(m, nuovo) {
+  if (!m || !Number.isFinite(m.ora)) return;
+  const d = m.ora - Date.now();
+  NET.orologio = nuovo || !Number.isFinite(NET.orologio) ? d : Math.max(NET.orologio, d);
+}
+
 function netHandle(m) {
+  netOrologio(m, m.t === 'welcome');
   switch (m.t) {
     case 'beat': netSend({ t: 'pong' }); return;
     case 'eco': clearTimeout(NET._eco); NET._eco = 0; return;   // c'è
@@ -609,11 +619,15 @@ async function applyWorld(w, toccati) {
     if (isMaster() && NET.mondoVisto && pubPrima !== settings.publicScene && settings.publicScene && typeof musicaDellaScena === 'function') musicaDellaScena(settings.publicScene, true);
     if (!isMaster()) settings.fogColor = w.fogColor || 'auto';     // il colore della nebbia lo decide chi conduce
     if (!isMaster() && t('turni') && typeof turniDaMondo === 'function') turniDaMondo(w.turni);
-    // la musica cambiata mentre eri scollegato (o con la linea debole): arriva con il mondo
-    // (all'ingresso no, come prima: parte quando il master la cambia)
+    // la musica cambiata mentre eri scollegato (o con la linea debole): arriva con il mondo.
+    // Anche all'ingresso (pagina ricaricata): si riprende dal punto giusto, calcolato dall'ora di partenza,
+    // e non da quello che la pagina si era salvata
     if (!isMaster() && t('music')) {
-      const j = JSON.stringify(w.music || null);
-      if (w.music && NET.musicaServer !== undefined && j !== NET.musicaServer && typeof musicApply === 'function') musicApply(w.music);
+      const j = JSON.stringify(w.music || null), primo = NET.musicaServer === undefined;
+      if (typeof musicApply === 'function') {
+        if (w.music && (primo || j !== NET.musicaServer)) musicApply(w.music);
+        else if (!w.music && primo && settings.music.playing) musicApply({ playing: false, at: 0, t0: 0 });
+      }
       NET.musicaServer = j;
     }
 
