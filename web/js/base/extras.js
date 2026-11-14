@@ -1001,7 +1001,7 @@ function renderChatTabs() {
 function renderChat() {
   const giu = chatInFondo(), su = chatLog.scrollTop;
   chatLog.replaceChildren(...chat.filter(chatVisible).map(msgEl));
-  if (giu || renderChat.cambio) chatGiu(); else chatLog.scrollTop = su;      // ridisegnata: resta dove stavi leggendo
+  if (giu || renderChat.cambio) chatGiu(); else { chatLog.scrollTop = su; chatPulsanteGiu(); }      // ridisegnata: resta dove stavi leggendo
   renderChat.cambio = false;
 }
 

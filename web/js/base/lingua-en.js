@@ -1381,7 +1381,8 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Scrivi un messaggio…": "Write a message…",
 "Scrivi…": "Write…",
 "Invio manda il messaggio, Maiusc+Invio va a capo": "Enter sends the message, Shift+Enter adds a new line",
-"Nuovi messaggi ↓": "New messages ↓",
+"Nuovi messaggi": "New messages",
+"Vai all'ultimo messaggio": "Go to the latest message",
 "puoi cancellare solo i tuoi messaggi": "you can only delete your own messages",
 });
 Object.assign(window.LIBRE_LINGUE.en, {
