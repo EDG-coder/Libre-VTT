@@ -1827,6 +1827,12 @@ const server = http.createServer(async (req, res) => {
     if (u.pathname !== '/api/vivo' && u.pathname !== '/api/presente' && u.pathname !== '/api/passaggio' && dato !== SEGRETO) return invia(res, 403, 'Questa finestra non è quella di LIBRE VTT.');
   }
 
+  // il tutorial guidato: gli stessi file del tavolo (js/strumenti/tutorial*.js, css/tutorial.css)
+  const TUTORIAL = { '/tutorial.js': 'js/strumenti/tutorial.js', '/tutorial-passi.js': 'js/strumenti/tutorial-passi.js', '/tutorial-en.js': 'js/strumenti/tutorial-en.js', '/tutorial.css': 'css/tutorial.css' };
+  if (Object.prototype.hasOwnProperty.call(TUTORIAL, u.pathname)) {
+    return fs.readFile(path.join(WEB, TUTORIAL[u.pathname]), (e, d) =>
+      e ? invia(res, 404, 'no') : invia(res, 200, d, u.pathname.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8'));
+  }
   if (u.pathname === '/' || u.pathname === '/index.html') {
     return fs.readFile(path.join(WEB, 'launcher.html'), (e, d) =>
       e ? invia(res, 500, 'launcher.html non trovato') : invia(res, 200, d, 'text/html; charset=utf-8'));
