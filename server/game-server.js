@@ -1322,7 +1322,7 @@ function handleIntent(c, m) {
       world.music = m.state || null;
       scheduleSave();
       // corsia C: a chi ha la linea debole la musica arriva quando il collegamento torna buono
-      for (const k of clients) { if (k.leggera) k.musicaDopo = true; else k.send({ t: 'music', state: world.music }); }
+      for (const k of clients) { if (k.leggera) k.musicaDopo = true; else k.send({ t: 'music', state: world.music, ora: Date.now() }); }
       return;
     }
 
@@ -1484,7 +1484,7 @@ function aggiornaQualita(c) {
     logAction(c, 'collegamento', true, leggera ? 'debole: modalità leggera' : 'di nuovo buono');
     if (!leggera) {                                          // torna buono: arriva quello che era rimasto indietro
       pushWorld(c);
-      if (c.musicaDopo) { c.musicaDopo = false; c.send({ t: 'music', state: world.music }); }
+      if (c.musicaDopo) { c.musicaDopo = false; c.send({ t: 'music', state: world.music, ora: Date.now() }); }
       pompaC(c);
     }
   }
@@ -1879,7 +1879,7 @@ function sendWelcome(c) {
   const chatV = world.chat || [], i = c.chatDa ? chatV.findIndex(x => x.id === c.chatDa) : -1;
   // (senza un messaggio da cui ripartire vuol dire che non ne aveva nessuno: gli si mandano tutti)
   if (c.delta && prec && c.verCliente === prec.ver && (i >= 0 || !c.chatDa)) {
-    c.send({ t: 'welcome', needName: !!c.needName, you, riprendi: true, sa: SA,
+    c.send({ t: 'welcome', needName: !!c.needName, you, riprendi: true, sa: SA, ora: Date.now(),
       chatDopo: chatV.slice(i + 1).slice(-250).map(m => chatFor(c, m)).filter(Boolean), chatVia: chatTolti.slice(),
       chatSvelati: chatSvelati.map(id => chatV.find(x => x.id === id)).filter(Boolean) });
     pushWorld(c);
@@ -1892,7 +1892,7 @@ function sendWelcome(c) {
       ver = (prec ? prec.ver : 0) + 1;
       ultime.set(c.token, { ver, testi });
     }
-    c.send({ t: 'welcome', needName: !!c.needName, you, world: w, ver, sa: SA });
+    c.send({ t: 'welcome', needName: !!c.needName, you, world: w, ver, sa: SA, ora: Date.now() });
   }
   logAction(c, 'ingresso', true, c.role);
   c.pluginGate = false;
@@ -2688,7 +2688,7 @@ if (MODE === 'host') {
       if (aggiornaQualita(c)) cambiata = true;
       c.alive = false;
       c.beatAt = Date.now();
-      c.send({ t: 'beat' });
+      c.send({ t: 'beat', ora: Date.now() });     // «ora»: l'orologio dell'host, per tenere la musica allineata
     }
     if (cambiata) sendPlayers();
   }, 5000);
