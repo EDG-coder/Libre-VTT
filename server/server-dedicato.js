@@ -69,6 +69,9 @@ function scriviSegreto(f, testo) {
 
 // ---------- la campagna ----------
 function preparaCampagna() {
+  // un modulo esportato da un altro master: file rimessi a posto e chiavi nuove (vedi modulo.js)
+  try { if (require('./modulo.js').completaModulo(CAMP, { programma: ROOT })) console.log('  Campagna arrivata da un altro master: codice e chiavi nuovi.'); }
+  catch (e) { console.error('  Non sono riuscito a finire di importare la campagna:', e.message); }
   fs.mkdirSync(DATA, { recursive: true });
   fs.mkdirSync(path.join(CAMP, 'assets'), { recursive: true });
   fs.mkdirSync(LINK_DIR, { recursive: true });

@@ -55,60 +55,84 @@ function elenca(dir, rel = '', out = []) {
  * Mette tutta la cartella `dir` in `fileZip`. Dentro lo zip i file stanno sotto `radice/`
  * (così chi lo apre a mano trova una cartella sola e non cento file sparsi).
  */
-function creaZip(dir, fileZip, { radice = path.basename(dir), salta = null } = {}) {
+function creaZip(dir, fileZip, { radice = path.basename(dir), salta = null, livello = 6 } = {}) {
+  const voci = (salta ? elenca(dir).filter(r => !salta(r)) : elenca(dir)).map(rel => {
+    const pieno = path.join(dir, ...rel.split('/'));
+    return { rel, dati: () => fs.readFileSync(pieno), mtime: () => fs.statSync(pieno).mtime };
+  });
+  return creaZipDaVoci(fileZip, voci, { radice, livello });
+}
+
+/**
+ * Scrive in `fileZip` le voci date: { rel, dati, mtime }. `dati` è un Buffer o una funzione che lo dà
+ * (così un file si legge solo quando tocca a lui), `mtime` una data o una funzione (facoltativa).
+ * `livello` è quanto si comprime (1-9): 9 è il più piccolo, e il più lento.
+ */
+function creaZipDaVoci(fileZip, voci, { radice = '', livello = 6 } = {}) {
+  const z = scrittoreZip(fileZip, { radice, livello });
+  try {
+    for (const v of voci) z.aggiungi(v.rel, typeof v.dati === 'function' ? v.dati() : v.dati, typeof v.mtime === 'function' ? v.mtime() : v.mtime);
+  } catch (e) { z.annulla(); throw e; }
+  return z.chiudi();
+}
+
+/**
+ * Uno zip scritto un file alla volta: aggiungi(rel, dati, data) e alla fine chiudi() (o annulla()).
+ * In memoria resta solo l'indice, non i file: va bene anche per campagne di centinaia di MB.
+ */
+function scrittoreZip(fileZip, { radice = '', livello = 6 } = {}) {
   const pre = radice ? radice.replace(/[\\/]+/g, '_') + '/' : '';
-  const voci = salta ? elenca(dir).filter(r => !salta(r)) : elenca(dir);
   const centrale = [];
   const tmp = fileZip + '.part';
   const fd = fs.openSync(tmp, 'w');
-  let pos = 0, byte = 0;
+  let pos = 0, byte = 0, chiuso = false;
   const scrivi = b => { fs.writeSync(fd, b, 0, b.length, pos); pos += b.length; };
-  try {
-    for (const rel of voci) {
-      const pieno = path.join(dir, ...rel.split('/'));
-      const dati = fs.readFileSync(pieno);
-      const st = fs.statSync(pieno);
-      const crc = crc32(dati);
-      const comprimi = !GIA_COMPRESSI.test(rel) && dati.length > 64;
-      let corpo = comprimi ? zlib.deflateRawSync(dati, { level: 6 }) : dati;
-      let metodo = comprimi ? 8 : 0;
-      if (comprimi && corpo.length >= dati.length) { corpo = dati; metodo = 0; }   // non conviene
-      if (dati.length > LIMITE || pos + corpo.length > LIMITE) throw new Error('La campagna è troppo grande per un file .zip (più di 4 GB).');
-      const nome = Buffer.from(pre + rel, 'utf8');
-      const { time, date } = dosTime(st.mtime);
-      const loc = Buffer.alloc(30);
-      loc.writeUInt32LE(0x04034b50, 0); loc.writeUInt16LE(20, 4); loc.writeUInt16LE(0x0800, 6);   // UTF-8
-      loc.writeUInt16LE(metodo, 8); loc.writeUInt16LE(time, 10); loc.writeUInt16LE(date, 12);
-      loc.writeUInt32LE(crc, 14); loc.writeUInt32LE(corpo.length, 18); loc.writeUInt32LE(dati.length, 22);
-      loc.writeUInt16LE(nome.length, 26); loc.writeUInt16LE(0, 28);
-      const offset = pos;
-      scrivi(loc); scrivi(nome); scrivi(corpo);
-      byte += dati.length;
-      centrale.push({ nome, metodo, time, date, crc, compresso: corpo.length, pieno: dati.length, offset });
-    }
-    const inizio = pos;
-    for (const c of centrale) {
-      const h = Buffer.alloc(46);
-      h.writeUInt32LE(0x02014b50, 0); h.writeUInt16LE(0x031e, 4); h.writeUInt16LE(20, 6); h.writeUInt16LE(0x0800, 8);
-      h.writeUInt16LE(c.metodo, 10); h.writeUInt16LE(c.time, 12); h.writeUInt16LE(c.date, 14);
-      h.writeUInt32LE(c.crc, 16); h.writeUInt32LE(c.compresso, 20); h.writeUInt32LE(c.pieno, 24);
-      h.writeUInt16LE(c.nome.length, 28); h.writeUInt16LE(0, 30); h.writeUInt16LE(0, 32); h.writeUInt16LE(0, 34);
-      h.writeUInt16LE(0, 36); h.writeUInt32LE((0o100644 << 16) >>> 0, 38); h.writeUInt32LE(c.offset, 42);
-      scrivi(h); scrivi(c.nome);
-    }
-    const fine = Buffer.alloc(22);
-    fine.writeUInt32LE(0x06054b50, 0); fine.writeUInt16LE(0, 4); fine.writeUInt16LE(0, 6);
-    fine.writeUInt16LE(centrale.length, 8); fine.writeUInt16LE(centrale.length, 10);
-    fine.writeUInt32LE(pos - inizio, 12); fine.writeUInt32LE(inizio, 16); fine.writeUInt16LE(0, 20);
-    if (centrale.length > 0xfffe) throw new Error('Troppi file per un file .zip.');
-    scrivi(fine);
-  } catch (e) {
-    fs.closeSync(fd); try { fs.unlinkSync(tmp); } catch {}
-    throw e;
+  const annulla = () => { if (chiuso) return; chiuso = true; try { fs.closeSync(fd); } catch {} try { fs.unlinkSync(tmp); } catch {} };
+  function aggiungi(rel, dati, quando) {
+    quando = quando || new Date();
+    const crc = crc32(dati);
+    const comprimi = !GIA_COMPRESSI.test(rel) && dati.length > 64;
+    let corpo = comprimi ? zlib.deflateRawSync(dati, { level: livello, memLevel: livello >= 9 ? 9 : 8 }) : dati;
+    let metodo = comprimi ? 8 : 0;
+    if (comprimi && corpo.length >= dati.length) { corpo = dati; metodo = 0; }   // non conviene
+    if (dati.length > LIMITE || pos + corpo.length > LIMITE) throw new Error('La campagna è troppo grande per un file .zip (più di 4 GB).');
+    if (centrale.length >= 0xfffe) throw new Error('Troppi file per un file .zip.');
+    const nome = Buffer.from(pre + rel, 'utf8');
+    const { time, date } = dosTime(quando);
+    const loc = Buffer.alloc(30);
+    loc.writeUInt32LE(0x04034b50, 0); loc.writeUInt16LE(20, 4); loc.writeUInt16LE(0x0800, 6);   // UTF-8
+    loc.writeUInt16LE(metodo, 8); loc.writeUInt16LE(time, 10); loc.writeUInt16LE(date, 12);
+    loc.writeUInt32LE(crc, 14); loc.writeUInt32LE(corpo.length, 18); loc.writeUInt32LE(dati.length, 22);
+    loc.writeUInt16LE(nome.length, 26); loc.writeUInt16LE(0, 28);
+    const offset = pos;
+    scrivi(loc); scrivi(nome); scrivi(corpo);
+    byte += dati.length;
+    centrale.push({ nome, metodo, time, date, crc, compresso: corpo.length, pieno: dati.length, offset });
   }
-  fs.closeSync(fd);
-  fs.renameSync(tmp, fileZip);
-  return { file: fileZip, voci: voci.length, byte };
+  function chiudi() {
+    try {
+      const inizio = pos;
+      for (const c of centrale) {
+        const h = Buffer.alloc(46);
+        h.writeUInt32LE(0x02014b50, 0); h.writeUInt16LE(0x031e, 4); h.writeUInt16LE(20, 6); h.writeUInt16LE(0x0800, 8);
+        h.writeUInt16LE(c.metodo, 10); h.writeUInt16LE(c.time, 12); h.writeUInt16LE(c.date, 14);
+        h.writeUInt32LE(c.crc, 16); h.writeUInt32LE(c.compresso, 20); h.writeUInt32LE(c.pieno, 24);
+        h.writeUInt16LE(c.nome.length, 28); h.writeUInt16LE(0, 30); h.writeUInt16LE(0, 32); h.writeUInt16LE(0, 34);
+        h.writeUInt16LE(0, 36); h.writeUInt32LE((0o100644 << 16) >>> 0, 38); h.writeUInt32LE(c.offset, 42);
+        scrivi(h); scrivi(c.nome);
+      }
+      const fine = Buffer.alloc(22);
+      fine.writeUInt32LE(0x06054b50, 0); fine.writeUInt16LE(0, 4); fine.writeUInt16LE(0, 6);
+      fine.writeUInt16LE(centrale.length, 8); fine.writeUInt16LE(centrale.length, 10);
+      fine.writeUInt32LE(pos - inizio, 12); fine.writeUInt32LE(inizio, 16); fine.writeUInt16LE(0, 20);
+      scrivi(fine);
+    } catch (e) { annulla(); throw e; }
+    chiuso = true;
+    fs.closeSync(fd);
+    fs.renameSync(tmp, fileZip);
+    return { file: fileZip, voci: centrale.length, byte, peso: pos };
+  }
+  return { aggiungi, chiudi, annulla };
 }
 
 /** Il percorso dentro lo zip, reso sicuro: niente assoluti, niente «..», niente lettere di disco. */
@@ -177,4 +201,4 @@ function estraiZip(fileZip, dest, { maxByte = 4 * 1024 * 1024 * 1024, maxVoci = 
   }
 }
 
-module.exports = { creaZip, estraiZip, crc32 };
+module.exports = { creaZip, creaZipDaVoci, scrittoreZip, estraiZip, elenca, crc32, SPAZZATURA };
