@@ -950,10 +950,45 @@
     });
   }
 
+  // ---------- filtri compressi mentre scorri ----------
+  // Scorrendo l'elenco verso il basso, filtri, ordine e pulsanti si chiudono: resta la barra con ricerca,
+  // tipo e «Filtri ▾» (che li riapre). Tornando in cima si riaprono da soli.
+  // Sul telefono in orizzontale (mobile.css) restano chiusi anche in cima, finché non tocchi «Filtri ▾».
+  const pane = $('tab-comp'), lista = $('compLista'), btnF = $('compFiltriBtn');
+  let apertiA = 0;                              // dove eri quando li hai riaperti a mano
+  function etichettaFiltri() {
+    const aperti = pane.classList.contains('filtriAperti');
+    const n = Object.values(F.extra).filter(x => x !== undefined && x !== '').length;
+    btnF.setAttribute('aria-expanded', String(aperti));
+    btnF.textContent = tr(aperti ? 'Filtri ▴' : 'Filtri ▾');
+    if (n) { const b = document.createElement('span'); b.className = 'compNF'; b.textContent = n; b.title = tr('Filtri attivi: {n}', { n }); btnF.append(b); }
+  }
+  function apriFiltri(si) { pane.classList.toggle('filtriAperti', si); apertiA = lista.scrollTop; etichettaFiltri(); }
+  btnF.addEventListener('click', () => apriFiltri(!pane.classList.contains('filtriAperti')));
+  function comprimi(si) {
+    if (pane.classList.contains('compatto') === si) return;
+    pane.classList.toggle('compatto', si);
+    if (!si) pane.classList.remove('filtriAperti');
+    etichettaFiltri();
+  }
+  lista.addEventListener('scroll', () => {
+    const y = lista.scrollTop;
+    if (y <= 2) { comprimi(false); return; }
+    if (pane.classList.contains('compatto')) {
+      if (pane.classList.contains('filtriAperti') && y > apertiA + 60) apriFiltri(false);   // riaperti a mano: si richiudono se continui a scendere
+      return;
+    }
+    if (y < 40) return;
+    // si comprime solo se, nascosti i filtri, l'elenco scorre ancora: altrimenti tornerebbe in cima e ballerebbe
+    const nasc = ['compFiltri', 'compStato'].map($).concat([pane.querySelector('.compAzioni')]).reduce((t, el) => t + (el ? el.offsetHeight : 0), 0);
+    if (lista.scrollHeight - lista.clientHeight - nasc > 60) comprimi(true);
+  }, { passive: true });
+  addEventListener('change', e => { if (e.target.closest && e.target.closest('#compFiltri')) etichettaFiltri(); });
+
   // ---------- collegamenti ----------
   $('compQ').addEventListener('input', e => { F.q = e.target.value; disegna(); });
   const etichettaNuova = () => { $('compNuova').textContent = F.tipo ? tr('＋ Nuova: {t}', { t: nomeTipo(F.tipo) }) : tr('＋ Nuova voce'); };
-  $('compTipo').addEventListener('change', e => { F.tipo = e.target.value; F.extra = { pack: F.extra.pack }; filtriExtra(); disegna(); etichettaNuova(); });
+  $('compTipo').addEventListener('change', e => { F.tipo = e.target.value; F.extra = { pack: F.extra.pack }; filtriExtra(); disegna(); etichettaNuova(); etichettaFiltri(); });
   $('compNuova').addEventListener('click', () => editor(null));
   $('compImporta').addEventListener('click', importa);
   $('compPacchetti').addEventListener('click', pacchetti);

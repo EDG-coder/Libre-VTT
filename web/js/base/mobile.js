@@ -83,11 +83,7 @@
   });
   requestAnimationFrame(dimensionaStrumenti);
 
-  document.addEventListener('click', e => {
-    const b = e.target.closest && e.target.closest('#compFiltriBtn'); if (!b) return;
-    const aperti = document.getElementById('tab-comp').classList.toggle('filtriAperti');
-    b.setAttribute('aria-expanded', aperti); b.textContent = (window.tr || (x => x))(aperti ? 'Filtri ▴' : 'Filtri ▾');
-  });
+  // il pulsante «Filtri ▾» del compendio ora sta in compendio.js (si usa anche quando l'elenco scorre)
 
   const toccoOra = () => R.classList.contains('ui-touch');
   const telefono = () => R.classList.contains('ui-tel');

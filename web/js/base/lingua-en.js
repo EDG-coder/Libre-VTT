@@ -1775,6 +1775,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Mostra o nascondi filtri e pulsanti": "Show or hide filters and buttons",
 "Filtri ▾": "Filters ▾",
 "Filtri ▴": "Filters ▴",
+"Filtri attivi: {n}": "Active filters: {n}",
 "Porta aperta: tocca per chiuderla": "Open door: tap to close it",
 "Porta chiusa: tocca per aprirla": "Closed door: tap to open it",
 "Luci e muri": "Lights and walls",
