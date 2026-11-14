@@ -693,7 +693,11 @@ function aggiornaSulPosto(sc) {
     if (!el) { creaDaDati(p); continue; }
     // lo sta spostando chi guarda, o lo ha appena spostato e il server non ha ancora risposto: si lascia stare
     const muove = (el === activeEl && mode) || netMossaInAttesa(p.id);
-    if (!muove) Object.assign(el.style, { left: p.l + 'px', top: p.t + 'px', width: p.w + 'px', height: p.h + 'px' });
+    if (!muove) {
+      // spostato da un altro (stessa misura, altro posto): scivola fin lì, se lo si vuole
+      if (typeof scivola === 'function' && el.style.width === p.w + 'px' && el.style.height === p.h + 'px' && (el.style.left !== p.l + 'px' || el.style.top !== p.t + 'px')) scivola(el);
+      Object.assign(el.style, { left: p.l + 'px', top: p.t + 'px', width: p.w + 'px', height: p.h + 'px' });
+    }
     if (p.z && el.dataset.layer !== 'map') el.style.zIndex = p.z;
     if (!p.shape) {
       // la rotazione appena data qui e non ancora confermata dal server non torna indietro

@@ -109,8 +109,8 @@
 svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
 #viewport.pen-on, #viewport.pen-on * { cursor: crosshair !important; }
 #viewport.ruler-on, #viewport.ruler-on * { cursor: crosshair !important; }
-#rulerSvg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 6; pointer-events: none; }
-#rulerSvg text { font: 600 14px system-ui, sans-serif; paint-order: stroke; stroke: rgba(0, 0, 0, .75); stroke-width: 4px; fill: #fff; }
+#rulerSvg, #trascinaSvg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 6; pointer-events: none; }
+#rulerSvg text, #trascinaSvg text { font: 600 14px system-ui, sans-serif; paint-order: stroke; stroke: rgba(0, 0, 0, .75); stroke-width: 4px; fill: #fff; }
 
 /* ======================= Scena mostrata ai giocatori ======================= */
 .sceneRow .pin { opacity: .45; }

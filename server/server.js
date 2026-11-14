@@ -513,7 +513,7 @@ function salvaVisibilita(req, res) {
 const PREDEF_ENV = process.env.LIBRE_PREDEFINITE || process.env.MYVTT_PREDEFINITE, CAMP_HOME_ENV = process.env.LIBRE_CAMP_HOME || process.env.MYVTT_CAMP_HOME;
 const PREDEF = PREDEF_ENV ? path.resolve(PREDEF_ENV) : null;
 const CAMP_HOME = CAMP_HOME_ENV ? path.resolve(CAMP_HOME_ENV) : null;
-const CHIAVI_COMUNI = ['theme', 'autoBg', 'resToken', 'resBg', 'gridDefault', 'border', 'ping', 'unit', 'sheetClose', 'rulerCenter', 'diag5', 'fogColor', 'fogVeil',
+const CHIAVI_COMUNI = ['theme', 'autoBg', 'resToken', 'resBg', 'gridDefault', 'border', 'ping', 'unit', 'sheetClose', 'rulerCenter', 'diag5', 'misuraTrascina', 'fogColor', 'fogVeil',
   'caratLibere', 'spareggioDes', 'dadiProvvisori', 'boxLabels', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'modelliScheda'];
 const soloComuni = s => Object.fromEntries(CHIAVI_COMUNI.filter(k => s && s[k] !== undefined).map(k => [k, s[k]]));
 function leggiPredefinite(res, q) {

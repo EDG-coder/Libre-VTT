@@ -492,6 +492,15 @@ function rulerSvgDi(mondo, nome) {
   svg += `<text x="${fine.x + 12}" y="${fine.y - 12}">${misura(cells)} · ${+cells.toFixed(1)} ${tr('caselle')}</text>`;
   return svg;
 }
+// Mentre si trascina un segnalino: la distanza dal centro di dove era a quello di dove è adesso (come il
+// righello, con la stessa regola per le diagonali). Sparisce quando lo si lascia. Solo per chi trascina.
+const trascinaSvg = document.createElementNS(SVGNS, 'svg'); trascinaSvg.id = 'trascinaSvg'; document.body.appendChild(trascinaSvg);
+function misuraTrascinamento(el, x0, y0) {
+  if (!el || settings.misuraTrascina === false || el._shape || (el.dataset.layer || 'tokens') === 'map' || !(grid.size > 0)) { if (trascinaSvg.firstChild) trascinaSvg.replaceChildren(); return; }
+  const w = num(el, 'width') / 2, h = num(el, 'height') / 2;
+  const a = { x: x0 + w, y: y0 + h }, b = { x: num(el, 'left') + w, y: num(el, 'top') + h };
+  trascinaSvg.innerHTML = rulerSvgDi([a, b]);
+}
 // un colore fisso per ogni nome, così due righelli insieme non si confondono
 const coloreDiNome = nome => { let h = 0; for (const ch of String(nome)) h = (h * 31 + ch.codePointAt(0)) >>> 0; return `hsl(${h % 360} 85% 62%)`; };
 function drawRuler() {
@@ -832,6 +841,7 @@ function toolMenu(el) {
   if (t.id === 'luce' && typeof fogMenuExtra === 'function') items.push('-', ...fogMenuExtra());
   if (t.id === 'pen') items.push({ label: 'Annulla l\'ultimo tratto', fn: () => $('penUndo').click() }, { label: 'Cancella i disegni del livello', danger: true, fn: () => $('penClear').click() });
   if (t.id === 'ruler') items.push({ label: settings.rulerCenter ? 'Misura liberamente (non da centro a centro)' : 'Misura da centro a centro delle caselle', fn: () => { settings.rulerCenter = !settings.rulerCenter; syncExtraForm(); scheduleBoardSave(); } },
+    { label: settings.misuraTrascina === false ? 'Misura lo spostamento mentre trascini un segnalino' : 'Non misurare lo spostamento dei segnalini', fn: () => { settings.misuraTrascina = settings.misuraTrascina === false; syncExtraForm(); scheduleBoardSave(); } },
     { label: settings.diag5 ? 'Diagonali col teorema di Pitagora' : 'Diagonali: ogni casella vale 5 ft', fn: () => { settings.diag5 = !settings.diag5; syncExtraForm(); if (ruler) drawRuler(); scheduleBoardSave(); } }, ...[['ft', 'Usa 5 ft per casella'], ['m', 'Usa 1,5 m per casella'], ['mi', 'Usa 1 miglio per casella']].filter(([u]) => u !== (settings.unit || 'ft')).map(([u, label]) => ({ label, fn: () => { settings.unit = u; rulerTitle(); syncSheetForm(); scheduleBoardSave(); } })));
   return items;
 }
@@ -982,10 +992,12 @@ function applyHidden() {
 function syncExtraForm() {
   $('rulerCenter').checked = !!settings.rulerCenter;
   $('diag5').checked = !!settings.diag5;
+  $('misuraTrascina').checked = settings.misuraTrascina !== false;
   $('hlShow').checked = settings.hiddenLayer.show; $('hlOp').value = settings.hiddenLayer.opacity; $('hlOpOut').textContent = settings.hiddenLayer.opacity;
   $('chTabRolls').checked = settings.chatTabs.rolls; $('chTabRules').checked = settings.chatTabs.rules;
 }
 $('rulerCenter').addEventListener('input', e => { settings.rulerCenter = e.target.checked; scheduleBoardSave(); });
+$('misuraTrascina').addEventListener('input', e => { settings.misuraTrascina = e.target.checked; scheduleBoardSave(); });
 $('diag5').addEventListener('input', e => { settings.diag5 = e.target.checked; if (ruler) drawRuler(); scheduleBoardSave(); });
 $('hlShow').addEventListener('input', e => { settings.hiddenLayer.show = e.target.checked; applyHidden(); scheduleBoardSave(); });
 $('hlOp').addEventListener('input', e => { settings.hiddenLayer.opacity = +e.target.value; applyHidden(); syncExtraForm(); scheduleBoardSave(); });
