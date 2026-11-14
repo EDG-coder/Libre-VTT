@@ -459,7 +459,7 @@ function barraMinima(w) {
 // e si continua ad allargarla finché non si lascia.
 function linguettaIcona(w) {
   const g = document.createElement('span');
-  g.className = 'sgrow'; g.title = 'Tira per allargare in barra'; g.setAttribute('aria-hidden', 'true');
+  g.className = 'sgrow'; g.title = typeof tr === 'function' ? tr('Tira per allargare in barra') : 'Tira per allargare in barra'; g.setAttribute('aria-hidden', 'true');
   g.addEventListener('pointerdown', e => {
     if (e.button !== 0 || w._state !== 'icon') return;
     e.preventDefault(); e.stopPropagation();
