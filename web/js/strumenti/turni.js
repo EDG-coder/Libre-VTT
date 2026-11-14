@@ -40,6 +40,11 @@
     const st = stato();
     const pid = el.dataset.pid || (el.dataset.pid = (typeof uid === 'function' ? uid() : idRiga()));
     if (st.righe.some(r => r.pid === pid)) return false;
+    // lo stesso personaggio (stessa scheda) già in fila col segnalino di un'altra scena, o senza segnalino (il suo
+    // tiro d'iniziativa è arrivato prima): resta una riga sola, che ora segue questo segnalino. Prima diventavano
+    // due righe uguali («Tocca a: Ari · Poi: Ari»). Due segnalini nella stessa scena restano due righe (i mostri).
+    const gia = el.dataset.sheet && st.righe.find(r => r.sheet === el.dataset.sheet);
+    if (gia && !(gia.pid && world.querySelector(`.photo[data-pid="${CSS.escape(gia.pid)}"]`))) { gia.pid = pid; return false; }
     const s = el.dataset.sheet && sheets.find(x => x.id === el.dataset.sheet);
     st.righe.push({ id: idRiga(), nome: (s && s.name) || el.dataset.name || tr('Segnalino'), ini: null, sheet: el.dataset.sheet || undefined, pid });
     return true;
@@ -86,6 +91,7 @@
        <p class="tnote" id="turniVuoto">Nessuno in fila. Aggiungi i segnalini della scena, oppure clic destro su un segnalino → «Aggiungi ai turni».</p>
        <div class="trow soloMaster"><button id="turniPrec" type="button" title="Turno precedente">◀</button><button id="turniAvanti" type="button" class="primo">Avanti ▶</button></div>
        <div class="trow soloMaster"><button id="turniAgg" type="button">＋ Segnalini della scena</button><button id="turniSvuota" type="button">Svuota</button></div>
+       <label class="trow soloMaster" id="turniMovRiga" title="Senza la spunta i giocatori muovono i segnalini quanto vogliono (i muri contano lo stesso)"><input id="turniMov" type="checkbox"><span>Conta il movimento in questa mappa (Velocità della scheda)</span></label>
        <p class="tnote">Quando un giocatore tira «Iniziativa» dalla sua scheda, il risultato arriva qui da solo.</p>
      </div>`);
   box.id = 'turniBox';
@@ -100,7 +106,22 @@
   barra.innerHTML = '<button type="button" class="tbTesta" aria-expanded="false"></button><ol class="tbLista" hidden></ol>';
   document.body.appendChild(barra);
   const tbTesta = barra.querySelector('.tbTesta'), tbLista = barra.querySelector('.tbLista');
-  tbTesta.addEventListener('click', () => { const ap = tbLista.hidden; tbLista.hidden = !ap; tbTesta.setAttribute('aria-expanded', ap); });
+  const apriLista = ap => { tbLista.hidden = !ap; tbTesta.setAttribute('aria-expanded', ap); };
+  tbTesta.addEventListener('click', () => apriLista(tbLista.hidden));
+  // l'elenco aperto si chiude toccando fuori dalla barra (prima restava aperto sopra la mappa)
+  addEventListener('pointerdown', e => { if (!tbLista.hidden && !barra.contains(e.target)) apriLista(false); }, true);
+  // l'avviso del collegamento («Collegato», «Scatto tolto»…) sta anche lui in alto al centro: la barra scende
+  // sotto di lui invece di finirci sotto
+  function sottoAvviso() {
+    const nb = document.getElementById('netBar');
+    const r = nb && !nb.hidden && nb.getBoundingClientRect();
+    barra.style.top = r && r.height ? Math.round(r.bottom + 6) + 'px' : '';
+  }
+  const nbEl = document.getElementById('netBar');
+  if (nbEl) {
+    new MutationObserver(sottoAvviso).observe(nbEl, { attributes: true, attributeFilter: ['hidden', 'class'], childList: true, subtree: true, characterData: true });
+    addEventListener('resize', sottoAvviso);
+  }
   function disegnaBarra(st) {
     const on = !!st.on && st.righe.length > 0;
     barra.hidden = !on;
@@ -154,9 +175,37 @@
       riga.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') evidenzia(r, 2000); });
       return riga;
     }));
-    const ora = tb.querySelector('tr.ora'); if (ora) ora.scrollIntoView({ block: 'nearest' });
+    // la riga di chi gioca resta in vista nell'elenco. Solo l'elenco scorre: scrollIntoView spostava anche il
+    // pannello (da chiuso l'icona finiva fuori dal suo cerchio e il pulsante «spariva») e la pagina sul telefono
+    const ora = tb.querySelector('tr.ora'), lista = box.querySelector('.turniLista');
+    if (ora && lista && box.classList.contains('open')) {
+      const a = ora.offsetTop - lista.offsetTop, b = a + ora.offsetHeight;
+      if (a < lista.scrollTop) lista.scrollTop = a; else if (b > lista.scrollTop + lista.clientHeight) lista.scrollTop = b - lista.clientHeight;
+    }
+    if (!box.classList.contains('open')) box.scrollTop = 0;
+    disegnaMovimento();
     if (box.classList.contains('open') && typeof misuraPannello === 'function') misuraPannello(box);
   }
+  // ---------- conteggio del movimento nella scena di adesso (lo stesso interruttore di Visibilità › Muri) ----------
+  // Nelle mappe di battaglia il server ferma i segnalini dei giocatori alla Velocità della scheda; qui il master
+  // lo spegne per la mappa aperta (per esempio in una mappa di guerra, dove si muovono eserciti e non persone).
+  function disegnaMovimento() {
+    const inp = $('turniMov'), riga = $('turniMovRiga');
+    if (!inp || typeof luceVelocita !== 'function') { if (riga) riga.hidden = true; return; }
+    const cin = typeof cur !== 'undefined' && cur && cur.type === 'cinematic';
+    riga.hidden = !!cin;                                // nelle scene cinematiche non si conta mai
+    inp.checked = luceVelocita();
+  }
+  $('turniMov').addEventListener('input', e => { if (typeof luceVelocita === 'function') luceVelocita(e.target.checked); disegnaMovimento(); });
+  if (typeof showScene === 'function') {
+    const prima = showScene;
+    showScene = function () {                                       // eslint-disable-line no-global-assign
+      const r = prima.apply(this, arguments);
+      Promise.resolve(r).then(disegnaMovimento, () => {});
+      return r;
+    };
+  }
+
   window.turniDisegna = () => { if (conduco()) ordina(stato()); disegna(); };
 
   $('turniOn').addEventListener('input', e => {
