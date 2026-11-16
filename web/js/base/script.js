@@ -2326,7 +2326,7 @@ function boardState() {
     v: 2, active: cur.id, settings,
     // la copia di un giocatore (quella che gli manda il server): riaprendola senza l'host resta una vista da giocatore
     giocatore: typeof netAs === 'function' && netAs() && !isMaster() ? true : undefined,
-    scenes: scenes.map(sc => ({ ...sc, bg: ok(sc.bg) ? sc.bg : null, photos: sc.photos.filter(ok) }))
+    scenes: scenes.map(sc => ({ ...sc, vistoParty: undefined, bg: ok(sc.bg) ? sc.bg : null, photos: sc.photos.filter(ok) }))
   };
 }
 function scheduleBoardSave() {

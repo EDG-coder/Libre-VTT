@@ -463,11 +463,14 @@ const viste = new Map();                // scena → { chiave, vista }
 const visti = new Map();                // scena → griglia del «già visto» (Uint8Array dentro)
 function grigliaVisto(sc, board, cella) {
   let g = visti.get(sc.id);
-  const ok = g && g.x === board.x && g.y === board.y && g.cols === Math.ceil(board.w / g.q) && g.rows === Math.ceil(board.h / g.q) && g.q === Math.max(4, cella / 4);
+  const nuova = LUCE.griglia(board, cella);
+  const ok = g && g.x === nuova.x && g.y === nuova.y && g.cols === nuova.cols && g.rows === nuova.rows && g.q === nuova.q;
   if (ok) return g;
-  g = LUCE.griglia(board, cella);
+  g = nuova;
   const salvato = world.visto && world.visto[sc.id];
-  if (salvato && salvato.x === g.x && salvato.y === g.y && salvato.cols === g.cols && salvato.rows === g.rows) g.d = LUCE.espandi(salvato.rle, g.d.length);
+  if (salvato && salvato.x === g.x && salvato.y === g.y && salvato.cols === g.cols && salvato.rows === g.rows && salvato.q === g.q) g.d = LUCE.espandi(salvato.rle, g.d.length);
+  // salvato con la griglia di prima (4 quadretti per casella) o con la mappa di un'altra misura: si riporta su questa
+  else if (salvato && LUCE.ricampiona(salvato, g)) { world.visto[sc.id] = { x: g.x, y: g.y, q: g.q, cols: g.cols, rows: g.rows, rle: LUCE.comprimi(g.d) }; scheduleSave(); }
   visti.set(sc.id, g);
   return g;
 }
@@ -561,7 +564,7 @@ function velocitaCaselle(ph) {
 }
 /** Il movimento passa per un passaggio (scale, botola…)? → dove si esce, oppure null. */
 function saltoDi(sc, ph, pos) {
-  const pass = sc.luce && Array.isArray(sc.luce.passaggi) && sc.luce.passaggi.length ? { passaggi: LUCE.pulisci(sc.luce).passaggi } : null;
+  const pass = sc.luce && Array.isArray(sc.luce.passaggi) && sc.luce.passaggi.length ? LUCE.pulisci(sc.luce) : null;   // anche i muri: un passaggio coperto si attraversa solo dal lato aperto
   if (!pass) return null;
   const [ax, ay] = centro(ph);
   const w = pos.w > 0 ? +pos.w : ph.w, h = pos.h > 0 ? +pos.h : ph.h;
@@ -601,10 +604,11 @@ function controllaMovimento(sc, ph, pos) {
 function dueTratti(muri, campo, cella, ax, ay, sl, max) {
   const lim = max >= 0 ? max : Infinity, m = muri || { muri: [] };
   const verso = (p, q, d) => { const L = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1; return [p[0] + (q[0] - p[0]) / L * d, p[1] + (q[1] - p[1]) / L * d]; };
-  const [px, py] = verso(sl.prima, [ax, ay], 1);                       // appena prima del passaggio
+  // appena prima del passaggio (3 unità: un muro disegnato sopra il passaggio, a un pelo, non deve fermare chi ci entra)
+  const [px, py] = verso(sl.prima, [ax, ay], 3);
   const uno = LUCE.percorso(m, campo, cella, ax, ay, px, py, lim);
   if (!uno) return null;
-  const [qx, qy] = verso(sl.dopo, [sl.x, sl.y], 1);                     // appena dopo, dall'altra parte
+  const [qx, qy] = verso(sl.dopo, [sl.x, sl.y], 3);                     // appena dopo, dall'altra parte
   const due = LUCE.percorso(m, campo, cella, qx, qy, sl.x, sl.y, lim - uno.caselle);
   return due ? { caselle: uno.caselle + due.caselle } : null;
 }
@@ -636,6 +640,12 @@ function sceneFor(c, sc) {
   // la nebbia va mandata comunque: al giocatore serve per dipingere il nero
   out.fog = fogOf(sc.id);
   if (!p.revealFog) Object.assign(out, lucePerGiocatore(c, sc));
+  else {
+    // a chi conduce il «già visto» del party, per l'anteprima (con la visione condivisa ce n'è uno solo)
+    delete out.vistoParty;
+    const v = sc.luce && sc.luce.on && sc.luce.ricordo !== 'nero' && sc.luce.condivisa !== false && world.visto && world.visto[sc.id];
+    if (v) out.vistoParty = v;
+  }
   return out;
 }
 
@@ -958,7 +968,7 @@ function handleIntent(c, m) {
         world.scenes = b.scenes;
         // indirizzi calcolati (http://127.0.0.1:<porta>/asset/<hash>) salvati per sbaglio: tornano «gs:<hash>»
         const fissa = o => { const m = o && /^https?:\/\/(?:127\.0\.0\.1|localhost):\d+\/asset\/([a-f0-9]{64})/.exec(String(o.url || '')); if (m) { o.url = 'gs:' + m[1]; o.gid = m[1]; } return o; };
-        for (const sc of world.scenes) fissa(sc.bg);
+        for (const sc of world.scenes) { fissa(sc.bg); delete sc.vistoParty; delete sc.vista; }   // le viste le calcola il server
         for (const sc of world.scenes) sc.photos = (sc.photos || []).map(ph => {
           fissa(ph);
           if (!ph.id) ph.id = newId('tk');

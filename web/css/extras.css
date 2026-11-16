@@ -935,6 +935,7 @@ html.mappaSuTela #luceTinta { visibility: hidden; }   /* sui dispositivi touch l
 #luceSegni .lPassoNum { pointer-events: auto; cursor: pointer; }
 #luceSegni .lPassoNum circle { fill: rgba(18, 21, 28, .85); stroke: #b07cff; stroke-width: 2; }
 #luceSegni .lPassoNum text { fill: #fff; font: 600 12px system-ui, sans-serif; pointer-events: none; }
+#luceSegni .lPassoVerso path { fill: #b07cff; stroke: rgba(18, 21, 28, .85); stroke-width: 2; pointer-events: none; }
 #viewport.layer-luce { cursor: crosshair; }
 #viewport.layer-luce .photo { pointer-events: none; opacity: .75; }
 #layerSwitch button[data-layer="luce"].active { background: rgba(255, 176, 0, .55); box-shadow: 0 0 12px rgba(255, 176, 0, .8); }

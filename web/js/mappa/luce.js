@@ -42,6 +42,26 @@
   };
   aggancia();
   const aiuto = document.createElement('canvas');                                    // per una visuale alla volta
+  const luminoso = document.createElement('canvas'), grigio = document.createElement('canvas');   // per più visuali insieme (il massimo)
+  // il filtro che trasforma il grigio in trasparenza (bianco con alfa = rosso): c'è dove il canvas sa usare i filtri SVG
+  const filtroSvg = document.createElementNS(NS, 'svg');
+  filtroSvg.setAttribute('width', '0'); filtroSvg.setAttribute('height', '0'); filtroSvg.setAttribute('aria-hidden', 'true');
+  filtroSvg.style.position = 'absolute';
+  filtroSvg.innerHTML = '<filter id="luceGrigioAlfa" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0"/></filter>';
+  document.body.appendChild(filtroSvg);
+  let filtroOk = null;
+  function filtroAlfa() {
+    if (filtroOk !== null) return filtroOk;
+    try {
+      const a = document.createElement('canvas'), b = document.createElement('canvas'); a.width = a.height = b.width = b.height = 2;
+      const x = a.getContext('2d'); x.fillStyle = 'rgb(128,128,128)'; x.fillRect(0, 0, 2, 2);
+      const y = b.getContext('2d'); if (!('filter' in y)) return (filtroOk = false);
+      y.filter = 'url(#luceGrigioAlfa)'; y.drawImage(a, 0, 0);
+      const d = y.getImageData(0, 0, 1, 1).data;
+      filtroOk = Math.abs(d[3] - 128) < 8 && d[0] > 240;
+    } catch { filtroOk = false; }
+    return filtroOk;
+  }
 
   const zonaAttiva = f => !!(f && f.zona && f.zona.indexOf('1') >= 0);
   /** La vista da disegnare: per i giocatori quella del server, per chi conduce solo in anteprima. */
@@ -69,6 +89,8 @@
     }
     const v = C.vista(l, b, cs, occhi, luciT);
     v.ricordo = l.ricordo;
+    // il «già visto» del party: lo tiene il server, che lo manda a chi conduce (senza rete non c'è)
+    if (l.ricordo === 'scuro' && l.condivisa && cur.vistoParty && cur.vistoParty.rle != null) v.visto = cur.vistoParty;
     return v;
   }
   function delParty(p) {
@@ -122,7 +144,10 @@
     const zona = zonaAttiva(fog) ? fog.zona : '';
     if (ultimoDisegno && ultimoDisegno.firma === firma && ultimoDisegno.zona === zona && !tela.hidden) return;
     ultimoDisegno = { firma, zona };
-    const k = Math.min(1.5, 2048 / Math.max(b.w, b.h));
+    // la risoluzione del buio: sulle mappe grandi con 2048 punti al massimo i bordi delle ombre venivano sfocati
+    // (e passavano qualche pixel oltre i muri); dove la grafica è leggera, o sui dispositivi touch, resta quella di prima
+    const leggera = (typeof graficaLeggera === 'function' && graficaLeggera()) || document.documentElement.classList.contains('mappaSuTela');
+    const k = Math.min(1.5, (leggera ? 2048 : 4096) / Math.max(b.w, b.h), Math.sqrt((leggera ? 4.2e6 : 6e6) / (b.w * b.h)));
     const W = Math.max(1, Math.ceil(b.w * k)), H = Math.max(1, Math.ceil(b.h * k));
     for (const c of [tela, tinta, aiuto]) if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
     for (const c of [tela, tinta]) Object.assign(c.style, { left: b.x + 'px', top: b.y + 'px', width: b.w + 'px', height: b.h + 'px' });
@@ -159,6 +184,19 @@
     // e solo con le luci che ci arrivano: il resto della mappa, lontano, non si tocca. Prima ogni segnalino
     // ripassava tutto il canvas e tutte le luci della scena.
     const vicine = (l, q) => { const R = l.r + l.rf; return R > 0 && l.x + R >= q[0] && l.x - R <= q[2] && l.y + R >= q[1] && l.y - R <= q[3]; };
+    // Con più segnalini, dove le loro visuali si sovrappongono il buio si toglieva due volte (in penombra o alla luce
+    // fioca si vedeva un cono più chiaro: dove guarda un compagno). Ora per ogni punto vale la visuale più chiara:
+    // ogni visuale si copia, in grigio pieno, su «somma» con «lighten» (il massimo), e alla fine si toglie il buio una volta.
+    // (solo se i rettangoli di almeno due visuali si toccano: se no non c'è niente da sovrapporre)
+    const scatole = v.occhi.filter(o => Array.isArray(o.poly) && o.poly.length >= 6).map(o => scatola(o.poly));
+    const molti = scatole.some((p, i) => scatole.some((q, j) => j > i && p[0] <= q[2] && q[0] <= p[2] && p[1] <= q[3] && q[1] <= p[3]));
+    let somma = null, unione = null;
+    if (molti) {
+      somma = luminoso.getContext('2d');
+      if (luminoso.width !== W || luminoso.height !== H) { luminoso.width = W; luminoso.height = H; }
+      if (grigio.width !== W || grigio.height !== H) { grigio.width = W; grigio.height = H; }
+      somma.setTransform(1, 0, 0, 1, 0, 0); somma.globalCompositeOperation = 'source-over'; somma.clearRect(0, 0, W, H);
+    }
     for (const o of v.occhi) {
       if (!Array.isArray(o.poly) || o.poly.length < 6) continue;
       const q = scatola(o.poly);
@@ -177,6 +215,8 @@
       const X1 = Math.min(W, Math.ceil((q[2] - b.x) * k) + 2), Y1 = Math.min(H, Math.ceil((q[3] - b.y) * k) + 2);
       if (X1 <= X0 || Y1 <= Y0) continue;
       a.setTransform(1, 0, 0, 1, 0, 0); a.globalCompositeOperation = 'source-over'; a.clearRect(X0, Y0, X1 - X0, Y1 - Y0);
+      // con più visuali si disegna in grigio pieno (bianco trasparente sul nero: grigio = quanto si vede)
+      if (molti) { a.fillStyle = '#000'; a.fillRect(X0, Y0, X1 - X0, Y1 - Y0); }
       a.save(); a.beginPath(); a.rect(X0, Y0, X1 - X0, Y1 - Y0); a.clip();
       a.setTransform(...T);
       if (v.amb === 'luce' || v.amb === 'penombra') { a.fillStyle = v.amb === 'luce' ? '#fff' : 'rgba(255,255,255,.62)'; percorso(a, o.poly); a.fill(); }
@@ -204,8 +244,30 @@
       }
       a.globalCompositeOperation = 'destination-in'; a.fillStyle = '#fff'; percorso(a, o.poly); a.fill();
       a.restore();
+      if (molti) {
+        const w = X1 - X0, h = Y1 - Y0;
+        somma.globalCompositeOperation = 'lighten'; somma.drawImage(aiuto, X0, Y0, w, h, X0, Y0, w, h);
+        unione = unione ? [Math.min(unione[0], X0), Math.min(unione[1], Y0), Math.max(unione[2], X1), Math.max(unione[3], Y1)] : [X0, Y0, X1, Y1];
+        continue;
+      }
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'destination-out';
       ctx.drawImage(aiuto, X0, Y0, X1 - X0, Y1 - Y0, X0, Y0, X1 - X0, Y1 - Y0);
+      ctx.setTransform(...T);
+    }
+    if (molti && unione) {
+      // il grigio torna trasparenza (bianco con alfa = grigio) e il buio si toglie una volta sola
+      const [X0, Y0, X1, Y1] = unione, w = X1 - X0, h = Y1 - Y0;
+      const gr = grigio.getContext('2d');
+      gr.setTransform(1, 0, 0, 1, 0, 0); gr.globalCompositeOperation = 'source-over'; gr.clearRect(X0, Y0, w, h);
+      if (filtroAlfa()) {                              // col filtro SVG lo fa la scheda video
+        gr.filter = 'url(#luceGrigioAlfa)'; gr.drawImage(luminoso, X0, Y0, w, h, X0, Y0, w, h); gr.filter = 'none';
+      } else {                                         // senza (browser vecchi): pixel per pixel
+        const im = somma.getImageData(X0, Y0, w, h), d = im.data;
+        for (let i = 0; i < d.length; i += 4) { d[i + 3] = d[i]; d[i] = d[i + 1] = d[i + 2] = 255; }
+        gr.putImageData(im, X0, Y0);
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'destination-out';
+      ctx.drawImage(grigio, X0, Y0, w, h, X0, Y0, w, h);
       ctx.setTransform(...T);
     }
     // 4. il colore delle luci, solo dove il party vede. Il canvas della tinta si fonde con la mappa
@@ -264,12 +326,21 @@
         if (R1 > 0) h += `<circle cx="${x.x}" cy="${x.y}" r="${R1}" class="lAlone forte" stroke-width="${px(1.5)}" style="--c:${x.col}"/>`;
         h += `<circle cx="${x.x}" cy="${x.y}" r="${px(11)}" class="lFonte" stroke-width="${px(2)}" style="--c:${x.col}"/>`;
       }
+      const pulita = C.pulisci(l);
       (l.passaggi || []).forEach((q, i) => {
-        for (const [t, n] of [[q.a, i + 1 + ''], [q.b, i + 1 + '′']]) {
+        const qp = pulita.passaggi.find(x => x.id === String(q.id == null ? '' : q.id).slice(0, 40));
+        for (const [t, n, lt] of [[q.a, i + 1 + '', 'a'], [q.b, i + 1 + '′', 'b']]) {
           if (!Array.isArray(t)) continue;
           h += `<line x1="${+t[0] || 0}" y1="${+t[1] || 0}" x2="${+t[2] || 0}" y2="${+t[3] || 0}" class="lPassaggio" stroke-width="${px(5)}" stroke-dasharray="${px(10)} ${px(5)}"/>`;
           for (const k of [0, 2]) h += `<circle cx="${+t[k] || 0}" cy="${+t[k + 1] || 0}" r="${px(4)}" class="lPunto"/>`;
-          h += `<g class="lPassoNum" data-i="${i}" transform="translate(${(+t[0] + +t[2]) / 2 || 0} ${(+t[1] + +t[3]) / 2 || 0}) scale(${px(1)})"><title>${tr('Passaggio {n}: tocca il numero con «Passaggio» per invertire il verso', { n: i + 1 })}</title><circle r="12"/><text y="4" text-anchor="middle">${n}</text></g>`;
+          const mx = (+t[0] + +t[2]) / 2 || 0, my = (+t[1] + +t[3]) / 2 || 0;
+          // coperto da un muro: una freccia indica il lato aperto (dall'altro il passaggio è un muro)
+          const aperto = qp ? C.apertoDi(pulita, qp, lt === 'a' ? qp.a : qp.b) : 0;
+          if (aperto) {
+            const ang = Math.atan2((t[3] - t[1]) * aperto, (t[2] - t[0]) * aperto) * 180 / Math.PI;   // la punta (0, 1) va sulla normale del lato aperto
+            h += `<g class="lPassoVerso" transform="translate(${mx} ${my}) rotate(${ang}) scale(${px(1)})"><path d="M-7 18 L0 30 L7 18 Z"/></g>`;
+          }
+          h += `<g class="lPassoNum" data-i="${i}" data-l="${lt}" transform="translate(${mx} ${my}) scale(${px(1)})"><title>${tr(aperto ? 'Passaggio {n}: tocca il numero con «Passaggio» per cambiare verso e lato aperto; con «Sposta» trascinalo per ruotare il tratto' : 'Passaggio {n}: tocca il numero con «Passaggio» per invertire il verso; con «Sposta» trascinalo per ruotare il tratto', { n: i + 1 })}</title><circle r="12"/><text y="4" text-anchor="middle">${n}</text></g>`;
         }
       });
       if (stato.passo && stato.passo.a) {
@@ -367,14 +438,108 @@
     }
     let best = null, d0 = 10 / s;
     for (const w of l.muri) { const d = distSeg(p, w); if (d < d0) { d0 = d; best = w; } }
-    if (best) return { muro: best };
+    // un passaggio disegnato sopra un muro: a parità di distanza vince il passaggio (se no non si prenderebbe mai)
+    let pas = null, dp = 10 / s;
     for (const q of l.passaggi) for (const lato of ['a', 'b']) {
       const t = q[lato];
-      if (Array.isArray(t) && distSeg(p, { x1: t[0], y1: t[1], x2: t[2], y2: t[3] }) < 10 / s) return { passaggio: q };
+      const d = Array.isArray(t) ? distSeg(p, { x1: t[0], y1: t[1], x2: t[2], y2: t[3] }) : Infinity;
+      if (d < dp) { dp = d; pas = { passaggio: q, lato }; }
     }
+    if (pas && (!best || dp <= d0 + 2 / s)) return pas;
+    if (best) return { muro: best };
     return null;
   }
   function fineCatena() { stato.catena = null; stato.passo = null; disegnaSegni(); }
+
+  // ---------- Allineare alla griglia (tasto destro su un oggetto, o «Allinea tutto») ----------
+  /** L'incrocio della griglia più vicino a (x, y). */
+  function incrocio(x, y) {
+    const o = typeof gridOrigin === 'function' ? gridOrigin() : rectOf(board), cs = cella();
+    return { x: o.x + Math.round((x - o.x) / cs) * cs, y: o.y + Math.round((y - o.y) / cs) * cs };
+  }
+  /** Tutti gli estremi di muri, porte e passaggi: { x, y, metti(x, y) }. */
+  function estremi(l) {
+    const out = [];
+    for (const w of l.muri) for (const k of [1, 2]) out.push({ x: w['x' + k], y: w['y' + k], og: w, metti: (x, y) => { w['x' + k] = x; w['y' + k] = y; } });
+    for (const q of l.passaggi) for (const lt of ['a', 'b']) for (const k of [0, 2]) {
+      if (!Array.isArray(q[lt])) continue;
+      out.push({ x: q[lt][k], y: q[lt][k + 1], og: q[lt], metti: (x, y) => { q[lt][k] = x; q[lt][k + 1] = y; } });
+    }
+    return out;
+  }
+  /** Dove va un estremo: l'estremo di un altro muro vicino (entro un quarto di casella), se no l'incrocio della griglia. */
+  function bersaglio(l, x, y, propri) {
+    let best = null, d0 = cella() / 4;
+    for (const e of estremi(l)) {
+      if (propri.has(e.og)) continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < 0.5) continue;                         // è già attaccato: quello si muove insieme
+      if (d < d0) { d0 = d; best = { x: e.x, y: e.y }; }
+    }
+    return best || incrocio(x, y);
+  }
+  /** Sposta i punti scelti (e quelli attaccati a loro: i muri restano uniti) sul loro bersaglio. Torna quanti ne ha mossi. */
+  function allineaPunti(l, punti, propri) {
+    const tutti = estremi(l);
+    let n = 0;
+    for (const p of punti) {
+      const t = bersaglio(l, p.x, p.y, propri);
+      if (Math.hypot(t.x - p.x, t.y - p.y) < 1e-6) continue;
+      const x0 = p.x, y0 = p.y;
+      for (const e of tutti) if (Math.hypot(e.x - x0, e.y - y0) < 0.5) { e.metti(t.x, t.y); e.x = t.x; e.y = t.y; n++; }
+    }
+    return n;
+  }
+  /** Tutta la scena: gli estremi vicinissimi (entro 3 unità) diventano uno, e ognuno va sull'incrocio più vicino. */
+  function allineaTutto() {
+    const l = luceDi(true), tutti = estremi(l), gruppi = [];
+    for (const e of tutti) {
+      const g = gruppi.find(g => g.some(f => Math.hypot(f.x - e.x, f.y - e.y) < 3));
+      if (g) g.push(e); else gruppi.push([e]);
+    }
+    let n = 0;
+    for (const g of gruppi) {
+      const mx = g.reduce((s, e) => s + e.x, 0) / g.length, my = g.reduce((s, e) => s + e.y, 0) / g.length, t = incrocio(mx, my);
+      for (const e of g) if (e.x !== t.x || e.y !== t.y) { e.metti(t.x, t.y); n++; }
+    }
+    // i pezzi ridotti a un punto (i due estremi sullo stesso incrocio) non servono più
+    l.muri = l.muri.filter(w => Math.hypot(w.x2 - w.x1, w.y2 - w.y1) > 0.5);
+    if (n) cambiata();
+    return n;
+  }
+  // il menu del tasto destro, nel livello «Luci»: sopra un oggetto, la voce per allineare proprio quello
+  if (typeof contextItems === 'function') {
+    const prima = contextItems;
+    contextItems = function (t, e) {                                            // eslint-disable-line no-global-assign
+      if (!luceAttiva() || !t || !t.closest || !t.closest('#viewport') || t.closest('.lPorta')) return prima.apply(this, arguments);
+      const l = luceDi(true), p = nelMondo(e);
+      const num = t.closest('.lPassoNum');
+      const q = num ? { passaggio: l.passaggi[+num.dataset.i], lato: num.dataset.l === 'b' ? 'b' : 'a' } : sotto(p);
+      if (!q) return prima.apply(this, arguments);
+      const fatto = n => { if (n) cambiata(); else if (typeof netSay === 'function') netSay(tr('È già allineato.')); };
+      if (q.luce) return [{ label: '📐 ' + tr('Allinea la luce al centro della casella'), fn: () => {
+        const c = typeof cellCenter === 'function' ? cellCenter(q.luce.x, q.luce.y) : q.luce;
+        const n = c.x !== q.luce.x || c.y !== q.luce.y; q.luce.x = c.x; q.luce.y = c.y; fatto(n);
+      } }];
+      if (q.punti) return [{ label: '📐 ' + tr('Allinea questo estremo alla griglia'), fn: () => {
+        const w = q.punti[0].w, k = q.punti[0].k;
+        fatto(allineaPunti(l, [{ x: w['x' + k], y: w['y' + k] }], new Set(q.punti.map(x => x.w))));
+      } }];
+      if (q.passo) return [{ label: '📐 ' + tr('Allinea questo estremo alla griglia'), fn: () => {
+        const tt = q.passo[q.lato];
+        fatto(allineaPunti(l, [{ x: tt[q.k], y: tt[q.k + 1] }], new Set([tt])));
+      } }];
+      if (q.muro) return [{ label: '📐 ' + tr(q.muro.porta ? 'Allinea questa porta alla griglia' : 'Allinea questo muro alla griglia'), fn: () => {
+        const w = q.muro;
+        fatto(allineaPunti(l, [{ x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 }], new Set([w])));
+      } }];
+      if (q.passaggio) return [{ label: '📐 ' + tr('Allinea questo tratto del passaggio alla griglia'), fn: () => {
+        const tt = q.passaggio[q.lato];
+        fatto(allineaPunti(l, [{ x: tt[0], y: tt[1] }, { x: tt[2], y: tt[3] }], new Set([tt])));
+      } }];
+      return prima.apply(this, arguments);
+    };
+  }
 
   // ---------- Passaggi (scale, botole…): due tratti lontani collegati, nei due sensi ----------
   /** Quanto spazio libero c'è da una parte del tratto (raggi nel mezzo piano), fino a 10 caselle. */
@@ -406,9 +571,18 @@
   segni.addEventListener('pointerdown', e => {
     const g = e.target.closest('.lPassoNum'); if (!g || !luceAttiva() || stato.modo !== 'passaggio') return;
     e.stopPropagation(); e.preventDefault();
-    const q = luceDi(true).passaggi[+g.dataset.i]; if (!q) return;
-    q.b = [q.b[2], q.b[3], q.b[0], q.b[1]];
-    if (typeof netSay === 'function') netSay(tr('Passaggio {n}: verso invertito.', { n: +g.dataset.i + 1 }));
+    const l = luceDi(true), q = l.passaggi[+g.dataset.i]; if (!q) return;
+    const pulita = C.pulisci(l), qp = pulita.passaggi.find(x => x.id === String(q.id == null ? '' : q.id).slice(0, 40));
+    if (qp && (C.coperto(pulita, qp.a) || C.coperto(pulita, qp.b))) {
+      // coperto da un muro: quattro combinazioni, una per tocco (lato aperto, poi verso e di nuovo i due lati)
+      const lato = qp.lato || C.latoLibero(pulita, qp.a);
+      if (lato > 0) q.lato = -1;
+      else { q.lato = 1; q.b = [q.b[2], q.b[3], q.b[0], q.b[1]]; }
+      if (typeof netSay === 'function') netSay(tr('Passaggio {n}: cambiati verso e lato aperto (la freccia indica il lato da cui si passa).', { n: +g.dataset.i + 1 }));
+    } else {
+      q.b = [q.b[2], q.b[3], q.b[0], q.b[1]];
+      if (typeof netSay === 'function') netSay(tr('Passaggio {n}: verso invertito.', { n: +g.dataset.i + 1 }));
+    }
     cambiata();
   });
   /** Una porta larga una casella dove hai cliccato sul muro: il muro resta prima e dopo. */
@@ -448,7 +622,8 @@
       const t = [a.x, a.y, p.x, p.y];
       stato.catena = null;
       if (!stato.passo || !stato.passo.a) { stato.passo = { a: t }; disegnaSegni(); sincronizza(); return; }
-      l.passaggi.push({ id: nuovoId(), a: stato.passo.a, b: orienta(l, stato.passo.a, t) });
+      // il lato aperto (conta se sopra c'è un muro): quello del primo tratto con più spazio libero
+      l.passaggi.push({ id: nuovoId(), a: stato.passo.a, b: orienta(l, stato.passo.a, t), lato: C.latoLibero(C.pulisci(l), stato.passo.a) });
       stato.passo = null;
       if (typeof netSay === 'function') netSay(tr('Passaggio {n} creato: chi lo attraversa esce dall\'altra parte.', { n: l.passaggi.length }));
       cambiata(); sincronizza();
@@ -488,9 +663,19 @@
       return;
     }
     if (stato.modo === 'sposta') {
+      // il numero di un passaggio: trascinandolo il suo tratto ruota attorno al centro (Maiusc: a scatti di 15°)
+      const num = e.target.closest && e.target.closest('.lPassoNum');
+      if (num) {
+        const q = l.passaggi[+num.dataset.i], lt = num.dataset.l === 'b' ? 'b' : 'a';
+        if (!q || !Array.isArray(q[lt])) return;
+        const t = q[lt], cx = (t[0] + t[2]) / 2, cy = (t[1] + t[3]) / 2;
+        stato.presa = { ruota: q, lato: lt, cx, cy, a0: Math.atan2(p0.y - cy, p0.x - cx), orig: t.slice(), id: e.pointerId };
+        viewport.setPointerCapture(e.pointerId);
+        return;
+      }
       const q = sotto(p0);
       if (!q) return;
-      stato.presa = { ...q, id: e.pointerId, da: p0, orig: q.muro ? { ...q.muro } : null };
+      stato.presa = { ...q, id: e.pointerId, da: p0, orig: q.muro ? { ...q.muro } : q.passaggio ? q.passaggio[q.lato].slice() : null };
       viewport.setPointerCapture(e.pointerId);
     }
   }, true);
@@ -504,11 +689,23 @@
     e.stopImmediatePropagation();
     if (g.luce) { g.luce.x = p0.x; g.luce.y = p0.y; }
     else if (g.passo) { const p = agganciaPunto(p0, e); g.passo[g.lato][g.k] = p.x; g.passo[g.lato][g.k + 1] = p.y; }
-    else if (g.passaggio) { /* un passaggio intero non si trascina: si spostano i suoi estremi */ }
+    else if (g.passaggio) {                            // un tratto del passaggio intero, dove vuoi (senza agganci; l'altro tratto resta)
+      const dx = p0.x - g.da.x, dy = p0.y - g.da.y, o = g.orig;
+      g.passaggio[g.lato] = [o[0] + dx, o[1] + dy, o[2] + dx, o[3] + dy];
+    }
+    else if (g.ruota) {
+      let a = Math.atan2(p0.y - g.cy, p0.x - g.cx) - g.a0;
+      if (e.shiftKey) a = Math.round(a / (Math.PI / 12)) * (Math.PI / 12);
+      const c = Math.cos(a), sn = Math.sin(a), o = g.orig, r = (x, y) => [g.cx + (x - g.cx) * c - (y - g.cy) * sn, g.cy + (x - g.cx) * sn + (y - g.cy) * c];
+      g.ruota[g.lato] = [...r(o[0], o[1]), ...r(o[2], o[3])];
+    }
     else if (g.punti) { const p = agganciaPunto(p0, e); for (const { w, k } of g.punti) { w['x' + k] = p.x; w['y' + k] = p.y; } }
     else if (g.muro) { const dx = p0.x - g.da.x, dy = p0.y - g.da.y; Object.assign(g.muro, { x1: g.orig.x1 + dx, y1: g.orig.y1 + dy, x2: g.orig.x2 + dx, y2: g.orig.y2 + dy }); }
-    disegnaSegni(); if (stato.anteprima) disegna();
+    disegnaSegni();
+    // l'anteprima si ridisegna una volta per fotogramma, non a ogni movimento del mouse (con tante luci scattava)
+    if (stato.anteprima && !attMossa) attMossa = requestAnimationFrame(() => { attMossa = 0; disegna(); });
   }, true);
+  let attMossa = 0;
   const lascia = e => {
     if (stato.stanza && stato.stanza.id === e.pointerId) {
       const { a, b } = stato.stanza; stato.stanza = null;
@@ -600,6 +797,7 @@
           <button type="button" data-m="sposta">✋ ${tr('Sposta')}</button>
           <button type="button" data-m="gomma">🧽 ${tr('Gomma')}</button>
         </div>
+        <div class="trow"><button id="luceAllinea" type="button" title="${tr('Ogni estremo di muri, porte e passaggi va sull\'incrocio della griglia più vicino; gli estremi vicinissimi fra loro si uniscono (si annulla con ↶)')}">📐 ${tr('Allinea tutto alla griglia')}</button></div>
         <div class="trow"><button id="luceFine" type="button">${tr('Fine muro')}</button><button id="luceAnnulla" type="button" title="Cmd/Ctrl+Z">↶ ${tr('Annulla')}</button><button id="luceRipeti" type="button" title="Cmd/Ctrl+Maiusc+Z">↷ ${tr('Ripeti')}</button></div>
         <label class="trow"><input id="luceSolidi" type="checkbox"> ${tr('I muri non si attraversano (i giocatori non ci passano)')}</label>
         <label class="trow"><input id="luceVel" type="checkbox"> ${tr('Nelle scene di battaglia il movimento dei giocatori è limitato dalla Velocità della scheda')}</label>
@@ -631,7 +829,7 @@
     luce: 'Un clic dove vuoi la luce (con le misure qui sotto). Trascina una luce per spostarla.',
     passaggio: 'Collega due punti lontani, nei due sensi (per esempio le scale fra due piani sulla stessa mappa): due clic per il primo tratto (la cima delle scale), due clic per il secondo (il fondo delle scale nell\'altro piano). La luce ci passa come se fossero attaccati, e chi ci cammina attraverso esce dall\'altra parte. Se esce dal lato sbagliato, tocca il numero del passaggio per invertirlo.',
     chiave: 'Tocca una porta per chiuderla a chiave: i giocatori non la possono aprire finché non la tocchi di nuovo. Anche fuori da qui: tasto destro sul simbolo della porta.',
-    sposta: 'Trascina un estremo (si spostano insieme tutti i muri che ci arrivano), un muro intero, una luce o l\'estremo di un passaggio.',
+    sposta: 'Trascina un estremo (si spostano insieme tutti i muri che ci arrivano), un muro intero, una luce, l\'estremo di un passaggio o un suo tratto intero (dove vuoi, senza agganci). Trascina il numero di un passaggio per ruotarlo (Maiusc: a scatti di 15°). Tasto destro su un oggetto: «Allinea alla griglia».',
     gomma: 'Tocca un muro, una porta, una luce o un passaggio per toglierli.'
   };
   let scheda = 'luci';
@@ -744,6 +942,10 @@
   $l('luceCol').addEventListener('input', e => { stato.col = e.target.value; });
   $l('luceAnte').addEventListener('input', e => { stato.anteprima = e.target.checked; disegna(); });
   $l('luceFine').addEventListener('click', fineCatena);
+  $l('luceAllinea').addEventListener('click', () => {
+    const n = allineaTutto();
+    if (typeof netSay === 'function') netSay(n ? tr('Allineati alla griglia {n} estremi di muri, porte e passaggi (↶ per annullare).', { n }) : tr('Era già tutto allineato alla griglia.'));
+  });
   $l('luceAnnulla').addEventListener('click', () => { if (typeof annullaMappa === 'function') annullaMappa().then(() => { disegnaSegni(); sincronizza(); }); });
   $l('luceRipeti').addEventListener('click', () => { if (typeof ripetiMappa === 'function') ripetiMappa().then(() => { disegnaSegni(); sincronizza(); }); });
   $l('luceDim').addEventListener('click', () => {
@@ -886,7 +1088,7 @@
     if (typeof NET !== 'undefined' && NET.on && typeof isMaster === 'function' && !isMaster()) return;
     const l = luceDi(false);
     if (!l || !l.passaggi.length) return;
-    const pass = { passaggi: C.pulisci(l).passaggi };
+    const pass = C.pulisci(l);                                     // anche i muri: un passaggio coperto si attraversa solo dal lato aperto
     let ultimo = null;
     for (const [el, x0, y0] of lista) {
       if (!el || el._shape || (el.dataset.layer || 'tokens') !== 'tokens') continue;

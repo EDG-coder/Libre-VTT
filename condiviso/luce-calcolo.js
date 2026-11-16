@@ -41,8 +41,53 @@
   function passaggiPuliti(lista) {
     const tratto = t => Array.isArray(t) && t.length === 4 ? t.map(v => num(v)) : null;
     const lungo = t => t && Math.hypot(t[2] - t[0], t[3] - t[1]) > 0.5;
-    return (Array.isArray(lista) ? lista : []).slice(0, 200).map(p => p && typeof p === 'object' ? { id: String(p.id == null ? '' : p.id).slice(0, 40), a: tratto(p.a), b: tratto(p.b) } : null)
+    // lato: il lato aperto del tratto a (+1 o -1, come il segno di latoDi), quello di b è l'opposto; conta solo
+    // se sopra uno dei due tratti c'è un muro (vedi coperto): senza, il passaggio si attraversa dai due lati
+    return (Array.isArray(lista) ? lista : []).slice(0, 200).map(p => p && typeof p === 'object' ? { id: String(p.id == null ? '' : p.id).slice(0, 40), a: tratto(p.a), b: tratto(p.b), lato: +p.lato === -1 ? -1 : +p.lato === 1 ? 1 : 0 } : null)
       .filter(p => p && lungo(p.a) && lungo(p.b));
+  }
+
+  // ---------- Passaggi coperti da un muro: un lato è il collegamento, l'altro è un muro ----------
+  /** Da che parte del tratto t sta il punto (x, y): +1, -1 o 0 (sulla linea). */
+  function latoDi(t, x, y) {
+    const v = (t[2] - t[0]) * (y - t[1]) - (t[3] - t[1]) * (x - t[0]);
+    return Math.abs(v) < 1e-9 ? 0 : Math.sign(v);
+  }
+  /** Il muro w sta sopra il tratto t? (parallelo, a meno di 2 unità, e lungo almeno quanto il tratto: anche più lungo) */
+  function copre(w, t) {
+    const dx = w.x2 - w.x1, dy = w.y2 - w.y1, L = Math.hypot(dx, dy);
+    if (!(L > 0.5)) return false;
+    const vicino = (x, y) => {
+      const k = ((x - w.x1) * dx + (y - w.y1) * dy) / (L * L);
+      if (k < -2 / L || k > 1 + 2 / L) return false;
+      return Math.abs((x - w.x1) * dy - (y - w.y1) * dx) / L <= 2;
+    };
+    return vicino(t[0], t[1]) && vicino(t[2], t[3]);
+  }
+  /** Sopra il tratto t c'è un muro (o una porta chiusa)? */
+  const coperto = (luce, t) => ((luce && luce.muri) || []).some(w => !(w.porta && w.aperta) && copre(w, t));
+  /** Il lato aperto del tratto «ing» di un passaggio (ing è p.a o p.b), oppure 0 se nessuno dei due tratti è coperto. */
+  function apertoDi(luce, p, ing) {
+    if (!coperto(luce, p.a) && !coperto(luce, p.b)) return 0;
+    const lato = p.lato || latoLibero(luce, p.a);
+    return ing === p.a ? lato : -lato;
+  }
+  /** Quanto spazio libero c'è da una parte del tratto (raggi nel mezzo piano, fino a 10 caselle di 50). */
+  function spazioDa(t, lato, segs) {
+    const mx = (t[0] + t[2]) / 2, my = (t[1] + t[3]) / 2, dx = t[2] - t[0], dy = t[3] - t[1], L = Math.hypot(dx, dy) || 1;
+    const nx = -dy / L * lato, ny = dx / L * lato, base = Math.atan2(ny, nx);
+    let somma = 0;
+    for (let i = -3; i <= 3; i++) {
+      const a = base + i * Math.PI / 8, k = piuVicino(segs, mx + nx * 3, my + ny * 3, Math.cos(a), Math.sin(a));
+      somma += Math.min(500, k);
+    }
+    return somma / 7;
+  }
+  /** Per i passaggi senza un lato scelto: quello con più spazio libero (come latoDi: +1 è a sinistra del verso). */
+  function latoLibero(luce, t) {
+    const segs = ((luce && luce.muri) || []).filter(w => !(w.porta && w.aperta) && !copre(w, t)).map(w => [w.x1, w.y1, w.x2, w.y2]);
+    // la normale (-dy, dx) punta dalla parte dove latoDi è positivo
+    return spazioDa(t, 1, segs) >= spazioDa(t, -1, segs) ? 1 : -1;
   }
 
   /** I segmenti che fermano la vista: i muri, le porte chiuse e il bordo della mappa. */
@@ -221,12 +266,25 @@
     while (p.length > 6 && Math.abs(p[0] - p[p.length - 2]) < 0.15 && Math.abs(p[1] - p[p.length - 1]) < 0.15) p.length -= 2;
     const n = p.length / 2;
     if (n < 4) return p;
-    const out = [];
-    for (let i = 0; i < n; i++) {
-      const a = (i + n - 1) % n, c = (i + 1) % n;
-      const ax = p[a * 2], ay = p[a * 2 + 1], bx = p[i * 2], by = p[i * 2 + 1], cx = p[c * 2], cy = p[c * 2 + 1];
-      const cross = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
-      if (Math.abs(cross) > 0.05 * Math.hypot(cx - ax, cy - ay)) out.push(bx, by);
+    // un punto si toglie solo se lui e tutti quelli già tolti dopo l'ultimo tenuto stanno sulla linea fra
+    // l'ultimo tenuto e il prossimo. Prima ognuno si confrontava con i vicini di partenza: due punti quasi
+    // uguali (l'estremo di un muro e il raggio appena accanto) si toglievano tutti e due, e il contorno
+    // tagliava l'angolo: oltre lo spigolo restava un triangolino di vista (e con un buco fra due muri, uno spicchio enorme).
+    const fuori = (ax, ay, cx, cy, bx, by) => Math.abs((bx - ax) * (cy - ay) - (by - ay) * (cx - ax)) > 0.05 * Math.hypot(cx - ax, cy - ay);
+    // si parte dal punto più lontano dalla media (un vero angolo: quello resta di sicuro)
+    let mx = 0, my = 0;
+    for (let i = 0; i < n; i++) { mx += p[i * 2]; my += p[i * 2 + 1]; }
+    mx /= n; my /= n;
+    let s0 = 0, d0 = -1;
+    for (let i = 0; i < n; i++) { const d = Math.hypot(p[i * 2] - mx, p[i * 2 + 1] - my); if (d > d0) { d0 = d; s0 = i; } }
+    const out = [p[s0 * 2], p[s0 * 2 + 1]];
+    let tolti = [];
+    for (let j = 1; j < n; j++) {
+      const i = (s0 + j) % n, c = (s0 + j + 1) % n;
+      const ax = out[out.length - 2], ay = out[out.length - 1], cx = p[c * 2], cy = p[c * 2 + 1];
+      const cand = [...tolti, i];
+      if (tolti.length > 64 || cand.some(k => fuori(ax, ay, cx, cy, p[k * 2], p[k * 2 + 1]))) { out.push(p[i * 2], p[i * 2 + 1]); tolti = []; }
+      else tolti.push(i);
     }
     return out.length >= 6 ? out : p;
   }
@@ -302,7 +360,17 @@
    * Quello che si vede guardando dentro il tratto «uscita» da (ex, ey), che sta dalla parte opposta: solo i raggi
    * che passano per il tratto, e solo da lì in poi (quello che c'è fra chi guarda e il tratto non conta).
    */
-  function oltre(ex, ey, uscita, segs) {
+  // i segmenti senza il tratto d'uscita e i muri che ci stanno sopra (i raggi partono proprio da lì)
+  const senzaUscita = new WeakMap();
+  function segsOltre(segs, usc) {
+    let m = senzaUscita.get(segs);
+    if (!m) { m = new Map(); senzaUscita.set(segs, m); }
+    const chiave = usc.join(',');
+    let out = m.get(chiave);
+    if (!out) { out = segs.filter(s => !copre({ x1: s[0], y1: s[1], x2: s[2], y2: s[3] }, usc)); m.set(chiave, out); }
+    return out;
+  }
+  function oltre(ex, ey, uscita, segs, usc, passa, tagli) {
     const [x1, y1, x2, y2] = uscita;
     const a1 = Math.atan2(y1 - ey, x1 - ex);
     let ampio = Math.atan2(y2 - ey, x2 - ex) - a1;
@@ -311,16 +379,20 @@
     let da = a1;
     if (ampio < 0) { da = a1 + ampio; ampio = -ampio; }
     if (ampio < 1e-5 || ampio > Math.PI - 1e-5) return null;
+    const usati = usc ? segsOltre(segs, usc) : segs;
     const angoli = [da + 1e-6, da + ampio - 1e-6];
-    for (const s of segs) for (const [px, py] of [[s[0], s[1]], [s[2], s[3]]]) {
+    const aggiungi = (px, py) => {
       let k = Math.atan2(py - ey, px - ex) - da;
       while (k < 0) k += 2 * Math.PI;
       while (k >= 2 * Math.PI) k -= 2 * Math.PI;
       if (k > 0 && k < ampio) for (const e of [-EPS, 0, EPS]) if (k + e > 0 && k + e < ampio) angoli.push(da + k + e);
-    }
+    };
+    for (const s of usati) { aggiungi(s[0], s[1]); aggiungi(s[2], s[3]); }
+    for (const [px, py] of tagli || []) aggiungi(px, py);        // dove, sul tratto d'ingresso, la vista comincia o finisce
     angoli.sort((p, q) => p - q);
-    const indice = segs.length > 48 ? indiceDi(segs) : null;
+    const indice = usati.length > 48 ? indiceDi(usati) : null;
     const sx = x2 - x1, sy = y2 - y1, pts = [];
+    const ux = usc ? usc[2] - usc[0] : sx, uy = usc ? usc[3] - usc[1] : sy, uL2 = ux * ux + uy * uy || 1;
     let primo = null, ultimo = null;
     for (const a of angoli) {
       const dx = Math.cos(a), dy = Math.sin(a);
@@ -328,13 +400,15 @@
       if (Math.abs(den) < 1e-12) continue;
       const tb = ((x1 - ex) * sy - (y1 - ey) * sx) / den;              // dove il raggio passa il tratto
       if (!(tb > 0)) continue;
-      const ox = ex + dx * (tb + 0.5), oy = ey + dy * (tb + 0.5);
-      const t = indice ? primoIncrocio(indice, ox, oy, dx, dy) : piuVicino(segs, ox, oy, dx, dy);
-      if (t === Infinity) continue;
       const sul = [ex + dx * tb, ey + dy * tb];
       if (!primo) primo = sul;
       ultimo = sul;
-      pts.push(arrot(ox + dx * t), arrot(oy + dy * t));
+      // da quel punto del tratto chi guarda vede davvero? (una colonna davanti al passaggio ne copre un pezzo)
+      if (passa && usc && !passa(((sul[0] - usc[0]) * ux + (sul[1] - usc[1]) * uy) / uL2)) { pts.push(arrot(sul[0]), arrot(sul[1])); continue; }
+      // il raggio riparte dal tratto stesso (non mezza unità più in là: sull'angolo con un muro partiva già oltre il muro)
+      const t = indice ? primoIncrocio(indice, sul[0], sul[1], dx, dy) : piuVicino(usati, sul[0], sul[1], dx, dy);
+      if (t === Infinity) continue;
+      pts.push(arrot(sul[0] + dx * t), arrot(sul[1] + dy * t));
     }
     if (!primo || pts.length < 2) return null;
     return semplifica([arrot(primo[0]), arrot(primo[1]), ...pts, arrot(ultimo[0]), arrot(ultimo[1])]);
@@ -342,6 +416,7 @@
   /**
    * Per chi guarda da (ox, oy) con davanti poly: le viste attraverso i passaggi che ha davanti.
    * → [{ x, y, poly }] dove (x, y) è il punto «di là» che corrisponde a chi guarda (serve per le distanze).
+   * Un tratto coperto da un muro si attraversa solo dal suo lato aperto: dall'altro è un muro.
    */
   function attraverso(luce, ox, oy, poly, segs, maxD) {
     const out = [];
@@ -351,11 +426,25 @@
         const k = Math.max(0, Math.min(1, ((ox - ing[0]) * dx + (oy - ing[1]) * dy) / L2));
         if (Math.hypot(ox - (ing[0] + k * dx), oy - (ing[1] + k * dy)) > maxD) continue;
       }
+      const lato = latoDi(ing, ox, oy), aperto = apertoDi(luce, p, ing);
+      if (!lato || (aperto && lato !== aperto)) continue;
       const tv = trattoVisto(ing, ox, oy, poly);
       if (!tv) continue;
       const T = trasforma(ing, usc), pt = k => T(ing[0] + (ing[2] - ing[0]) * k, ing[1] + (ing[3] - ing[1]) * k);
       const [ex, ey] = T(ox, oy);
-      const poli = oltre(ex, ey, [...pt(tv[0]), ...pt(tv[1])], segs);
+      // i punti del tratto d'ingresso, appena dalla parte di chi guarda: si vedono?
+      const dx = ing[2] - ing[0], dy = ing[3] - ing[1], L = Math.hypot(dx, dy) || 1, nx = -dy / L * lato * 1.5, ny = dx / L * lato * 1.5;
+      const passa = k => { const kk = Math.min(1, Math.max(0, k)); return dentro(poly, ing[0] + dx * kk + nx, ing[1] + dy * kk + ny); };
+      // dove il contorno della vista taglia il tratto: lì la vista di là comincia o finisce
+      const tagli = [];
+      for (let i = 0, n = poly.length / 2, j = n - 1; i < n; j = i++) {
+        const s = [poly[j * 2], poly[j * 2 + 1], poly[i * 2], poly[i * 2 + 1]];
+        const qx = ing[0] + nx, qy = ing[1] + ny, ex2 = s[2] - s[0], ey2 = s[3] - s[1], den = dx * ey2 - dy * ex2;
+        if (Math.abs(den) < 1e-12) continue;
+        const k = ((s[0] - qx) * ey2 - (s[1] - qy) * ex2) / den, u = ((s[0] - qx) * dy - (s[1] - qy) * dx) / den;
+        if (k > tv[0] - 0.05 && k < tv[1] + 0.05 && u >= 0 && u <= 1) tagli.push(pt(k));
+      }
+      const poli = oltre(ex, ey, [...pt(tv[0]), ...pt(tv[1])], segs, usc, passa, tagli);
       if (poli && poli.length >= 6) out.push({ x: arrot(ex), y: arrot(ey), poly: poli });
     }
     return out;
@@ -378,6 +467,8 @@
     for (const p of (luce && luce.passaggi) || []) for (const [ing, usc] of versi(p)) {
       const w = { x1: ing[0], y1: ing[1], x2: ing[2], y2: ing[3] };
       if (!taglia(w, ax, ay, bx, by)) continue;
+      const aperto = apertoDi(luce, p, ing);                         // coperto da un muro: dal lato chiuso non si passa
+      if (aperto && latoDi(ing, ax, ay) !== aperto) continue;
       const d = (bx - ax) * (w.y2 - w.y1) - (by - ay) * (w.x2 - w.x1);
       const t = ((w.x1 - ax) * (w.y2 - w.y1) - (w.y1 - ay) * (w.x2 - w.x1)) / d;
       if (best && best.t <= t) continue;
@@ -458,14 +549,31 @@
       }
     }
   }
+  // 8 quadretti per lato di casella (erano 4: il «già visto» veniva a scalini ben visibili)
   function griglia(board, cella) {
-    const q = Math.max(4, (cella > 0 ? cella : 50) / 4);
-    const cols = Math.max(1, Math.min(1200, Math.ceil(board.w / q))), rows = Math.max(1, Math.min(1200, Math.ceil(board.h / q)));
+    const q = Math.max(4, (cella > 0 ? cella : 50) / 8);
+    const cols = Math.max(1, Math.min(2400, Math.ceil(board.w / q))), rows = Math.max(1, Math.min(2400, Math.ceil(board.h / q)));
     return { x: board.x, y: board.y, q, cols, rows, d: new Uint8Array(cols * rows) };
+  }
+  /** Un «già visto» salvato con un'altra griglia (le campagne di prima, o la mappa ridimensionata) portato su g. */
+  function ricampiona(salvato, g) {
+    const { x, y, q, cols, rows } = salvato || {};
+    if (!(q > 0 && cols > 0 && rows > 0)) return false;
+    const vecchio = espandi(salvato.rle, cols * rows);
+    let qualcosa = false;
+    for (let r = 0; r < g.rows; r++) {
+      const vr = Math.floor((g.y + (r + 0.5) * g.q - y) / q);
+      if (vr < 0 || vr >= rows) continue;
+      for (let c = 0; c < g.cols; c++) {
+        const vc = Math.floor((g.x + (c + 0.5) * g.q - x) / q);
+        if (vc >= 0 && vc < cols && vecchio[vr * cols + vc]) { g.d[r * g.cols + c] = 1; qualcosa = true; }
+      }
+    }
+    return qualcosa;
   }
   /** Aggiunge al «già visto» quello che il party vede adesso. */
   function segnaVisto(g, v) {
-    const t = griglia({ x: g.x, y: g.y, w: g.cols * g.q, h: g.rows * g.q }, g.q * 4);
+    const t = griglia({ x: g.x, y: g.y, w: g.cols * g.q, h: g.rows * g.q }, g.q * 8);
     for (const o of v.occhi) {
       if (v.amb !== 'buio') { riempi(t, o.poly, 1); continue; }
       const tmp = { ...t, d: new Uint8Array(t.d.length) };
@@ -590,5 +698,5 @@
     return false;
   }
 
-  return { leggiDistanza, percorso, salto, trasforma, attraverso, rettangoloGriglia, attraversa, pulisci, segmenti, visuale, dentro, scurovisione, vista, visibile, griglia, riempi, segnaVisto, comprimi, espandi };
+  return { ricampiona, latoDi, copre, coperto, apertoDi, latoLibero, leggiDistanza, percorso, salto, trasforma, attraverso, rettangoloGriglia, attraversa, pulisci, segmenti, visuale, dentro, scurovisione, vista, visibile, griglia, riempi, segnaVisto, comprimi, espandi };
 });

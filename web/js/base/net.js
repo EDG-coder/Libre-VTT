@@ -670,7 +670,7 @@ function normScene(s) {
     id: s.id, name: s.name || 'Scena', type: s.type === 'cinematic' ? 'cinematic' : 'map',
     bg: s.bg || null, grid: { ...DEFAULT_GRID, ...s.grid }, photos: s.photos || [],
     view: s.view || null, draw: s.draw || null, board: s.board || { ...DEFAULT_RECT },
-    fog: s.fog || null, luce: s.luce || null, vista: s.vista || null
+    fog: s.fog || null, luce: s.luce || null, vista: s.vista || null, vistoParty: s.vistoParty || null
   };
 }
 
