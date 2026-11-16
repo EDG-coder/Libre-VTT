@@ -958,6 +958,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "🎲 Tira": "🎲 Roll",
 "💬 Manda in chat": "💬 Send to chat",
 "Si salva da solo": "Saves automatically",
+"Richiede un tiro per colpire (mettilo tra gli attacchi)": "Needs an attack roll (put it in the attacks)",
 "Maestria (competenza doppia)": "Expertise (double proficiency)",
 "Arma o attacco": "Weapon or attack",
 "Si recupera con: riposo breve, riposo lungo, all'alba": "Recovers with: short rest, long rest, at dawn",
