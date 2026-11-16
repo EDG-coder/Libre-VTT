@@ -273,7 +273,9 @@ function spellDanno(s, k) {
 function spellAtkSet(top, s, k, on) {
   if (!on) { delete s.f[k + '_att']; return; }
   s.f[k + '_att'] = '1';
-  if (s.f[k + '_atk'] !== undefined && s.f[k + '_atk'] !== '') return;   // già collegata: niente doppioni
+  // già collegata a una riga che c'è ancora: niente doppioni (se l'hai svuotata, se ne fa una nuova)
+  const prima = s.f[k + '_atk'];
+  if (prima != null && prima !== '' && ['an', 'ab', 'ad'].some(p => String(s.f[p + prima] ?? '').trim())) return;
   const n = quantiAttacchi(s);                       // prima riga libera
   if (top && top._addAtk) top._addAtk(n + 1);
   const bonus = typeof atkIncantesimi === 'function' ? atkIncantesimi(s) : null;
@@ -374,7 +376,7 @@ $('spellAtk').addEventListener('change', e => {
   if (!spellCur) return;
   const { s, k, top } = spellCur;
   spellAtkSet(top, s, k, e.target.checked);
-  scheduleSheets();
+  schedaCambiata(s);                         // si salva e, in rete, arriva anche agli altri
 });
 addEventListener('pointerdown', e => {
   if (spellPop.hidden) return;

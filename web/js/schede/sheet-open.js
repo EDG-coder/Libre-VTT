@@ -188,7 +188,7 @@ function openSetup(w, root, s) {
     return nuove[0];
   };
   if (atkBox) atkRighe(quantiAttacchi(s));
-  root._addAtk = atkRighe;                           // per l'incantesimo con tiro per colpire
+  if (atkBox) root._addAtk = atkRighe;               // per l'incantesimo con tiro per colpire
   schedaBindListe(root, s);                          // inventario: le righe vuote in fondo restano nascoste
 
   root.addEventListener('click', e => {
