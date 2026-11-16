@@ -140,6 +140,7 @@ function rigaIncantesimo(L, i) {
     </div>
     <div class="oSpBody" hidden>
       <textarea data-f="${k}_d" placeholder="Scuola · tempo di lancio · gittata · componenti · durata&#10;&#10;Cosa fa. Metti [[8d6 | Danni]] per avere il tiro pronto."></textarea>
+      <label class="oAtkChk"><input type="checkbox" class="oAtkBox"> Richiede un tiro per colpire (mettilo tra gli attacchi)</label>
     </div>
   </div>`;
 }
@@ -170,6 +171,8 @@ function openSetup(w, root, s) {
     tog.textContent = on ? '▾' : '▸';
     tog.setAttribute('aria-expanded', on);
     tog.classList.toggle('has', !vuoto(s.f[k + '_d']));
+    const chk = riga.querySelector('.oAtkBox');
+    if (chk) chk.checked = !!s.f[k + '_att'];
     if (on) allunga(corpo.querySelector('textarea'));
   }
   root.querySelectorAll('.oLiv').forEach(disegnaLivello);
@@ -185,6 +188,7 @@ function openSetup(w, root, s) {
     return nuove[0];
   };
   if (atkBox) atkRighe(quantiAttacchi(s));
+  root._addAtk = atkRighe;                           // per l'incantesimo con tiro per colpire
   schedaBindListe(root, s);                          // inventario: le righe vuote in fondo restano nascoste
 
   root.addEventListener('click', e => {
@@ -231,7 +235,7 @@ function openSetup(w, root, s) {
       // le righe dopo scalano di uno, così non restano buchi
       const n = Math.max(quantiIncantesimi(s, L), i + 1);
       for (let j = i; j < n; j++) {
-        for (const suf of ['', '_d']) {
+        for (const suf of ['', '_d', '_att', '_atk']) {   // anche la spunta e il collegamento alla riga attacco
           const da = spK(L, j + 1) + suf, a = spK(L, j) + suf;
           if (s.f[da] !== undefined) s.f[a] = s.f[da]; else delete s.f[a];
         }
@@ -242,6 +246,13 @@ function openSetup(w, root, s) {
       disegnaLivello(box);
       schedaCambiata(s);
     }
+  });
+  root.addEventListener('change', e => {
+    const chk = e.target.closest('.oAtkBox');
+    if (!chk) return;
+    const riga = chk.closest('.oSp'), L = +chk.closest('.oLiv').dataset.liv;
+    spellAtkSet(root, s, spK(L, +riga.dataset.i), chk.checked);
+    schedaCambiata(s);
   });
   root.addEventListener('input', e => {
     const ta = e.target.closest('.oSpBody textarea');

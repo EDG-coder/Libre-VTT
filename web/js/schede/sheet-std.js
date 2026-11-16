@@ -225,6 +225,7 @@ function stdBindAttacchi(root, s) {
     lista.insertAdjacentHTML('beforeend', rep(fino - n, j => zsAtkRow(n + j)));
     [...lista.children].slice(n).forEach(r => r.querySelectorAll('[data-f]').forEach(el => bindField(el, root, s)));
   };
+  root._addAtk = aggiungi;                          // anche l'incantesimo con tiro per colpire ne aggiunge una
   aggiungi(quantiAttacchi(s));                      // tutte quelle già scritte, almeno cinque
   root.addEventListener('click', e => {
     if (!e.target.closest('[data-zs="atk"]')) return;
@@ -259,6 +260,33 @@ function stdBindImages(root, s) {
 
 const bodyKey = k => k + '_d';
 
+// Il primo tiro [[dadi]] scritto nella descrizione dell'incantesimo, che diventa il danno della riga attacco.
+function spellDanno(s, k) {
+  const m = String(s.f[bodyKey(k)] || '').match(/\[\[\s*(\d*d\d+[^\]|]*?)\s*(?:\|[^\]]*)?\]\]/i);
+  return m ? m[1] : '';
+}
+/**
+ * Incantesimo con tiro per colpire: la riga degli attacchi si compila da sola (nome, bonus, danno),
+ * una volta sola. Togliere la spunta non cancella la riga: resta, e si può modificare a mano.
+ * `top` è la scheda intera (dove stanno le righe degli attacchi). Chi chiama salva la scheda.
+ */
+function spellAtkSet(top, s, k, on) {
+  if (!on) { delete s.f[k + '_att']; return; }
+  s.f[k + '_att'] = '1';
+  if (s.f[k + '_atk'] !== undefined && s.f[k + '_atk'] !== '') return;   // già collegata: niente doppioni
+  const n = quantiAttacchi(s);                       // prima riga libera
+  if (top && top._addAtk) top._addAtk(n + 1);
+  const bonus = typeof atkIncantesimi === 'function' ? atkIncantesimi(s) : null;
+  s.f['an' + n] = String(s.f[k] || '').trim() || 'Incantesimo';
+  s.f['ab' + n] = bonus == null ? '' : sgnE(bonus);
+  s.f['ad' + n] = spellDanno(s, k);
+  s.f[k + '_atk'] = String(n);
+  if (top) ['an', 'ab', 'ad'].forEach(p => {
+    const el = top.querySelector(`[data-f="${p}${n}"]`);
+    if (el) el.value = s.f[p + n] ?? '';
+  });
+}
+
 /** Tira tutte le [[espressioni]] del titolo e della descrizione; se non ce ne sono, manda in chat. */
 function stdFire(s, k) {
   const title = String(s.f[k] || '').trim();
@@ -286,7 +314,7 @@ function stdBindLines(root, s) {
     const d = e.target.closest('.sDie');
     if (d) { stdFire(s, d.dataset.die); return; }
     const m = e.target.closest('.sMore');
-    if (m) { stdOpenSpell(s, m.dataset.more, m); return; }
+    if (m) { stdOpenSpell(s, m.dataset.more, m, root); return; }
   });
   stdMarkLines(root, s);
 }
@@ -303,6 +331,7 @@ document.body.insertAdjacentHTML('beforeend', `
   <header><input id="spellTitle" type="text" maxlength="80" placeholder="Nome dell'incantesimo" autocomplete="off">
     <button type="button" id="spellClose" aria-label="Chiudi">✕</button></header>
   <textarea id="spellBody" placeholder="Scrivi qui l'effetto: scuola, tempo di lancio, gittata, durata…&#10;Metti [[8d6 | Danni]] per avere il tiro pronto."></textarea>
+  <label class="spellAtkChk"><input type="checkbox" id="spellAtk"> Richiede un tiro per colpire (mettilo tra gli attacchi)</label>
   <footer>
     <button type="button" id="spellRoll">🎲 Tira</button>
     <button type="button" id="spellChat">💬 Manda in chat</button>
@@ -313,9 +342,10 @@ document.body.insertAdjacentHTML('beforeend', `
 const spellPop = $('spellPop');
 let spellCur = null;                       // { sheet, key, root }
 
-function stdOpenSpell(s, k, anchor) {
-  spellCur = { s, k, root: anchor.closest('.sbody') };
+function stdOpenSpell(s, k, anchor, top) {
+  spellCur = { s, k, root: anchor.closest('.sbody'), top };
   $('spellTitle').value = s.f[k] || '';
+  $('spellAtk').checked = !!s.f[k + '_att'];
   $('spellBody').value = s.f[bodyKey(k)] || '';
   spellPop.hidden = false;
   const r = anchor.getBoundingClientRect();
@@ -340,6 +370,12 @@ $('spellBody').addEventListener('input', stdSpellSave);
 $('spellClose').addEventListener('click', stdCloseSpell);
 $('spellRoll').addEventListener('click', () => { if (spellCur) stdFire(spellCur.s, spellCur.k); });
 $('spellChat').addEventListener('click', () => { if (spellCur) stdSend(spellCur.s, spellCur.k); });
+$('spellAtk').addEventListener('change', e => {
+  if (!spellCur) return;
+  const { s, k, top } = spellCur;
+  spellAtkSet(top, s, k, e.target.checked);
+  scheduleSheets();
+});
 addEventListener('pointerdown', e => {
   if (spellPop.hidden) return;
   if (!spellPop.contains(e.target) && !e.target.closest('.sMore')) stdCloseSpell();
