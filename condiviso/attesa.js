@@ -18,6 +18,7 @@
   const CHIARO = hex(0xc9bcff);          // il colore chiaro della punta
   const rgba = (c, a) => `rgba(${Math.round(c[0] * 255)},${Math.round(c[1] * 255)},${Math.round(c[2] * 255)},${a})`;
   const mescola = (a, b, t) => { t = Math.min(1, Math.max(0, t)); return [0, 1, 2].map(i => a[i] + (b[i] - a[i]) * t); };
+  let SUL_CHIARO = false;      // lo sfondo è chiaro: colori più scuri per l'anello e il d20
   const gradi = d => d * Math.PI / 180;
 
   // accelera e frena (curva a S), su 0..1
@@ -66,13 +67,13 @@
 
     // la pista: un anello appena visibile
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = sp; ctx.stroke();
+    ctx.strokeStyle = SUL_CHIARO ? 'rgba(40,30,90,0.10)' : 'rgba(255,255,255,0.07)'; ctx.lineWidth = sp; ctx.stroke();
 
     // l'arco interno, sottile, che gira al contrario e più lento
     const ri = r * 0.6;
     const gira = -(t * 140) % 360;
     for (let k = 0; k < 2; k++) {
-      tratto(ri, gira + k * 180, 70, 'rgba(217,209,255,0.35)', Math.max(sp * 0.4, 1.5), 'round');
+      tratto(ri, gira + k * 180, 70, SUL_CHIARO ? 'rgba(106,76,240,0.45)' : 'rgba(217,209,255,0.35)', Math.max(sp * 0.4, 1.5), 'round');
     }
 
     // l'arco principale: sfuma dal viola alla punta chiara, in 14 pezzi
@@ -93,7 +94,7 @@
     gh.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.beginPath(); ctx.arc(hx, hy, h, 0, Math.PI * 2); ctx.fillStyle = gh; ctx.fill();
     const p = sp * 0.32;
-    ctx.beginPath(); ctx.arc(hx, hy, p, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.beginPath(); ctx.arc(hx, hy, p, 0, Math.PI * 2); ctx.fillStyle = SUL_CHIARO ? '#6a4cf0' : '#fff'; ctx.fill();
 
     // al centro il d20 del logo, che respira piano
     dado(ctx, cx, cy, r * 0.62 * (1 + 0.04 * respiro), 0.75 + 0.25 * respiro);
@@ -103,7 +104,7 @@
   function dado(ctx, cx, cy, mezzo, opacita) {
     const k = mezzo / 10;
     const P = (x, y) => [cx + (x - 12) * k, cy + (y - 12) * k];
-    const colore = `rgba(237,232,255,${opacita})`;
+    const colore = SUL_CHIARO ? `rgba(70,48,170,${opacita})` : `rgba(237,232,255,${opacita})`;
     ctx.lineWidth = Math.max(k * 1.5, 1.4);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.strokeStyle = colore;
@@ -150,6 +151,10 @@
     canvas.setAttribute('aria-hidden', 'true');
     wrap.appendChild(canvas);
     host.appendChild(wrap);
+    try {      // chiaro o scuro: lo si capisce dal colore del testo (chiaro sul fondo scuro)
+      const m = /(\d+)[, ]+(\d+)[, ]+(\d+)/.exec(getComputedStyle(host).color || '');
+      SUL_CHIARO = !!m && (0.299 * m[1] + 0.587 * m[2] + 0.114 * m[3]) < 128;
+    } catch { SUL_CHIARO = false; }
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(lato * dpr); canvas.height = Math.round(lato * dpr);
     const ctx = canvas.getContext('2d');
@@ -182,5 +187,32 @@
     return { stop() { a.stop(); box.remove(); } };
   }
 
-  return { arco, disegna, anello, attesa };
+  // una schermata intera con l'anello (stili in linea: si vede anche prima che i fogli di stile siano arrivati).
+  // opzioni: ritardo (ms prima di mostrarla: se l'attesa finisce prima non si vede nulla), velo (true: sfondo
+  // semitrasparente, si vede ancora quello che c'è sotto), id. Restituisce { chiudi() }: dissolvenza breve,
+  // subito se si è chiesto di ridurre il movimento. Si chiude da sola dopo 'massimo' ms (20 s) per non restare mai bloccata.
+  function schermata(testo, opz) {
+    opz = opz || {};
+    stile();
+    const e = document.createElement('div');
+    if (opz.id) e.id = opz.id;
+    e.setAttribute('aria-live', 'polite');
+    const sfondo = opz.velo ? 'rgba(18,21,28,.72)' : 'var(--bg,#12151c)';
+    e.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:' + sfondo + ';transition:opacity .3s ease';
+    let a = null, chiusa = false, tShow = 0;
+    const monta = () => { (document.body || document.documentElement).appendChild(e); a = attesa(e, testo, opz.lato || 104); };
+    if (opz.ritardo) tShow = setTimeout(monta, opz.ritardo); else monta();
+    const via = () => { if (a) a.stop(); e.remove(); };
+    function chiudi() {
+      if (chiusa) return; chiusa = true; clearTimeout(tShow); clearTimeout(tMax);
+      if (!e.isConnected || fermo()) return via();
+      e.style.opacity = '0'; e.style.pointerEvents = 'none';
+      e.addEventListener('transitionend', via, { once: true });
+      setTimeout(via, 600);
+    }
+    const tMax = setTimeout(chiudi, opz.massimo || 20000);
+    return { chiudi };
+  }
+
+  return { arco, disegna, anello, attesa, schermata };
 });

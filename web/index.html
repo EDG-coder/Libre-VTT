@@ -25,8 +25,7 @@
 <script src="condiviso/attesa.js"></script>
 </head>
 <body>
-<div id="attesaIniziale" aria-live="polite"></div>
-<script>try { LibreAttesa.attesa(document.getElementById('attesaIniziale'), 'Un momento…', 104); } catch (e) {}</script>
+<script>try { window.ATTESA_INIZIALE = LibreAttesa.schermata('Un momento…', { id: 'attesaIniziale' }); } catch (e) {}</script>
 <div id="viewport">
   <div id="stage">
     <div id="boardFill"></div>

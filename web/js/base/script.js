@@ -1092,12 +1092,21 @@ async function showScene(sc) {
   setBoard(sc.board);
   const url = resolveUrl(sc.bg);
   setBgBox(url ? { ...sc.bg, url, gid: sc.bg.gid || (String(sc.bg.url).startsWith('gs:') ? sc.bg.url.slice(3) : undefined) } : null);
+  attesaMappa();
   setLayer('tokens');
   paintGrid();
   const vista = sc.view && adattaVista(sc.view);
   if (vista) { Object.assign(view, { x: vista.x, y: vista.y, s: vista.s }); applyView(); } else fitView(false, 0.9);
   updatePageColor();
   renderSceneUI(); syncSettings();
+}
+
+// mappa grande ancora in arrivo: dopo un quarto di secondo compare l'anello sopra la scena, e sparisce appena l'immagine c'è
+function attesaMappa() {
+  if (!window.LibreAttesa || document.getElementById('attesaIniziale') || !map.src || map.complete) return;
+  const v = LibreAttesa.schermata('Carico la mappa…', { ritardo: 250, velo: true, massimo: 15000 });
+  const fine = () => { map.removeEventListener('load', fine); map.removeEventListener('error', fine); v.chiudi(); };
+  map.addEventListener('load', fine); map.addEventListener('error', fine);
 }
 
 async function switchScene(id) {
@@ -2564,14 +2573,5 @@ addEventListener('DOMContentLoaded', async () => {      // dopo che sheets.js ed
   try { await loadBoard(); } finally { chiudiAttesaIniziale(); }
 });
 
-// la schermata con l'anello di attesa, finché la scena non è pronta (sparisce con una dissolvenza breve, o subito con «riduci movimento»)
-function chiudiAttesaIniziale() {
-  const e = document.getElementById('attesaIniziale');
-  if (!e) return;
-  const via = () => e.remove();
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return via();
-  e.classList.add('esce');
-  e.addEventListener('transitionend', via, { once: true });
-  setTimeout(via, 600);
-}
-setTimeout(() => { try { chiudiAttesaIniziale(); } catch {} }, 20000);   // per non restare mai bloccati
+// la schermata con l'anello di attesa (condiviso/attesa.js) si chiude quando la scena è pronta
+function chiudiAttesaIniziale() { if (window.ATTESA_INIZIALE) window.ATTESA_INIZIALE.chiudi(); }
