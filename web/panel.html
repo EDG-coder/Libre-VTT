@@ -122,6 +122,19 @@
     <p class="sub" style="margin:10px 0 0" id="idHint"></p>
   </div>
 
+  <div class="card" id="offCard">
+    <h2>Quando non ci sei</h2>
+    <p class="sub" style="margin:0 0 8px">I giocatori possono entrare nella campagna anche col master spento e lavorare su una copia. Qui scegli che cosa possono fare; quando torni, quello che hanno fatto lo decidi tu.</p>
+    <div class="rules">
+      <label><input type="checkbox" id="oChat"> Scrivere in chat</label>
+      <label><input type="checkbox" id="oSchede"> Modificare le proprie schede</label>
+      <label><input type="checkbox" id="oDadi"> Tirare i dadi (segnati come fatti offline)</label>
+      <label><input type="checkbox" id="oSegn"> Spostare i propri segnalini</label>
+      <label><input type="checkbox" id="oNote"> Scrivere le note di gruppo (se sono modificabili)</label>
+    </div>
+    <div id="offRichieste"></div>
+  </div>
+
   <div class="card" id="rulesCard">
     <h2>Regole della sessione</h2>
     <div class="rules">
@@ -237,6 +250,7 @@ function draw() {
   const se = S.session || {};
   $('rLock').checked = !!se.locked; $('rAppr').checked = !!se.approval;
   $('rPause').checked = !!se.paused; $('rMax').value = se.maxPlayers || 0;
+  drawOffline(S.offline);
 
   const sc = $('scenes');
   if (!S.scenes.length) sc.innerHTML = '<span class="empty">Nessuna scena: apri il VTT.</span>';
@@ -480,12 +494,31 @@ const sendRules = () => post('/api/session', {
 for (const id of ['rLock', 'rAppr', 'rPause']) $(id).onchange = sendRules;
 $('rMax').onchange = sendRules;
 
+// ---------- quando il master non c'è ----------
+const OFF_CAMPI = { oChat: 'chat', oSchede: 'schede', oDadi: 'dadi', oSegn: 'segnalini', oNote: 'note' };
+function drawOffline(o) {
+  if (!o) return;
+  for (const [id, k] of Object.entries(OFF_CAMPI)) $(id).checked = !!o.cfg[k];
+  const box = $('offRichieste');
+  box.replaceChildren(...o.richieste.map(r => {
+    const d = document.createElement('div'); d.className = 'logRow'; d.setAttribute('data-noi18n', '');
+    const t = document.createElement('span'); t.className = 'lw'; t.textContent = (r.name || '?') + ' · ' + r.cambi.length;
+    const n = document.createElement('span'); n.className = 'ln'; n.textContent = r.cambi.slice(0, 3).map(c => c.testo).join(' · ');
+    const ok = document.createElement('button'); ok.textContent = T('Applica tutto'); ok.onclick = () => post('/api/offline/decidi', { id: r.id, scelti: 'tutti' }).then(load);
+    const no = document.createElement('button'); no.textContent = T('Scarta'); no.onclick = () => post('/api/offline/decidi', { id: r.id, scelti: [] }).then(load);
+    d.append(t, n, ok, no);
+    return d;
+  }));
+}
+const sendOffline = () => post('/api/session', { offline: Object.fromEntries(Object.entries(OFF_CAMPI).map(([id, k]) => [k, $(id).checked])) }).then(load);
+for (const id of Object.keys(OFF_CAMPI)) $(id).onchange = sendOffline;
+
 // ---------- in diretta ----------
 const es = LOCALE ? {} : new EventSource('/api/events');
 es.onmessage = e => {
   let m; try { m = JSON.parse(e.data); } catch { return; }
   if (m.t === 'log') { logRows.push(m.entry); if (logRows.length > 400) logRows.shift(); drawLog(); return; }
-  if (m.t === 'players' || m.t === 'scene' || m.t === 'session') { load(); return; }
+  if (m.t === 'players' || m.t === 'scene' || m.t === 'session' || m.t === 'offline') { load(); return; }
   if (m.t === 'chat') {
     const x = m.msg;
     logRows.push({

@@ -102,6 +102,7 @@ const netInAttesa = () => NET.coda.length;
 /** Mentre si è scollegati: quante cose aspettano di partire. */
 function netAvvisaCoda() {
   if (NET.on && !NET.hostDown) return;
+  if (NET.offline) return;                                     // senza il master le cose le tiene il ponte (e lo si è già detto)
   netSay(tr('Sei scollegato: {n} cose in attesa, partono appena torna il collegamento.', { n: netInAttesa() }), 'retry', { label: tr('Smetti'), fn: netDisconnect });
 }
 /** Rientrati: si rimanda tutto quello che non ha ancora avuto risposta, in ordine. */
@@ -123,12 +124,18 @@ const netBarAct = mk('button', 'nbAct', '');
 netBarAct.type = 'button'; netBarAct.hidden = true;
 netBar.insertBefore(netBarAct, netBar.querySelector('.nbX'));
 netBarAct.addEventListener('click', () => { const f = netBarAct._fn; if (f) f(); });
+const netBarAlt = mk('button', 'nbAct', '');                   // una seconda azione (es. «Lavora offline»)
+netBarAlt.type = 'button'; netBarAlt.hidden = true;
+netBar.insertBefore(netBarAlt, netBar.querySelector('.nbX'));
+netBarAlt.addEventListener('click', () => { const f = netBarAlt._fn; if (f) f(); });
 /** kind: '' | 'warn' | 'live' (resta) | 'retry' (resta, puntino che pulsa). act: { label, fn } */
-function netSay(text, kind = '', act = null) {
+function netSay(text, kind = '', act = null, alt = null) {
   netBar.className = kind;
   netBar.querySelector('.nbTxt').textContent = text;
   netBarAct.hidden = !act;
   if (act) { netBarAct.textContent = act.label; netBarAct._fn = act.fn; }
+  netBarAlt.hidden = !alt;
+  if (alt) { netBarAlt.textContent = alt.label; netBarAlt._fn = alt.fn; }
   netBar.hidden = false;
   clearTimeout(netBarTimer);
   if (kind !== 'live' && kind !== 'retry' && !act) netBarTimer = setTimeout(() => { netBar.hidden = true; }, 5000);
@@ -325,6 +332,8 @@ function netHandle(m) {
       NET.on = true; NET.everOn = true; NET.me = m.you;
       NET.giocatore = m.you.role !== 'master';
       NET.retrying = false; NET.hostDown = false; NET.tries = 0; NET.pending = false;
+      NET.offline = !!m.offline;                 // il master non c'è: è la copia salvata, non la partita
+      if (NET.offline) NET.hostDown = true;      // i dadi, ecc. si comportano come da scollegati
       try { localStorage.setItem('uffa-token', m.you.token); if (m.you.firma) localStorage.setItem('uffa-firma', m.you.firma); } catch {}
       NET.conferme = Array.isArray(m.sa) && m.sa.includes('ok');   // l'host conferma gli intenti? (dalla 3.7)
       NET.sa = Array.isArray(m.sa) ? m.sa : [];
@@ -332,7 +341,8 @@ function netHandle(m) {
       if (typeof netAreeVia === 'function') netAreeVia();
       const rimandate = netRimanda();
       if (!NET.conferme) NET.coda = [];
-      if (back && rimandate) netSay(tr('Ricollegato: ho mandato le {n} cose fatte mentre eri scollegato.', { n: rimandate }), 'live');
+      if (NET.offline) netSay(tr('Il master non c\'è: lavori sulla copia che ho salvato. Quello che fai gli arriva quando torna, e decide lui.'), 'live');
+      else if (back && rimandate) netSay(tr('Ricollegato: ho mandato le {n} cose fatte mentre eri scollegato.', { n: rimandate }), 'live');
       else if (back) netSay('Ricollegato: sei di nuovo nella sessione.', 'live');
       else netSay(m.you.role === 'master'
         ? 'Sei collegato come master: la sessione è tua.'
@@ -369,7 +379,8 @@ function netHandle(m) {
       if ((!NET.everOn && !NET.giocatore) || NET.manual || NET.stopped) return;
       NET.hostDown = true;
       netSay('Il collegamento con chi conduce si è interrotto: mi ricollego da solo…', 'retry',
-        { label: 'Smetti', fn: netDisconnect });
+        { label: 'Smetti', fn: netDisconnect },
+        NET.giocatore && !NET.offline ? { label: tr('Lavora offline'), fn: () => netSend({ t: 'offline.passa' }) } : null);
       return;
     case 'you': {
       const before = NET.me;
@@ -388,6 +399,8 @@ function netHandle(m) {
       if (typeof netSyncForm === 'function') netSyncForm();
       return;
     }
+    case 'offline.richieste': if (window.libreOffline) window.libreOffline.richieste(m.lista || []); return;   // (master) i giocatori mandano quello che hanno fatto senza di te
+    case 'offline.cfg': return;
     case 'rename': askName(m.reason || 'Il master ti chiede di cambiare nome.'); return;
     case 'notice': netSay(m.text || '', m.kind || 'warn'); return;
     case 'world':
@@ -458,7 +471,7 @@ function netHandle(m) {
       return;
     case 'bye': {
       // Non insistere: è stata una decisione (o ti sei ricollegato da un'altra finestra), non un guasto.
-      NET.stopped = true; NET.retrying = false; NET.hostDown = false;
+      NET.stopped = true; NET.retrying = false; NET.hostDown = false; NET.offline = false;
       clearTimeout(netTimer);
       if (window.LIBRE && window.LIBRE.condivisi) window.LIBRE.condivisi.fuori();
       const ws = NET.ws;
@@ -994,6 +1007,7 @@ var rollExpr = (prev => function (expr, label) {
   if (NET.retrying || NET.hostDown) {
     // scollegati: se il master lo permette si tira qui, «in provvisorio»; il tiro parte al ritorno, segnato come non verificato
     if (NET.world && NET.world.dadiProvvisori && can('roll')) return netTiroProvvisorio(expr, label);
+    if (NET.offline) { netSay(tr('Il master non c\'è e non ha ammesso i dadi senza di lui.'), 'warn'); return true; }
     netSay('Sei scollegato: il tiro partirà quando torna il collegamento. Riprova tra un attimo.', 'warn'); return true;
   }
   if (!NET.on) return prev(expr, label);
@@ -1293,7 +1307,9 @@ function netSyncForm() {
   pi.placeholder = 'nessuno (da solo)';
   const pn = $('netPanel'); if (pn && NET.port) pn.href = 'http://127.0.0.1:' + NET.port + '/?lang=' + (window.LIBRE_I18N ? LIBRE_I18N.lingua : 'it');
   if (!ni.matches(':focus')) ni.value = (NET.me && NET.me.name) || netName() || '';
-  st.textContent = NET.retrying
+  st.textContent = NET.offline
+    ? tr('Il master non c\'è: lavori sulla copia salvata. Quello che fai gli arriva quando torna.')
+    : NET.retrying
     ? `Collegamento perso: mi sto ricollegando da solo (tentativo ${NET.tries}).`
     : NET.hostDown
       ? 'Il collegamento con chi conduce si è interrotto: mi sto ricollegando da solo.'

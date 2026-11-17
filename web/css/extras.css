@@ -1317,3 +1317,18 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 .ctAdd:hover, .ctLock:hover { border-color: var(--sh-accent); }
 .ui-touch .ctMeno, .ui-touch .ctPiu { width: 36px; height: 36px; opacity: 1; }
 .ui-touch .ctReset { opacity: .7; width: 26px; height: 26px; }
+
+/* ---------- (master) modifiche fatte dai giocatori mentre non c'era ---------- */
+.offModal { position: fixed; inset: 0; z-index: 200000; background: rgba(0, 0, 0, .5); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.offScheda { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; width: min(560px, 100%); max-height: 85vh; display: flex; flex-direction: column; }
+.offTesta { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.offX { background: none; border: 0; color: var(--text-soft); font-size: 1.4rem; line-height: 1; cursor: pointer; }
+.offCorpo { padding: 12px 14px; overflow: auto; }
+.offRichiesta { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+.offRichiesta h3 { margin: 0 0 8px; font-size: 1rem; }
+.offCambio { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; font-size: .92rem; cursor: pointer; }
+.offConflitto { color: #e6a23c; }
+.offNota { color: var(--muted); font-size: .85rem; margin: 6px 0 0; }
+.offAzioni { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.offAzioni button { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel-3); color: var(--text); cursor: pointer; }
+.offAzioni button.go { background: var(--accent); border-color: var(--accent); color: #fff; }

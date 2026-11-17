@@ -524,6 +524,7 @@ function dalServerDiGioco(cosa, d) {
     const u = unite(), vecchia = u[codice];
     if (vecchia) { u[d.codice] = { ...vecchia, codice: d.codice }; delete u[codice]; }
     try { fs.renameSync(path.join(UNITE_DIR, codice + '.img'), path.join(UNITE_DIR, d.codice + '.img')); } catch {}
+    for (const x of ['.snap.json', '.log.json']) { try { fs.renameSync(path.join(OFFLINE_DIR, codice + x), path.join(OFFLINE_DIR, d.codice + x)); } catch {} }
     salvaConf();
     say('Il master ha cambiato il codice: mi ricollego con quello nuovo.', 'ok');
     state.joinCodice = d.codice;
@@ -532,13 +533,33 @@ function dalServerDiGioco(cosa, d) {
     run('sessione', LINK, ['join', d.codice, '--port', String(state.porte.link)], { keep: true, cwd: USERDIR, env: { UFFA_LINK_RETE: relayConf().irohRete } });
   }
 }
+/** Le modifiche che questo giocatore ha fatto in una campagna col master spento (le scrive il ponte, vedi server/offline-ponte.js). */
+const OFFLINE_DIR = path.join(GUEST_DIR, 'data', 'offline');
+function pacchettoOffline(codice) {
+  try {
+    const l = JSON.parse(fs.readFileSync(path.join(OFFLINE_DIR, codice + '.log.json'), 'utf8'));
+    if (!/^[a-f0-9]{12}$/.test(String(l.id)) || !Array.isArray(l.cambi) || !l.cambi.length) return null;
+    return { id: l.id + '.' + l.cambi.length, cambi: l.cambi };
+  } catch { return null; }
+}
+function toltoOffline(codice, idp) {
+  const f = path.join(OFFLINE_DIR, codice + '.log.json');
+  try {
+    const l = JSON.parse(fs.readFileSync(f, 'utf8')), m = /^([a-f0-9]{12})\.(\d{1,4})$/.exec(String(idp));
+    if (!m || m[1] !== l.id) return;
+    l.cambi.splice(0, +m[2]);
+    l.id = crypto.randomBytes(6).toString('hex');      // quello che resta è un registro nuovo (l'host conta per prefisso)
+    if (l.cambi.length) fs.writeFileSync(f, JSON.stringify(l)); else fs.unlinkSync(f);
+  } catch {}
+}
+function dimenticaOffline(codice) { for (const x of ['.snap.json', '.log.json']) { try { fs.unlinkSync(path.join(OFFLINE_DIR, codice + x)); } catch {} } }
 /** Il riquadro di una campagna: si chiede all'host com'è (online, quanti dentro, in sessione)
  *  aprendo per un momento un collegamento come quello di «join». Nessuna risposta = offline. */
 async function statoUnita(e) {
   if (MOBILE ? !LINK_CTRL : !linkBin()) return { online: false };
   const porta = await portaLibera(PREF.link + 20, [UI_PORT, ...(state.porte ? [state.porte.web, state.porte.game, state.porte.link] : [])]);
   return new Promise(resolve => {
-    let finito = false, collegato = false, sock = null, buf = '';
+    let finito = false, collegato = false, sock = null, buf = '', pacco = null, risposta = null;
     const p = lancia(LINK, ['join', e.codice, '--port', String(porta)], { cwd: USERDIR });
     const fine = r => {
       if (finito) return; finito = true; clearTimeout(timer);
@@ -556,13 +577,29 @@ async function statoUnita(e) {
         await attesa(250);
         await new Promise(ok => {
           const s = net.connect(porta, '127.0.0.1');
-          s.on('connect', () => { sock = s; s.write(JSON.stringify({ t: 'stato', token: e.idGiocatore || '', firma: e.firma || undefined }) + '\n'); ok(); });
+          s.on('connect', () => {
+            sock = s; s.write(JSON.stringify({ t: 'stato', token: e.idGiocatore || '', firma: e.firma || undefined }) + '\n');
+            // il master c'è: se ha da ricevere le cose fatte mentre non c'era, gliele si manda adesso (le decide lui)
+            pacco = pacchettoOffline(e.codice);
+            if (pacco) s.write(JSON.stringify({ t: 'offline.invia', id: pacco.id, token: e.idGiocatore || '', firma: e.firma || undefined, cambi: pacco.cambi }) + '\n');
+            ok();
+          });
           s.on('error', () => ok());
           s.on('data', d => {
             buf += d.toString('utf8');
-            const i = buf.indexOf('\n'); if (i < 0) return;
-            let m = null; try { m = JSON.parse(buf.slice(0, i)); } catch {}
-            if (m && m.t === 'stato') fine(m.fuori ? { fuori: true } : { online: true, membriOnline: +m.membriOnline || 0, sessioneDa: m.sessioneDa || null, nomeCampagna: m.nomeCampagna || null });
+            let i;
+            while ((i = buf.indexOf('\n')) >= 0) {
+              let m = null; try { m = JSON.parse(buf.slice(0, i)); } catch {}
+              buf = buf.slice(i + 1);
+              if (m && m.t === 'stato') {
+                risposta = m.fuori ? { fuori: true } : { online: true, membriOnline: +m.membriOnline || 0, sessioneDa: m.sessioneDa || null, nomeCampagna: m.nomeCampagna || null };
+                if (!pacco || m.fuori) return fine(risposta);
+                setTimeout(() => fine(risposta), 4000);          // la conferma del master arriva subito dopo
+              } else if (m && m.t === 'offline.ricevuto') {
+                if (m.id === (pacco && pacco.id) && !m.pieno && !m.fuori) toltoOffline(e.codice, m.id);
+                if (risposta) fine(risposta);
+              }
+            }
           });
         });
       }
@@ -581,7 +618,7 @@ async function statoUnite() {
       const r = await Promise.all(pezzo.map(e => state.mode === 'join' && state.joinCodice === e.codice ? { online: true, qui: true } : statoUnita(e)));
       pezzo.forEach((e, k) => {
         out[e.codice] = r[k];
-        if (r[k].fuori) { delete unite()[e.codice]; try { fs.unlinkSync(path.join(UNITE_DIR, e.codice + '.img')); } catch {} salvaConf(); }
+        if (r[k].fuori) { delete unite()[e.codice]; try { fs.unlinkSync(path.join(UNITE_DIR, e.codice + '.img')); } catch {} dimenticaOffline(e.codice); salvaConf(); }
         else if (r[k].nomeCampagna && r[k].nomeCampagna !== e.nome) { unite()[e.codice].nome = r[k].nomeCampagna; salvaConf(); }
       });
     }
@@ -1135,6 +1172,7 @@ async function avvia(mode, id, campagna, opz = {}) {
       if (intero && intero[2]) ricordaUnita(id, { parola: intero[2] });
       const parola = intero && (intero[2] || (unite()[id] || {}).parola);
       if (parola && /^[a-f0-9]{32}$/.test(parola)) extra.LIBRE_JOIN_PAROLA = parola;
+      if (state.joinCodice) extra.LIBRE_JOIN_ID = state.joinCodice;     // la copia salvata e le modifiche fatte col master spento stanno per codice
       const e = state.joinCodice && unite()[state.joinCodice];
       if (e && e.idGiocatore) extra.IDENTITA = JSON.stringify({ token: e.idGiocatore, firma: e.firma || null });
       // il nome che hai in questa campagna (ognuna ha il suo): ci si presenta con quello
@@ -2002,7 +2040,7 @@ const server = http.createServer(async (req, res) => {
     return fs.readFile(path.join(UNITE_DIR, c + '.img'), (e, d) => e ? invia(res, 404, 'no') : invia(res, 200, d, d[0] === 0x89 ? 'image/png' : d[0] === 0xff ? 'image/jpeg' : 'image/webp'));
   }
   if (u.pathname === '/api/unite/dimentica' && req.method === 'POST') {
-    return corpo(m => { const c = String((m || {}).codice || ''); delete unite()[c]; try { fs.unlinkSync(path.join(UNITE_DIR, c + '.img')); } catch {} salvaConf(); ok({ ok: true }); });
+    return corpo(m => { const c = String((m || {}).codice || ''); delete unite()[c]; try { fs.unlinkSync(path.join(UNITE_DIR, c + '.img')); } catch {} if (/^[a-f0-9]{64}$/.test(c)) dimenticaOffline(c); salvaConf(); ok({ ok: true }); });
   }
   if (u.pathname === '/api/invito/cambia' && req.method === 'POST') return corpo(async () => ok(await cambiaCodice()));
   // «Partita pubblica»: { attiva, indirizzo }; vale subito se si sta conducendo, e la volta dopo
