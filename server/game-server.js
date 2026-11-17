@@ -899,6 +899,7 @@ function rispostaCalcolo(c, text, whisper) {
 
 // ======================= Le intenzioni dei clienti =======================
 function deny(c, op, why) {
+  if (c.kind === 'offline') { c.send({ t: 'denied', op, reason: why }); return; }   // una modifica fatta senza il master, applicata adesso: il motivo resta qui
   sendA(c, { t: 'denied', op, reason: why, q: c.qOra || undefined });
   logAction(c, op, false, why);
 }
@@ -1648,6 +1649,11 @@ function onMessage(c, raw) {
   c.giaParlato = true;
   // «Com'è la campagna?» dal riquadro di «Mi unisco» di un giocatore (prima di salutare, poi se ne va).
   // Si risponde solo a chi è del tavolo: agli altri non si dice niente.
+  if (m.t === 'offline.invia' && !c.token && c.kind === 'link') {         // dal riquadro di «Mi unisco»: arriva col gettone, senza salutare
+    const r = consuma(c, 'offline', 4, 0.1) ? riceviOffline(m, c) : null;
+    if (r) c.send(r);
+    setTimeout(() => c.close(), 300); return;
+  }
   if (m.t === 'stato' && !c.token && c.kind === 'link') { c.send(statoPerRiquadro(m)); setTimeout(() => c.close(), 200); return; }
   if (m.t === 'pong') { c.alive = true; if (c.beatAt) c.rtt = Date.now() - c.beatAt; return; }
   if (m.t === 'eco') { c.alive = true; c.send({ t: 'eco' }); return; }   // «ci sei?» (chi si è appena svegliato)
@@ -1878,6 +1884,16 @@ function onMessage(c, raw) {
     c.viewRect = m.view && Number.isFinite(+m.view.x) ? { x: Math.round(+m.view.x), y: Math.round(+m.view.y), s: +(+m.view.s).toFixed(2) } : null;
     return;
   }
+  if (m.t === 'offline.invia') {                                          // entrato, rimanda quello che ha fatto senza il master
+    if (!c.token || c.pending || !consuma(c, 'offline', 4, 0.1)) return;
+    const r = riceviOffline(m, c); if (r) c.send(r);
+    return;
+  }
+  if (m.t === 'offline.decidi') {                                         // il master, dal tavolo
+    if (c.role !== 'master' || c.pending) return;
+    decidiOff(str(m.id, 40), m.scelti === 'tutti' ? 'tutti' : m.scelti, c);
+    return;
+  }
   if (m.t === 'intent') {
     if (c.pending) return;                                        // davanti alla porta (approvazione o plugin) non si tocca niente: rimanda dopo
     // Con il suo numero (q) l'intento si fa una volta sola: il browser lo rimanda finché non ha la conferma
@@ -1996,7 +2012,7 @@ function sendWelcome(c) {
   const chatV = world.chat || [], i = c.chatDa ? chatV.findIndex(x => x.id === c.chatDa) : -1;
   // (senza un messaggio da cui ripartire vuol dire che non ne aveva nessuno: gli si mandano tutti)
   if (c.delta && prec && c.verCliente === prec.ver && (i >= 0 || !c.chatDa)) {
-    c.send({ t: 'welcome', needName: !!c.needName, you, riprendi: true, sa: SA, ora: Date.now(),
+    c.send({ t: 'welcome', needName: !!c.needName, you, riprendi: true, sa: SA, ora: Date.now(), off: c.role === 'master' ? undefined : offlineCfg(),
       chatDopo: chatV.slice(i + 1).slice(-250).map(m => chatFor(c, m)).filter(Boolean), chatVia: chatTolti.slice(),
       chatSvelati: chatSvelati.map(id => chatV.find(x => x.id === id)).filter(Boolean) });
     pushWorld(c);
@@ -2009,14 +2025,166 @@ function sendWelcome(c) {
       ver = (prec ? prec.ver : 0) + 1;
       ultime.set(c.token, { ver, testi });
     }
-    c.send({ t: 'welcome', needName: !!c.needName, you, world: w, ver, sa: SA, ora: Date.now() });
+    c.send({ t: 'welcome', needName: !!c.needName, you, world: w, ver, sa: SA, ora: Date.now(), off: c.role === 'master' ? undefined : offlineCfg() });
   }
   logAction(c, 'ingresso', true, c.role);
+  if (c.role === 'master') { const l = listaOff(); if (l.length) c.send({ t: 'offline.richieste', lista: l }); }
+  else if (rec.esitoOffline) { c.send({ t: 'notice', text: rec.esitoOffline, kind: 'live' }); delete rec.esitoOffline; }
   for (const a of areeAperte.values()) if (a.id !== c.id) c.send(a);   // le aree già sulla mappa
   c.pluginGate = false;
   // i plugin che il master condivide: i necessari li ha già accettati, i facoltativi li sceglie lui
   if (c.role !== 'master' && c.sapluginCondivisi && pluginOfferti().length) offriPlugin(c, false);
   scheduleSave(); sendPlayers();
+}
+
+// ======================= Il master non c'è =======================
+// I giocatori possono entrare in una campagna salvata anche col master spento (vedi server/offline-ponte.js): lavorano
+// su una copia e, quando il master è di nuovo qui, il loro ponte gli manda il registro di quello che hanno fatto
+// («offline.invia»). Qui le richieste aspettano (restano su disco) finché il master non decide, una per una o a
+// gruppi, che cosa applicare. Il master sceglie anche quali tipi di cosa si possono fare quando non c'è.
+const OFF_TIPI = ['chat', 'schede', 'dadi', 'segnalini', 'note'];
+const OFF_STANDARD = { chat: true, schede: true, dadi: false, segnalini: false, note: false };
+const OFF_OP = { 'chat': 'chat', 'sheet.save': 'schede', 'sheet.add': 'schede', 'roll.prov': 'dadi', 'token.move': 'segnalini', 'notes.save': 'note' };
+function offlineCfg() {
+  const s = session.offline || {}, o = {};
+  for (const k of OFF_TIPI) o[k] = k in s ? !!s[k] : OFF_STANDARD[k];
+  return o;
+}
+let richiesteOff = readJson('offline-richieste.json', null) || {};
+if (!richiesteOff.r || typeof richiesteOff.r !== 'object' || !Array.isArray(richiesteOff.chiuse)) richiesteOff = { r: {}, chiuse: [] };
+const salvaOff = () => writeJson('offline-richieste.json', richiesteOff);
+
+/** Un cambio arrivato da fuori: solo i campi che servono, controllati. */
+function pulisciCambio(x) {
+  if (!x || typeof x !== 'object' || !OFF_OP[x.op]) return null;
+  const ts = Math.min(Date.now(), Math.max(1, +x.ts || Date.now()));
+  switch (x.op) {
+    case 'chat': { const text = str(x.text, 2000).trim(); return text ? { op: 'chat', text, ts } : null; }
+    case 'roll.prov': {
+      if (!Array.isArray(x.dadi) || x.dadi.length > 200 || !x.dadi.every(Number.isFinite)) return null;
+      return { op: 'roll.prov', expr: str(x.expr, 200), label: str(x.label, 80), dadi: x.dadi.map(Number), secret: !!x.secret, ts };
+    }
+    case 'sheet.save': {
+      const f = campiScheda(x.f); if (!f) return null;
+      return { op: 'sheet.save', id: str(x.id, 60), name: typeof x.name === 'string' ? str(x.name, 60) : undefined, f, base: campiScheda(x.base) || {}, ts };
+    }
+    case 'sheet.add': {
+      const d = x.sheet && typeof x.sheet === 'object' ? x.sheet : null; if (!d) return null;
+      const f = campiScheda(d.f || {}); if (!f) return null;
+      return { op: 'sheet.add', sheet: { id: str(d.id, 60), name: str(d.name, 60), tpl: d.tpl != null ? str(d.tpl, 60) : undefined, f }, ts };
+    }
+    case 'token.move': {
+      const p = x.pos && typeof x.pos === 'object' ? x.pos : {};
+      return { op: 'token.move', scene: str(x.scene, 60), id: str(x.id, 60), pos: { l: +p.l || 0, t: +p.t || 0, w: +p.w > 0 ? +p.w : undefined, h: +p.h > 0 ? +p.h : undefined, rot: typeof p.rot === 'number' ? p.rot : undefined }, ts };
+    }
+    case 'notes.save': return { op: 'notes.save', text: str(x.text, 20000), ts };
+  }
+  return null;
+}
+const corto = (t, n) => { t = String(t || '').replace(/\s+/g, ' '); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+function testoCambio(x) {
+  switch (x.op) {
+    case 'chat': return 'Chat: «' + corto(x.text, 120) + '»';
+    case 'roll.prov': return 'Tiro: ' + corto(x.label || x.expr, 60) + ' (' + corto(x.expr, 40) + ')';
+    case 'sheet.save': {
+      const s = (world.sheets || []).find(y => y.id === x.id);
+      return 'Scheda «' + corto(s ? s.name : x.id, 40) + '»: ' + (Object.keys(x.f).length ? 'cambia ' + Object.keys(x.f).slice(0, 8).join(', ') + (Object.keys(x.f).length > 8 ? '…' : '') : 'nuovo nome');
+    }
+    case 'sheet.add': return 'Scheda nuova «' + corto(x.sheet.name, 40) + '»';
+    case 'token.move': return 'Un segnalino spostato';
+    case 'notes.save': return 'Note di gruppo riscritte';
+  }
+  return x.op;
+}
+/** Campi di una scheda cambiati anche da chi conduce, dopo che il giocatore è partito dalla sua copia. */
+function conflittoCambio(x) {
+  if (x.op !== 'sheet.save') return [];
+  const s = (world.sheets || []).find(y => y.id === x.id);
+  if (!s) return [];
+  const j = v => JSON.stringify(v === undefined ? null : v);
+  return Object.keys(x.f).filter(k => j((s.f || {})[k]) !== j(x.base[k]) && j((s.f || {})[k]) !== j(x.f[k]));
+}
+function listaOff() {
+  return Object.values(richiesteOff.r).sort((a, b) => a.arrivo - b.arrivo).map(r => ({
+    id: r.id, token: r.token, name: (roster[r.token] || {}).name || r.name, arrivo: r.arrivo, scartati: r.scartati || 0,
+    cambi: r.cambi.map((x, i) => ({ i, op: x.op, testo: testoCambio(x), conflitto: conflittoCambio(x), ts: x.ts }))
+  }));
+}
+function avvisaOff() {
+  const lista = listaOff();
+  panelPush({ t: 'offline', n: lista.length });
+  broadcast({ t: 'offline.richieste', lista }, c => c.role === 'master' && c.token && !c.pending);
+}
+/** Il ponte di un giocatore manda quello che ha fatto da solo. Risponde con «offline.ricevuto» (o null se non è per noi). */
+function riceviOffline(m, c) {
+  if (MODE !== 'host') return null;
+  const token = c.token || str(m.token, 64);
+  const rec = /^[a-f0-9]{24}$/.test(token) ? roster[token] : null;
+  if (!rec || rec.banned || (!c.token && rec.firmaRichiesta && !firmaValida(token, str(m.firma, 64)))) return { t: 'offline.ricevuto', fuori: true };
+  const id = str(m.id, 40);
+  if (!/^[a-f0-9]{6,20}\.\d{1,4}$/.test(id)) return null;
+  if (richiesteOff.r[id] || richiesteOff.chiuse.includes(id) || rec.role === 'master') return { t: 'offline.ricevuto', id };
+  const cfg = offlineCfg(), cambi = [];
+  let scartati = 0;
+  for (const x of (Array.isArray(m.cambi) ? m.cambi.slice(0, 500) : [])) {
+    const p = pulisciCambio(x);
+    if (p && cfg[OFF_OP[p.op]]) cambi.push(p); else scartati++;
+  }
+  if (!cambi.length) return { t: 'offline.ricevuto', id };
+  const suoi = Object.values(richiesteOff.r).filter(r => r.token === token).length;
+  if (suoi >= 20 || Object.keys(richiesteOff.r).length >= 200) return { t: 'offline.ricevuto', id, pieno: true };
+  richiesteOff.r[id] = { id, token, name: rec.name || '', arrivo: Date.now(), cambi, scartati };
+  salvaOff();
+  logAction({ name: rec.name, token }, 'offline', true, cambi.length + ' modifiche fatte senza il master');
+  avvisaOff();
+  return { t: 'offline.ricevuto', id };
+}
+/** Il master decide: scelti = 'tutti' o l'elenco delle posizioni da applicare (le altre si scartano). */
+function decidiOff(id, scelti, chi) {
+  const r = richiesteOff.r[id];
+  if (!r) return { ok: false };
+  const rec = roster[r.token];
+  const quali = scelti === 'tutti' ? r.cambi.map((_, i) => i) : (Array.isArray(scelti) ? scelti.filter(Number.isInteger) : []);
+  const motivi = [];
+  const pc = { id: -1, kind: 'offline', token: r.token, name: rec ? rec.name : r.name, role: rec ? rec.role : 'player', send(m) { if (m && m.t === 'denied') motivi.push(m.reason); }, close() {} };
+  let fatte = 0;
+  const provv = world.dadiProvvisori;
+  try {
+    for (const i of quali) {
+      const x = r.cambi[i];
+      if (!x || !rec || rec.banned) continue;
+      const prima = motivi.length;
+      if (rec.frozen && MUTATING.has(x.op)) { motivi.push('congelato'); continue; }
+      if (x.op === 'chat') {
+        if (rec.muted || !permsOf(rec).chat) { motivi.push('non può scrivere'); continue; }
+        addChat({ kind: 'text', text: x.text, by: pc.name, byId: pc.token, offline: true, quando: x.ts });
+      } else if (x.op === 'roll.prov') {
+        world.dadiProvvisori = true;
+        handleIntent(pc, { op: 'roll.prov', expr: x.expr, label: x.label, dadi: x.dadi, secret: x.secret, quando: x.ts });
+      } else if (x.op === 'sheet.save') {
+        const s = (world.sheets || []).find(y => y.id === x.id);
+        if (!s) { motivi.push('scheda sconosciuta'); continue; }
+        handleIntent(pc, { op: 'sheet.save', id: x.id, name: x.name, f: { ...(s.f || {}), ...x.f } });
+      } else if (x.op === 'sheet.add') handleIntent(pc, { op: 'sheet.add', sheet: x.sheet });
+      else if (x.op === 'token.move') handleIntent(pc, { op: 'token.move', scene: x.scene, id: x.id, pos: x.pos });
+      else if (x.op === 'notes.save') handleIntent(pc, { op: 'notes.save', text: x.text });
+      if (motivi.length === prima) fatte++;
+    }
+  } finally { world.dadiProvvisori = provv; }
+  delete richiesteOff.r[id];
+  richiesteOff.chiuse.push(id); if (richiesteOff.chiuse.length > 300) richiesteOff.chiuse.shift();
+  salvaOff();
+  const tot = r.cambi.length, non = tot - fatte;
+  const testo = fatte === 0
+    ? 'Il master non ha applicato le cose che hai fatto mentre non c\'era.'
+    : non > 0 ? `Il master ha applicato ${fatte} delle ${tot} cose che hai fatto mentre non c'era.`
+    : (fatte === 1 ? 'Il master ha applicato la cosa che hai fatto mentre non c\'era.' : `Il master ha applicato tutte le ${fatte} cose che hai fatto mentre non c'era.`);
+  const live = [...clients].filter(c => c.token === r.token && !c.pending);
+  if (live.length) for (const c of live) c.send({ t: 'notice', text: testo, kind: 'live' });
+  else if (rec) { rec.esitoOffline = testo; scheduleSave(); }
+  logAction(chi ? { name: chi.name || 'MASTER', token: chi.token } : null, 'offline', true, `${pc.name}: ${fatte}/${tot} applicate` + (motivi.length ? ' (' + [...new Set(motivi)].slice(0, 3).join('; ') + ')' : ''));
+  avvisaOff();
+  return { ok: true, applicate: fatte, totale: tot };
 }
 
 // ======================= WebSocket, scritto a mano =======================
@@ -2142,6 +2310,31 @@ let bridge = null, bridgeBuf = '', bridgeQueue = [], bridgeQueueBytes = 0;
 // nuova e non sa chi sia. Glielo ripresentiamo noi, così il giocatore rientra da solo,
 // con lo stesso gettone (quindi stesso nome, stessi permessi, stesse schede).
 let lastHello = null;
+// Il master spento: la copia dell'ultimo mondo visto e le modifiche fatte da soli (vedi server/offline-ponte.js).
+const OFF = MODE === 'join' && /^[a-f0-9]{64}$/.test(process.env.LIBRE_JOIN_ID || '')
+  ? require('./offline-ponte.js')({ dir: path.join(DATA, 'offline'), id: process.env.LIBRE_JOIN_ID }) : null;
+if (OFF) {
+  process.on('exit', () => OFF.salvaOra());
+  process.on('SIGTERM', () => process.exit(0));
+  process.on('SIGINT', () => process.exit(0));
+}
+/** Il tubo verso l'host è giù: al browser si dà la copia salvata (con i soli permessi ammessi senza il master). */
+function entraOffline(c, avvisa) {
+  if (!OFF || c.offlineDato) return;
+  const w = OFF.benvenuto(c);
+  if (!w) {
+    if (avvisa) c.send({ t: 'notice', kind: 'live', text: 'Il master non c\'è e di questa campagna non ho ancora una copia: serve entrare almeno una volta con il master acceso.' });
+    return;
+  }
+  c.offlineDato = true;
+  // al ritorno del master il mondo vero va preso intero, non «da dove eravamo»
+  if (lastHello) { lastHello = { ...lastHello, ver: 0 }; delete lastHello.chatDa; }
+  c.send(w);
+}
+function inviaOffline() {
+  const p = OFF && OFF.pacco();
+  if (p) bridgeSend({ t: 'offline.invia', id: p.id, cambi: p.cambi });
+}
 let invitoInAttesa = null;            // il codice nuovo mandato dall'host, finché chi gioca non lo accetta
 let hostUp = false, lastFromHost = 0, bridgeTries = 0, bridgeTimer = 0;
 
@@ -2225,6 +2418,11 @@ function bridgeConnect() {
       if (msg.t === 'asset.data' || msg.t === 'asset.miss') { bridgeAsset(msg); continue; }   // roba nostra
       if (msg.t === 'beat') { bridgeSend({ t: 'pong' }); continue; }   // il ponte è vivo anche senza browser
       if (msg.t === 'eco') continue;                        // la risposta al nostro «ci sei?»: basta che sia arrivata
+      if (msg.t === 'offline.ricevuto') {                   // il master ha ricevuto le cose fatte da soli
+        const n = OFF && !msg.pieno && !msg.fuori ? OFF.ricevuto(msg.id) : 0;
+        if (n) versoBrowser({ t: 'notice', kind: 'live', text: n === 1 ? 'Ho mandato al master la cosa che hai fatto mentre non c\'era: decide lui se applicarla.' : `Ho mandato al master le ${n} cose che hai fatto mentre non c'era: decide lui quali applicare.` });
+        continue;
+      }
       if (msg.t === 'welcome') hostSaStabile = Array.isArray(msg.sa) && msg.sa.includes('stabile');
       if (msg.t === 'pannello.r') { const f = pannelloAttese.get(String(msg.id)); if (typeof f === 'function') { pannelloAttese.delete(String(msg.id)); f({ codice: +msg.codice || 500, dati: msg.dati }); } continue; }
       if (msg.t === 'pannello.e') { if (masterQui() && msg.msg) panelPush(msg.msg); continue; }
@@ -2295,6 +2493,10 @@ function versoBrowser(msg, giaInOrdine) {
     if (msg.t === 'delta') lastHello.ver = msg.a;
     const ch = msg.t === 'chat' ? [msg.msg] : msg.world && msg.world.chat || msg.chatDopo || [];
     if (ch.length && ch[ch.length - 1] && ch[ch.length - 1].id) lastHello.chatDa = ch[ch.length - 1].id;
+  }
+  if (OFF) {
+    OFF.segui(msg);
+    if (msg.t === 'welcome' && !msg.offline) { OFF.fine(); for (const c of clients) c.offlineDato = false; setTimeout(inviaOffline, 300); }   // il master c'è: gli si manda quello che si è fatto da soli
   }
   for (const c of clients) c.send(msg);                 // al browser
   if (msg.t === 'delta' && lastHello) {                 // quelle che aspettavano questa
@@ -2472,14 +2674,14 @@ function leggiCorpo(req, res, max, fn) {
 // Le azioni del pannello (permessi, moderazione, regole della sessione...). Le stesse arrivano dall'http di
 // questa macchina (il master locale) o dal tubo (un master entrato da fuori, sul server dedicato).
 const API_PANNELLO = { '/api/state': 'GET', '/api/perm': 'POST', '/api/scene': 'POST', '/api/mod': 'POST', '/api/session': 'POST',
-  '/api/invito/cambia': 'POST', '/api/invito': 'POST', '/api/kick': 'POST', '/api/relay': 'POST', '/api/account': 'POST' };
+  '/api/invito/cambia': 'POST', '/api/invito': 'POST', '/api/kick': 'POST', '/api/relay': 'POST', '/api/account': 'POST', '/api/offline/decidi': 'POST' };
 const NON_HOST = { codice: 409, dati: 'questo è un giocatore, non l\'host' };
 function statoPannello() {
   let sessionId = null;
   try { sessionId = fs.readFileSync(LINK_ID_FILE, 'utf8').trim() || null; } catch {}
   return {
     mode: MODE, dedicato: DEDICATO || undefined, sessionId, invito: sessionId ? sessionId + parolaInvito() : null, relay: relay ? relay.stato() : undefined, perms: PERMS, roles: Object.keys(ROLE_DEFAULTS), defaults: ROLE_DEFAULTS,
-    session,
+    session, offline: { cfg: offlineCfg(), richieste: listaOff() },
     players: playerList(),
     log: actionLog.slice(-120),
     roster: Object.entries(roster).map(([token, r]) => ({
@@ -2509,6 +2711,10 @@ function apiPannello(p, m, chi) {
       const ok = applyPerm(m);
       if (ok && m.role) logAction(io, 'ruolo', true, (roster[m.token].name || '?') + ' → ' + m.role);
       return { codice: ok ? 200 : 404, dati: { ok } };
+    }
+    case '/api/offline/decidi': {
+      const r = decidiOff(str(m.id, 40), m.scelti === 'tutti' ? 'tutti' : m.scelti, chi);
+      return { codice: r.ok ? 200 : 404, dati: r };
     }
     case '/api/scene':
       world.publicScene = m.id || null;
@@ -2552,6 +2758,12 @@ function apiPannello(p, m, chi) {
     case '/api/session':
       for (const k of ['locked', 'approval', 'paused']) if (k in m) session[k] = !!m[k];
       if ('maxPlayers' in m) session.maxPlayers = Math.max(0, Math.min(40, parseInt(m.maxPlayers, 10) || 0));
+      if (m.offline && typeof m.offline === 'object') {                          // che cosa si può fare quando il master non c'è
+        const o = offlineCfg();
+        for (const k of OFF_TIPI) if (k in m.offline) o[k] = !!m.offline[k];
+        session.offline = o;
+        broadcast({ t: 'offline.cfg', cfg: o }, c => c.role !== 'master');
+      }
       logAction(io, 'sessione', true, JSON.stringify(session));
       scheduleSave();
       panelPush({ t: 'session', session });
@@ -2778,12 +2990,18 @@ if (MODE === 'join') {
     if (m.t === 'hello' && !m.canale && JOIN_PAROLA) m = { ...m, invito: JOIN_PAROLA };
     // l'ID di chi gioca (uguale in tutte le campagne) e il nome che ha in questa: il browser non ne sa niente
     if (m.t === 'hello' && !m.canale) m = { ...m, idUtente: ID_UTENTE || undefined, name: nomeQui || m.name || ID_UTENTE || undefined };
+    if (OFF && m.t === 'offline.passa') { entraOffline(c, true); return; }   // chi gioca sceglie di continuare da solo
+    if (OFF && OFF.inCorso && m.t === 'intent') { OFF.intento(c, m); return; }
     if (m.t === 'hello') lastHello = m;
     if (m.t === 'name' && lastHello) lastHello = { ...lastHello, name: m.name };
     if (m.t === 'leave') { lastHello = null; if (stabile) stabile.destroy(); }   // scollegato a mano: non ripresentarlo
     bridgeSend(m);
     stabileManda(m);                                         // gli intenti piccoli anche dall'altra strada
     if (m.t === 'hello') c.send({ t: 'link', up: hostUp });  // appena arrivato: sappia subito com'è il tubo
+    // il master non risponde: dopo qualche secondo si entra sulla copia salvata (prima, se il tubo è già noto come giù)
+    if (OFF && m.t === 'hello' && !m.canale && !c.offlineDato) {
+      setTimeout(() => { if (!hostUp && !c.offlineDato && clients.has(c)) entraOffline(c, true); }, bridgeTries >= 1 ? 1200 : 5000);
+    }
   };
   bridgeConnect();
   bridgeWatchdog();
