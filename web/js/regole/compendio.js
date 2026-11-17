@@ -112,7 +112,7 @@
   async function carica() {
     if (C.caricando) return C.caricando;
     C.caricando = (async () => {
-      stato(tr('Carico il compendio…'));
+      stato(tr('Carico il compendio…'), true);
       let elenco = [];
       if (giocatore()) {
         const w = NET.world && NET.world.compendio;
@@ -208,7 +208,13 @@
     }
   }
   window.ricaricaCompendio = () => { C.pronto = false; C.caricando = null; return carica(); };
-  const stato = t => { const e = $('compStato'); if (e) { e.textContent = t || ''; e.hidden = !t; } };
+  const stato = (t, attesa) => {
+    const e = $('compStato');
+    if (!e) return;
+    if (e._anello) { e._anello.stop(); e._anello = null; }
+    e.textContent = t || ''; e.hidden = !t;
+    if (t && attesa && window.LibreAttesa) { const s = document.createElement('span'); e.prepend(s); e._anello = LibreAttesa.anello(s, 22); s.style.display = 'inline-block'; }
+  };
 
   // ---------- in partita: cosa vedono i giocatori ----------
   // Il master manda l'elenco dei pacchetti visibili; per quelli della campagna prepara un file JSON

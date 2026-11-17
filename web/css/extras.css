@@ -1332,3 +1332,11 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 .offAzioni { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .offAzioni button { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel-3); color: var(--text); cursor: pointer; }
 .offAzioni button.go { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* schermata di attesa all'avvio: l'anello (condiviso/attesa.js) finché la scena non è pronta */
+#attesaIniziale { position: fixed; inset: 0; z-index: 2147483000; display: flex; align-items: center; justify-content: center;
+  background: var(--bg, #12151c); transition: opacity .3s ease; }
+#attesaIniziale.esce { opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { #attesaIniziale { transition: none; } }
+/* attesa del compendio */
+#compStato .anelloAttesa { vertical-align: middle; margin-right: 8px; }

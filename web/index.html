@@ -22,8 +22,11 @@
 <script src="js/strumenti/tutorial-passi.js"></script>
 <script src="js/strumenti/tutorial.js"></script>
 <script src="js/base/nativo.js"></script>
+<script src="condiviso/attesa.js"></script>
 </head>
 <body>
+<div id="attesaIniziale" aria-live="polite"></div>
+<script>try { LibreAttesa.attesa(document.getElementById('attesaIniziale'), 'Un momento…', 104); } catch (e) {}</script>
 <div id="viewport">
   <div id="stage">
     <div id="boardFill"></div>

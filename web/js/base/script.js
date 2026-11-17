@@ -2561,5 +2561,17 @@ addEventListener('DOMContentLoaded', async () => {      // dopo che sheets.js ed
   setStatus();
   await reload(primo);  // l'elenco degli assets (già letto qui sopra) serve per ritrovare le immagini delle scene
   loadChat();
-  loadBoard();
+  try { await loadBoard(); } finally { chiudiAttesaIniziale(); }
 });
+
+// la schermata con l'anello di attesa, finché la scena non è pronta (sparisce con una dissolvenza breve, o subito con «riduci movimento»)
+function chiudiAttesaIniziale() {
+  const e = document.getElementById('attesaIniziale');
+  if (!e) return;
+  const via = () => e.remove();
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return via();
+  e.classList.add('esce');
+  e.addEventListener('transitionend', via, { once: true });
+  setTimeout(via, 600);
+}
+setTimeout(() => { try { chiudiAttesaIniziale(); } catch {} }, 20000);   // per non restare mai bloccati
