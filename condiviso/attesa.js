@@ -18,7 +18,6 @@
   const CHIARO = hex(0xc9bcff);          // il colore chiaro della punta
   const rgba = (c, a) => `rgba(${Math.round(c[0] * 255)},${Math.round(c[1] * 255)},${Math.round(c[2] * 255)},${a})`;
   const mescola = (a, b, t) => { t = Math.min(1, Math.max(0, t)); return [0, 1, 2].map(i => a[i] + (b[i] - a[i]) * t); };
-  let SUL_CHIARO = false;      // lo sfondo è chiaro: colori più scuri per l'anello e il d20
   const gradi = d => d * Math.PI / 180;
 
   // accelera e frena (curva a S), su 0..1
@@ -39,7 +38,9 @@
   }
 
   // ---------- il disegno di un fotogramma ----------
-  function disegna(ctx, W, H, t) {
+  // chiaro: lo sfondo è chiaro, colori più scuri per l'anello e il d20 (vale per questo anello soltanto)
+  function disegna(ctx, W, H, t, chiaro) {
+    const SUL_CHIARO = !!chiaro;
     const cx = W / 2, cy = H / 2;
     const lato = Math.min(W, H);
     const r = lato / 2 * 0.62;
@@ -97,11 +98,11 @@
     ctx.beginPath(); ctx.arc(hx, hy, p, 0, Math.PI * 2); ctx.fillStyle = SUL_CHIARO ? '#6a4cf0' : '#fff'; ctx.fill();
 
     // al centro il d20 del logo, che respira piano
-    dado(ctx, cx, cy, r * 0.62 * (1 + 0.04 * respiro), 0.75 + 0.25 * respiro);
+    dado(ctx, cx, cy, r * 0.62 * (1 + 0.04 * respiro), 0.75 + 0.25 * respiro, SUL_CHIARO);
   }
 
   // il d20 del logo: le stesse linee di ic_dadi.svg (un quadrato di 24, centro 12,12)
-  function dado(ctx, cx, cy, mezzo, opacita) {
+  function dado(ctx, cx, cy, mezzo, opacita, SUL_CHIARO) {
     const k = mezzo / 10;
     const P = (x, y) => [cx + (x - 12) * k, cy + (y - 12) * k];
     const colore = SUL_CHIARO ? `rgba(70,48,170,${opacita})` : `rgba(237,232,255,${opacita})`;
@@ -126,6 +127,14 @@
   }
 
   // ---------- montaggio: un anello che gira dentro un contenitore ----------
+  // chiaro o scuro: lo si capisce dal colore del testo (scuro sul fondo chiaro). Si ricontrolla ogni tanto,
+  // perché il tema può cambiare mentre l'anello gira (il tavolo lo applica solo a scena caricata).
+  function suChiaro(el) {
+    try {
+      const m = /(\d+(?:\.\d+)?)[, ]+(\d+(?:\.\d+)?)[, ]+(\d+(?:\.\d+)?)/.exec(getComputedStyle(el).color || '');
+      return !!m && (0.299 * m[1] + 0.587 * m[2] + 0.114 * m[3]) < 128;
+    } catch { return false; }
+  }
   const fermo = () => { try { return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); } catch { return false; } };
 
   // lo stile: si aggiunge da solo, una volta, così le pagine non devono caricare altro
@@ -151,25 +160,35 @@
     canvas.setAttribute('aria-hidden', 'true');
     wrap.appendChild(canvas);
     host.appendChild(wrap);
-    try {      // chiaro o scuro: lo si capisce dal colore del testo (chiaro sul fondo scuro)
-      const m = /(\d+)[, ]+(\d+)[, ]+(\d+)/.exec(getComputedStyle(host).color || '');
-      SUL_CHIARO = !!m && (0.299 * m[1] + 0.587 * m[2] + 0.114 * m[3]) < 128;
-    } catch { SUL_CHIARO = false; }
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(lato * dpr); canvas.height = Math.round(lato * dpr);
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (fermo()) { disegna(ctx, lato, lato, 0.4); return { stop() { wrap.remove(); } }; }
+    let chiaro = suChiaro(host), finito = false, id = 0, tm = 0, giri = 0;
+    const ferma = () => { finito = true; cancelAnimationFrame(id); clearTimeout(tm); };
+    if (fermo()) {
+      // fermo: un solo fotogramma, ridisegnato solo se cambia il tema; si smette quando l'anello esce dalla pagina
+      disegna(ctx, lato, lato, 0.4, chiaro);
+      const guarda = () => {
+        if (finito || !wrap.isConnected) return ferma();
+        const c = suChiaro(host); if (c !== chiaro) { chiaro = c; disegna(ctx, lato, lato, 0.4, chiaro); }
+        tm = setTimeout(guarda, 1000);
+      };
+      tm = setTimeout(guarda, 1000);
+      return { stop() { ferma(); wrap.remove(); } };
+    }
     const inizio = performance.now();
-    let finito = false, id = 0;
     function passo(now) {
       if (finito) return;
-      if (!wrap.isConnected) { finito = true; return; }
-      disegna(ctx, lato, lato, (now - inizio) / 1000);
+      if (!wrap.isConnected) return ferma();
+      // nascosto (display:none, come il box «Un attimo…» della home): niente disegni, si ricontrolla ogni tanto
+      if (!wrap.getClientRects().length) { tm = setTimeout(() => { id = requestAnimationFrame(passo); }, 400); return; }
+      if (++giri % 30 === 0) chiaro = suChiaro(host);
+      disegna(ctx, lato, lato, (now - inizio) / 1000, chiaro);
       id = requestAnimationFrame(passo);
     }
     id = requestAnimationFrame(passo);
-    return { stop() { finito = true; cancelAnimationFrame(id); wrap.remove(); } };
+    return { stop() { ferma(); wrap.remove(); } };
   }
 
   // l'anello con una scritta sotto (la scritta passa da tr() se c'è)
@@ -197,8 +216,12 @@
     const e = document.createElement('div');
     if (opz.id) e.id = opz.id;
     e.setAttribute('aria-live', 'polite');
-    const sfondo = opz.velo ? 'rgba(18,21,28,.72)' : 'var(--bg,#12151c)';
-    e.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:' + sfondo + ';transition:opacity .3s ease';
+    // il velo segue il tema (color-mix; i browser vecchi tengono il grigio scuro) e non blocca i clic:
+    // mostra solo che la mappa sta arrivando, intanto si può continuare a usare il tavolo
+    const sfondo = opz.velo
+      ? 'background:rgba(18,21,28,.72);background:color-mix(in srgb,var(--bg,#12151c) 72%,transparent);pointer-events:none'
+      : 'background:var(--bg,#12151c)';
+    e.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;color:var(--text,#e8ecf3);' + sfondo + ';transition:opacity .3s ease';
     let a = null, chiusa = false, tShow = 0;
     const monta = () => { (document.body || document.documentElement).appendChild(e); a = attesa(e, testo, opz.lato || 104); };
     if (opz.ritardo) tShow = setTimeout(monta, opz.ritardo); else monta();
