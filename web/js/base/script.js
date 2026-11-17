@@ -1092,12 +1092,26 @@ async function showScene(sc) {
   setBoard(sc.board);
   const url = resolveUrl(sc.bg);
   setBgBox(url ? { ...sc.bg, url, gid: sc.bg.gid || (String(sc.bg.url).startsWith('gs:') ? sc.bg.url.slice(3) : undefined) } : null);
+  attesaMappa();
   setLayer('tokens');
   paintGrid();
   const vista = sc.view && adattaVista(sc.view);
   if (vista) { Object.assign(view, { x: vista.x, y: vista.y, s: vista.s }); applyView(); } else fitView(false, 0.9);
   updatePageColor();
   renderSceneUI(); syncSettings();
+}
+
+// mappa grande ancora in arrivo: dopo un quarto di secondo compare l'anello sopra la scena, e sparisce appena l'immagine c'è.
+// Uno solo alla volta: cambiando di nuovo scena (anche verso una senza mappa o con un video, dove 'load' non arriva) il
+// velo di prima si chiude subito.
+let attesaMappaFine = null;
+function attesaMappa() {
+  if (attesaMappaFine) attesaMappaFine();
+  if (!window.LibreAttesa || document.getElementById('attesaIniziale') || !map.src || map.complete) return;
+  const v = LibreAttesa.schermata('Carico la mappa…', { ritardo: 250, velo: true, massimo: 15000 });
+  const fine = () => { map.removeEventListener('load', fine); map.removeEventListener('error', fine); v.chiudi(); if (attesaMappaFine === fine) attesaMappaFine = null; };
+  map.addEventListener('load', fine); map.addEventListener('error', fine);
+  attesaMappaFine = fine;
 }
 
 async function switchScene(id) {
@@ -2550,6 +2564,9 @@ diceToggle.addEventListener('click', () => {
 
 
 addEventListener('DOMContentLoaded', async () => {      // dopo che sheets.js ed extras.js sono stati letti
+  try { await avvioTavolo(); } finally { chiudiAttesaIniziale(); }   // anche se qualcosa va storto, la schermata d'attesa non resta
+});
+async function avvioTavolo() {
   let primo = null;
   try { primo = await serverStore.list(); online = true; modeMsg = 'Le foto vengono salvate nella cartella assets/.'; }
   catch {
@@ -2561,5 +2578,8 @@ addEventListener('DOMContentLoaded', async () => {      // dopo che sheets.js ed
   setStatus();
   await reload(primo);  // l'elenco degli assets (già letto qui sopra) serve per ritrovare le immagini delle scene
   loadChat();
-  loadBoard();
-});
+  await loadBoard();
+}
+
+// la schermata con l'anello di attesa (condiviso/attesa.js) si chiude quando la scena è pronta
+function chiudiAttesaIniziale() { if (window.ATTESA_INIZIALE) window.ATTESA_INIZIALE.chiudi(); }

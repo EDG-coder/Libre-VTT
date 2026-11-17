@@ -7,6 +7,7 @@
 <script src="/lingua-en.js"></script>
 <script src="/tutorial-en.js"></script>
 <script src="/i18n.js"></script>
+<script src="/condiviso/attesa.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjOWI4MmZmIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzVhM2ZkNiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHBhdGggZD0iTTMyIDNsMjUgMTQuNXYyOUwzMiA2MSA3IDQ2LjUwMHYtMjl6IiBmaWxsPSJ1cmwoI2cpIiBzdHJva2U9IiMyYjFhODUiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0zMiAxN2wxNSAyNkgxN3oiIGZpbGw9IiNmZmZmZmYyMiIgc3Ryb2tlPSIjZTllM2ZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNMzIgMTdWM00zMiAxN0w3IDE3LjUwME0zMiAxN2wyNSAuNU00NyA0M2wxMCAzLjUwME00NyA0M0wzMiA2MU0xNyA0M0w3IDQ2LjUwME0xNyA0M2wxNSAxOE0xNyA0M0w3IDE3LjUwME00NyA0M2wxMC0yNS41MDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2U5ZTNmZiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9Ii44NSIvPgogIDx0ZXh0IHg9IjMyIiB5PSIzOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmZmIj4yMDwvdGV4dD4KPC9zdmc+Cg==">
 <style>
   :root {
@@ -70,7 +71,7 @@
   .dot.warn { background: var(--warn); }
   .dot.bad { background: var(--bad); }
 
-  .spin { width: 15px; height: 15px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: g 1s linear infinite; }
+  .spin { display: inline-flex; }
   @keyframes g { to { transform: rotate(360deg); } }
 
   .avviso { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); }
@@ -276,6 +277,7 @@
 <script src="/tutorial.js" data-pagina="home"></script>
 </head>
 <body>
+<script>try { window.ATTESA_HOME = LibreAttesa.schermata('Un momento…', { id: 'attesaHome' }); } catch (e) {}</script>
 <button id="ingranaggio" type="button" aria-label="Impostazioni" title="Impostazioni">
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.650 1.650 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
 </button>
@@ -519,7 +521,7 @@
   </div>
 
   <div class="box hide" id="boxLavoro">
-    <div class="stato"><span class="spin"></span><span id="lavoroTesto">Un attimo…</span></div>
+    <div class="stato"><span class="spin" id="lavoroAnello"></span><span id="lavoroTesto">Un attimo…</span></div>
     <p class="err hide" id="errore"></p>
   </div>
 
@@ -557,6 +559,9 @@
 
 <script>
 const $ = id => document.getElementById(id);
+// schermata con l'anello finché la home non ha ricevuto lo stato dal programma (si apre subito, senza aspettare)
+let attesaHome = window.ATTESA_HOME || null;     // aperta in cima al body, prima che la pagina si disegni
+try { LibreAttesa.anello($('lavoroAnello'), 24); } catch (e) {}
 const NAT = window.LIBRE_NATIVO || { disponibile: false };
 if (NAT.disponibile) document.documentElement.classList.add('app');
 const azione = what => fetch('/api/azione', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(what) });
@@ -736,6 +741,7 @@ async function carica() {
     if (S.log) { $('log').replaceChildren(); S.log.forEach(logLine); }
     disegna();
   } catch {}
+  if (attesaHome) { attesaHome.chiudi(); attesaHome = null; }
 }
 
 // --- scelte ---

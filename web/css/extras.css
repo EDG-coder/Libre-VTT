@@ -1332,3 +1332,6 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 .offAzioni { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .offAzioni button { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel-3); color: var(--text); cursor: pointer; }
 .offAzioni button.go { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* attesa del compendio */
+#compStato .anelloAttesa { vertical-align: middle; margin-right: 8px; }

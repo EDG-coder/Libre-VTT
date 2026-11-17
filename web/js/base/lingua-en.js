@@ -1575,6 +1575,8 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "📦 Pacchetti…": "📦 Packages…",
 "Compendio": "Compendium",
 "Carico il compendio…": "Loading the compendium…",
+"Un momento…": "One moment…",
+"Carico la mappa…": "Loading the map…",
 "Tutti i tipi": "All types",
 "tutti": "all",
 "Livello {n}": "Level {n}",

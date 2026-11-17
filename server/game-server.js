@@ -2878,6 +2878,10 @@ function httpHandler(req, res) {
     return fs.readFile(path.join(WEB, 'panel.html'), (e, d) =>
       e ? sendHttp(res, 404, 'panel.html non trovato') : sendHttp(res, 200, d, 'text/html; charset=utf-8'));
   }
+  if (url.pathname === '/condiviso/attesa.js') {                        // l'anello di attesa del pannello
+    return fs.readFile(path.join(ROOT, 'condiviso', 'attesa.js'), (e, d) =>
+      e ? sendHttp(res, 404, 'no') : sendHttp(res, 200, d, 'text/javascript; charset=utf-8'));
+  }
   if (url.pathname === '/i18n.js' || /^\/lingua-[a-z]{2}\.js$/.test(url.pathname)) {   // le traduzioni
     return fs.readFile(path.join(WEB, 'js', 'base', url.pathname.slice(1)), (e, d) =>
       e ? sendHttp(res, 404, 'no') : sendHttp(res, 200, d, 'text/javascript; charset=utf-8'));

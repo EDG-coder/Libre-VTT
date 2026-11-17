@@ -1910,6 +1910,10 @@ const server = http.createServer(async (req, res) => {
     return fs.readFile(path.join(WEB, 'js', 'base', u.pathname.slice(1)), (e, d) =>
       e ? invia(res, 404, 'no') : invia(res, 200, d, 'text/javascript; charset=utf-8'));
   }
+  if (u.pathname === '/condiviso/attesa.js') {                // l'anello di attesa (lo stesso del tavolo)
+    return fs.readFile(path.join(ROOT, 'condiviso', 'attesa.js'), (e, d) =>
+      e ? invia(res, 404, 'no') : invia(res, 200, d, 'text/javascript; charset=utf-8'));
+  }
   if (u.pathname === '/nativo.js') {                          // il ponte con le app per telefono (sul computer non fa niente)
     return fs.readFile(path.join(WEB, 'js', 'base', 'nativo.js'), (e, d) =>
       e ? invia(res, 404, 'no') : invia(res, 200, d, 'text/javascript; charset=utf-8'));
@@ -2279,12 +2283,13 @@ function segnalaPronto() {
   if (UI_PORT !== pref) console.log(`La porta ${pref} è usata da un altro programma: uso la ${UI_PORT}.`);
   if (!process.env.UI_PORT && conf.porte.ui !== UI_PORT) { conf.porte.ui = UI_PORT; salvaConf(); }
   server.on('listening', async () => {
-    await check();
-    if (MOBILE) return segnalaPronto();
+    if (MOBILE) { await check(); return segnalaPronto(); }
     sorvegliaChiusura();
+    // la finestra si apre subito (la home mostra l'anello di attesa); il controllo degli strumenti (cargo) va dopo
     await chiudiBrowserRimasto();               // un browser di LIBRE VTT rimasto nel Dock da prima
     console.log('LIBRE VTT: finestra su http://127.0.0.1:' + UI_PORT);
     apriFinestra('http://127.0.0.1:' + UI_PORT + '/');
+    check().catch(() => {});
   });
   server.listen(UI_PORT, '127.0.0.1');
 })();

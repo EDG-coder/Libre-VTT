@@ -6,6 +6,7 @@
 <title>Pannello della sessione · LIBRE VTT</title>
 <script src="/lingua-en.js"></script>
 <script src="/i18n.js"></script>
+<script src="/condiviso/attesa.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjOWI4MmZmIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzVhM2ZkNiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHBhdGggZD0iTTMyIDNsMjUgMTQuNXYyOUwzMiA2MSA3IDQ2LjUwMHYtMjl6IiBmaWxsPSJ1cmwoI2cpIiBzdHJva2U9IiMyYjFhODUiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0zMiAxN2wxNSAyNkgxN3oiIGZpbGw9IiNmZmZmZmYyMiIgc3Ryb2tlPSIjZTllM2ZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNMzIgMTdWM00zMiAxN0w3IDE3LjUwME0zMiAxN2wyNSAuNU00NyA0M2wxMCAzLjUwME00NyA0M0wzMiA2MU0xNyA0M0w3IDQ2LjUwME0xNyA0M2wxNSAxOE0xNyA0M0w3IDE3LjUwME00NyA0M2wxMC0yNS41MDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2U5ZTNmZiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9Ii44NSIvPgogIDx0ZXh0IHg9IjMyIiB5PSIzOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSxBcmlhbCxzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmZmIj4yMDwvdGV4dD4KPC9zdmc+Cg==">
 <style>
   :root {
@@ -110,7 +111,7 @@
 <body>
 <div class="wrap">
   <h1>Pannello della sessione</h1>
-  <p class="sub" id="sub">Caricamento…</p>
+  <p class="sub" id="sub"><span id="subAnello" style="display:inline-block;vertical-align:middle;margin-right:8px"></span>Caricamento…</p>
 
   <div class="card" id="idCard">
     <h2>ID da dare ai giocatori</h2>
@@ -204,6 +205,7 @@ const ROLE_IT = { master: 'Master', player: 'Giocatore', spectator: 'Spettatore'
 let S = { perms: [], roster: [], sheets: [], scenes: [], defaults: {}, session: {}, log: [] };
 let logRows = [];
 
+try { LibreAttesa.anello(document.getElementById('subAnello'), 24); } catch (e) {}
 async function load() {
   try {
     const r = await fetch('/api/state');
