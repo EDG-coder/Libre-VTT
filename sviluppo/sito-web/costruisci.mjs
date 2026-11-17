@@ -65,20 +65,54 @@ writeFileSync(tavolo, html);
 // ---------- la pagina di presentazione ----------
 cpSync(join(RADICE, 'sviluppo/sito-web/pagina'), OUT, { recursive: true, filter: salta });
 cpSync(da('docs/immagini'), join(OUT, 'immagini'), { recursive: true, filter: salta });
-const pagina = join(OUT, 'index.html');
-let p = readFileSync(pagina, 'utf8').replace('<!--VERSIONE-->', versione);
-if (URL_SITO) p = p.replace('<!--SITO_URL-->', `<link rel="canonical" href="${URL_SITO}/">\n<meta property="og:url" content="${URL_SITO}/">`)
-  .replace('content="immagini/bosco.webp"', `content="${URL_SITO}/immagini/bosco.webp"`);
-writeFileSync(pagina, p.replace('<!--SITO_URL-->\n', ''));
+// «/» sceglie la lingua da sola (quella ricordata o quella del browser); «/it/» e «/eng/» sono la stessa pagina
+// ma ferma in una lingua, per mandare un link per forza italiano o inglese. Il pulsante IT/EN porta dall'una all'altra.
+const modello = readFileSync(join(OUT, 'index.html'), 'utf8').replace('<!--VERSIONE-->', versione);
+const finestra = {};
+new Function('window', readFileSync(join(RADICE, 'sviluppo/sito-web/pagina/pagina-en.js'), 'utf8'))(finestra);
+const EN = finestra.PAGINA_EN, META = finestra.PAGINA_META_EN;
+const esc = t => t.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+const dec = t => t.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;|&apos;/g, "'").replace(/&amp;/g, '&');
+const meta = (h, riga, valore) => h.replace(riga, (m, a, b) => a + esc(valore) + b);
+function pagina(lingua) {                       // '' (da sola) | 'it' | 'eng'
+  let h = modello;
+  const dir = lingua || '';
+  const indirizzo = `${URL_SITO}/${dir ? dir + '/' : ''}`;
+  h = h.replace('<!--SITO_URL-->\n<!--LINGUE-->',
+    `<link rel="canonical" href="${indirizzo}">\n<meta property="og:url" content="${indirizzo}">\n` +
+    `<link rel="alternate" hreflang="it" href="${URL_SITO}/it/">\n<link rel="alternate" hreflang="en" href="${URL_SITO}/eng/">\n` +
+    `<link rel="alternate" hreflang="x-default" href="${URL_SITO}/">`)
+    .replace('content="immagini/bosco.webp"', `content="${URL_SITO}/immagini/bosco.webp"`);
+  if (!dir) return h;
+  // nelle sottocartelle i file della pagina e il tavolo stanno un livello più su
+  h = h.replace(/(\b(?:src|href|action)=")(pagina\.css|lingua\.js|pagina\.js|pagina-en\.js|gioca\/|immagini\/)/g, '$1../$2')
+    .replace('href="./"', `href="../${dir}/"`);
+  h = h.replace('<html lang="it">', `<html lang="${dir === 'eng' ? 'en' : 'it'}">`);
+  if (dir === 'eng') {
+    // l'inglese già scritto nel file (chi indicizza e chi ha JavaScript spento lo vede); pagina.js poi lo conferma
+    h = h.replace(/<title>[^<]*<\/title>/, `<title>${esc(META.titolo)}</title>`);
+    h = meta(h, /(<meta name="description" content=")[^"]*(")/, META.descrizione);
+    h = meta(h, /(<meta name="keywords" content=")[^"]*(")/, META.parole);
+    h = meta(h, /(<meta property="og:title" content=")[^"]*(")/, META.ogTitolo);
+    h = meta(h, /(<meta property="og:description" content=")[^"]*(")/, META.ogDescrizione);
+    h = h.replace(/(<[^<>]*\bdata-t="([^"]*)"[^<>]*>)([^<]*)(<\/)/g, (m, apre, chiave, testo, chiude) => EN[dec(chiave)] ? apre + esc(EN[dec(chiave)]).replace(/&quot;/g, '"') + chiude : m);
+    h = h.replace(/(\balt=")([^"]*)("[^<>]*\bdata-ta="([^"]*)")/g, (m, a, v, c, chiave) => EN[dec(chiave)] ? a + esc(EN[dec(chiave)]) + c : m);
+    h = h.replace(/(\bsrc="\.\.\/immagini\/\w+)(\.webp"[^<>]*\bdata-foto=)/g, '$1-en$2');
+    h = h.replace('id="lingua" type="button" aria-label="English">EN<', 'id="lingua" type="button" aria-label="Italiano">IT<');
+  }
+  return h;
+}
+writeFileSync(join(OUT, 'index.html'), pagina(''));
+for (const d of ['it', 'eng']) { mkdirSync(join(OUT, d), { recursive: true }); writeFileSync(join(OUT, d, 'index.html'), pagina(d)); }
 
 // ---------- per i motori di ricerca e per Cloudflare ----------
 if (RELAY) writeFileSync(join(OUT, 'relay.json'), JSON.stringify({ relay: RELAY }) + '\n');
 else console.warn('Attenzione: SITO_RELAY non c\'è, dal sito non si potrà entrare nelle partite.');
 writeFileSync(join(OUT, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${URL_SITO}/sitemap.xml\n`);
-// solo la pagina di presentazione (IT/EN cambiano sullo stesso indirizzo); il tavolo /gioca/ è noindex
+// le pagine di presentazione (senza lingua, /it/ e /eng/); il tavolo /gioca/ è noindex
 writeFileSync(join(OUT, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-  `  <url><loc>${URL_SITO}/</loc></url>\n</urlset>\n`);
+  `  <url><loc>${URL_SITO}/</loc></url>\n  <url><loc>${URL_SITO}/it/</loc></url>\n  <url><loc>${URL_SITO}/eng/</loc></url>\n</urlset>\n`);
 // la cornice dove gira il codice dei plugin del master in sandbox: come la serve il programma (server/server.js),
 // senza rete e senza origine, con solo il suo script
 const sandboxHtml = readFileSync(da('web/plugin-sandbox.html'), 'utf8');
@@ -111,6 +145,8 @@ writeFileSync(join(OUT, '_headers'), [
   '  Cache-Control: public, max-age=86400',
   ''
 ].join('\n'));
+// scorciatoie per chi scrive l'indirizzo a mano (Cloudflare Pages legge _redirects; GitHub Pages lo ignora)
+writeFileSync(join(OUT, '_redirects'), '/en /eng/ 301\n/en/ /eng/ 301\n/ita /it/ 301\n/ita/ /it/ 301\n');
 writeFileSync(join(OUT, '404.html'), `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LIBRE VTT · pagina non trovata</title>
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#1b1f27;color:#e8ecf3;font:16px system-ui,sans-serif;text-align:center;padding:16px}a{color:#9b82ff}</style>
