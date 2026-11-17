@@ -2,7 +2,7 @@
 // Costruisce la versione sito web di LIBRE VTT in una cartella di file statici (di base _site/),
 // pronta per Cloudflare Pages o GitHub Pages. Non serve nessun pacchetto: solo Node.
 //
-//   node sviluppo/sito-web/costruisci.mjs [cartella]      SITO_URL=https://… per robots e sitemap
+//   node sviluppo/sito-web/costruisci.mjs [cartella]      SITO_URL=https://… per robots, sitemap e canonical
 //
 //   /             la pagina di presentazione (sviluppo/sito-web/pagina/)
 //   /gioca/       il tavolo (web/) con accanto condiviso/, sistemi/ e gli sfondi: gira tutto nel
@@ -18,7 +18,8 @@ import { createHash } from 'node:crypto';
 
 const RADICE = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const OUT = resolve(process.argv[2] || join(RADICE, '_site'));
-const URL_SITO = (process.env.SITO_URL || '').replace(/\/+$/, '');
+// senza SITO_URL vale l'indirizzo di Cloudflare Pages (robots.txt e sitemap.xml ci sono sempre)
+const URL_SITO = (process.env.SITO_URL || 'https://libre-vtt.pages.dev').replace(/\/+$/, '');
 // l'indirizzo del relay (wss://…): lo leggono il tavolo del sito e l'app del master (relay.json)
 const RELAY = (process.env.SITO_RELAY || '').trim().replace(/^https:/i, 'wss:').replace(/\/+$/, '');
 if (RELAY && !/^wss:\/\/[\w.-]+(:\d+)?(\/[\w./-]*)?$/i.test(RELAY)) { console.error('SITO_RELAY non valido: ' + RELAY); process.exit(1); }
@@ -73,10 +74,11 @@ writeFileSync(pagina, p.replace('<!--SITO_URL-->\n', ''));
 // ---------- per i motori di ricerca e per Cloudflare ----------
 if (RELAY) writeFileSync(join(OUT, 'relay.json'), JSON.stringify({ relay: RELAY }) + '\n');
 else console.warn('Attenzione: SITO_RELAY non c\'è, dal sito non si potrà entrare nelle partite.');
-writeFileSync(join(OUT, 'robots.txt'), 'User-agent: *\nAllow: /\n' + (URL_SITO ? `Sitemap: ${URL_SITO}/sitemap.xml\n` : ''));
-if (URL_SITO) writeFileSync(join(OUT, 'sitemap.xml'),
+writeFileSync(join(OUT, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${URL_SITO}/sitemap.xml\n`);
+// solo la pagina di presentazione (IT/EN cambiano sullo stesso indirizzo); il tavolo /gioca/ è noindex
+writeFileSync(join(OUT, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-  `  <url><loc>${URL_SITO}/</loc></url>\n  <url><loc>${URL_SITO}/gioca/</loc></url>\n</urlset>\n`);
+  `  <url><loc>${URL_SITO}/</loc></url>\n</urlset>\n`);
 // la cornice dove gira il codice dei plugin del master in sandbox: come la serve il programma (server/server.js),
 // senza rete e senza origine, con solo il suo script
 const sandboxHtml = readFileSync(da('web/plugin-sandbox.html'), 'utf8');
