@@ -20,7 +20,8 @@
     for (const r of lista) {
       const box = document.createElement('section'); box.className = 'offRichiesta';
       const t = document.createElement('h3');
-      t.textContent = tr('{n}: {c} cose, arrivate alle {h}', { n: r.name || tr('Giocatore'), c: r.cambi.length, h: ora(r.arrivo) });
+      t.textContent = r.cambi.length === 1 ? tr('{n}: una cosa, arrivata alle {h}', { n: r.name || tr('Giocatore'), h: ora(r.arrivo) })
+        : tr('{n}: {c} cose, arrivate alle {h}', { n: r.name || tr('Giocatore'), c: r.cambi.length, h: ora(r.arrivo) });
       box.append(t);
       const checks = [];
       for (const c of r.cambi) {
@@ -36,7 +37,7 @@
         }
         box.append(riga);
       }
-      if (r.scartati) { const p = document.createElement('p'); p.className = 'offNota'; p.textContent = tr('{n} cose non ammesse senza di te sono state ignorate.', { n: r.scartati }); box.append(p); }
+      if (r.scartati) { const p = document.createElement('p'); p.className = 'offNota'; p.textContent = r.scartati === 1 ? tr('Una cosa non ammessa senza di te è stata ignorata.') : tr('{n} cose non ammesse senza di te sono state ignorate.', { n: r.scartati }); box.append(p); }
       const az = document.createElement('div'); az.className = 'offAzioni';
       const ok = document.createElement('button'); ok.type = 'button'; ok.className = 'go'; ok.textContent = tr('Applica le selezionate');
       ok.onclick = () => decidi(r, checks.filter(([, cb]) => cb.checked).map(([i]) => i));

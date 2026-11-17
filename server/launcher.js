@@ -548,6 +548,7 @@ function toltoOffline(codice, idp) {
     const l = JSON.parse(fs.readFileSync(f, 'utf8')), m = /^([a-f0-9]{12})\.(\d{1,4})$/.exec(String(idp));
     if (!m || m[1] !== l.id) return;
     l.cambi.splice(0, +m[2]);
+    l.id = crypto.randomBytes(6).toString('hex');      // quello che resta è un registro nuovo (l'host conta per prefisso)
     if (l.cambi.length) fs.writeFileSync(f, JSON.stringify(l)); else fs.unlinkSync(f);
   } catch {}
 }

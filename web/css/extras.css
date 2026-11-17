@@ -1319,7 +1319,7 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 .ui-touch .ctReset { opacity: .7; width: 26px; height: 26px; }
 
 /* ---------- (master) modifiche fatte dai giocatori mentre non c'era ---------- */
-.offModal { position: fixed; inset: 0; z-index: 9000; background: rgba(0, 0, 0, .5); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.offModal { position: fixed; inset: 0; z-index: 200000; background: rgba(0, 0, 0, .5); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .offScheda { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; width: min(560px, 100%); max-height: 85vh; display: flex; flex-direction: column; }
 .offTesta { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
 .offX { background: none; border: 0; color: var(--text-soft); font-size: 1.4rem; line-height: 1; cursor: pointer; }

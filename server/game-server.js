@@ -2124,9 +2124,14 @@ function riceviOffline(m, c) {
   const id = str(m.id, 40);
   if (!/^[a-f0-9]{6,20}\.\d{1,4}$/.test(id)) return null;
   if (richiesteOff.r[id] || richiesteOff.chiuse.includes(id) || rec.role === 'master') return { t: 'offline.ricevuto', id };
+  // lo stesso registro può arrivare due volte, la seconda più lungo (la conferma della prima si era persa):
+  // dei cambi già arrivati con lo stesso prefisso si tiene solo la parte nuova
+  const prefisso = id.slice(0, id.lastIndexOf('.') + 1);
+  let giaVisti = 0;
+  for (const k of Object.keys(richiesteOff.r).concat(richiesteOff.chiuse)) if (k.startsWith(prefisso)) giaVisti = Math.max(giaVisti, +k.slice(prefisso.length) || 0);
   const cfg = offlineCfg(), cambi = [];
   let scartati = 0;
-  for (const x of (Array.isArray(m.cambi) ? m.cambi.slice(0, 500) : [])) {
+  for (const x of (Array.isArray(m.cambi) ? m.cambi.slice(giaVisti, 500) : [])) {
     const p = pulisciCambio(x);
     if (p && cfg[OFF_OP[p.op]]) cambi.push(p); else scartati++;
   }
@@ -2323,7 +2328,7 @@ function entraOffline(c, avvisa) {
   if (!OFF || c.offlineDato) return;
   const w = OFF.benvenuto(c);
   if (!w) {
-    if (avvisa) c.send({ t: 'notice', kind: 'live', text: 'Il master non c\'è e di questa campagna non ho ancora una copia: serve entrare almeno una volta con il master acceso.' });
+    if (avvisa && !masterQui()) c.send({ t: 'notice', kind: 'live', text: 'Il master non c\'è e di questa campagna non ho ancora una copia: serve entrare almeno una volta con il master acceso.' });
     return;
   }
   c.offlineDato = true;
@@ -2992,6 +2997,9 @@ if (MODE === 'join') {
     if (m.t === 'hello' && !m.canale) m = { ...m, idUtente: ID_UTENTE || undefined, name: nomeQui || m.name || ID_UTENTE || undefined };
     if (OFF && m.t === 'offline.passa') { entraOffline(c, true); return; }   // chi gioca sceglie di continuare da solo
     if (OFF && OFF.inCorso && m.t === 'intent') { OFF.intento(c, m); return; }
+    // la copia va tenuta al passo con le differenze: se non abbiamo il mondo in memoria (il ponte è appena
+    // ripartito, il browser no) ci si fa mandare il mondo intero invece di «riprendere da dove eravamo»
+    if (OFF && m.t === 'hello' && !m.canale && !OFF.haMondo() && m.ver) m = { ...m, ver: 0 };
     if (m.t === 'hello') lastHello = m;
     if (m.t === 'name' && lastHello) lastHello = { ...lastHello, name: m.name };
     if (m.t === 'leave') { lastHello = null; if (stabile) stabile.destroy(); }   // scollegato a mano: non ripresentarlo

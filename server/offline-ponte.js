@@ -60,7 +60,6 @@ module.exports = function creaOffline({ dir, id }) {
         if (msg.offline) return;
         if (msg.you && msg.you.token) you = { token: msg.you.token, firma: msg.you.firma || null, name: msg.you.name, role: msg.you.role, perms: msg.you.perms, campagna: msg.you.campagna };
         if (msg.off) cfg = { ...STANDARD, ...msg.off };
-        caricato = true;
         if (msg.world) mondo_(msg.world, msg.ver);
         else if (P) {
           for (const x of msg.chatDopo || []) chatAgg(x);
@@ -68,7 +67,7 @@ module.exports = function creaOffline({ dir, id }) {
           for (const i of msg.chatVia || []) chat = chat.filter(x => x.id !== i);
         }
         sporca(); return;
-      case 'world': caricato = true; mondo_(msg.world, msg.ver); sporca(); return;
+      case 'world': mondo_(msg.world, msg.ver); sporca(); return;
       case 'delta': if (P && msg.da === ver) { VERS.applica(P, msg); ver = msg.a; sporca(); } return;
       case 'you': if (msg.you && you) { you = { ...you, name: msg.you.name || you.name, role: msg.you.role || you.role, perms: msg.you.perms || you.perms }; sporca(); } return;
       case 'offline.cfg': if (msg.cfg) { cfg = { ...STANDARD, ...msg.cfg }; sporca(); } return;
@@ -79,6 +78,7 @@ module.exports = function creaOffline({ dir, id }) {
   }
   function mondo_(w, v) {
     if (!w || typeof w !== 'object') return;
+    caricato = true;                                  // da qui vale il mondo vero, non la copia su disco
     chat = Array.isArray(w.chat) ? w.chat.slice(-250) : [];
     P = VERS.pezzi(w); ver = v || 0;
   }
@@ -205,13 +205,17 @@ module.exports = function creaOffline({ dir, id }) {
     const m = /^([a-f0-9]{12})\.(\d{1,4})$/.exec(String(idp || ''));
     if (!m || m[1] !== log.id) return 0;
     const n = Math.min(+m[2], log.cambi.length);
-    log.cambi.splice(0, n); salvaLog();
+    log.cambi.splice(0, n);
+    if (log.cambi.length) log.id = nuovoId();          // quello che resta è un registro nuovo (l'host conta per prefisso)
+    salvaLog();
     return n;
   }
 
   return {
     segui, benvenuto, intento, pacco, ricevuto,
     disponibile: () => carica(),
+    /** Il mondo vero lo abbiamo in memoria, aggiornato a una versione nota? (altrimenti va chiesto intero) */
+    haMondo: () => !!P && caricato && ver > 0,
     get inCorso() { return inCorso; },
     fine() { inCorso = false; },
     salvaOra() { salvaSnap(); },
