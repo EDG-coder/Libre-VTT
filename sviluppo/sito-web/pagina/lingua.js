@@ -3,8 +3,11 @@
 // Le foto con data-foto hanno nell'src quella italiana; in inglese l'src si cambia appena l'<img> compare,
 // prima del primo disegno della pagina. Il resto (testi e cambio di lingua col pulsante) lo fa pagina.js.
 (function () {
-  var l = '';
-  try { l = localStorage.getItem('libre-lingua') || ''; } catch (e) {}
+  var l = '', p = location.pathname;
+  // /it/ e /eng/ hanno la lingua nell'indirizzo; la pagina senza lingua usa quella scelta o quella del browser
+  window.LIBRE_BASE = /\/(it|eng)\/?(index\.html)?$/.test(p) ? '../' : '';
+  if (/\/it\/?(index\.html)?$/.test(p)) l = 'it'; else if (/\/eng\/?(index\.html)?$/.test(p)) l = 'en';
+  if (!l) { try { l = localStorage.getItem('libre-lingua') || ''; } catch (e) {} }
   if (l !== 'it' && l !== 'en') l = /^it\b/i.test(navigator.language || '') ? 'it' : 'en';
   window.LIBRE_LINGUA = l;
   document.documentElement.lang = l;
@@ -16,7 +19,7 @@
     for (var i = 0; i < FOTO.length; i++) if (FOTO[i] === chiesto) nome = FOTO[i];
     if (!nome || img.getAttribute('data-lingua') === 'en') return;
     img.setAttribute('data-lingua', 'en');
-    img.setAttribute('src', 'immagini/' + nome + '-en.webp');
+    img.setAttribute('src', window.LIBRE_BASE + 'immagini/' + nome + '-en.webp');
   }
   var mo = new MutationObserver(function (lista) {
     for (var i = 0; i < lista.length; i++) for (var j = 0; j < lista[i].addedNodes.length; j++) {
