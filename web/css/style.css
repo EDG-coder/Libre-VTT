@@ -573,8 +573,12 @@ html.ui-tel #chatNuovi { min-width: 44px; height: 44px; }
 @media (prefers-reduced-motion: reduce) { #chatNuovi { animation: none; } }
 #chatNuovi[hidden] { display: none; }
 /* con il pannello di destra aperto, la barra in basso si centra nello spazio che resta (non copre la chat) */
-html:not(.ui-tel) body.menu-open #dock { left: calc((100vw - min(var(--side-w, 340px), 92vw)) / 2); max-width: calc(100vw - min(var(--side-w, 340px), 92vw) - 24px); }
-html:not(.ui-tel) body.menu-open #dockZone { left: calc((100vw - min(var(--side-w, 340px), 92vw)) / 2); }
+html:not(.ui-tel) body.menu-open #dock { max-width: calc(100vw - min(var(--side-w, 340px), 92vw) - 24px); }
+/* La barra sta al centro dello schermo, qualunque sia il numero dei suoi pulsanti (--dock-w la misura
+   extras.js). Si sposta solo se così coprirebbe gli strumenti a sinistra o il pannello di destra aperto:
+   in quel caso resta il più vicino possibile al centro. */
+html:not(.ui-tel) :is(#dock, #dockZone) { left: clamp(calc(var(--dock-w, 0px) / 2 + 84px), 50%, calc(100% - var(--dock-w, 0px) / 2 - 12px)); }
+html:not(.ui-tel) body.menu-open :is(#dock, #dockZone) { left: clamp(calc(var(--dock-w, 0px) / 2 + 84px), 50%, calc(100% - min(var(--side-w, 340px), 92vw) - 12px - var(--dock-w, 0px) / 2)); }
 
 /* risultato grande del tiro, quando la chat è chiusa */
 #dicePop {

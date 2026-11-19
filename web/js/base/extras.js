@@ -44,6 +44,7 @@ function registerTool(id, el, grip, name) {
   slotsEl.appendChild(slot); slot.appendChild(el);               // all'inizio tutti stanno nel menu
   const t = { id, el, grip, slot, name, docked: true };
   TOOLS.push(t);
+  if (window.LibreFinestre) LibreFinestre.registra(t);           // sul computer il pannello si apre come finestra mobile (finestre.js)
   // si osserva il contenuto intero (non solo i pezzi che c'erano all'inizio): righe nuove dei turni,
   // finestre messe nella cartella, testi che vanno a capo… il pannello aperto si allunga da solo
   // (il pannello ha un'altezza massima, quindi si osservano i pezzi dentro, anche quelli aggiunti dopo)
@@ -168,6 +169,7 @@ const osservaPannelli = typeof ResizeObserver === 'function'
 addEventListener('resize', () => document.querySelectorAll('.tool.glass.open').forEach(misuraPannello));
 // Aprendo un pannello, quelli già aperti che gli finirebbero sotto si chiudono.
 function chiudiSovrapposti(box) {
+  if (window.LibreFinestre && LibreFinestre.attivo()) return;   // le finestre mobili si sovrappongono come vuole l'utente
   const r = box.getBoundingClientRect(), body = box.querySelector('.tbody, #diceBody, #zoomBody');
   const w = Math.max(r.width, parseFloat(getComputedStyle(box).getPropertyValue('--tw')) || 0, body ? body.scrollWidth : 0);
   const h = Math.max(r.height, parseFloat(box.style.getPropertyValue('--dh')) || 0);
@@ -981,7 +983,10 @@ $('dockHandle').addEventListener('click', () => { setDock(dockEl.classList.conta
 // L'altezza vera della barra in basso: sul telefono in verticale va a capo (due o tre righe) e la
 // linguetta e il menu degli strumenti devono stare sopra, non in mezzo ai pulsanti (mobile.css).
 if (typeof ResizeObserver === 'function') {
-  new ResizeObserver(() => document.documentElement.style.setProperty('--dock-h', dockEl.offsetHeight + 'px')).observe(dockEl);
+  new ResizeObserver(() => {
+    document.documentElement.style.setProperty('--dock-h', dockEl.offsetHeight + 'px');
+    document.documentElement.style.setProperty('--dock-w', dockEl.offsetWidth + 'px');   // per tenerla centrata (style.css)
+  }).observe(dockEl);
 }
 
 // ======================= Livello nascosto e altre impostazioni =======================
