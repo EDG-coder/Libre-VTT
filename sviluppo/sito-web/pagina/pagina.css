@@ -105,3 +105,26 @@ a.altro { color: var(--accent-2); }
   .entra .riga { flex-direction: column; }
   section { padding: 28px 0; }
 }
+
+/* «Gioca ora»: i riquadri delle partite a cui ti sei unito */
+.giocaOra { padding-top: 24px; }
+.unite { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 8px; }
+.unite:empty { display: none; }
+.unita { position: relative; }
+.unita .apri { display: flex; flex-direction: column; width: 100%; padding: 0; overflow: hidden; text-align: left; cursor: pointer;
+  border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: inherit; font: inherit; transition: border-color .15s, transform .12s; }
+.unita .apri:hover, .unita .apri:focus-visible { border-color: var(--accent); transform: translateY(-2px); }
+.unita .foto { display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 10; font-size: 2.2rem;
+  background: var(--panel-3) center / cover no-repeat; }
+.unita .nome { font-weight: 700; padding: 10px 12px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.unita .stato { padding: 2px 12px 12px; font-size: 13px; color: var(--muted); }
+.unita .via { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 50%; border: 0; cursor: pointer;
+  background: rgba(0, 0, 0, .6); color: #fff; font-size: 13px; }
+.unita .via:hover { background: #b3261e; }
+.vuoto { color: var(--soft); margin: 0 0 8px; }
+.vuoto[hidden] { display: none; }
+.entra.nuova { max-width: 520px; margin-top: 26px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+.entra.nuova h2 { font-size: 20px; }
+.entra.nuova label { margin-top: 12px; }
+.entra.nuova input { width: 100%; }
+.entra.nuova .btn { margin-top: 16px; width: 100%; border: 0; cursor: pointer; font: inherit; font-weight: 600; }

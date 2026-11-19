@@ -5,8 +5,11 @@
 (function () {
   var l = '', p = location.pathname;
   // /it/ e /eng/ hanno la lingua nell'indirizzo; la pagina senza lingua usa quella scelta o quella del browser
-  window.LIBRE_BASE = /\/(it|eng)\/?(index\.html)?$/.test(p) ? '../' : '';
+  window.LIBRE_BASE = /\/(it|eng|gioca-ora)\/?(index\.html)?$/.test(p) ? '../' : '';
   if (/\/it\/?(index\.html)?$/.test(p)) l = 'it'; else if (/\/eng\/?(index\.html)?$/.test(p)) l = 'en';
+  // ?lang=it|en (i link di /it/ e /eng/ verso le altre pagine): vale e si ricorda
+  var q = /[?&]lang=(it|en)\b/.exec(location.search);
+  if (!l && q) { l = q[1]; try { localStorage.setItem('libre-lingua', l); } catch (e) {} }
   if (!l) { try { l = localStorage.getItem('libre-lingua') || ''; } catch (e) {} }
   if (l !== 'it' && l !== 'en') l = /^it\b/i.test(navigator.language || '') ? 'it' : 'en';
   window.LIBRE_LINGUA = l;

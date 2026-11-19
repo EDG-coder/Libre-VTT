@@ -181,7 +181,9 @@
         const r = await disegna(cur); if (!r) return;
         const b = r.blob;
         const data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); });
-        NET.ws.send(JSON.stringify({ t: 'miniatura', data, scena: cur.name }));
+        // dal sito la miniatura resta nel browser, per il riquadro di «Gioca ora» (gioca-web.js); nell'app va al programma
+        if (typeof window.libreWebMiniatura === 'function') window.libreWebMiniatura(data, cur.name);
+        else NET.ws.send(JSON.stringify({ t: 'miniatura', data, scena: cur.name }));
       } catch {}
     }, 2500);
   }
