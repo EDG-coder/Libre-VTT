@@ -65,6 +65,11 @@ writeFileSync(tavolo, html);
 // ---------- la pagina di presentazione ----------
 cpSync(join(RADICE, 'sviluppo/sito-web/pagina'), OUT, { recursive: true, filter: salta });
 cpSync(da('docs/immagini'), join(OUT, 'immagini'), { recursive: true, filter: salta });
+// l'icona del sito: /favicon.ico (la cercano da soli browser e motori di ricerca) e il PNG per telefoni e schede
+cpSync(da('web/icona.ico'), join(OUT, 'favicon.ico'));
+cpSync(da('web/icona.png'), join(OUT, 'icona.png'));
+// «Gioca ora»: le partite a cui ci si è uniti, un riquadro ciascuna (/gioca-ora/)
+cpSync(join(RADICE, 'sviluppo/sito-web/gioca-ora'), join(OUT, 'gioca-ora'), { recursive: true, filter: salta });
 // «/» sceglie la lingua da sola (quella ricordata o quella del browser); «/it/» e «/eng/» sono la stessa pagina
 // ma ferma in una lingua, per mandare un link per forza italiano o inglese. Il pulsante IT/EN porta dall'una all'altra.
 const modello = readFileSync(join(OUT, 'index.html'), 'utf8').replace('<!--VERSIONE-->', versione);
@@ -85,7 +90,7 @@ function pagina(lingua) {                       // '' (da sola) | 'it' | 'eng'
     .replace('content="immagini/bosco.webp"', `content="${URL_SITO}/immagini/bosco.webp"`);
   if (!dir) return h;
   // nelle sottocartelle i file della pagina e il tavolo stanno un livello più su
-  h = h.replace(/(\b(?:src|href|action)=")(pagina\.css|lingua\.js|pagina\.js|pagina-en\.js|gioca\/|immagini\/)/g, '$1../$2')
+  h = h.replace(/(\b(?:src|href|action)=")(pagina\.css|lingua\.js|pagina\.js|pagina-en\.js|favicon\.ico|icona\.png|gioca-ora\/|gioca\/|immagini\/)/g, '$1../$2')
     .replace('href="./"', `href="../${dir}/"`);
   h = h.replace('<html lang="it">', `<html lang="${dir === 'eng' ? 'en' : 'it'}">`);
   if (dir === 'eng') {
@@ -112,7 +117,7 @@ writeFileSync(join(OUT, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${UR
 // le pagine di presentazione (senza lingua, /it/ e /eng/); il tavolo /gioca/ è noindex
 writeFileSync(join(OUT, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-  `  <url><loc>${URL_SITO}/</loc></url>\n  <url><loc>${URL_SITO}/it/</loc></url>\n  <url><loc>${URL_SITO}/eng/</loc></url>\n</urlset>\n`);
+  `  <url><loc>${URL_SITO}/</loc></url>\n  <url><loc>${URL_SITO}/it/</loc></url>\n  <url><loc>${URL_SITO}/eng/</loc></url>\n  <url><loc>${URL_SITO}/gioca-ora/</loc></url>\n</urlset>\n`);
 // la cornice dove gira il codice dei plugin del master in sandbox: come la serve il programma (server/server.js),
 // senza rete e senza origine, con solo il suo script
 const sandboxHtml = readFileSync(da('web/plugin-sandbox.html'), 'utf8');
@@ -149,6 +154,7 @@ writeFileSync(join(OUT, '_headers'), [
 writeFileSync(join(OUT, '_redirects'), '/en /eng/ 301\n/en/ /eng/ 301\n/ita /it/ 301\n/ita/ /it/ 301\n');
 writeFileSync(join(OUT, '404.html'), `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LIBRE VTT · pagina non trovata</title>
+<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/svg+xml" href="/gioca/favicon.svg">
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#1b1f27;color:#e8ecf3;font:16px system-ui,sans-serif;text-align:center;padding:16px}a{color:#9b82ff}</style>
 <div><h1>404</h1><p>Questa pagina non c'è. · This page doesn't exist.</p><p><a href="/">LIBRE VTT</a></p></div>\n`);
 writeFileSync(join(OUT, '.nojekyll'), '');

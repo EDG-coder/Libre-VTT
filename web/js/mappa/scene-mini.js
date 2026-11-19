@@ -182,6 +182,7 @@
         const b = r.blob;
         const data = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); });
         NET.ws.send(JSON.stringify({ t: 'miniatura', data, scena: cur.name }));
+        if (typeof window.libreWebMiniatura === 'function') window.libreWebMiniatura(data, cur.name);   // sul sito: il riquadro della partita in «Gioca ora»
       } catch {}
     }, 2500);
   }

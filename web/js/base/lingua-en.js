@@ -130,6 +130,7 @@
 "GitHub non risponde ({connessione}): riprova": "GitHub isn't responding ({connessione}): try again",
 "Hai l'ultima versione ({x})": "You have the latest version ({x})",
 "Torna alla home": "Back to home",
+"Le mie partite": "My games",
 
 // ---------- impostazioni della home, scelta della lingua ----------
 "Impostazioni": "Settings",
