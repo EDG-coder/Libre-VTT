@@ -475,7 +475,9 @@
     const prova = () => {
       if (imp.modo) return;
       const pronta = !CASA || (() => { try { return !prefPrima; } catch { return n > 20; } })();   // nella home: quando sono arrivate le impostazioni dell'app
-      if (pronta && !document.querySelector('dialog[open]')) return fn();
+      // sul sito: non finché c'è la schermata d'ingresso (codice e nome), la domanda parte quando si è dentro la partita
+      const ingresso = [...document.querySelectorAll('.weBox')].some(b => !b.hidden);
+      if (pronta && !ingresso && !document.querySelector('dialog[open]')) return fn();
       if (++n < 2400) setTimeout(prova, 500);                       // al più 20 minuti
     };
     setTimeout(prova, 600);
@@ -489,7 +491,10 @@
     const attendi = () => { let ok = false; try { ok = !prefPrima; } catch {} if (ok) daPrefHome(); else if (++k < 120) setTimeout(attendi, 250); };
     attendi();
   }
-  if (CASA || TAVOLO) quandoLibero(domanda);
+  // Nell'app la domanda si fa una volta sola, nella home: il tavolo aperto dalla home (che manda sempre «pref»)
+  // non la rifà. La fa il tavolo solo sul sito o se è aperto direttamente (per esempio da un giocatore in rete locale).
+  const dallaHome = TAVOLO && !window.LIBRE_WEB && (() => { try { return new URLSearchParams(location.search).has('pref'); } catch { return false; } })();
+  if (CASA || (TAVOLO && !dallaHome)) quandoLibero(domanda);
 
   // ---------- le impostazioni: nella home (rotellina) ----------
   function bottoniModo(box) {
