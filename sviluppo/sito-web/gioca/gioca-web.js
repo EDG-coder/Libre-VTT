@@ -8,7 +8,7 @@
   if (!window.LIBRE_WEB || typeof NET === 'undefined') return;
   const tr = window.tr || (s => s);
   const $ = id => document.getElementById(id);
-  const CACHE = 'libre-asset-v1', K_CODICE = 'libre-web-codice', K_ACCOUNT = 'libre-web-account', K_PARTITE = 'libre-web-partite';
+  const CACHE = 'libre-asset-v1', K_CODICE = 'libre-web-codice', K_ACCOUNT = 'libre-web-account';
   const MIME_OK = /^(image\/(webp|png|jpeg|gif|avif|bmp|svg\+xml)|video\/(mp4|webm)|application\/json)$/;
   // gli sfondi animati (video) possono essere più grandi delle immagini: come nel deposito del master
   const massimo = mime => (/^video\//.test(mime) ? 25 : 12) * 1024 * 1024;
@@ -104,34 +104,6 @@
     return hex(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: enc.encode('libre-vtt-account|' + codice), iterations: 200000 }, k, 256));
   }
 
-  // ---------- le partite ricordate (la pagina «Gioca ora», /gioca-ora/, le mostra come riquadri) ----------
-  // Una voce per campagna: il codice, il nome della campagna, come ti chiami lì, quando sei entrato e la miniatura
-  // dell'ultima scena vista. Sta solo in questo browser. Più partite si tengono aperte insieme, una per scheda.
-  const leggiPartite = () => { try { const v = JSON.parse(ls.get(K_PARTITE) || '[]'); return Array.isArray(v) ? v.filter(e => e && /^[a-f0-9]{64}$/.test(String(e.codice))) : []; } catch { return []; } };
-  const scriviPartite = v => ls.set(K_PARTITE, JSON.stringify(v.slice(0, 40)));
-  function ricordaPartita(codice, dati) {
-    if (!/^[a-f0-9]{64}$/.test(String(codice || ''))) return;
-    const v = leggiPartite(), i = v.findIndex(e => e.codice === codice), e = i >= 0 ? v.splice(i, 1)[0] : { codice };
-    Object.assign(e, dati, { ultimo: Date.now() });
-    v.unshift(e); scriviPartite(v);
-  }
-  // la miniatura dell'ultima scena (la manda scene-mini.js): piccola, perché sta in localStorage
-  window.libreWebMiniatura = (data, scena) => {
-    if (!corrente) return;
-    const img = new Image();
-    img.onload = () => {
-      try {
-        const k = Math.min(1, 360 / img.width), c = document.createElement('canvas');
-        c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        const mini = c.toDataURL('image/jpeg', 0.72);
-        if (mini.length < 60000) ricordaPartita(corrente.slice(0, 64), { mini, scena: String(scena || '').slice(0, 80) });
-      } catch {}
-    };
-    img.src = data;
-  };
-  let corrente = '';                                // il codice (intero) della partita di questa scheda
-
   // ---------- la schermata d'ingresso ----------
   const st = document.createElement('style');
   st.textContent = `
@@ -194,7 +166,7 @@
     <div class="due"><button type="button" class="secondo" id="weAnnulla" data-t="Annulla" hidden>Annulla</button><button type="submit" id="weVai" data-t="Entra">Entra</button></div>
     <p class="stato" id="weStato" role="status" hidden></p>
     <p class="err" id="weErr" role="alert"></p>
-    <p class="piccolo"><span data-t="Dal sito si gioca solo come giocatore. Per condurre una partita serve l'app.">Dal sito si gioca solo come giocatore. Per condurre una partita serve l'app.</span> <a href="../#scarica" data-t="Scarica l'app">Scarica l'app</a> · <a href="../gioca-ora/" data-t="Le mie partite">Le mie partite</a></p>
+    <p class="piccolo"><span data-t="Dal sito si gioca solo come giocatore. Per condurre una partita serve l'app.">Dal sito si gioca solo come giocatore. Per condurre una partita serve l'app.</span> <a href="../#scarica" data-t="Scarica l'app">Scarica l'app</a></p>
   </form>`;
   document.body.append(box);
   for (const el of box.querySelectorAll('[data-t]')) el.textContent = tr(el.dataset.t);
@@ -204,9 +176,6 @@
   $('weAccCodice').value = ls.get(K_ACCOUNT);
   if (ls.get(K_ACCOUNT)) $('weAcc').open = true;
   const errore = t => { $('weErr').textContent = t || ''; };
-  // dalla pagina «Gioca ora» si arriva con ?entra=1 e il codice: se il nome c'è già (e non serve la password di un account) si entra da soli
-  const vuoleEntrare = new URLSearchParams(location.search).get('entra') === '1';
-  if (vuoleEntrare) { try { history.replaceState(null, '', location.pathname + location.hash); } catch {} }
   // le finestre del tavolo (per esempio il benvenuto) stanno sopra a tutto: finché si è qui, restano chiuse
   // (tranne la porta dei plugin del master, che arriva proprio mentre si entra: vedi js/plugins/condivisi.js)
   const chiudiDialoghi = () => { if (!box.hidden) document.querySelectorAll('dialog[open]:not(.plgPorta)').forEach(d => { try { d.close(); } catch {} }); };
@@ -228,10 +197,36 @@
     box.hidden = modo === 'dentro';
     if (!box.hidden) { chiudiDialoghi(); if (typeof netSayHide === 'function') netSayHide(); }
   }
-  window.libreWebEntrato = () => {
-    dentro = true; cadute = 0; errore(''); mostra('dentro');
-    // il nome della campagna e il tuo arrivano col saluto (subito dopo): si scrivono nella voce della partita
-    setTimeout(() => { const io = NET.me || {}; if (corrente) ricordaPartita(corrente.slice(0, 64), { intero: corrente, ...(io.campagna ? { nome: String(io.campagna).slice(0, 80) } : {}), ...(io.name ? { giocatore: String(io.name).slice(0, 40) } : {}) }); }, 400);
+  window.libreWebEntrato = () => { dentro = true; cadute = 0; errore(''); mostra('dentro'); setTimeout(ricordaPartita, 0); };
+
+  // ---------- le partite a cui ci si è uniti, per la pagina «Gioca ora» (../gioca-ora/) ----------
+  // Come l'elenco «Mi unisco» dell'app: per ogni partita il codice, il nome della campagna, l'ultima scena e una
+  // foto piccola. Sta solo in questo browser (localStorage, «libre-web-unite»), non va a nessuno.
+  const K_UNITE = 'libre-web-unite';
+  const leggiUnite = () => { try { return JSON.parse(ls.get(K_UNITE) || '{}') || {}; } catch { return {}; } };
+  function ricordaPartita(extra) {
+    const intero = ls.get(K_CODICE), codice = intero.slice(0, 64);
+    if (!/^[a-f0-9]{64}$/.test(codice) || !dentro) return;
+    const o = leggiUnite(), e = o[codice] || {};
+    const nome = String((NET.me && NET.me.campagna) || e.nome || '').slice(0, 80);
+    o[codice] = { ...e, codice, intero: /^[a-f0-9]{96}$/.test(intero) ? intero : (e.intero || codice), nome, ultimo: Date.now(), ...(extra || {}) };
+    // senza posto nel browser (le foto pesano) si tengono solo le ultime partite
+    const salva = () => ls.set(K_UNITE, JSON.stringify(o));
+    salva();
+    if (ls.get(K_UNITE) !== JSON.stringify(o)) { for (const k of Object.keys(o).filter(k => k !== codice)) delete o[k].foto; salva(); }
+  }
+  // la foto dell'ultima scena (la manda scene-mini.js): piccola, per il riquadro
+  window.libreWebMiniatura = (data, scena) => {
+    const im = new Image();
+    im.onload = () => {
+      try {
+        const L = 480, r = Math.min(1, L / im.width), c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(im.width * r)); c.height = Math.max(1, Math.round(im.height * r));
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        ricordaPartita({ scena: String(scena || '').slice(0, 80), foto: c.toDataURL('image/jpeg', 0.7) });
+      } catch {}
+    };
+    im.src = data;
   };
   window.libreWebAttesa = () => { if (!dentro) mostra('attesa', tr('Sei in sala d\'attesa: il master deve farti entrare.')); };
   // Il relay ha chiuso il collegamento: true = non si insiste e si torna qui (net.js smette di riprovare).
@@ -258,7 +253,6 @@
     if (!(await swPronto)) errore(tr('Questo browser non lascia arrivare le immagini della partita: prova con un altro (Chrome, Edge, Firefox o Safari aggiornati).'));
     NET.relay = relay + '/v1/stanza/' + await stanzaDi(codice);
     ls.set(K_CODICE, intero);
-    corrente = intero; ricordaPartita(codice, { intero });
     entrato = true; dentro = false; cadute = 0;
     mostra('attesa', tr('Mi collego alla partita…'));
     netReconnectNow();
@@ -291,8 +285,6 @@
       await entra(codice);
     } finally { $('weVai').disabled = false; }
   });
-
-  if (vuoleEntrare && interoDa(location.hash) && ($('weNome').value.trim().length >= 2) && !ls.get(K_ACCOUNT)) setTimeout(() => $('weVai').click(), 50);
 
   // Il master ti ha dato un account mentre giochi: si sceglie la password da qui (due volte, per non sbagliarla).
   const acBox = document.createElement('div');
@@ -346,7 +338,8 @@
 
   // Il master ha cambiato codice: si passa alla stanza nuova (il codice vecchio non vale più).
   window.libreWebNuovoCodice = async codice => {
-    { const v = leggiPartite(), e = v.find(x => x.codice === (corrente || '').slice(0, 64)); if (e) { e.codice = codice; e.intero = codice; scriviPartite(v); } corrente = codice; }
+    const vecchio = ls.get(K_CODICE).slice(0, 64), unite = leggiUnite();    // l'elenco di «Gioca ora» passa al codice nuovo
+    if (unite[vecchio] && vecchio !== codice) { unite[codice] = { ...unite[vecchio], codice, intero: codice }; delete unite[vecchio]; ls.set(K_UNITE, JSON.stringify(unite)); }
     ls.set(K_CODICE, codice); NET.parolaInvito = '';      // (chi è dentro è già conosciuto: la parola non gli serve più)
     netSay(tr('Il master ha cambiato il codice: passo a quello nuovo…'), 'retry');
     NET.relay = NET.relay.replace(/[a-f0-9]{64}$/, await stanzaDi(codice));
@@ -412,4 +405,10 @@
   $('wsChiudi').onclick = () => sess.close();
   $('wsEsci').onclick = () => { sess.close(); netDisconnect(); mostra('modulo', tr('Sei uscito dalla partita.')); };
   $('wsHome').onclick = () => { sess.close(); allaHome(); };
+
+  // Dal riquadro di «Gioca ora» (?entra=1#codice) si entra da soli, se il nome è già noto e non serve la password di un account.
+  if (/[?&]entra=1\b/.test(location.search) && interoDa(location.hash)) {
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch {}
+    if (!ls.get(K_ACCOUNT) && ls.get('uffa-name').trim().length >= 2) setTimeout(() => box.querySelector('form').requestSubmit(), 0);
+  }
 })();
