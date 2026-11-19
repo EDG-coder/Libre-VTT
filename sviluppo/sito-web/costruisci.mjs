@@ -7,6 +7,7 @@
 //   /             la pagina di presentazione (sviluppo/sito-web/pagina/)
 //   /gioca/       il tavolo (web/) con accanto condiviso/, sistemi/ e gli sfondi: gira tutto nel
 //                 browser, senza programma, e salva solo in quel browser
+//   /gioca-ora/  le partite a cui ti sei unito da questo browser (riquadri con la foto) e il codice per una nuova
 //   /immagini/    le foto della pagina (docs/immagini/)
 //
 // Sul sito non vanno la home delle campagne (launcher.html) e il pannello del master (panel.html):
@@ -60,6 +61,9 @@ html = html.replace(primo, '<script src="js/base/versione-web.js"></script>\n' +
 cpSync(join(RADICE, 'sviluppo/sito-web/gioca'), GIOCA, { recursive: true, filter: salta });
 if (!html.includes('</body>')) throw new Error('web/index.html: manca </body>');
 html = html.replace('</body>', '<script src="gioca-web.js"></script>\n</body>');
+// l'icona della scheda: anche .ico (Google e i vecchi browser) e quella per la schermata Home dell'iPhone
+html = html.replace('<link rel="icon" type="image/svg+xml" href="favicon.svg">',
+  '<link rel="icon" href="../favicon.ico" sizes="32x32">\n<link rel="icon" type="image/svg+xml" href="favicon.svg">\n<link rel="apple-touch-icon" href="../apple-touch-icon.png">');
 writeFileSync(tavolo, html);
 
 // ---------- la pagina di presentazione ----------
@@ -85,8 +89,9 @@ function pagina(lingua) {                       // '' (da sola) | 'it' | 'eng'
     .replace('content="immagini/bosco.webp"', `content="${URL_SITO}/immagini/bosco.webp"`);
   if (!dir) return h;
   // nelle sottocartelle i file della pagina e il tavolo stanno un livello più su
-  h = h.replace(/(\b(?:src|href|action)=")(pagina\.css|lingua\.js|pagina\.js|pagina-en\.js|gioca\/|immagini\/)/g, '$1../$2')
-    .replace('href="./"', `href="../${dir}/"`);
+  h = h.replace(/(\b(?:src|href|action)=")(pagina\.css|lingua\.js|pagina\.js|pagina-en\.js|favicon\.ico|favicon\.svg|apple-touch-icon\.png|gioca-ora\/|gioca\/|immagini\/)/g, '$1../$2')
+    .replace('href="./"', `href="../${dir}/"`)
+    .replaceAll('href="../gioca-ora/"', `href="../gioca-ora/?lang=${dir === 'eng' ? 'en' : 'it'}"`);
   h = h.replace('<html lang="it">', `<html lang="${dir === 'eng' ? 'en' : 'it'}">`);
   if (dir === 'eng') {
     // l'inglese già scritto nel file (chi indicizza e chi ha JavaScript spento lo vede); pagina.js poi lo conferma
@@ -112,7 +117,7 @@ writeFileSync(join(OUT, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${UR
 // le pagine di presentazione (senza lingua, /it/ e /eng/); il tavolo /gioca/ è noindex
 writeFileSync(join(OUT, 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-  `  <url><loc>${URL_SITO}/</loc></url>\n  <url><loc>${URL_SITO}/it/</loc></url>\n  <url><loc>${URL_SITO}/eng/</loc></url>\n</urlset>\n`);
+  `  <url><loc>${URL_SITO}/</loc></url>\n  <url><loc>${URL_SITO}/gioca-ora/</loc></url>\n  <url><loc>${URL_SITO}/it/</loc></url>\n  <url><loc>${URL_SITO}/eng/</loc></url>\n</urlset>\n`);
 // la cornice dove gira il codice dei plugin del master in sandbox: come la serve il programma (server/server.js),
 // senza rete e senza origine, con solo il suo script
 const sandboxHtml = readFileSync(da('web/plugin-sandbox.html'), 'utf8');
@@ -149,6 +154,7 @@ writeFileSync(join(OUT, '_headers'), [
 writeFileSync(join(OUT, '_redirects'), '/en /eng/ 301\n/en/ /eng/ 301\n/ita /it/ 301\n/ita/ /it/ 301\n');
 writeFileSync(join(OUT, '404.html'), `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LIBRE VTT · pagina non trovata</title>
+<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#1b1f27;color:#e8ecf3;font:16px system-ui,sans-serif;text-align:center;padding:16px}a{color:#9b82ff}</style>
 <div><h1>404</h1><p>Questa pagina non c'è. · This page doesn't exist.</p><p><a href="/">LIBRE VTT</a></p></div>\n`);
 writeFileSync(join(OUT, '.nojekyll'), '');

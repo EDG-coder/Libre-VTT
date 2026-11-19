@@ -197,7 +197,37 @@
     box.hidden = modo === 'dentro';
     if (!box.hidden) { chiudiDialoghi(); if (typeof netSayHide === 'function') netSayHide(); }
   }
-  window.libreWebEntrato = () => { dentro = true; cadute = 0; errore(''); mostra('dentro'); };
+  window.libreWebEntrato = () => { dentro = true; cadute = 0; errore(''); mostra('dentro'); setTimeout(ricordaPartita, 0); };
+
+  // ---------- le partite a cui ci si è uniti, per la pagina «Gioca ora» (../gioca-ora/) ----------
+  // Come l'elenco «Mi unisco» dell'app: per ogni partita il codice, il nome della campagna, l'ultima scena e una
+  // foto piccola. Sta solo in questo browser (localStorage, «libre-web-unite»), non va a nessuno.
+  const K_UNITE = 'libre-web-unite';
+  const leggiUnite = () => { try { return JSON.parse(ls.get(K_UNITE) || '{}') || {}; } catch { return {}; } };
+  function ricordaPartita(extra) {
+    const intero = ls.get(K_CODICE), codice = intero.slice(0, 64);
+    if (!/^[a-f0-9]{64}$/.test(codice) || !dentro) return;
+    const o = leggiUnite(), e = o[codice] || {};
+    const nome = String((NET.me && NET.me.campagna) || e.nome || '').slice(0, 80);
+    o[codice] = { ...e, codice, intero: /^[a-f0-9]{96}$/.test(intero) ? intero : (e.intero || codice), nome, ultimo: Date.now(), ...(extra || {}) };
+    // senza posto nel browser (le foto pesano) si tengono solo le ultime partite
+    const salva = () => ls.set(K_UNITE, JSON.stringify(o));
+    salva();
+    if (ls.get(K_UNITE) !== JSON.stringify(o)) { for (const k of Object.keys(o).filter(k => k !== codice)) delete o[k].foto; salva(); }
+  }
+  // la foto dell'ultima scena (la manda scene-mini.js): piccola, per il riquadro
+  window.libreWebMiniatura = (data, scena) => {
+    const im = new Image();
+    im.onload = () => {
+      try {
+        const L = 480, r = Math.min(1, L / im.width), c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(im.width * r)); c.height = Math.max(1, Math.round(im.height * r));
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        ricordaPartita({ scena: String(scena || '').slice(0, 80), foto: c.toDataURL('image/jpeg', 0.7) });
+      } catch {}
+    };
+    im.src = data;
+  };
   window.libreWebAttesa = () => { if (!dentro) mostra('attesa', tr('Sei in sala d\'attesa: il master deve farti entrare.')); };
   // Il relay ha chiuso il collegamento: true = non si insiste e si torna qui (net.js smette di riprovare).
   window.libreWebChiuso = (codice, motivo) => {
@@ -308,6 +338,8 @@
 
   // Il master ha cambiato codice: si passa alla stanza nuova (il codice vecchio non vale più).
   window.libreWebNuovoCodice = async codice => {
+    const vecchio = ls.get(K_CODICE).slice(0, 64), unite = leggiUnite();    // l'elenco di «Gioca ora» passa al codice nuovo
+    if (unite[vecchio] && vecchio !== codice) { unite[codice] = { ...unite[vecchio], codice, intero: codice }; delete unite[vecchio]; ls.set(K_UNITE, JSON.stringify(unite)); }
     ls.set(K_CODICE, codice); NET.parolaInvito = '';      // (chi è dentro è già conosciuto: la parola non gli serve più)
     netSay(tr('Il master ha cambiato il codice: passo a quello nuovo…'), 'retry');
     NET.relay = NET.relay.replace(/[a-f0-9]{64}$/, await stanzaDi(codice));
@@ -373,4 +405,10 @@
   $('wsChiudi').onclick = () => sess.close();
   $('wsEsci').onclick = () => { sess.close(); netDisconnect(); mostra('modulo', tr('Sei uscito dalla partita.')); };
   $('wsHome').onclick = () => { sess.close(); allaHome(); };
+
+  // Dal riquadro di «Gioca ora» (?entra=1#codice) si entra da soli, se il nome è già noto e non serve la password di un account.
+  if (/[?&]entra=1\b/.test(location.search) && interoDa(location.hash)) {
+    try { history.replaceState(null, '', location.pathname + location.hash); } catch {}
+    if (!ls.get(K_ACCOUNT) && ls.get('uffa-name').trim().length >= 2) setTimeout(() => box.querySelector('form').requestSubmit(), 0);
+  }
 })();

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gioca ora · LIBRE VTT</title>
+<meta name="description" content="Le tue partite di LIBRE VTT, una accanto all'altra: un tocco e rientri dal browser, senza installare niente.">
+<meta name="theme-color" content="#12151c">
+<link rel="canonical" href="https://libre-vtt.pages.dev/gioca-ora/">
+<link rel="icon" href="../favicon.ico" sizes="32x32">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="stylesheet" href="../pagina.css">
+<script src="../lingua.js"></script>
+</head>
+<body>
+<header class="testa">
+  <a class="marchio" href="../"><img src="../favicon.svg" alt="" width="28" height="28"> LIBRE VTT</a>
+  <nav>
+    <a href="../" data-t="Home">Home</a>
+    <a href="../#scarica" data-t="Scarica">Scarica</a>
+    <a href="https://github.com/EDG-coder/Libre-VTT" rel="noopener">GitHub</a>
+    <button id="lingua" type="button" aria-label="English">EN</button>
+  </nav>
+</header>
+
+<main>
+  <section class="giocaOra">
+    <h1 data-t="Le tue partite">Le tue partite</h1>
+    <p class="sotto" data-t="Le partite a cui ti sei unito da questo browser. Un tocco e rientri, con lo stesso nome.">Le partite a cui ti sei unito da questo browser. Un tocco e rientri, con lo stesso nome.</p>
+
+    <div id="unite" class="unite" aria-live="polite"></div>
+    <p id="vuoto" class="vuoto" data-t="Ancora nessuna partita: unisciti alla prima qui sotto e comparirà qui, con la sua immagine.">Ancora nessuna partita: unisciti alla prima qui sotto e comparirà qui, con la sua immagine.</p>
+
+    <form class="entra nuova" id="entra" novalidate>
+      <h2 data-t="Unisciti a un'altra partita">Unisciti a un'altra partita</h2>
+      <label for="codice" data-t="Codice della partita">Codice della partita</label>
+      <input id="codice" spellcheck="false" autocapitalize="off" autocomplete="off" data-p="Incolla qui il codice del master" placeholder="Incolla qui il codice del master">
+      <label for="nome" data-t="Il tuo nome">Il tuo nome</label>
+      <input id="nome" maxlength="40" autocomplete="nickname" data-p="Come ti vedranno gli altri" placeholder="Come ti vedranno gli altri">
+      <p class="err" id="codiceErr" role="alert"></p>
+      <button class="btn primo" type="submit" data-t="Entra">Entra</button>
+      <p class="nota" data-t="Il master deve avere l'app aperta con «Partita pubblica» accesa. Dal sito si gioca solo da giocatori: per condurre serve l'app.">Il master deve avere l'app aperta con «Partita pubblica» accesa. Dal sito si gioca solo da giocatori: per condurre serve l'app.</p>
+    </form>
+  </section>
+
+  <section class="modi">
+    <h2 data-t="Come mi unisco">Come mi unisco</h2>
+    <div class="tre">
+      <article>
+        <span class="num">1</span>
+        <h3 data-t="Chiedi il codice al master">Chiedi il codice al master</h3>
+        <p data-t="Nell'app il master lo trova nella schermata della partita aperta, con «Partita pubblica» accesa. Te lo manda dove volete: WhatsApp, Telegram, Discord.">Nell'app il master lo trova nella schermata della partita aperta, con «Partita pubblica» accesa. Te lo manda dove volete: WhatsApp, Telegram, Discord.</p>
+      </article>
+      <article>
+        <span class="num">2</span>
+        <h3 data-t="Incollalo qui e scegli il nome">Incollalo qui e scegli il nome</h3>
+        <p data-t="Funziona anche incollando il link intero che ti ha mandato il master. Niente account e niente download, nemmeno dal telefono.">Funziona anche incollando il link intero che ti ha mandato il master. Niente account e niente download, nemmeno dal telefono.</p>
+      </article>
+      <article>
+        <span class="num">3</span>
+        <h3 data-t="Le volte dopo basta un tocco">Le volte dopo basta un tocco</h3>
+        <p data-t="La partita resta qui fra i riquadri, con la foto dell'ultima scena che hai visto, come nell'elenco «Mi unisco» dell'app. Per toglierla usa la ✕.">La partita resta qui fra i riquadri, con la foto dell'ultima scena che hai visto, come nell'elenco «Mi unisco» dell'app. Per toglierla usa la ✕.</p>
+      </article>
+    </div>
+    <p class="nota" data-t="L'elenco sta solo in questo browser: non viene mandato a nessuno. Cancellando i dati del sito (o cambiando browser) scompare, ma basta rimettere il codice.">L'elenco sta solo in questo browser: non viene mandato a nessuno. Cancellando i dati del sito (o cambiando browser) scompare, ma basta rimettere il codice.</p>
+  </section>
+</main>
+
+<footer class="piede">
+  <p><span data-t="LIBRE VTT è software libero (AGPL-3.0).">LIBRE VTT è software libero (AGPL-3.0).</span> <a href="https://github.com/EDG-coder/Libre-VTT" rel="noopener" data-t="Codice e segnalazioni su GitHub">Codice e segnalazioni su GitHub</a></p>
+</footer>
+<script src="../pagina-en.js"></script>
+<script src="gioca-ora.js"></script>
+</body>
+</html>
