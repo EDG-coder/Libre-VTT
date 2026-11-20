@@ -259,6 +259,13 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 #viewport.layer-hidden .photo.shape[data-layer="hidden"] svg *,
 #viewport.layer-map .photo.shape[data-layer="map"] svg * { pointer-events: visiblePainted; }
 #viewport .photo.shape .handle { pointer-events: auto; }
+/* il riquadro del disegno non si clicca mai: solo il tratto (e il riempimento), così il centro vuoto di un cerchio
+   lascia passare il clic a ciò che sta sotto. Specificità alta perché la regola dei livelli sopra rende cliccabili tutti i .photo */
+#viewport#viewport#viewport .photo.shape { pointer-events: none; }
+/* selezionato: si illumina il tratto, non il riquadro; niente maniglie (le strisce lungo il riquadro prenderebbero clic fuori dal disegno) */
+.photo.shape.selected { outline: none; box-shadow: none; }
+.photo.shape.selected svg { filter: drop-shadow(0 0 calc(4px * var(--inv, 1)) rgba(47, 140, 255, .95)) drop-shadow(0 0 calc(2px * var(--inv, 1)) rgba(47, 140, 255, .95)); }
+.photo.shape.selected .handle { display: none !important; }
 svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
 #viewport.pen-on, #viewport.pen-on * { cursor: crosshair !important; }
 #viewport.pen-erase, #viewport.pen-erase * { cursor: cell !important; }
