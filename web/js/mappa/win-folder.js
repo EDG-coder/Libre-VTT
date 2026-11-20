@@ -92,8 +92,10 @@ $('parkOpenAll').addEventListener('click', () => [...parked.keys()].forEach(unpa
 // ---- bersaglio del trascinamento: la cartella si illumina quando ci passi sopra ----
 function overFolder(x, y) {
   if (!folderBox.isConnected) return false;
-  const r = folderBox.getBoundingClientRect();
-  return x >= r.left - 12 && x <= r.right + 12 && y >= r.top - 12 && y <= r.bottom + 12;
+  // l'icona nel menu e, con le finestre mobili (finestre.js), anche la finestra della cartella aperta altrove sullo schermo
+  const corpo = folderBox.querySelector('.tbody');
+  const aree = [folderBox, corpo && corpo.matches(':popover-open') ? corpo : null];
+  return aree.some(el => { if (!el) return false; const r = el.getBoundingClientRect(); return x >= r.left - 12 && x <= r.right + 12 && y >= r.top - 12 && y <= r.bottom + 12; });
 }
 function winDragOver(e) {
   const hot = overFolder(e.clientX, e.clientY);
