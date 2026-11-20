@@ -129,7 +129,7 @@ const ALL = v => Object.fromEntries(PERMS.map(p => [p, v]));
 const ROLE_DEFAULTS = Object.freeze({
   master: Object.freeze(ALL(true)),
   // Un giocatore fa le cose normali di un giocatore, e niente che tocchi gli altri.
-  player: Object.freeze({ ...ALL(false), chat: true, roll: true, ping: true, moveOwnTokens: true, createTokens: true, uploadTokenImage: true }),
+  player: Object.freeze({ ...ALL(false), chat: true, roll: true, ping: true, draw: true, moveOwnTokens: true, createTokens: true, uploadTokenImage: true }),
   // Chi guarda e basta.
   spectator: Object.freeze({ ...ALL(false), chat: true })
 });

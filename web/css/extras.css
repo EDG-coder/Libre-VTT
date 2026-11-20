@@ -259,6 +259,9 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 #viewport.layer-hidden .photo.shape[data-layer="hidden"] svg *,
 #viewport.layer-map .photo.shape[data-layer="map"] svg * { pointer-events: visiblePainted; }
 #viewport .photo.shape .handle { pointer-events: auto; }
+/* il riquadro del disegno non si clicca mai: solo il tratto (e il riempimento), così il centro vuoto di un cerchio
+   lascia passare il clic a ciò che sta sotto. Specificità alta perché la regola dei livelli sopra rende cliccabili tutti i .photo */
+#viewport#viewport#viewport .photo.shape { pointer-events: none; }
 svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
 #viewport.pen-on, #viewport.pen-on * { cursor: crosshair !important; }
 #viewport.pen-erase, #viewport.pen-erase * { cursor: cell !important; }
