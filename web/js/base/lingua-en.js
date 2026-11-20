@@ -433,6 +433,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "per un tiro rapido.": "for a quick roll.",
 "Strumenti": "Tools",
 "Righello: misura da centro a centro delle caselle": "Ruler: measure from square center to center",
+"Non scrivere in chat salute, consumabili e contatori della scheda": "Do not write sheet health, consumables and counters in the chat",
 "Righello: ogni casella in diagonale vale una casella (5 ft), senza Pitagora": "Ruler: each diagonal square counts as one square (5 ft), no Pythagoras",
 "Righello": "Ruler",
 "Aree degli incantesimi": "Spell areas",

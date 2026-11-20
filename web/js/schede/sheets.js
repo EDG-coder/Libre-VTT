@@ -412,7 +412,7 @@ function tokenMenu(el) {
 const wins = new Map();          // schede aperte
 const allWins = new Set();       // tutte le finestre
 let winZ = 150000;
-const bringWin = w => { w.style.zIndex = ++winZ; };
+const bringWin = w => { w.style.zIndex = ++winZ; if (window.LibreFinestre) LibreFinestre.sopra(w); };   // sopra anche alle finestre degli strumenti (finestre.js)
 function closeWin(w) {
   if (w._tool && w._tool.slot) w._tool.slot.remove();      // la casella temporanea del menu sparisce
   w.remove(); allWins.delete(w); wins.delete(w.dataset.id);

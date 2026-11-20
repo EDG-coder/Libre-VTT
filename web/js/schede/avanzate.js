@@ -221,7 +221,7 @@
     }
     if (b.dataset.lancia) return usaCasella(s, +b.dataset.lancia);
     if (b.dataset.pip) { const L = b.dataset.pip, t = iv(s.f['sl' + L + 't']), libere = t - Math.min(t, iv(s.f['sl' + L + 'u'])); s.f['sl' + L + 'u'] = String(t - (+b.dataset.i < libere ? +b.dataset.i : +b.dataset.i + 1)); cambiata(s); return; }
-    if (b.dataset.ris) { const ris = J(s, 'avRis', []), r = ris.find(x => x.id === b.dataset.ris); if (!r) return; const mx = Math.round(formula(s, r.max) || +r.max || 0); r.cur = Math.max(0, Math.min(mx || Infinity, (+r.cur || 0) + +b.dataset.d)); salvaJ(s, 'avRis', ris); if (+b.dataset.d < 0) addChat({ kind: 'text', text: `${s.name}: ${r.nome} (${r.cur}/${mx})` }); return; }
+    if (b.dataset.ris) { const ris = J(s, 'avRis', []), r = ris.find(x => x.id === b.dataset.ris); if (!r) return; const mx = Math.round(formula(s, r.max) || +r.max || 0); r.cur = Math.max(0, Math.min(mx || Infinity, (+r.cur || 0) + +b.dataset.d)); salvaJ(s, 'avRis', ris); if (+b.dataset.d < 0 && !chatSchedaMuta()) addChat({ kind: 'text', text: `${s.name}: ${r.nome} (${r.cur}/${mx})` }); return; }
     const riq = J(s, 'avRiq', { cats: [], items: [] });
     if (b.classList.contains('avCatT')) { const c = riq.cats.find(x => x.id === b.dataset.cat); if (c) { c.chiusa = !c.chiusa; salvaJ(s, 'avRiq', riq); } return; }
     if (b.dataset.pingcat != null) { const items = riq.items.filter(r => (r.cat || '') === b.dataset.pingcat || !riq.cats.length); const c = riq.cats.find(x => x.id === b.dataset.pingcat); if (items.length) addChat({ kind: 'rule', title: `${s.name} · ${c ? c.nome : tr('Riquadri')}`, text: items.map(r => `**${r.nome}**${r.tipo === 'numero' || r.tipo === 'contatore' ? ' ' + valoreRiq(s, r) : r.tipo === 'testo' && r.val ? ': ' + r.val : ''}${r.desc ? '\n' + r.desc : ''}`).join('\n\n') }); return; }
@@ -456,6 +456,9 @@
   // resistenza dimezza, immunità annulla, vulnerabilità raddoppia; i PF temporanei si consumano prima.
   // Il messaggio con danni e PF (e quello delle cure) in rete lo leggono solo il master e chi l'ha scritto:
   // agli altri giocatori il server non lo manda proprio (soloMaster).
+  // Opzione del dispositivo (Impostazioni › Strumenti): danni, cure, risorse e contatori non scrivono in chat.
+  function chatSchedaMuta() { try { return localStorage.getItem('libre-chat-scheda-muta') === '1'; } catch { return false; } }
+  window.chatSchedaMuta = chatSchedaMuta;
   function subisci(s, quanti, tipo) {
     const dif = J(s, 'avDif', {}), t = tipoDanno(tipo), nomeT = t ? nomeDanno(t).toLowerCase() : '';
     let n = Math.max(0, Math.floor(+quanti || 0)); const note = [];
@@ -467,14 +470,14 @@
     if (temp > 0) { const via = Math.min(temp, resto); s.f.hpt = temp - via ? String(temp - via) : ''; resto -= via; }
     s.f.hp = String(Math.max(0, iv(s.f.hp) - resto));
     cambiata(s);
-    addChat({ kind: 'rule', soloMaster: true, title: `🩸 ${s.name}`, text: tr('Subisce {n} danni{t}{note} → {pf}/{max} PF', { n, t: nomeT ? ' ' + tr('da {t}', { t: nomeT }) : '', note: note.length ? ' (' + note.join(', ') + ')' : '', pf: s.f.hp, max: iv(s.f.hpmax) }) });
+    if (!chatSchedaMuta()) addChat({ kind: 'rule', soloMaster: true, title: `🩸 ${s.name}`, text: tr('Subisce {n} danni{t}{note} → {pf}/{max} PF', { n, t: nomeT ? ' ' + tr('da {t}', { t: nomeT }) : '', note: note.length ? ' (' + note.join(', ') + ')' : '', pf: s.f.hp, max: iv(s.f.hpmax) }) });
   }
   function cura(s, quanti) {
     const n = Math.max(0, Math.floor(+quanti || 0)); if (!n) return;
     const mx = iv(s.f.hpmax), prima = iv(s.f.hp);
     s.f.hp = String(mx ? Math.min(mx, prima + n) : prima + n);
     cambiata(s);
-    addChat({ kind: 'rule', soloMaster: true, title: `💚 ${s.name}`, text: tr('Recupera {n} PF → {pf}/{max} PF', { n: iv(s.f.hp) - prima, pf: s.f.hp, max: mx }) });
+    if (!chatSchedaMuta()) addChat({ kind: 'rule', soloMaster: true, title: `💚 ${s.name}`, text: tr('Recupera {n} PF → {pf}/{max} PF', { n: iv(s.f.hp) - prima, pf: s.f.hp, max: mx }) });
   }
   window.avanzSubisci = subisci;
   window._avanzate = { formula, riposo, subisci, cura, J };
