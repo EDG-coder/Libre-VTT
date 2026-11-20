@@ -122,7 +122,8 @@ const PERMS = Object.freeze([
   'revealFog',        // scoprire la nebbia
   'editScene',        // cambiare scena, sfondo, griglia
   'editAnySheet',     // aprire e modificare le schede degli altri
-  'controlMusic'      // scegliere la musica per tutti
+  'controlMusic',     // scegliere la musica per tutti
+  'playSounds'        // far partire i suoni della soundboard per tutti
 ]);
 const ALL = v => Object.fromEntries(PERMS.map(p => [p, v]));
 
@@ -152,7 +153,7 @@ function writeJson(f, v) {
 
 // Il documento del mondo: è quello che il master manda e che tutti ricevono (filtrato).
 let world = readJson('world.json', null) || {};
-world = Object.assign({ v: 1, active: null, publicScene: null, scenes: [], sheets: [], chat: [], music: null, fog: {} }, world);
+world = Object.assign({ v: 1, active: null, publicScene: null, scenes: [], sheets: [], chat: [], music: null, suoni: null, fog: {} }, world);
 
 // Server dedicato con una campagna copiata da un computer: le immagini che il mondo cita con il percorso della
 // campagna («assets/mappa.webp») e che non sono ancora nel deposito ci entrano adesso, così chi gioca le riceve
@@ -700,6 +701,13 @@ function turniPerChi(c) {
   return { ...t, righe, cur: righe.indexOf(ora), curId: ora ? ora.id : null };
 }
 
+/** La soundboard: chi può far partire i suoni la vede intera; gli altri solo quel che serve per sentirli (id e file), senza titoli né immagini. */
+function suoniFor(c, p) {
+  const s = world.suoni;
+  if (!s || !Array.isArray(s.boards)) return null;
+  if (c.role === 'master' || (p && p.playSounds)) return s;
+  return { boards: [{ id: 'x', name: '', sounds: s.boards.flatMap(b => (b.sounds || []).map(x => ({ id: x.id, gid: x.gid || '' }))) }] };
+}
 function viewFor(c) {
   const p = permsFor(c);
   const pubId = world.publicScene || world.active;
@@ -711,7 +719,7 @@ function viewFor(c) {
   return {
     v: world.v, active: p.seeAllScenes ? world.active : pubId, publicScene: world.publicScene, fogColor: world.fogColor || 'auto', dadiProvvisori: !!world.dadiProvvisori, follia: !!world.follia,
     scenes: scenes.map(s => sceneFor(c, s)),
-    sheets, chat: (world.chat || []).slice(-250).map(m => chatFor(c, m)).filter(Boolean), music: world.music,
+    sheets, chat: (world.chat || []).slice(-250).map(m => chatFor(c, m)).filter(Boolean), music: world.music, suoni: suoniFor(c, p),
     notes: world.notes || { text: '', editable: false },
     sistema: world.sistema || null,
     schedeTolte: p.editAnySheet ? (world.schedeTolte || []).slice(-200) : undefined,
@@ -781,7 +789,7 @@ function pushWorldDi(c, piena) {
 // modalità leggera solo quando il collegamento torna buono).
 const CAMPI_PF = new Set(['hp', 'hpmax', 'hpt']);
 function corsiaDi(k, tp) {
-  if (k === 'k:compendio' || k === 'k:sistema' || k === 'k:music') return 'C';
+  if (k === 'k:compendio' || k === 'k:sistema' || k === 'k:music' || k === 'k:suoni') return 'C';
   if (k.startsWith('ph:') || k.startsWith('pho:') || k === 'k:turni') return 'A';
   if (tp && !tp.v.length && k.startsWith('sh:') && tp.p.every(([pp]) => pp[0] === 'f' && CAMPI_PF.has(pp[1]))) return 'A';
   if (tp && !tp.v.length && k.startsWith('sc:') && tp.p.every(([pp]) => ['vista', 'luce', 'fog'].includes(pp[0]))) return 'A';
@@ -1388,6 +1396,30 @@ function handleIntent(c, m) {
       scheduleSave();
       // corsia C: a chi ha la linea debole la musica arriva quando il collegamento torna buono
       for (const k of clients) { if (k.leggera) k.musicaDopo = true; else k.send({ t: 'music', state: world.music, ora: Date.now() }); }
+      return;
+    }
+
+    // --- soundboard: la scelta dei suoni la fa solo il master; farli partire chi ha il permesso ---
+    case 'soundboard': {
+      if (c.role !== 'master') return deny(c, m.op, 'la soundboard la prepara chi conduce');
+      const st = m.state;
+      if (st === null) world.suoni = null;
+      else {
+        if (!st || !Array.isArray(st.boards) || st.boards.length > 40) return deny(c, m.op, 'soundboard non valida');
+        if (JSON.stringify(st).length > 1.5 * 1024 * 1024) return deny(c, m.op, 'soundboard troppo grande');
+        world.suoni = st;
+      }
+      changed();
+      return;
+    }
+    case 'sound': {
+      if (!p.playSounds) return deny(c, m.op, 'i suoni li fa partire chi conduce');
+      const ora = Date.now();
+      c.suoniA = (c.suoniA || []).filter(t => ora - t < 1000);
+      if (c.suoniA.length >= 10) return;                       // non si intasa il tavolo
+      c.suoniA.push(ora);
+      const msg = m.stop ? { t: 'sound', stop: true, by: c.name } : { t: 'sound', id: str(m.id, 60), by: c.name };
+      broadcast(msg, k => k !== c && !k.pending && !k.leggera);
       return;
     }
 

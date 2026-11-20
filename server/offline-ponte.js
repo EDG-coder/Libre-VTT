@@ -11,7 +11,7 @@ const VERS = require('../condiviso/versioni.js');
 
 const STANDARD = Object.freeze({ chat: true, schede: true, dadi: false, segnalini: false, note: false });
 const MAX_CAMBI = 500, MAX_BYTE = 1.5 * 1024 * 1024;
-const NIENTE = new Set(['ping', 'righello', 'area', 'percorso.prova', 'asset.put', 'asset.have', 'asset.get', 'asset.preso']);   // senza il master non servono
+const NIENTE = new Set(['ping', 'sound', 'righello', 'area', 'percorso.prova', 'asset.put', 'asset.have', 'asset.get', 'asset.preso']);   // senza il master non servono
 
 module.exports = function creaOffline({ dir, id }) {
   const fSnap = path.join(dir, id + '.snap.json'), fLog = path.join(dir, id + '.log.json');
@@ -92,7 +92,7 @@ module.exports = function creaOffline({ dir, id }) {
     p.chat = !!(p.chat && cfg.chat);
     p.roll = !!(p.roll && cfg.dadi);
     p.moveOwnTokens = !!(p.moveOwnTokens && cfg.segnalini);
-    for (const k of ['moveAnyToken', 'createTokens', 'uploadTokenImage', 'uploadAssets', 'revealFog', 'editScene', 'editAnySheet', 'controlMusic']) p[k] = false;
+    for (const k of ['moveAnyToken', 'createTokens', 'uploadTokenImage', 'uploadAssets', 'revealFog', 'editScene', 'editAnySheet', 'controlMusic', 'playSounds']) p[k] = false;
     return p;
   }
 
