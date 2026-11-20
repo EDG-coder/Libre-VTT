@@ -1411,15 +1411,15 @@ const aggSaltata = v => { try { return localStorage.getItem('libre_agg_saltata')
 // Sul telefono il controllo lo fa la pagina, con la rete e i certificati di Android (come il browser):
 // il Node che gira dentro l'app non sempre riesce a parlare con GitHub. Sul computer lo fa il programma.
 const confrontaV = (a, b) => { const pa = String(a).replace(/^v/, '').split(/[.-]/), pb = String(b).replace(/^v/, '').split(/[.-]/); for (let i = 0; i < 3; i++) { const d = (parseInt(pa[i], 10) || 0) - (parseInt(pb[i], 10) || 0); if (d) return d; } return 0; };
-function novitaDaTesto(testo) {
-  const righe = String(testo || '').split(/\r?\n/), da = righe.findIndex(r => /^##\s+Novit/i.test(r)), out = [];
+function novitaDaTesto(testo, en) {
+  const righe = String(testo || '').split(/\r?\n/), da = righe.findIndex(r => en ? /^##\s+What.?s new/i.test(r) : /^##\s+Novit/i.test(r)), out = [];
   if (da < 0) return out;
   for (const r of righe.slice(da + 1)) {
     if (/^#{2,}\s/.test(r)) break;      // «### Dalla 3.7.0» la mostra la release della 3.7.0
     const m = r.match(/^\s*[-*]\s+(.*)$/);
     if (m) out.push(m[1].replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]*)`/g, '$1').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim());
   }
-  return out.slice(0, 15);
+  return out.slice(0, 30);
 }
 // Come versioniNuove in launcher.js: le release più nuove della propria, dalla più recente.
 function versioniNuove(lista, attuale) {
@@ -1428,7 +1428,7 @@ function versioniNuove(lista, attuale) {
     .map(j => ({ j, v: String(j.tag_name).replace(/^v/, '') })).sort((a, b) => confrontaV(b.v, a.v));
   if (!buone.length) return null;
   const nuove = buone.filter(x => confrontaV(x.v, attuale) > 0);
-  return { ultima: buone[0].j, versioni: nuove.map(x => ({ versione: x.v, novita: novitaDaTesto(x.j.body), pagina: x.j.html_url || null })),
+  return { ultima: buone[0].j, versioni: nuove.map(x => ({ versione: x.v, novita: novitaDaTesto(x.j.body), novitaEn: novitaDaTesto(x.j.body, true), pagina: x.j.html_url || null })),
            forseAltre: lista.length >= 30 && nuove.length === buone.length };
 }
 async function controlloDaApp() {
@@ -1446,7 +1446,7 @@ async function controlloDaApp() {
   let file = null;
   for (const n of nomi) { const a = (j.assets || []).find(x => x.name === n); if (a) { file = { nome: a.name, url: a.browser_download_url, byte: a.size || 0 }; break; } }
   return { attuale: st.versione, nuova: nuove.versioni.length ? nuove.versioni[0].versione : null, pagina: j.html_url,
-           tutte: `https://github.com/${repo}/releases`, file, mobile: st.mobile, novita: novitaDaTesto(j.body),
+           tutte: `https://github.com/${repo}/releases`, file, mobile: st.mobile, novita: novitaDaTesto(j.body), novitaEn: novitaDaTesto(j.body, true),
            versioni: nuove.versioni, forseAltre: nuove.forseAltre };
 }
 const chiediAgg = () => NAT.disponibile ? controlloDaApp() : fetch('/api/aggiornamento?ora=1').then(r => r.json());
@@ -1463,12 +1463,13 @@ async function controllaAgg() {
   $('aggSi').textContent = ios || !AGG.file ? 'Apri la pagina' : 'Aggiorna';
   // le novità di tutte le versioni uscite dopo la propria, una sotto l'altra (la più recente in alto)
   const lista = $('aggNovita2'), el = (tag, testo) => { const e = document.createElement(tag); if (testo != null) e.textContent = testo; return e; };
-  const versioni = AGG.versioni && AGG.versioni.length ? AGG.versioni : [{ versione: AGG.nuova, novita: AGG.novita || [] }];
+  const versioni = AGG.versioni && AGG.versioni.length ? AGG.versioni : [{ versione: AGG.nuova, novita: AGG.novita || [], novitaEn: AGG.novitaEn || [] }];
   const pezzi = [];
   for (const v of versioni) {
-    if (!v.novita || !v.novita.length) continue;
+    const righe = I18N.lingua === 'en' && v.novitaEn && v.novitaEn.length ? v.novitaEn : v.novita;   // la lingua della home; senza sezione inglese resta l'italiano
+    if (!righe || !righe.length) continue;
     if (versioni.length > 1) { const t = el('div', v.versione); t.className = 'ver'; pezzi.push(t); }
-    const ul = el('ul'); for (const t of v.novita) ul.append(el('li', t)); pezzi.push(ul);
+    const ul = el('ul'); for (const t of righe) ul.append(el('li', t)); pezzi.push(ul);
   }
   if (pezzi.length && AGG.forseAltre && AGG.tutte) {
     const p = el('p'), a = el('a', tr('le altre sono nella pagina delle release'));

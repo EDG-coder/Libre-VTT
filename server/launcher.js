@@ -1363,16 +1363,16 @@ function fileAggiornamento(assets) {
   return null;
 }
 /** Le righe «- …» della sezione «## Novità» delle note della release, senza il markdown. */
-function novitaDa(testo) {
+function novitaDa(testo, en) {
   const righe = String(testo || '').split(/\r?\n/);
-  const da = righe.findIndex(r => /^##\s+Novit/i.test(r));
+  const da = righe.findIndex(r => en ? /^##\s+What.?s new/i.test(r) : /^##\s+Novit/i.test(r));   // le note hanno una sezione per lingua
   if (da < 0) return [];
   const out = [];
   for (const r of righe.slice(da + 1)) {
     if (/^#{2,}\s/.test(r)) break;      // anche «### Dalla 3.7.0»: quelle righe le dà la release della 3.7.0
     const m = r.match(/^\s*[-*]\s+(.*)$/);
     if (m) out.push(m[1].replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]*)`/g, '$1').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim().slice(0, 600));
-    if (out.length >= 15) break;
+    if (out.length >= 30) break;
   }
   return out;
 }
@@ -1387,7 +1387,7 @@ function versioniNuove(lista, attuale) {
   const nuove = buone.filter(x => confrontaVersioni(x.v, attuale) > 0);
   return {
     ultima: buone[0].j,
-    versioni: nuove.map(x => ({ versione: x.v, novita: novitaDa(x.j.body), pagina: x.j.html_url || null })),
+    versioni: nuove.map(x => ({ versione: x.v, novita: novitaDa(x.j.body), novitaEn: novitaDa(x.j.body, true), pagina: x.j.html_url || null })),
     // 30 release lette e tutte più nuove: ce ne possono essere altre più vecchie che non abbiamo visto
     forseAltre: lista.length >= 30 && nuove.length === buone.length
   };
@@ -1416,7 +1416,7 @@ async function controllaAggiornamento(forza) {
     pagina: j ? j.html_url || `https://github.com/${repo}/releases/latest` : `https://github.com/${repo}/releases/latest`,
     tutte: `https://github.com/${repo}/releases`,
     file: j ? fileAggiornamento(Array.isArray(j.assets) ? j.assets : []) : null, mobile: MOBILE,
-    novita: j ? novitaDa(j.body) : [],
+    novita: j ? novitaDa(j.body) : [], novitaEn: j ? novitaDa(j.body, true) : [],
     versioni: nuove.versioni, forseAltre: nuove.forseAltre
   };
   ultimoControllo = { quando: Date.now(), dati };
