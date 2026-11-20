@@ -277,6 +277,12 @@
         <p class="note">Le canzoni dal computer si copiano nella cartella «musica» della campagna; in rete arrivano anche ai giocatori (al massimo 40 MB l'una).</p>
       </div>
 
+      <div class="sect" data-sect="soundVol" id="sndVolSect">
+        <h4>Volume della soundboard</h4>
+        <label class="row">Volume <input id="sndVolSet" type="range" min="0" max="100" step="1"> <output id="sndVolSetOut"></output></label>
+        <p class="note">I suoni della soundboard hanno il loro volume, separato da quello della musica. È solo tuo: non cambia quello degli altri. Anche con il clic destro sullo strumento.</p>
+      </div>
+
       <div class="sect" data-sect="gridDefault">
         <h4>Griglia predefinita</h4>
         <p class="note">Si applica alle nuove scene.</p>
@@ -421,6 +427,7 @@
     <li>Nello strumento <b>Segnalini</b>, «Immagine» apre l'editor di ritaglio: sposti e ingrandisci la foto sotto la maschera, togli lo sfondo con la bacchetta e rifinisci la sagoma con la gomma.</li>
     <li>La <b>cartella</b> nel menu a sinistra tiene da parte le finestre delle schede: trascinaci sopra la loro barra, e la manopola ne cambia la dimensione.</li>
     <li>Con <b>Musica</b> incolli un link di YouTube o scegli canzoni dal computer, per tutti; il volume però è tuo e non tocca quello degli altri. Ogni scena può avere la sua canzone (Impostazioni › Musica di questa scena).</li>
+    <li>Con <b>Soundboard</b> prepari pulsanti con un suono, un titolo e un'immagine tuoi (effetti brevi, fino a 10 MB): un clic e lo sentono tutti subito, in parallelo alla musica. Il volume è tuo e separato (Impostazioni o clic destro); i giocatori vedono lo strumento solo se dai loro il permesso «Far partire i suoni».</li>
     <li>La <b>Visibilità</b> (l'occhio nel menu) decide come vedono i giocatori: tutto, solo quello che scopri con la <b>nebbia</b>, la <b>luce dinamica</b> o entrambe. Per i giocatori la parte coperta è nera e i segnalini che ci stanno sotto non gli arrivano nemmeno.</li>
     <li>La <b>luce dinamica</b> in tre passi: disegna i <b>muri</b> (anche una stanza intera trascinando; le porte con un clic su un muro), metti una <b>luce</b> o scegli Giorno/Penombra, spunta chi è del <b>party</b>. La lista in cima al pannello dice cosa manca; «Anteprima» ti fa vedere la mappa come la vedono loro.</li>
     <li>Il <b>📚 Compendio</b> (nel pannello di destra) ha mostri, incantesimi, oggetti, classi e regole dell'SRD: trascina un mostro sulla mappa per avere segnalino e scheda, un oggetto o un incantesimo su una scheda per aggiungerlo. In chat <b>@Palla di fuoco</b> diventa un link.</li>
@@ -448,6 +455,7 @@
 <script src="js/mappa/anteprima-segnalino.js"></script>
 <script src="js/mappa/win-folder.js"></script>
 <script src="js/strumenti/music.js"></script>
+<script src="js/strumenti/soundboard.js"></script>
 <script src="js/base/net.js"></script>
 <script src="js/base/offline.js"></script>
 <script src="js/schede/tipi-danno.js"></script>

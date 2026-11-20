@@ -840,6 +840,7 @@ function toolMenu(el) {
     : { label: 'Rimetti nel menu a sinistra', fn: () => { dockTool(t); setDrawer(true); scheduleBoardSave(); } }];
   if (t.id === 'folder' && typeof folderToolExtra === 'function') items.push('-', ...folderToolExtra());
   if (t.id === 'music' && typeof musicMenuExtra === 'function') items.push('-', ...musicMenuExtra());
+  if (t.id === 'sound' && typeof soundMenuExtra === 'function') items.push('-', ...soundMenuExtra());
   if (t.id === 'luce' && typeof fogMenuExtra === 'function') items.push('-', ...fogMenuExtra());
   if (t.id === 'pen') items.push({ label: 'Annulla l\'ultimo tratto', fn: () => $('penUndo').click() }, { label: 'Cancella i disegni del livello', danger: true, fn: () => $('penClear').click() });
   if (t.id === 'ruler') items.push({ label: settings.rulerCenter ? 'Misura liberamente (non da centro a centro)' : 'Misura da centro a centro delle caselle', fn: () => { settings.rulerCenter = !settings.rulerCenter; syncExtraForm(); scheduleBoardSave(); } },

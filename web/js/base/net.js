@@ -71,7 +71,7 @@ function netSend(o) { try { NET.ws && NET.ws.readyState === 1 && NET.ws.send(JSO
 // e i pezzi delle immagini non aspettano: senza collegamento non partono (le immagini hanno la loro attesa).
 NET.coda = []; NET.n = 0;
 NET.sessione = [...crypto.getRandomValues(new Uint8Array(4))].map(b => b.toString(16).padStart(2, '0')).join('');
-const NET_SUBITO = new Set(['percorso.prova', 'ping', 'righello', 'asset.put', 'asset.have', 'asset.get']);
+const NET_SUBITO = new Set(['percorso.prova', 'ping', 'sound', 'righello', 'asset.put', 'asset.have', 'asset.get']);
 function netChiave(op, x) {
   switch (op) {
     case 'token.move': return 'mv:' + x.scene + ':' + x.id;
@@ -79,6 +79,7 @@ function netChiave(op, x) {
     case 'sheet.save': return 'sh:' + x.id;
     case 'board': return 'board';
     case 'music': return 'music';
+    case 'soundboard': return 'soundboard';
     case 'notes.save': return 'notes';
     case 'fog.set': return 'fog:' + x.scene;
     default: return null;
@@ -432,6 +433,7 @@ function netHandle(m) {
       if (m.state) NET.musicaServer = JSON.stringify(m.state);
       if (typeof musicApply === 'function' && m.state) musicApply(m.state);
       return;
+    case 'sound': if (typeof soundDaRete === 'function') soundDaRete(m); return;
     case 'denied':
       if (m.q) NET.coda = NET.coda.filter(e => e.q !== m.q);
       netSay(tr('Non si può:') + ' ' + tr(m.reason || 'il master non te l\'ha permesso.'), 'warn');
@@ -721,6 +723,9 @@ async function applyWorld(w, toccati) {
       }
       NET.musicaServer = j;
     }
+
+    // la soundboard: il master la tiene da sé (e la manda); gli altri la ricevono e preparano i suoni
+    if (t('suoni') && typeof soundDalMondo === 'function') soundDalMondo(w.suoni);
 
     if (!t('scenes') && !t('active')) { /* le scene non sono cambiate */ }
     else if (isMaster()) {
@@ -1119,7 +1124,7 @@ function applyRole() {
   b.classList.toggle('net-on', on);
   b.classList.toggle('net-player', on && !isMaster());
   b.classList.toggle('net-retry', !NET.on && on);
-  for (const p of ['seeHiddenLayer', 'seeAllScenes', 'editScene', 'uploadAssets', 'draw', 'revealFog', 'controlMusic', 'createTokens', 'ping', 'roll', 'chat']) {
+  for (const p of ['seeHiddenLayer', 'seeAllScenes', 'editScene', 'uploadAssets', 'draw', 'revealFog', 'controlMusic', 'playSounds', 'createTokens', 'ping', 'roll', 'chat']) {
     b.classList.toggle('no-' + p, on && !can(p));
   }
   // se il livello nascosto è vietato e ci sei dentro, torna ai segnalini

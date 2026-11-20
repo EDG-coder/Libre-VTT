@@ -23,6 +23,9 @@ const { intestazioniPagina, segretoOk } = require('./csp.js');
 // ---------- Musica dal computer: le canzoni stanno nella cartella musica/ della campagna ----------
 const MUSICA = path.join(CAMP, 'musica');
 const MAX_MUSICA = 40 * 1024 * 1024;
+// I suoni della soundboard: effetti brevi, nella cartella suoni/ della campagna (stesso modo delle canzoni, ma più piccoli)
+const SUONI = path.join(CAMP, 'suoni');
+const MAX_SUONO = 10 * 1024 * 1024;
 const AUDIO = { '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.oga': 'audio/ogg', '.opus': 'audio/ogg', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.aac': 'audio/aac', '.flac': 'audio/flac', '.weba': 'audio/webm' };
 const AUDIO_TYPE_EXT = { 'audio/mpeg': '.mp3', 'audio/mp3': '.mp3', 'audio/ogg': '.ogg', 'audio/wav': '.wav', 'audio/x-wav': '.wav', 'audio/wave': '.wav', 'audio/mp4': '.m4a', 'audio/x-m4a': '.m4a', 'audio/aac': '.aac', 'audio/flac': '.flac', 'audio/x-flac': '.flac', 'audio/webm': '.weba' };
 const ASSET_MIME = new Set([...Object.keys(TYPE_EXT), 'application/json', ...new Set(Object.values(AUDIO))]);
@@ -190,15 +193,15 @@ function saveUpload(req, res, q) {
 
 // Le canzoni: elenco, caricamento (mai sovrascrivere), eliminazione, e il file a pezzi (Range) per il lettore.
 const okBrano = n => n && n === path.basename(n) && !n.startsWith('.') && !!AUDIO[path.extname(n).toLowerCase()];
-function elencoMusica(res) {
+function elencoMusica(res, cartella = MUSICA) {
   let brani = [];
   try {
-    brani = fs.readdirSync(MUSICA, { withFileTypes: true }).filter(d => d.isFile() && okBrano(d.name))
-      .map(d => ({ name: d.name, bytes: fs.statSync(path.join(MUSICA, d.name)).size })).sort((a, b) => a.name.localeCompare(b.name));
+    brani = fs.readdirSync(cartella, { withFileTypes: true }).filter(d => d.isFile() && okBrano(d.name))
+      .map(d => ({ name: d.name, bytes: fs.statSync(path.join(cartella, d.name)).size })).sort((a, b) => a.name.localeCompare(b.name));
   } catch {}
   json(res, 200, { brani });
 }
-function salvaBrano(req, res, q) {
+function salvaBrano(req, res, q, cartella = MUSICA, massimo = MAX_MUSICA) {
   let base = clean(q.get('name')) || 'canzone';
   if (!AUDIO[path.extname(base).toLowerCase()]) {
     const ext = AUDIO_TYPE_EXT[String(req.headers['content-type'] || '').toLowerCase().split(';')[0].trim()];
@@ -208,18 +211,18 @@ function salvaBrano(req, res, q) {
   const chunks = []; let size = 0, tooBig = false;
   req.on('data', c => {
     size += c.length;
-    if (size > MAX_MUSICA) { tooBig = true; send(res, 413, 'Canzone troppo grande (max 40 MB)'); req.destroy(); }
+    if (size > massimo) { tooBig = true; send(res, 413, 'File troppo grande (max ' + Math.round(massimo / 1048576) + ' MB)'); req.destroy(); }
     else chunks.push(c);
   });
   req.on('end', () => {
     if (tooBig) return;
     if (!size) return send(res, 400, 'File vuoto');
-    try { fs.mkdirSync(MUSICA, { recursive: true }); } catch {}
+    try { fs.mkdirSync(cartella, { recursive: true }); } catch {}
     const dati = Buffer.concat(chunks);
     // la stessa canzone caricata di nuovo non si copia due volte
     const ext = path.extname(base), stem = path.basename(base, ext);
     for (let i = 0; ; i++) {
-      const n = i ? `${stem}-${i}${ext}` : base, f = path.join(MUSICA, n);
+      const n = i ? `${stem}-${i}${ext}` : base, f = path.join(cartella, n);
       if (fs.existsSync(f)) {
         try { if (fs.statSync(f).size === dati.length && fs.readFileSync(f).equals(dati)) return json(res, 200, { name: n, bytes: dati.length }); } catch {}
         continue;
@@ -229,10 +232,10 @@ function salvaBrano(req, res, q) {
     }
   });
 }
-function eliminaBrano(res, q) {
+function eliminaBrano(res, q, cartella = MUSICA) {
   const n = q.get('name');
   if (!okBrano(n)) return send(res, 400, 'Richiesta non valida');
-  try { fs.unlinkSync(path.join(MUSICA, n)); json(res, 200, { ok: true }); } catch { send(res, 404, 'File non trovato'); }
+  try { fs.unlinkSync(path.join(cartella, n)); json(res, 200, { ok: true }); } catch { send(res, 404, 'File non trovato'); }
 }
 /** Un file audio o video, intero o il pezzo chiesto con Range (Safari e iPhone senza non lo suonano). */
 function mandaAudio(req, res, file, tipo, testa = {}) {
@@ -675,6 +678,9 @@ function handle(req, res) {
     if (route === 'GET /api/musica') return elencoMusica(res);
     if (route === 'POST /api/musica') return salvaBrano(req, res, q);
     if (route === 'DELETE /api/musica') return eliminaBrano(res, q);
+    if (route === 'GET /api/suoni') return elencoMusica(res, SUONI);
+    if (route === 'POST /api/suoni') return salvaBrano(req, res, q, SUONI, MAX_SUONO);
+    if (route === 'DELETE /api/suoni') return eliminaBrano(res, q, SUONI);
     if (route === 'POST /api/folders') return createFolder(res, q);
     if (route === 'DELETE /api/folders') return deleteFolder(res, q);
     if (route === 'GET /api/boot') return json(res, 200, { boot: BOOT });
@@ -731,6 +737,12 @@ function handle(req, res) {
     const n = rel.slice(8);
     if (!okBrano(n)) return send(res, 404, 'Non trovato');
     return mandaAudio(req, res, path.join(MUSICA, n), AUDIO[path.extname(n).toLowerCase()]);
+  }
+  // i suoni della soundboard (suoni/)
+  if (rel.startsWith('/suoni/')) {
+    const n = rel.slice(7);
+    if (!okBrano(n)) return send(res, 404, 'Non trovato');
+    return mandaAudio(req, res, path.join(SUONI, n), AUDIO[path.extname(n).toLowerCase()]);
   }
   // i file dei plugin applicati (solo quelli che la home ha acceso, e solo tipi innocui o il loro codice)
   if (rel.startsWith('/plugins/')) {

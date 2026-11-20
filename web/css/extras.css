@@ -523,6 +523,7 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 .no-revealFog #layerSwitch [data-layer="luce"],
 .no-draw #penBox,
 .no-controlMusic .mMaster,
+.no-playSounds #soundBox, .no-playSounds #toolDrawer .slot[data-tool="sound"],
 .no-seeAllScenes #sceneWrap,
 .no-editScene #layerSwitch [data-layer="map"],
 .no-seeHiddenLayer #layerSwitch [data-layer="hidden"],
@@ -1335,3 +1336,29 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 
 /* attesa del compendio */
 #compStato .anelloAttesa { vertical-align: middle; margin-right: 8px; }
+
+/* ---------- Soundboard ---------- */
+#soundBox { --tw: 290px; }
+#soundBox .tbody { min-width: 250px; }
+#soundBox [hidden] { display: none !important; }
+.sbHead { display: flex; gap: 6px; }
+.sbHead select { flex: 1; min-width: 0; }
+.sbHead #sbEdit { flex: none; padding: 4px 8px; }
+#soundBox .sbHead #sbEdit.on { background: var(--accent); color: #fff; border-color: transparent; }
+.sbEditRow input[type=text], #sbForm input[type=text] { flex: 1; min-width: 0; }
+.sbGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 6px; margin: 6px 0; min-height: 150px; max-height: 300px; overflow: auto; align-content: start; }
+.sbTile { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px 3px; border-radius: 10px; min-width: 0; font-size: 11px; line-height: 1.2; text-align: center; }
+.sbTile:active { transform: scale(.94); }
+.sbTile .sbImg { width: 52px; height: 52px; border-radius: 9px; background: var(--panel-2) center / cover no-repeat; border: 1px solid var(--line); display: grid; place-items: center; font-size: 22px; }
+.sbTile .sbName { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sbTile.carica { opacity: .55; }
+.sbTile.on { outline: 2px solid var(--accent); }
+.sbGrid.modifica .sbTile { border-style: dashed; }
+.sbBtns button, .sbAdd button, #sbForm .trow button { flex: 1; font-size: 12px; padding: 5px 7px; }
+.sbAdd { margin-top: 6px; }
+#sbForm { border-top: 1px solid var(--line); margin-top: 7px; padding-top: 7px; display: flex; flex-direction: column; gap: 6px; }
+#sbForm .row input[type=file] { flex: 1; min-width: 0; font-size: 11px; }
+.sbImgRow { align-items: center; }
+.sbThumb { flex: none; width: 40px; height: 40px; border-radius: 8px; background: var(--panel-2) center / cover no-repeat; border: 1px solid var(--line); display: grid; place-items: center; }
+#sbForm .sbOk { background: var(--accent); color: #fff; border-color: transparent; }
+#soundBox .mVol button.on { background: var(--accent); color: #fff; border-color: transparent; }

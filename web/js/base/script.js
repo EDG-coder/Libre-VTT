@@ -2374,7 +2374,7 @@ function applicaImpostazioni(s) {
   if (s.turni && Array.isArray(s.turni.righe)) settings.turni = s.turni;
   if (Array.isArray(s.boxLabels)) settings.boxLabels = [0, 1, 2].map(i => String(s.boxLabels[i] || '').slice(0, 14));
   if (+s.prefT > 0) settings.prefT = +s.prefT;
-  for (const k of ['tools', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'park', 'music']) if (s[k] && typeof s[k] === 'object') settings[k] = { ...settings[k], ...s[k] };
+  for (const k of ['tools', 'sheetStyle', 'pen', 'hiddenLayer', 'chatTabs', 'park', 'music', 'soundboard']) if (s[k] && typeof s[k] === 'object') settings[k] = { ...settings[k], ...s[k] };
   if (Array.isArray(s.modelliScheda)) settings.modelliScheda = s.modelliScheda.slice(0, 100);
   settings.sections = s.sections && typeof s.sections === 'object' ? { ...s.sections } : {};
   settings.toolOrder = Array.isArray(s.toolOrder) ? s.toolOrder.filter(x => typeof x === 'string').slice(0, 60) : null;
