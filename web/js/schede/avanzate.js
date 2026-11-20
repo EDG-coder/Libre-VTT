@@ -8,6 +8,7 @@
 //   avRis   [{ id, nome, cur, max, ric }]     risorse con contatore (ric: breve, lunga, '')
 //   avRiq   { cats: [{ id, nome, chiusa }], items: [{ id, cat, tipo, nome, val, formula, max, desc, chat }] }
 //   avPunti { on, cur }                       punti incantatore (variante della Guida del DM)
+//   avConc  { mai, vant, bonus }              concentrazione dopo i danni: mai = non chiedere, vant = vantaggio (War Caster), bonus = numero in più
 //   avChat  'nome' | 'desc' | 'nulla'         cosa va in chat usando una capacità (predefinito della scheda)
 //   vNuoto vVolo vScalata vScavo vLibrarsi, sCieca sTremore sPura   velocità e sensi (testo)
 // Le caselle incantesimo usano i campi che c'erano già: sl1t…sl9t (totali) e sl1u…sl9u (spese).
@@ -221,7 +222,7 @@
     }
     if (b.dataset.lancia) return usaCasella(s, +b.dataset.lancia);
     if (b.dataset.pip) { const L = b.dataset.pip, t = iv(s.f['sl' + L + 't']), libere = t - Math.min(t, iv(s.f['sl' + L + 'u'])); s.f['sl' + L + 'u'] = String(t - (+b.dataset.i < libere ? +b.dataset.i : +b.dataset.i + 1)); cambiata(s); return; }
-    if (b.dataset.ris) { const ris = J(s, 'avRis', []), r = ris.find(x => x.id === b.dataset.ris); if (!r) return; const mx = Math.round(formula(s, r.max) || +r.max || 0); r.cur = Math.max(0, Math.min(mx || Infinity, (+r.cur || 0) + +b.dataset.d)); salvaJ(s, 'avRis', ris); if (+b.dataset.d < 0) addChat({ kind: 'text', text: `${s.name}: ${r.nome} (${r.cur}/${mx})` }); return; }
+    if (b.dataset.ris) { const ris = J(s, 'avRis', []), r = ris.find(x => x.id === b.dataset.ris); if (!r) return; const mx = Math.round(formula(s, r.max) || +r.max || 0); r.cur = Math.max(0, Math.min(mx || Infinity, (+r.cur || 0) + +b.dataset.d)); salvaJ(s, 'avRis', ris); if (+b.dataset.d < 0 && !chatSchedaMuta()) addChat({ kind: 'text', text: `${s.name}: ${r.nome} (${r.cur}/${mx})` }); return; }
     const riq = J(s, 'avRiq', { cats: [], items: [] });
     if (b.classList.contains('avCatT')) { const c = riq.cats.find(x => x.id === b.dataset.cat); if (c) { c.chiusa = !c.chiusa; salvaJ(s, 'avRiq', riq); } return; }
     if (b.dataset.pingcat != null) { const items = riq.items.filter(r => (r.cat || '') === b.dataset.pingcat || !riq.cats.length); const c = riq.cats.find(x => x.id === b.dataset.pingcat); if (items.length) addChat({ kind: 'rule', title: `${s.name} · ${c ? c.nome : tr('Riquadri')}`, text: items.map(r => `**${r.nome}**${r.tipo === 'numero' || r.tipo === 'contatore' ? ' ' + valoreRiq(s, r) : r.tipo === 'testo' && r.val ? ': ' + r.val : ''}${r.desc ? '\n' + r.desc : ''}`).join('\n\n') }); return; }
@@ -326,11 +327,16 @@
           <label>${esc(tr('Usando una capacità, in chat va:'))} <select data-f="avChat"><option value="">${esc(tr('Nome e descrizione'))}</option><option value="nome">${esc(tr('Solo il nome'))}</option><option value="nulla">${esc(tr('Niente'))}</option></select></label>`;
       }
       if (cur === 'incantesimi') {
-        const p = J(s, 'avPunti', {});
+        const p = J(s, 'avPunti', {}), cn = J(s, 'avConc', {});
         return `<p class="note">${esc(tr('Le caselle totali e spese di ogni livello (le stesse della scheda). Con i punti incantatore (variante della Guida del DM) le caselle si sostituiscono con un pool di punti.'))}</p>
           <table class="avTab"><thead><tr><th>${esc(tr('Livello'))}</th><th>${esc(tr('Totali'))}</th><th>${esc(tr('Spese'))}</th></tr></thead><tbody>${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(L => `<tr><td>${L}°</td><td><input type="number" min="0" max="9" class="avCorto" data-f="sl${L}t"></td><td><input type="number" min="0" max="9" class="avCorto" data-f="sl${L}u"></td></tr>`).join('')}</tbody></table>
           <button type="button" class="btn ghost" data-dallaclasse="1">✨ ${esc(tr('Riempi dalla classe e dal livello'))}</button>
-          <label class="check"><input type="checkbox" data-punti="1" ${p.on ? 'checked' : ''}> <b>${esc(tr('Punti incantatore'))}</b> <small>${esc(tr('{n} punti al livello {l}; costo per livello d\'incantesimo: 2, 3, 5, 6, 7 (fino al 5°)', { n: puntiMax(s), l: iv(s.f.level) || 1 }))}</small></label>`;
+          <label class="check"><input type="checkbox" data-punti="1" ${p.on ? 'checked' : ''}> <b>${esc(tr('Punti incantatore'))}</b> <small>${esc(tr('{n} punti al livello {l}; costo per livello d\'incantesimo: 2, 3, 5, 6, 7 (fino al 5°)', { n: puntiMax(s), l: iv(s.f.level) || 1 }))}</small></label>
+          <h4>${esc(tr('Concentrazione'))}</h4>
+          <p class="note">${esc(tr('Quando subisci danni (e resti in piedi) il gioco chiede se tirare il tiro salvezza su Costituzione: CD 10 o metà del danno, il più alto.'))}</p>
+          <label class="check"><input type="checkbox" data-conc="mai" ${cn.mai ? 'checked' : ''}> ${esc(tr('Non chiedere mai'))}</label>
+          <label class="check"><input type="checkbox" data-conc="vant" ${cn.vant ? 'checked' : ''}> ${esc(tr('Vantaggio al tiro (es. War Caster)'))}</label>
+          <label>${esc(tr('Bonus in più al tiro'))} <input type="number" class="avCorto" data-conc="bonus" value="${esc(cn.bonus ?? '')}"></label>`;
       }
       if (cur === 'modelli') {
         const m = (typeof settings !== 'undefined' && Array.isArray(settings.modelliScheda)) ? settings.modelliScheda : [];
@@ -379,6 +385,7 @@
       if (el.dataset.ab) { const k = el.dataset.ab, v = el.value; s.f['kh_' + k] = v === 'mezza' ? '1' : ''; s.f['kp_' + k] = v === 'comp' || v === 'mae' ? '1' : ''; s.f['ke_' + k] = v === 'mae' ? '1' : ''; cambiata(s); const td = el.closest('tr').querySelector('.avVal'); if (td) td.textContent = sgn(calcValue(s, 'skill:' + k)); return; }
       if (el.dataset.dif) { const dif = J(s, 'avDif', {}), g = el.dataset.dif; dif[g] = (dif[g] || []).filter(x => x !== el.dataset.t); if (el.checked) dif[g].push(el.dataset.t); salvaJ(s, 'avDif', dif); return; }
       if (el.dataset.cond) { const dif = J(s, 'avDif', {}); dif.cond = (dif.cond || []).filter(x => x !== el.dataset.cond); if (el.checked) dif.cond.push(el.dataset.cond); salvaJ(s, 'avDif', dif); return; }
+      if (el.dataset.conc) { const cn = J(s, 'avConc', {}), k = el.dataset.conc; if (k === 'bonus') cn.bonus = el.value === '' ? 0 : +el.value || 0; else cn[k] = el.checked; salvaJ(s, 'avConc', cn); return; }
       if (el.dataset.punti) { const p = J(s, 'avPunti', {}); p.on = el.checked; if (p.on && p.cur == null) p.cur = puntiMax(s); salvaJ(s, 'avPunti', p); }
     });
     d.addEventListener('click', e => {
@@ -408,7 +415,7 @@
       if (b.dataset.salvamod) {
         const nome = prompt(tr('Nome del modello'), s.f.class || s.name); if (!nome) return;
         if (!Array.isArray(settings.modelliScheda)) settings.modelliScheda = [];
-        settings.modelliScheda.push({ nome: nome.slice(0, 60), dati: Object.fromEntries(['avRis', 'avRiq', 'avMod', 'avVant', 'avChat', 'avStr'].filter(k => s.f[k]).map(k => [k, s.f[k]])) });
+        settings.modelliScheda.push({ nome: nome.slice(0, 60), dati: Object.fromEntries(['avRis', 'avRiq', 'avMod', 'avVant', 'avChat', 'avStr', 'avConc'].filter(k => s.f[k]).map(k => [k, s.f[k]])) });
         scheduleBoardSave(); return disegna();
       }
       if (b.dataset.usamod) {
@@ -456,6 +463,9 @@
   // resistenza dimezza, immunità annulla, vulnerabilità raddoppia; i PF temporanei si consumano prima.
   // Il messaggio con danni e PF (e quello delle cure) in rete lo leggono solo il master e chi l'ha scritto:
   // agli altri giocatori il server non lo manda proprio (soloMaster).
+  // Opzione del dispositivo (Impostazioni › Strumenti): danni, cure, risorse e contatori non scrivono in chat.
+  function chatSchedaMuta() { try { return localStorage.getItem('libre-chat-scheda-muta') === '1'; } catch { return false; } }
+  window.chatSchedaMuta = chatSchedaMuta;
   function subisci(s, quanti, tipo) {
     const dif = J(s, 'avDif', {}), t = tipoDanno(tipo), nomeT = t ? nomeDanno(t).toLowerCase() : '';
     let n = Math.max(0, Math.floor(+quanti || 0)); const note = [];
@@ -467,14 +477,40 @@
     if (temp > 0) { const via = Math.min(temp, resto); s.f.hpt = temp - via ? String(temp - via) : ''; resto -= via; }
     s.f.hp = String(Math.max(0, iv(s.f.hp) - resto));
     cambiata(s);
-    addChat({ kind: 'rule', soloMaster: true, title: `🩸 ${s.name}`, text: tr('Subisce {n} danni{t}{note} → {pf}/{max} PF', { n, t: nomeT ? ' ' + tr('da {t}', { t: nomeT }) : '', note: note.length ? ' (' + note.join(', ') + ')' : '', pf: s.f.hp, max: iv(s.f.hpmax) }) });
+    if (!chatSchedaMuta()) addChat({ kind: 'rule', soloMaster: true, title: `🩸 ${s.name}`, text: tr('Subisce {n} danni{t}{note} → {pf}/{max} PF', { n, t: nomeT ? ' ' + tr('da {t}', { t: nomeT }) : '', note: note.length ? ' (' + note.join(', ') + ')' : '', pf: s.f.hp, max: iv(s.f.hpmax) }) });
+    chiediConcentrazione(s, n);
+  }
+  // Dopo un danno che non ti manda a 0 PF il gioco chiede se tirare il tiro salvezza su Costituzione per la
+  // concentrazione (CD 10 o metà del danno, il più alto). ⚙ Avanzate › Incantesimi: non chiedere mai, vantaggio
+  // (War Caster) e bonus in più (es. Resilient: Constitution si somma da sola con la competenza).
+  function chiediConcentrazione(s, danno) {
+    const c = J(s, 'avConc', {});
+    if (c.mai || !(danno > 0) || iv(s.f.hp) <= 0 || document.querySelector('#concDlg')) return;
+    const cd = Math.max(10, Math.floor(danno / 2));
+    const d = document.createElement('dialog'); d.id = 'concDlg'; d.className = 'compDlg temaScheda';
+    d.innerHTML = `<h3>${esc(tr('Concentrazione'))}</h3><p>${esc(tr('{nome} subisce {n} danni. Tiro salvezza su Costituzione per mantenere la concentrazione (CD {cd})?', { nome: s.name, n: danno, cd }))}</p>
+      <div class="dialogBtns"><button type="button" class="btn ghost" data-r="no">${esc(tr('No'))}</button><button type="button" class="btn" data-r="si">${esc(tr('Sì, tira'))}</button></div>`;
+    document.body.appendChild(d);
+    const fine = () => { try { d.close(); } catch {} d.remove(); };
+    d.addEventListener('click', e => {
+      const b = e.target.closest('[data-r]'); if (!b) return;
+      fine();
+      if (b.dataset.r !== 'si') return;
+      let v = typeof avanzVantaggio === 'function' ? avanzVantaggio(s, 'save:con') : '';
+      if (c.vant) v = v === 'dis' ? '' : 'adv';
+      const extra = Math.trunc(+c.bonus || 0);
+      const expr = (v === 'adv' ? '2d20kh1' : v === 'dis' ? '2d20kl1' : '1d20') + sgnE(calcValue(s, 'save:con') + extra);
+      rollExpr(expr, `${s.name} · ${tr('Concentrazione')} (${tr('CD')} ${cd})`);
+    });
+    d.addEventListener('cancel', e => { e.preventDefault(); fine(); });
+    try { d.showModal(); } catch { d.remove(); }
   }
   function cura(s, quanti) {
     const n = Math.max(0, Math.floor(+quanti || 0)); if (!n) return;
     const mx = iv(s.f.hpmax), prima = iv(s.f.hp);
     s.f.hp = String(mx ? Math.min(mx, prima + n) : prima + n);
     cambiata(s);
-    addChat({ kind: 'rule', soloMaster: true, title: `💚 ${s.name}`, text: tr('Recupera {n} PF → {pf}/{max} PF', { n: iv(s.f.hp) - prima, pf: s.f.hp, max: mx }) });
+    if (!chatSchedaMuta()) addChat({ kind: 'rule', soloMaster: true, title: `💚 ${s.name}`, text: tr('Recupera {n} PF → {pf}/{max} PF', { n: iv(s.f.hp) - prima, pf: s.f.hp, max: mx }) });
   }
   window.avanzSubisci = subisci;
   window._avanzate = { formula, riposo, subisci, cura, J };

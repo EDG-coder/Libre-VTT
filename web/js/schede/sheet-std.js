@@ -71,7 +71,7 @@ function stdPagBase() {
 
   const colA = `<div class="zsCol">
     <div class="zsAbs">${ZS_AB.map(([k, t]) => `<div class="zsAb">${zsLab(t)}${zsNum(k, 'zsScore')}${zsVal('mod:' + k, 'mod:' + k, 'zsMod')}</div>`).join('')}</div>
-    <div class="zsDue">${zsBox('Ispirazione', `<span class="zsInsp">${rep(4, i => zsChk('insp' + (i + 1), '', 'Ispirazione'))}</span>`)}${zsBox('Bonus competenza', `<input class="zsF zsScore" type="number" data-f="profb" data-ph="prof" title="Lascialo vuoto per calcolarlo dal livello" autocomplete="off">`)}</div>
+    <div class="zsDue">${zsBox('Ispirazione', `<span class="zsInsp">${rep(4, i => zsChk('insp' + (i + 1), '', 'Ispirazione'))}</span>`)}${zsBox('Reazione', zsChk('reaz', '', 'Spunta: hai la reazione. Si toglie e si rimette a mano'))}${zsBox('Bonus competenza', `<input class="zsF zsScore" type="number" data-f="profb" data-ph="prof" title="Lascialo vuoto per calcolarlo dal livello" autocomplete="off">`)}</div>
     ${zsCard('Tiri salvezza', ZS_AB.map(([k, t]) => `<div class="zsLine">${zsChk('sp_' + k, '', 'Competenza')}${zsVal('save:' + k, 'save:' + k)}<span>${t}</span></div>`).join(''))}
     ${zsCard('Abilità', STD_SK.map(([k, t, a]) => `<div class="zsLine">${zsChk('ke_' + k, 'zsMini', 'Maestria (competenza doppia)')}${zsChk('kp_' + k, '', 'Competenza')}${zsVal('skill:' + k, 'skill:' + k)}<span>${t} <i>(${a})</i></span></div>`).join('') +
       `<div class="zsLine zsPass">${zsVal('pp', null)}<span>Saggezza (Percezione) passiva</span></div>`)}
@@ -307,7 +307,11 @@ function stdSend(s, k) {
   // in chat le [[2d6 | Danni]] si leggono come «Danni (2d6)»: il tiro resta sul pulsante
   const plain = t => t.replace(/\[\[\s*([^\]|]+?)\s*(?:\|\s*([^\]]+?)\s*)?\]\]/g,
     (_, expr, nm) => (nm ? `${nm} (${expr})` : expr));
-  addChat({ kind: 'rule', title: `${s.name} · ${plain(title) || 'Incantesimo'}`, text: plain(body || title) });
+  // un incantesimo con tiro salvezza dice anche la CD della scheda (se il testo non ne scrive già una)
+  const testo = plain(body || title), tutto = title + ' ' + body;
+  const cd = typeof cdIncantesimi === 'function' ? cdIncantesimi(s) : null;
+  const conTS = cd != null && /tiro salvezza|tiri salvezza|saving throw|\b(?:TS|CD|DC)\b/i.test(tutto) && !/\b(?:CD|DC)\s*:?\s*\d+/i.test(tutto);
+  addChat({ kind: 'rule', title: `${s.name} · ${plain(title) || 'Incantesimo'}`, text: conTS ? testo + '\n' + tr('Tiro salvezza CD {n}', { n: cd }) : testo });
 }
 
 // Il dado a fine riga, e la tendina della descrizione.

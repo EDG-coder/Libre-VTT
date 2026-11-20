@@ -79,7 +79,7 @@
         x.val = b.classList.contains('ctReset') ? numTot(x) : limita(x, prima + (b.classList.contains('ctPiu') ? 1 : -1));
         if (x.val === prima) return;
         scrivi(s, lista); disegna(host, s);
-        if (b.classList.contains('ctMeno')) inChat(s, x);
+        if (b.classList.contains('ctMeno') && !(typeof chatSchedaMuta === 'function' && chatSchedaMuta())) inChat(s, x);   // «Non scrivere in chat…» (Impostazioni)
         return;
       }
       if (b.classList.contains('ctNome')) inChat(s, x);

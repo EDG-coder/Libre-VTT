@@ -36,6 +36,7 @@ function openPagBase() {
       oBox('Caratteristiche', `<div class="abil oAbil">${abil}</div>
         <div class="hdr oHdr3" style="margin-top:8px">
           <div class="stat"><span class="lab">Ispirazione</span><span class="oInsp">${rows(4, i => ck('insp' + (i + 1), 'Ispirazione'))}</span></div>
+          <div class="stat"><span class="lab">Reazione</span>${ck('reaz', 'Spunta: hai la reazione. Si toglie e si rimette a mano')}</div>
           ${oStat('Bonus di competenza', '<output data-c="prof"></output>')}
           <label class="lab">Competenza a mano<input type="number" data-f="profb" placeholder="dal livello"></label></div>`),
       oBox('Tiri salvezza', saves),

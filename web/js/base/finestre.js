@@ -123,6 +123,20 @@
   }
   let ultima = null;
 
+  // Le finestre delle schede (e le altre finestre del tavolo) stanno sotto, nella pagina normale: una finestra
+  // di strumento aperta, che sta nel livello superiore, le coprirebbe sempre e non si potrebbe più
+  // toccarle. Finché c'è una finestra di strumento aperta, anche la finestra su cui si clicca passa nel livello
+  // superiore, in cima. Chiuse tutte le finestre di strumento, tornano com'erano (menù e avvisi restano sopra).
+  function sopra(w) {
+    if (!w || !aperte.size || !permesso() || !w.isConnected) return;
+    if (w.matches(':popover-open')) { if (w === ultima) return; }
+    else w.setAttribute('popover', 'manual');
+    try { if (w.matches(':popover-open')) w.hidePopover(); w.showPopover(); ultima = w; } catch {}
+  }
+  function riportaGiu() {
+    for (const w of document.querySelectorAll('.sheetWin[popover]')) { try { w.hidePopover(); } catch {} w.removeAttribute('popover'); }
+  }
+
   function apri(t) {
     if (aperte.has(t) || !permesso()) return;
     const corpo = corpoDi(t);
@@ -149,7 +163,7 @@
     c.removeAttribute('popover'); c.classList.remove('finW', 'finMuove');
     t.el.classList.remove('finAperta');
     if (ultima === c) ultima = null;
-    if (!aperte.size) R.classList.remove('finestre');
+    if (!aperte.size) { R.classList.remove('finestre'); riportaGiu(); }
   }
 
   const osservate = new WeakSet();
@@ -184,5 +198,5 @@
     for (const [t, f] of aperte) if (f.corpo === a) { t.grip.click(); e.preventDefault(); break; }
   });
 
-  window.LibreFinestre = { registra, attivo, aperte: () => [...aperte.keys()].map(t => t.id), ripristina: () => { try { localStorage.removeItem(PREF); } catch {} } };
+  window.LibreFinestre = { registra, attivo, sopra, aperte: () => [...aperte.keys()].map(t => t.id), ripristina: () => { try { localStorage.removeItem(PREF); } catch {} } };
 })();

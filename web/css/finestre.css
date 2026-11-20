@@ -36,3 +36,6 @@ html.finestre .finW:popover-open.finMuove { user-select: none; box-shadow: 0 14p
 }
 .finMan:hover { color: #fff; }
 :not(.finW) > .finBar, :not(.finW) > .finMan { display: none; }
+
+/* una finestra di scheda portata nel livello superiore (finestre.js) resta dov'è e com'è: via gli stili dei popover */
+.sheetWin[popover] { inset: auto; margin: 0; padding: 0; }

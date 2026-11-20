@@ -997,12 +997,14 @@ function applyHidden() {
 function syncExtraForm() {
   $('rulerCenter').checked = !!settings.rulerCenter;
   $('diag5').checked = !!settings.diag5;
+  try { $('chatSchedaMuta').checked = localStorage.getItem('libre-chat-scheda-muta') === '1'; } catch {}
   $('misuraTrascina').checked = settings.misuraTrascina !== false;
   $('hlShow').checked = settings.hiddenLayer.show; $('hlOp').value = settings.hiddenLayer.opacity; $('hlOpOut').textContent = settings.hiddenLayer.opacity;
   $('chTabRolls').checked = settings.chatTabs.rolls; $('chTabRules').checked = settings.chatTabs.rules;
 }
 $('rulerCenter').addEventListener('input', e => { settings.rulerCenter = e.target.checked; scheduleBoardSave(); });
 $('misuraTrascina').addEventListener('input', e => { settings.misuraTrascina = e.target.checked; scheduleBoardSave(); });
+$('chatSchedaMuta').addEventListener('input', e => { try { localStorage.setItem('libre-chat-scheda-muta', e.target.checked ? '1' : '0'); } catch {} });   // solo di questo dispositivo
 $('diag5').addEventListener('input', e => { settings.diag5 = e.target.checked; if (ruler) drawRuler(); scheduleBoardSave(); });
 $('hlShow').addEventListener('input', e => { settings.hiddenLayer.show = e.target.checked; applyHidden(); scheduleBoardSave(); });
 $('hlOp').addEventListener('input', e => { settings.hiddenLayer.opacity = +e.target.value; applyHidden(); syncExtraForm(); scheduleBoardSave(); });

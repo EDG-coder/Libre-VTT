@@ -65,7 +65,7 @@ window.LIBRE_TUTORIAL_PASSI = (function () {
     { id: 'i.impAspetto', covers: ['v.imp.aspetto'], around: '#side', el: '#tab-settings [data-sect="look"]', before: [SIDE, TAB('settings'), { scroll: '#tab-settings [data-sect="look"]' }] },
     { id: 'i.impGuida', around: '#side', el: '#helpOpen', before: [SIDE, TAB('settings'), { open: '#tab-settings [data-sect="tools"]' }, { scroll: '#helpOpen' }] },
     { id: 'i.impTutorial', around: '#side', el: '#tutImpBtn', before: [SIDE, TAB('settings'), { open: '#tab-settings [data-sect="tools"]' }, { scroll: '#tutImpBtn' }] },
-    { id: 'i.impHome', around: '#side', el: '#netHome', before: [SIDE, TAB('settings'), { open: '#tab-settings [data-sect="sessione"]' }, { scroll: '#netHome' }] },
+    { id: 'i.impHome', around: '#side', el: '#netHome', need: '#netHome', before: [SIDE, TAB('settings'), { open: '#tab-settings [data-sect="sessione"]' }, { scroll: '#netHome' }] },
     { id: 'i.latoChiudi', el: '#sideToggle', do: { hidden: '#side.open' } },
     { id: 'i.dock', el: '#dock' },
     { id: 'i.livelli', el: '#layerSwitch' },
