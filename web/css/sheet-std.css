@@ -88,6 +88,7 @@
 /* riquadri numerici in fila: due, tre, quattro o cinque uguali */
 .zsDue, .zsTre, .zsQuattro, .zsCinque { display: grid; gap: 8px; margin-bottom: 12px; }
 .zsDue { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.zsDue:has(> .zsBox:nth-child(3)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .zsTre { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .zsQuattro { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .zsCinque { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; margin: 8px 0 0; }

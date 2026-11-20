@@ -743,8 +743,9 @@ function doRoll(s, key) {
   if (t === 'spatk') { expr = '1d20' + sgnE(atkIncantesimi(s) ?? 0); label = `${s.name} · Attacco con incantesimo`; }
   else if (t === 'atk') {
     // un incantesimo a tiro salvezza («CD 13», «DC13»): non si tira per colpire, si dice la CD
-    const cd = /^\s*(?:CD|DC|TS)\s*:?\s*(\d+)/i.exec(String(s.f['ab' + a] || ''));
-    if (cd) { addChat({ kind: 'rule', title: `${s.name} · ${s.f['an' + a] || 'Attacco'}`, text: `Tiro salvezza CD ${cd[1]}` + (s.f['ad' + a] ? ` · ${s.f['ad' + a]}` : '') }); return; }
+    // (senza il numero, «CD» o «TS» nel bonus usa la CD incantesimi della scheda)
+    const cd = /^\s*(?:CD|DC|TS)\b\s*:?\s*(\d+)?/i.exec(String(s.f['ab' + a] || '')), cdN = cd && (cd[1] ?? cdIncantesimi(s));
+    if (cd && cdN != null) { addChat({ kind: 'rule', title: `${s.name} · ${s.f['an' + a] || 'Attacco'}`, text: `Tiro salvezza CD ${cdN}` + (s.f['ad' + a] ? ` · ${s.f['ad' + a]}` : '') }); return; }
     expr = '1d20' + sgnE(bonusAttacco(s, s.f['ab' + a])); label = `${s.name} · ${s.f['an' + a] || 'Attacco'}`;
   }
   else if (t === 'dmg') { expr = conBonusDanni(s, conCaratteristiche(s, s.f['ad' + a] || '')); label = `${s.name} · Danni ${s.f['an' + a] || ''}`.trim(); }
@@ -872,7 +873,7 @@ function standardHtml() {
   <div class="spage" data-pg="1"><div class="sgrid">
     <div class="box full"><div class="hdr">${fld('Classe', 'class')}${fld('Livello', 'level', 'number')}${fld('Nome giocatore', 'player')}${fld('Razza', 'race')}${fld('Background', 'bg')}${fld('Allineamento / sesso', 'align')}</div></div>
     <div class="box"><h5>Caratteristiche</h5><div class="abil">${abil}</div>
-      <div class="hdr" style="margin-top:8px"><label class="rl2">${ck('insp')}<span>Ispirazione</span></label>
+      <div class="hdr" style="margin-top:8px"><label class="rl2">${ck('insp')}<span>Ispirazione</span></label><label class="rl2" title="Spunta: hai la reazione. Si toglie e si rimette a mano">${ck('reaz')}<span>Reazione</span></label>
         <div class="stat"><span class="lab">Bonus di competenza</span><output data-c="prof"></output></div>${fld('Competenza (manuale)', 'profb', 'number')}</div></div>
     <div class="box"><h5>Tiri salvezza</h5>${saves}</div>
     <div class="box"><h5>Abilità</h5>${skills}<div class="stat" style="margin-top:6px"><span class="lab">Saggezza (Percezione) passiva</span><output data-c="pp"></output></div></div>
