@@ -1,4 +1,4 @@
-## What's new in 3.11.1
+## What's new in 3.12.0
 
 **At the table**
 - **Tools as floating windows** (with a mouse): a tool's panel opens next to its button as a window with a draggable title bar, a resize handle and an X. Position and size are remembered for each tool. The bottom bar stays centered.
@@ -26,7 +26,7 @@
 - Voice asks only once in the app.
 - In the tutorial, the "Back to home" step is skipped when the button is not visible.
 
-## Novità della 3.11.1
+## Novità della 3.12.0
 
 **Al tavolo**
 - **Strumenti come finestre mobili** (con il mouse): il pannello di uno strumento si apre accanto al pulsante come una finestra con barra da trascinare, maniglia per ridimensionare e X. Posto e misura si ricordano per ogni strumento. La barra in basso resta centrata.
