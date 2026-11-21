@@ -678,7 +678,7 @@ function formaPulita(x) {
   return sh;
 }
 
-// L'ordine dei turni: lo decide il master. Ai giocatori non arrivano i nomi dei segnalini nascosti.
+// L'ordine dei turni: lo decide il master. Ai giocatori non arrivano i nomi dei segnalini sul livello nascosto.
 function turniPuliti(t) {
   if (!t || !Array.isArray(t.righe)) return null;
   const s = (v, n) => String(v == null ? '' : v).slice(0, n);
@@ -692,13 +692,23 @@ function turniPerChi(c) {
   const t = world.turni;
   if (!t) return null;
   if (permsFor(c).seeHiddenLayer) return t;
+  // Si tolgono solo i segnalini che il master ha messo sul livello nascosto. Prima si toglievano anche quelli
+  // fuori dalla visuale o nella nebbia di quel giocatore: ognuno riceveva una lista diversa, sparivano i turni
+  // dei compagni lontani e la barra restava ferma su «Tocca a: X · Poi: X».
   const nascosti = new Set();
-  for (const sc of world.scenes || []) for (const ph of sc.photos || []) if ((ph.layer || 'tokens') === 'hidden' || nascostoA(c, sc, ph)) nascosti.add(ph.id);
+  for (const sc of world.scenes || []) for (const ph of sc.photos || []) if ((ph.layer || 'tokens') === 'hidden') nascosti.add(ph.id);
   const righe = t.righe.filter(r => !(r.pid && nascosti.has(r.pid)));
-  // il turno corrente per id: se tocca a un segnalino che il giocatore non vede, nessuna riga è «ora»
-  // (prima saltava alla prima riga, come se toccasse a un altro)
-  const ora = t.righe[t.cur];
-  return { ...t, righe, cur: righe.indexOf(ora), curId: ora ? ora.id : null };
+  // il turno corrente per id: se tocca a un segnalino nascosto nessuna riga è «ora» (cur -1) e «dopo» dice chi
+  // viene dopo tra quelli che il giocatore vede
+  const ora = t.righe[t.cur], cur = righe.indexOf(ora);
+  let dopo = cur;
+  if (cur < 0 && righe.length) {
+    for (let k = 1; k <= t.righe.length; k++) {
+      const i = righe.indexOf(t.righe[((t.cur || 0) + k) % t.righe.length]);
+      if (i >= 0) { dopo = i; break; }
+    }
+  }
+  return { ...t, righe, cur, dopo, curId: ora ? ora.id : null };
 }
 
 /** La soundboard: chi può far partire i suoni la vede intera; gli altri solo quel che serve per sentirli (id e file), senza titoli né immagini. */
