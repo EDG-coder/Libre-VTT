@@ -70,6 +70,29 @@ function netSend(o) { try { NET.ws && NET.ws.readyState === 1 && NET.ws.send(JSO
 // l'ultimo), e così i salvataggi della stessa scheda. Il ping, la prova del percorso durante il trascinamento
 // e i pezzi delle immagini non aspettano: senza collegamento non partono (le immagini hanno la loro attesa).
 NET.coda = []; NET.n = 0;
+// Tiri e messaggi non ancora confermati dal server si tengono anche nella scheda del browser: se la pagina
+// si ricarica (connessione debole!) prima del «ok», al ritorno si rimandano. Il server riconosce il numero (q)
+// e non li rifà se erano già arrivati. Valgono 30 minuti, e solo per chi li ha fatti (stesso gettone).
+const NET_PERSISTE = new Set(['roll', 'roll.prov', 'chat', 'rule']);
+const NET_CODA_CHIAVE = 'uffa-coda';
+function netSalvaCoda() {
+  try {
+    const l = NET.coda.filter(e => NET_PERSISTE.has(e.op)).map(e => ({ q: e.q, op: e.op, x: e.x, t: e.t || Date.now() }));
+    if (l.length) sessionStorage.setItem(NET_CODA_CHIAVE, JSON.stringify({ tok: netToken(), l }));
+    else sessionStorage.removeItem(NET_CODA_CHIAVE);
+  } catch {}
+}
+function netRipristinaCoda() {
+  try {
+    const o = JSON.parse(sessionStorage.getItem(NET_CODA_CHIAVE) || 'null');
+    if (!o || o.tok !== netToken() || !Array.isArray(o.l)) return;
+    const ora = Date.now();
+    for (const e of o.l) {
+      if (!e || typeof e.q !== 'string' || !NET_PERSISTE.has(e.op) || !(ora - e.t < 30 * 60e3) || NET.coda.some(y => y.q === e.q)) continue;
+      NET.coda.push({ n: ++NET.n, q: e.q, op: e.op, x: e.x || {}, k: null, t: e.t });
+    }
+  } catch {}
+}
 NET.sessione = [...crypto.getRandomValues(new Uint8Array(4))].map(b => b.toString(16).padStart(2, '0')).join('');
 const NET_SUBITO = new Set(['percorso.prova', 'ping', 'sound', 'righello', 'asset.put', 'asset.have', 'asset.get']);
 function netChiave(op, x) {
@@ -91,9 +114,10 @@ function intent(op, extra) {
   if (!netAs()) return;                                       // da soli: non c'è nessun server
   const x = extra || {}, k = netChiave(op, x);
   if (k) NET.coda = NET.coda.filter(e => e.k !== k);
-  const e = { n: ++NET.n, q: NET.sessione + '.' + NET.n, op, x, k };
+  const e = { n: ++NET.n, q: NET.sessione + '.' + NET.n, op, x, k, t: Date.now() };
   NET.coda.push(e);
   if (NET.coda.length > 500) NET.coda.splice(0, NET.coda.length - 500);
+  if (NET_PERSISTE.has(op)) netSalvaCoda();
   if (netAperto()) { netSend({ t: 'intent', op, q: e.q, ...x }); e.via = true; }   // (col tubo giù il ponte la tiene da parte)
   // un host di prima della 3.7 non conferma: quello che è partito non resta in coda (al ritorno lo rifarebbe)
   if (e.via && NET.conferme === false) NET.coda = NET.coda.filter(y => y !== e);
@@ -320,7 +344,7 @@ function netHandle(m) {
   switch (m.t) {
     case 'beat': netSend({ t: 'pong' }); return;
     case 'eco': clearTimeout(NET._eco); NET._eco = 0; return;   // c'è
-    case 'ok': NET.coda = NET.coda.filter(e => e.q !== m.q); return;   // fatto (o rifiutato): esce dalla coda
+    case 'ok': NET.coda = NET.coda.filter(e => e.q !== m.q); netSalvaCoda(); return;   // fatto (o rifiutato): esce dalla coda
     case 'leggera':                              // il server ha visto che il collegamento è debole (o di nuovo buono)
       NET.leggera = !!m.on;
       document.body.classList.toggle('net-leggera', NET.leggera);
@@ -340,8 +364,9 @@ function netHandle(m) {
       NET.sa = Array.isArray(m.sa) ? m.sa : [];
       netRighelliVia();
       if (typeof netAreeVia === 'function') netAreeVia();
+      if (NET.conferme) netRipristinaCoda();      // quello che non era arrivato prima di ricaricare la pagina
       const rimandate = netRimanda();
-      if (!NET.conferme) NET.coda = [];
+      if (!NET.conferme) { NET.coda = []; netSalvaCoda(); }
       if (NET.offline) netSay(tr('Il master non c\'è: lavori sulla copia che ho salvato. Quello che fai gli arriva quando torna, e decide lui.'), 'live');
       else if (back && rimandate) netSay(tr('Ricollegato: ho mandato le {n} cose fatte mentre eri scollegato.', { n: rimandate }), 'live');
       else if (back) netSay('Ricollegato: sei di nuovo nella sessione.', 'live');
@@ -435,7 +460,7 @@ function netHandle(m) {
       return;
     case 'sound': if (typeof soundDaRete === 'function') soundDaRete(m); return;
     case 'denied':
-      if (m.q) NET.coda = NET.coda.filter(e => e.q !== m.q);
+      if (m.q) { NET.coda = NET.coda.filter(e => e.q !== m.q); netSalvaCoda(); }
       netSay(tr('Non si può:') + ' ' + tr(m.reason || 'il master non te l\'ha permesso.'), 'warn');
       // un movimento rifiutato (un muro, troppo lontano): il segnalino torna indietro piano
       if (m.op === 'token.move' && NET.ultimoMosso && NET.ultimoMosso.isConnected) {
