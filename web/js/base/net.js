@@ -85,6 +85,30 @@ function netChiave(op, x) {
     default: return null;
   }
 }
+// La coda sopravvive a un ricaricamento della pagina (con un collegamento debole capita di ricaricare mentre un
+// tiro sta ancora partendo): si tiene in sessionStorage per qualche minuto e, rientrati, si rimanda. Il server
+// riconosce dal numero (q) ciò che ha già fatto, quindi niente doppioni.
+const NET_CODA_CHIAVE = 'uffa-coda', NET_CODA_VALIDA = 10 * 60 * 1000;
+function netCodaSalva() {
+  try {
+    if (NET.coda.length) sessionStorage.setItem(NET_CODA_CHIAVE, JSON.stringify({ ts: Date.now(), token: NET.me && NET.me.token || localStorage.getItem('uffa-token') || '', n: NET.n, sess: NET.sessione, coda: NET.coda.map(e => ({ n: e.n, q: e.q, op: e.op, x: e.x, k: e.k })) }));
+    else sessionStorage.removeItem(NET_CODA_CHIAVE);
+  } catch {}
+}
+/** Dopo un ricaricamento: rimette in coda quello che non aveva ancora avuto risposta (una volta sola, e solo se è recente). */
+function netCodaRecupera(token) {
+  try {
+    const raw = sessionStorage.getItem(NET_CODA_CHIAVE);
+    if (!raw) return;
+    sessionStorage.removeItem(NET_CODA_CHIAVE);
+    const d = JSON.parse(raw);
+    if (!d || Date.now() - d.ts > NET_CODA_VALIDA || (d.token && token && d.token !== token) || !Array.isArray(d.coda)) return;
+    const gia = new Set(NET.coda.map(e => e.q));
+    const prima = d.coda.filter(e => e && typeof e.q === 'string' && typeof e.op === 'string' && !gia.has(e.q) && !NET_SUBITO.has(e.op)).map(e => ({ n: 0, q: e.q, op: e.op, x: e.x || {}, k: e.k || null }));
+    NET.coda = prima.concat(NET.coda);
+  } catch {}
+}
+addEventListener('pagehide', () => netCodaSalva());
 const netAperto = () => !!(NET.on && NET.ws && NET.ws.readyState === 1);
 function intent(op, extra) {
   if (NET_SUBITO.has(op)) { if (NET.on) netSend({ t: 'intent', op, ...extra }); return; }
@@ -97,6 +121,7 @@ function intent(op, extra) {
   if (netAperto()) { netSend({ t: 'intent', op, q: e.q, ...x }); e.via = true; }   // (col tubo giù il ponte la tiene da parte)
   // un host di prima della 3.7 non conferma: quello che è partito non resta in coda (al ritorno lo rifarebbe)
   if (e.via && NET.conferme === false) NET.coda = NET.coda.filter(y => y !== e);
+  netCodaSalva();
   if (!netAperto() || NET.hostDown) netAvvisaCoda();
 }
 const netInAttesa = () => NET.coda.length;
@@ -320,7 +345,7 @@ function netHandle(m) {
   switch (m.t) {
     case 'beat': netSend({ t: 'pong' }); return;
     case 'eco': clearTimeout(NET._eco); NET._eco = 0; return;   // c'è
-    case 'ok': NET.coda = NET.coda.filter(e => e.q !== m.q); return;   // fatto (o rifiutato): esce dalla coda
+    case 'ok': NET.coda = NET.coda.filter(e => e.q !== m.q); netCodaSalva(); return;   // fatto (o rifiutato): esce dalla coda
     case 'leggera':                              // il server ha visto che il collegamento è debole (o di nuovo buono)
       NET.leggera = !!m.on;
       document.body.classList.toggle('net-leggera', NET.leggera);
@@ -340,6 +365,8 @@ function netHandle(m) {
       NET.sa = Array.isArray(m.sa) ? m.sa : [];
       netRighelliVia();
       if (typeof netAreeVia === 'function') netAreeVia();
+      NET.conferme = Array.isArray(m.sa) && m.sa.includes('ok');
+      if (NET.conferme) netCodaRecupera(m.you.token); else { try { sessionStorage.removeItem(NET_CODA_CHIAVE); } catch {} }
       const rimandate = netRimanda();
       if (!NET.conferme) NET.coda = [];
       if (NET.offline) netSay(tr('Il master non c\'è: lavori sulla copia che ho salvato. Quello che fai gli arriva quando torna, e decide lui.'), 'live');
@@ -435,7 +462,7 @@ function netHandle(m) {
       return;
     case 'sound': if (typeof soundDaRete === 'function') soundDaRete(m); return;
     case 'denied':
-      if (m.q) NET.coda = NET.coda.filter(e => e.q !== m.q);
+      if (m.q) { NET.coda = NET.coda.filter(e => e.q !== m.q); netCodaSalva(); }
       netSay(tr('Non si può:') + ' ' + tr(m.reason || 'il master non te l\'ha permesso.'), 'warn');
       // un movimento rifiutato (un muro, troppo lontano): il segnalino torna indietro piano
       if (m.op === 'token.move' && NET.ultimoMosso && NET.ultimoMosso.isConnected) {

@@ -260,18 +260,26 @@ function stdBindImages(root, s) {
 
 const bodyKey = k => k + '_d';
 
-// Il danno della riga attacco: il primo tiro [[dadi]] del titolo o della descrizione (gli incantesimi
-// presi dal compendio lo hanno nel titolo); se non ce ne sono, i dadi scritti nel testo, col tipo di danno.
+// Il danno dell'incantesimo, per la riga attacco. Si cerca, in ordine: un tiro [[dadi]] nel titolo (come lo scrive
+// il compendio: «Fiamma sacra [[1d8 | Fiamma sacra]]»), uno nella descrizione, poi un dado scritto in chiaro
+// vicino a «damage» / «danni» («takes 4d6 radiant damage» → «4d6 radiant»). Quello che segue
+// «ai livelli superiori» / «at higher levels» / «cantrip upgrade» non conta: è la scala, non il danno base.
+const DADI_TIRO = /\[\[\s*(\d*d\d+[^\]|]*?)\s*(?:\|[^\]]*)?\]\]/i;
 function spellDanno(s, k) {
-  const tit = String(s.f[k] || ''), corpo = String(s.f[bodyKey(k)] || '');
-  const m = (tit + '\n' + corpo).match(/\[\[\s*(\d*d\d+[^\]|]*?)\s*(?:\|\s*([^\]]*?)\s*)?\]\]/i);
-  if (m) return m[1].trim();
-  const x = corpo.match(/(\d+d\d+(?:\s*[+-]\s*\d+)?)\s+(?:([a-zà-ù]+)\s+damage|danni\s+(?:da\s+|di\s+)?([a-zà-ù]+))/i)
-    || corpo.match(/(\d+d\d+(?:\s*[+-]\s*\d+)?)/i);
-  if (!x) return '';
-  const tipo = x[2] || x[3];
-  return x[1].replace(/\s+/g, '') + (tipo ? ' ' + tipo : '');
+  const titolo = String(s.f[k] || ''), corpo = String(s.f[bodyKey(k)] || '');
+  const base = corpo.split(/\n\s*(?:at higher levels|ai livelli superiori|cantrip upgrade|potenziamento)/i)[0];
+  const m = titolo.match(DADI_TIRO) || base.match(DADI_TIRO);
+  if (m) return m[1];
+  const L = 'A-Za-zÀ-ÖØ-öø-ÿ';
+  const dado = '(\\d+d\\d+(?:\\s*[+-]\\s*\\d+)?)';
+  let t = base.match(new RegExp(dado + '\\s+([' + L + ']+)\\s+damage', 'i'))                                   // 4d6 radiant damage
+    || base.match(new RegExp(dado + '\\s+(?:punti\\s+ferita\\s+)?danni?\\s+(?:da\\s+|di\\s+)?([' + L + ']+)', 'i'));   // 4d6 danni radiosi / da fuoco
+  if (t) return t[1].replace(/\s+/g, '') + ' ' + t[2].toLowerCase();
+  t = base.match(new RegExp(dado + '(?=[^.\\n]{0,30}(?:damage|danni|danno|hit points|punti ferita))', 'i'));
+  return t ? t[1].replace(/\s+/g, '') : '';
 }
+/** Il nome dell'incantesimo senza i [[tiri]] che il compendio scrive dopo il nome. */
+const spellNome = (s, k) => String(s.f[k] || '').replace(/\[\[[^\]]*\]\]/g, '').replace(/\s+/g, ' ').trim();
 /**
  * Incantesimo con tiro per colpire: la riga degli attacchi si compila da sola (nome, bonus, danno),
  * una volta sola. Togliere la spunta non cancella la riga: resta, e si può modificare a mano.
@@ -282,11 +290,22 @@ function spellAtkSet(top, s, k, on) {
   s.f[k + '_att'] = '1';
   // già collegata a una riga che c'è ancora: niente doppioni (se l'hai svuotata, se ne fa una nuova)
   const prima = s.f[k + '_atk'];
-  if (prima != null && prima !== '' && ['an', 'ab', 'ad'].some(p => String(s.f[p + prima] ?? '').trim())) return;
+  if (prima != null && prima !== '' && ['an', 'ab', 'ad'].some(p => String(s.f[p + prima] ?? '').trim())) {
+    // la riga c'è già: se il danno era rimasto vuoto (descrizione scritta dopo) lo si completa, senza toccare il resto
+    if (!String(s.f['ad' + prima] ?? '').trim()) {
+      const d = spellDanno(s, k);
+      if (d) {
+        s.f['ad' + prima] = d;
+        const el = top && top.querySelector(`[data-f="ad${prima}"]`);
+        if (el) el.value = d;
+      }
+    }
+    return;
+  }
   const n = quantiAttacchi(s);                       // prima riga libera
   if (top && top._addAtk) top._addAtk(n + 1);
   const bonus = typeof atkIncantesimi === 'function' ? atkIncantesimi(s) : null;
-  s.f['an' + n] = String(s.f[k] || '').replace(/\s*\[\[[^\]]*\]\]/g, '').trim() || 'Incantesimo';
+  s.f['an' + n] = spellNome(s, k) || 'Incantesimo';
   s.f['ab' + n] = bonus == null ? '' : sgnE(bonus);
   s.f['ad' + n] = spellDanno(s, k);
   s.f[k + '_atk'] = String(n);
