@@ -260,10 +260,17 @@ function stdBindImages(root, s) {
 
 const bodyKey = k => k + '_d';
 
-// Il primo tiro [[dadi]] scritto nella descrizione dell'incantesimo, che diventa il danno della riga attacco.
+// Il danno della riga attacco: il primo tiro [[dadi]] del titolo o della descrizione (gli incantesimi
+// presi dal compendio lo hanno nel titolo); se non ce ne sono, i dadi scritti nel testo, col tipo di danno.
 function spellDanno(s, k) {
-  const m = String(s.f[bodyKey(k)] || '').match(/\[\[\s*(\d*d\d+[^\]|]*?)\s*(?:\|[^\]]*)?\]\]/i);
-  return m ? m[1] : '';
+  const tit = String(s.f[k] || ''), corpo = String(s.f[bodyKey(k)] || '');
+  const m = (tit + '\n' + corpo).match(/\[\[\s*(\d*d\d+[^\]|]*?)\s*(?:\|\s*([^\]]*?)\s*)?\]\]/i);
+  if (m) return m[1].trim();
+  const x = corpo.match(/(\d+d\d+(?:\s*[+-]\s*\d+)?)\s+(?:([a-zà-ù]+)\s+damage|danni\s+(?:da\s+|di\s+)?([a-zà-ù]+))/i)
+    || corpo.match(/(\d+d\d+(?:\s*[+-]\s*\d+)?)/i);
+  if (!x) return '';
+  const tipo = x[2] || x[3];
+  return x[1].replace(/\s+/g, '') + (tipo ? ' ' + tipo : '');
 }
 /**
  * Incantesimo con tiro per colpire: la riga degli attacchi si compila da sola (nome, bonus, danno),
@@ -279,7 +286,7 @@ function spellAtkSet(top, s, k, on) {
   const n = quantiAttacchi(s);                       // prima riga libera
   if (top && top._addAtk) top._addAtk(n + 1);
   const bonus = typeof atkIncantesimi === 'function' ? atkIncantesimi(s) : null;
-  s.f['an' + n] = String(s.f[k] || '').trim() || 'Incantesimo';
+  s.f['an' + n] = String(s.f[k] || '').replace(/\s*\[\[[^\]]*\]\]/g, '').trim() || 'Incantesimo';
   s.f['ab' + n] = bonus == null ? '' : sgnE(bonus);
   s.f['ad' + n] = spellDanno(s, k);
   s.f[k + '_atk'] = String(n);
