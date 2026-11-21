@@ -258,6 +258,7 @@ function scollega(s) {
 function vociFileScheda(w) {
   const s = w._sheet, e = SINCRO.get(s.id), out = ['-'];
   out.push({ label: '💾 Salva in un file…', fn: () => salvaSuFile(s).catch(err => avvisoScheda('Non sono riuscito a salvare la scheda: ' + err.message)) });
+  if (typeof window.esportaSchedaPdf === 'function') out.push({ label: '📄 Esporta in PDF…', fn: () => window.esportaSchedaPdf(s).catch(err => avvisoScheda(tr('Non sono riuscito a fare il PDF: {e}', { e: err.message }))) });
   if (e) {
     if (e.stato === 'permesso') out.push({ label: '🔗 Riattiva la sincronizzazione', fn: async () => {
       if (await permesso(e, true)) { e.controllato = false; segnaStato(s.id, e, 'ok'); giroSincro(); } else avvisoScheda('Senza il permesso di scrivere il file la sincronizzazione resta in pausa.');

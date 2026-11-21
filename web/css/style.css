@@ -438,6 +438,14 @@ body.menu-open #sideToggle svg { transform: rotate(180deg); }
   border: 1px solid rgba(255, 255, 255, .22); box-shadow: 0 6px 22px rgba(0, 0, 0, .4);
 }
 #sceneBtn:hover { background: rgba(60, 50, 110, .6); }
+/* «Esci»: solo per chi gioca (chi conduce ha «Torna alla home» nel menu delle scene), e solo se l'app c'è */
+#dockEsci { display: none; }
+body.net-player #dockEsci:not([hidden]) {
+  display: flex; align-items: center; height: 44px; padding: 0 16px; border-radius: 22px; font-size: 14px; color: #fff; text-decoration: none; white-space: nowrap;
+  background: rgba(18, 21, 28, .55); -webkit-backdrop-filter: blur(10px) saturate(1.5); backdrop-filter: blur(10px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, .22); box-shadow: 0 6px 22px rgba(0, 0, 0, .4);
+}
+body.net-player #dockEsci:not([hidden]):hover, #dockEsci:focus-visible { background: rgba(150, 50, 60, .6); }
 #sceneName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #sceneBtn svg { transition: transform .25s; flex: none; }
 #sceneBtn[aria-expanded="true"] svg { transform: rotate(180deg); }
