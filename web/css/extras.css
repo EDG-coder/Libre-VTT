@@ -203,6 +203,8 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 .sheetWin .sdot { width: 16px; height: 16px; border-radius: 50%; background: #ff5f57; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25); }
 .sheetWin .sdot:hover { background: #ff3b30; }
 .sheetWin .sbody { flex: 1; min-height: 0; overflow: auto; padding: 12px; }
+/* Con il mouse la scheda si ridimensiona dall'angolo in basso a destra: la barra di scorrimento si ferma sopra, così la sua freccia in giù non si sovrappone alla maniglia. */
+@media (pointer: fine) { .sheetWin:not(.inFinestra):not(.min):not(.icon) .sbody { margin-bottom: 18px; } }
 
 .sheetWin .sgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; align-items: start; }
 .sheetWin .box { border: 1px solid var(--sh-line); border-radius: 10px; background: color-mix(in srgb, var(--sh-soft) 55%, var(--sh-bg)); padding: 8px 10px; }
