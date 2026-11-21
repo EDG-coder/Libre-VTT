@@ -126,11 +126,16 @@
     const on = !!st.on && st.righe.length > 0;
     barra.hidden = !on;
     if (!on) return;
-    const ora = st.righe[st.cur] || st.righe[0], poi = st.righe.length > 1 ? st.righe[(st.cur + 1) % st.righe.length] : null;
+    // cur -1 (dal server): tocca a un segnalino nascosto a questo giocatore. Prima qui si ripiegava sulla prima
+    // riga sia per «Tocca a» sia per «Poi» (righe[(-1 + 1) % n]): «Tocca a: X · Poi: X», ferma lì
+    const n = st.righe.length, nascosto = st.cur < 0 || st.cur >= n;
+    const ora = nascosto ? null : st.righe[st.cur];
+    const iPoi = !nascosto ? (st.cur + 1) % n : Number.isInteger(st.dopo) && st.dopo >= 0 && st.dopo < n ? st.dopo : 0;
+    const poi = nascosto || n > 1 ? st.righe[iPoi] : null;
     tbTesta.replaceChildren();
     const pezzo = (t, cl) => { const e = document.createElement('span'); e.textContent = t; if (cl) e.className = cl; e.setAttribute('data-noi18n', ''); tbTesta.append(e); };
     pezzo(tr('Round {n}', { n: st.round || 1 }), 'tbRound');
-    pezzo(tr('Tocca a: {n}', { n: ora.nome }), 'tbOra');
+    pezzo(tr('Tocca a: {n}', { n: ora ? ora.nome : '…' }), 'tbOra');
     if (poi) pezzo(tr('Poi: {n}', { n: poi.nome }), 'tbPoi');
     tbLista.replaceChildren(...st.righe.map((r, i) => {
       const li = document.createElement('li'); li.setAttribute('data-noi18n', '');
