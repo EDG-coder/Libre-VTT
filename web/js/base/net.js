@@ -1372,9 +1372,10 @@ function netSyncForm() {
   }
 }
 // Il collegamento «torna all'avvio» ha senso solo se sei partito dall'app.
-// Sta anche nel menu delle scene, dove si trova subito.
+// Sta anche nel menu delle scene, dove si trova subito, e, per chi gioca (che il menu delle scene non lo può usare),
+// come pulsante «Esci» nella barra in basso, accanto ai livelli.
 if ($('netHome') && !window.LIBRE_WEB) {   // nella versione web non c'è nessun avviatore da cercare
-  const home = [$('netHome'), $('sceneHome')].filter(Boolean);
+  const home = [$('netHome'), $('sceneHome'), $('dockEsci')].filter(Boolean);
   for (const a of home) {
     a.hidden = true; a.href = 'http://127.0.0.1:' + NET.uiPort + '/';
     a.addEventListener('click', () => { try { fetch('http://127.0.0.1:' + NET.uiPort + '/api/passaggio', { keepalive: true, mode: 'no-cors' }).catch(() => {}); } catch {} });   // non è una chiusura

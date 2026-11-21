@@ -168,6 +168,8 @@
     }));
   }
 
+  window.libreriaPdf = libreria;
+
   // Da un elenco di campi { nome, valore } (testo o true/false) alla scheda.
   function schedaDaCampi(campi, nomeFile) {
     const f = {}, avanzi = [], incantesimi = [], dopo = { rimasti: {}, inc: {} };
@@ -304,7 +306,11 @@
   window.leggiEtichettePdf = leggiEtichette;
 
   function crea(c, avviso) {
-    const s = { id: uid(), icon: null, name: c.name, tpl: c.tpl, f: c.f };
+    // un segnalino letto dal PDF fa anche da immagine dell'«Aspetto del personaggio»
+    if (c.ritratto) { c.f.img_portrait = c.ritratto; delete c.f.img_portrait_aid; }
+    const s = { id: uid(), icon: c.icon || null, name: c.name, tpl: c.tpl, f: c.f };
+    // «Aspetto del personaggio» mostra sempre il segnalino della scheda (se il PDF non ne aveva uno, quello di partenza)
+    if (c.ritratto === null && typeof makeIcon === 'function') s.f.img_portrait = makeIcon(s);
     sheets.push(s); renderSheetList(); scheduleSheets();
     if (typeof onSheetCreated === 'function') onSheetCreated(s);
     $('sheetDialog').close();
@@ -316,6 +322,11 @@
     let buf, campi;
     try { buf = await file.arrayBuffer(); campi = await leggiPdf(buf.slice(0)); }
     catch (e) { alert(tr('Non riesco a leggere questo PDF: {e}', { e: e.message })); return; }
+    // 0. un PDF fatto sul modello della scheda di LIBRE VTT (anche esportato da qui): si ritrova la scheda com'era
+    try {
+      const m = typeof window.leggiModelloPdf === 'function' ? await window.leggiModelloPdf(buf.slice(0), file.name) : null;
+      if (m) { crea(m, tr('Scheda «{nome}» importata dal PDF.', { nome: '{nome}' })); return; }
+    } catch (e) { console.warn('PDF modello:', e); }
     // 1. un PDF compilabile: si leggono i campi
     if (campi.some(c => c.valore === true || (typeof c.valore === 'string' && c.valore.trim()))) {
       const c = schedaDaCampi(campi, file.name);
