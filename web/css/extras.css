@@ -422,6 +422,7 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
   --ps: 52px;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--ps), 1fr));
   gap: 7px; margin: 6px 0; max-height: 46vh; max-height: 46dvh; overflow: auto;
+  flex: none; /* nella finestra mobile (colonna flex) non deve ridursi a 0 e nascondere le miniature */
 }
 .parkGrid:empty { display: none; }
 .parkChip {
