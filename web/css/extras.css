@@ -186,6 +186,8 @@ svg.drawSvg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; over
 :where(.sheetWin, .temaScheda) :is(select, option) { background-color: var(--sh-bg); color: var(--sh-fg); }
 :where(.sheetWin, .temaScheda) input:is([type=checkbox], [type=radio], [type=range]) { accent-color: var(--sh-accent); }
 :where(.sheetWin, .temaScheda) .note { color: color-mix(in srgb, var(--sh-fg) 65%, var(--sh-bg)); }
+/* un po' di spazio in fondo: la freccia della barra di scorrimento non finisce sotto la maniglia per ridimensionare */
+.sheetWin:not(.min):not(.icon) { padding-bottom: 16px; }
 .sheetWin.min { resize: none; height: auto !important; min-height: 0; }
 .sheetWin.min .sbody { display: none; }
 .sheetWin .stitle {

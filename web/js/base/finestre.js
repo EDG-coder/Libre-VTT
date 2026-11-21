@@ -133,8 +133,25 @@
     else w.setAttribute('popover', 'manual');
     try { if (w.matches(':popover-open')) w.hidePopover(); w.showPopover(); ultima = w; } catch {}
   }
+  // Il menu del clic destro e le tendine (incantesimo, capacità) stanno nella pagina normale: con una finestra di
+  // strumento aperta (la cartella delle schede, per esempio) le finestre delle schede salgono nel livello superiore e
+  // li coprirebbero. Finché sono visibili, anche loro passano nel livello superiore, dopo le finestre: restano sopra.
+  const MENU_SOPRA = '#ctx, #spellPop, .capPop';
+  function menuSopra(el) {
+    if (el.hidden) {
+      if (el.hasAttribute('popover')) { try { el.hidePopover(); } catch {} el.removeAttribute('popover'); }
+      return;
+    }
+    if (!aperte.size || !permesso()) return;
+    el.setAttribute('popover', 'manual');
+    try { if (el.matches(':popover-open')) el.hidePopover(); el.showPopover(); } catch {}
+  }
+  new MutationObserver(ms => { for (const m of ms) if (m.target.matches && m.target.matches(MENU_SOPRA)) menuSopra(m.target); })
+    .observe(document.documentElement, { attributes: true, attributeFilter: ['hidden'], subtree: true });
+
   function riportaGiu() {
     for (const w of document.querySelectorAll('.sheetWin[popover]')) { try { w.hidePopover(); } catch {} w.removeAttribute('popover'); }
+    for (const m of document.querySelectorAll(MENU_SOPRA)) if (m.hasAttribute('popover')) { try { m.hidePopover(); } catch {} m.removeAttribute('popover'); }
   }
 
   function apri(t) {

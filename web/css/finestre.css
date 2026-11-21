@@ -39,3 +39,6 @@ html.finestre .finW:popover-open.finMuove { user-select: none; box-shadow: 0 14p
 
 /* una finestra di scheda portata nel livello superiore (finestre.js) resta dov'è e com'è: via gli stili dei popover */
 .sheetWin[popover] { inset: auto; margin: 0; padding: 0; }
+
+/* il menu del clic destro e le tendine portati nel livello superiore (finestre.js) restano dov'erano */
+:where(#ctx, #spellPop, .capPop)[popover] { inset: auto; margin: 0; }
