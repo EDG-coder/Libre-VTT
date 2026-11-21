@@ -55,7 +55,7 @@
     w: parseFloat(corpo.style.getPropertyValue('--fw')), h: parseFloat(corpo.style.getPropertyValue('--fh')) });
 
   function portaInCima(corpo) {                      // l'ultima finestra mostrata sta sopra le altre
-    try { corpo.hidePopover(); corpo.showPopover(); } catch {}
+    try { corpo.hidePopover(); corpo.showPopover(); ultima = corpo; } catch {}   // ricordarla: sopra(w) la scambia con una scheda
   }
 
   function aggancia(t, corpo) {
