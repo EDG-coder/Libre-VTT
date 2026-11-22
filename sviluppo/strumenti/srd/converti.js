@@ -38,6 +38,16 @@ const dsc = o => testo(o.desc !== undefined ? o.desc : o.description);
 const metri = s => String(s || '');
 const leggi = (ed, f) => { try { return JSON.parse(fs.readFileSync(path.join(SRC, ed, 'en', `5e-SRD-${f}.json`), 'utf8')); } catch { return []; } };
 const gs = cr => cr === 0.125 ? '1/8' : cr === 0.25 ? '1/4' : cr === 0.5 ? '1/2' : String(cr);
+// I PE seguono il grado di sfida (tabella dell'SRD): in 5e-database alcuni mostri hanno PE sbagliati (cavallo da galoppo, dretch…).
+const PE_PER_GS = { '1/8': 25, '1/4': 50, '1/2': 100, 1: 200, 2: 450, 3: 700, 4: 1100, 5: 1800, 6: 2300, 7: 2900, 8: 3900, 9: 5000, 10: 5900, 11: 7200, 12: 8400, 13: 10000, 14: 11500, 15: 13000, 16: 15000, 17: 18000, 18: 20000, 19: 22000, 20: 25000, 21: 33000, 22: 41000, 23: 50000, 24: 62000, 25: 75000, 26: 90000, 27: 105000, 28: 120000, 29: 135000, 30: 155000 };
+// Correzioni puntuali ai dati di 5e-database che non coincidono con l'SRD (il resto passa tale e quale).
+const CORREZIONI_MOSTRI = {
+  '2014:cult-fanatic': { pf: 33, dadiPf: '6d8+6' },
+  '2014:blink-dog': { sensi: 'Percezione passiva 13' },
+  '2014:black-bear': { abilita: { Percezione: 3 } },
+  '2014:swarm-of-ravens': { abilita: { Percezione: 5 } },
+  '2014:half-red-dragon-veteran': { abilita: { Percezione: 2 } }
+};
 const segno = n => (n >= 0 ? '+' : '') + n;
 
 function converti(ed, idSis, idPack, nomePack, fonte) {
@@ -82,7 +92,7 @@ function converti(ed, idSis, idPack, nomePack, fonte) {
       return out;
     };
     const sensi = Object.entries(m.senses || {}).map(([k, x]) => k === 'passive_perception' ? `Percezione passiva ${x}` : `${({ darkvision: 'Scurovisione', blindsight: 'Vista cieca', tremorsense: 'Percezione tellurica', truesight: 'Vista pura' })[k] || k} ${x}`).join(', ');
-    const vel = Object.entries(m.speed || {}).map(([k, x]) => (k === 'walk' ? '' : ({ fly: 'volare ', swim: 'nuotare ', climb: 'scalare ', burrow: 'scavare ', hover: '' })[k] || k + ' ') + (x === true ? '(fluttuare)' : x)).join(', ');
+    const vel = Object.entries(m.speed || {}).filter(([k]) => k !== 'hover').map(([k, x]) => (k === 'walk' ? '' : ({ fly: 'volare ', swim: 'nuotare ', climb: 'scalare ', burrow: 'scavare ' })[k] || k + ' ') + x + (k === 'fly' && m.speed.hover ? ' (fluttuare)' : '')).join(', ');
     const tipo = String(m.type || '').toLowerCase();
     metti('mostro', { index: m.index, corpo: {
       nome: nomeIt(m.name, 'mostri'), en: m.name, taglia: TAGLIE[m.size] || m.size, tipoCreatura: TIPI[tipo.split(' ')[0]] || m.type, sottotipo: m.subtype || undefined, allineamento: m.alignment,
@@ -92,10 +102,11 @@ function converti(ed, idSis, idPack, nomePack, fonte) {
       ts: Object.keys(ts).length ? ts : undefined, abilita: Object.keys(ab).length ? ab : undefined,
       vulnerabilita: (m.damage_vulnerabilities || []).map(v).join(', ') || undefined, resistenze: (m.damage_resistances || []).map(v).join(', ') || undefined,
       immunita: (m.damage_immunities || []).map(v).join(', ') || undefined, immCondizioni: (m.condition_immunities || []).map(c => v(c.name || c)).join(', ') || undefined,
-      sensi, lingue: m.languages || '—', gs: gs(m.challenge_rating), px: m.xp, competenza: m.proficiency_bonus,
+      sensi, lingue: m.languages || '—', gs: gs(m.challenge_rating), px: PE_PER_GS[gs(m.challenge_rating)] ?? m.xp, competenza: m.proficiency_bonus,
       tratti: (m.special_abilities || []).map(azione), azioni: (m.actions || []).map(azione),
       azioniBonus: (m.bonus_actions || []).map(azione), reazioni: (m.reactions || []).map(azione),
-      leggendarie: (m.legendary_actions || []).map(azione)
+      leggendarie: (m.legendary_actions || []).map(azione),
+      ...(CORREZIONI_MOSTRI[ed + ':' + m.index] || {})
     } });
   }
   // equipaggiamento (armi, armature, attrezzi…) e oggetti magici
