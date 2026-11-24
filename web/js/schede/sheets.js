@@ -231,7 +231,7 @@ function renderSheetList() {
     const d = document.createElement('div'), im = new Image(), nm = document.createElement('span'), sm = document.createElement('small');
     d.className = 'sheetItem'; d.dataset.id = s.id; d.draggable = true; d.title = document.documentElement.classList.contains('ui-touch') ? 'Tocca per aprire, tieni premuto per le altre opzioni' : 'Doppio clic per aprire, trascina sulla mappa per il segnalino';
     im.className = 'sicon'; im.src = iconOf(s); im.alt = ''; im.draggable = false;
-    nm.className = 'nm'; nm.textContent = s.name; sm.textContent = (nelParty(s) ? '🧑‍🤝‍🧑 ' : '') + ({ standard: 'Standard', dnd5e: 'Open 5e', simple: 'Open semplice' }[s.tpl] || '');
+    nm.className = 'nm'; nm.textContent = s.name; sm.textContent = (nelParty(s) ? '🧑‍🤝‍🧑 ' : '') + ({ standard: 'Standard', dnd5e: 'Open 5e', simple: 'Open semplice', mostro: 'Mostro' }[s.tpl] || '');
     d.append(im, nm, sm);
     d.addEventListener('dblclick', () => openSheet(s.id));
     // copia = segnalino sulla mappa; sposta = in una cartella dell'elenco
@@ -545,7 +545,7 @@ const sheetWinMenu = w => {
     st === 'open' ? { label: 'Riduci a barra', fn: () => setWinState(w, 'min') } : { label: 'Ripristina', fn: () => setWinState(w, 'open') },
     ...(w._sheet && st !== 'icon' ? [{ label: 'Riduci a icona', fn: () => setWinState(w, 'icon') }] : []),
     ...(w._sheet ? [{ label: '🖼 Cambia icona…', fn: () => (typeof scegliIconaScheda === 'function' ? scegliIconaScheda(w._sheet) : pickAsset(a => setSheetIcon(w._sheet, a))) }] : []),
-    ...(w._sheet && w._sheet.tpl !== 'simple' && w._sheet.tpl !== 'generica' ? [{ label: (vistaScheda.get(w._sheet.id) || w._sheet.tpl) === 'standard' ? '📋 Vedi come scheda Open (solo ora)' : '📜 Vedi come scheda Standard (solo ora)', fn: () => cambiaVista(w) }] : []),
+    ...(w._sheet && w._sheet.tpl !== 'simple' && w._sheet.tpl !== 'generica' && w._sheet.tpl !== 'mostro' ? [{ label: (vistaScheda.get(w._sheet.id) || w._sheet.tpl) === 'standard' ? '📋 Vedi come scheda Open (solo ora)' : '📜 Vedi come scheda Standard (solo ora)', fn: () => cambiaVista(w) }] : []),
     ...(w._sheet && typeof vociFileScheda === 'function' ? vociFileScheda(w) : []),
     ...(w._sheet && typeof vociSaliLivello === 'function' ? vociSaliLivello(w) : []),
     '-', { label: 'Chiudi', fn: () => closeWin(w) }
@@ -563,15 +563,19 @@ function openSheet(id) {
   refreshWinIcon(w);
   w._ic.addEventListener('click', () => { if (w._state !== 'icon') pickAsset(a => setSheetIcon(s, a)); });
   const tpl = vistaScheda.get(id) || s.tpl;       // si può guardare la stessa scheda nell'altro formato
-  const std = tpl === 'standard';
+  const std = tpl === 'standard', mz = tpl === 'mostro';
+  if (mz) {
+    w.classList.add('mzWin');
+    Object.assign(w.style, { width: Math.min(1020, innerWidth - 20) + 'px', height: Math.min(780, innerHeight - 80) + 'px' });
+  }
   if (std) {
     stdMigrate(s);
     w.classList.add('stdWin');
     Object.assign(w.style, { width: Math.min(880, innerWidth - 20) + 'px', height: Math.min(900, innerHeight - 80) + 'px' });
   }
   const body = w._body;
-  body.innerHTML = (std ? '' : '<div class="box nameBox"><label class="lab">Nome del personaggio<input type="text" data-name maxlength="40"></label></div>') +
-    (std ? standardHtml() : tpl === 'dnd5e' ? dndHtml() : tpl === 'generica' && typeof genericaHtml === 'function' ? genericaHtml() : simpleHtml());
+  body.innerHTML = (std || mz ? '' : '<div class="box nameBox"><label class="lab">Nome del personaggio<input type="text" data-name maxlength="40"></label></div>') +
+    (std ? standardHtml() : mz ? mostroHtml(s) : tpl === 'dnd5e' ? dndHtml() : tpl === 'generica' && typeof genericaHtml === 'function' ? genericaHtml() : simpleHtml());
   const ni = body.querySelector('[data-name]');
   if (ni) {
     ni.value = s.name;
@@ -580,6 +584,7 @@ function openSheet(id) {
   bindSheet(body, s);
   if (std) stdSetup(w, body, s);
   if (tpl === 'dnd5e') openSetup(w, body, s);
+  if (mz) mostroSetup(w, body, s);
   if (tpl === 'generica' && typeof genericaSetup === 'function') genericaSetup(w, body, s);
   dentroLoSchermo(w);
   return w;
