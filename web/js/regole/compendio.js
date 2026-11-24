@@ -648,14 +648,20 @@
       f.speed = v.velocita || ''; f.profb = String(v.competenza ?? ''); f.class = [v.taglia, v.tipoCreatura].filter(Boolean).join(' '); f.level = '';
       f.align = v.allineamento || ''; f.race = tr('GS {g}', { g: v.gs });
       for (const [k, n] of Object.entries(v.ts || {})) if (n !== mod(v.car[k] || 10)) f['sp_' + k] = '1';
+      const priv = privataV(v);                         // da un manuale: nomi e tiri sì, il testo no
+      // il mostro com'è (tratti e azioni) per la scheda «Mostro»; ogni attacco col tiro per colpire sa su quale riga an/ab/ad sta
+      const m = JSON.parse(JSON.stringify(v));
+      for (const k of ['id', 'tipo', 'fonte', 'en', 'it', '_p', 'testo']) delete m[k];
+      if (priv) { m._p = 1; for (const sez of ['tratti', 'azioni', 'azioniBonus', 'reazioni', 'leggendarie']) for (const a of m[sez] || []) a.testo = ''; }
       let i = 0;
-      for (const a of v.azioni || []) {
+      for (const sez of ['azioni', 'azioniBonus', 'reazioni', 'leggendarie']) for (const a of m[sez] || []) {
         if (!Number.isFinite(a.colpire) && !(a.danni && a.danni.length)) continue;
         f['an' + i] = a.nome; f['ab' + i] = Number.isFinite(a.colpire) ? (a.colpire >= 0 ? '+' : '') + a.colpire : a.cd ? 'CD ' + a.cd.valore : '';
         f['ad' + i] = (a.danni || []).map(d => d.dadi + (d.tipo ? ' ' + d.tipo.toLowerCase() : '')).join(' + ');
+        if (Number.isFinite(a.colpire)) a.ai = i;
         i++;
       }
-      const priv = privataV(v);                         // da un manuale: nomi e tiri sì, il testo no
+      s.tpl = 'mostro'; f.mz = JSON.stringify(m);       // la scheda a due colonne (sheet-mostro.js)
       const blocco = (tit, arr) => arr && arr.length ? `${tit}\n` + arr.map(a => `${a.nome}${a.uso ? ' (' + a.uso + ')' : ''}.${priv ? '' : ' ' + (a.testo || '')}${Number.isFinite(a.colpire) ? ` [[1d20${a.colpire >= 0 ? '+' : ''}${a.colpire} | ${a.nome}]]` : ''}${(a.danni || []).map(d => ` [[${d.dadi} | ${a.nome} ${d.tipo || ''}]]`).join('')}`).join('\n\n') + '\n\n' : '';
       f.features = (priv ? `📖 ${tr('Il testo completo è nel tuo compendio: «{n}».', { n: v.nome })}\n\n` : '') + (blocco(tr('TRATTI'), v.tratti) + blocco(tr('AZIONI'), v.azioni) + blocco(tr('AZIONI BONUS'), v.azioniBonus) + blocco(tr('REAZIONI'), v.reazioni) + blocco(tr('AZIONI LEGGENDARIE'), v.leggendarie)).trim();
       f.racial = [v.sensi && tr('Sensi') + ': ' + v.sensi, v.lingue && tr('Linguaggi') + ': ' + v.lingue, v.resistenze && tr('Resistenze') + ': ' + v.resistenze, v.immunita && tr('Immunità') + ': ' + v.immunita, v.immCondizioni && tr('Immunità alle condizioni') + ': ' + v.immCondizioni].filter(Boolean).join('\n');

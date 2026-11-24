@@ -50,6 +50,14 @@
       b.append(nv);
       bindField(nv.querySelector('input'), w._body, sh);
       nv.querySelector('input').addEventListener('change', () => setTimeout(() => { if (typeof updateTokenBars === 'function') updateTokenBars(); }, 0));
+      if (sh.tpl === 'mostro') {                           // la descrizione in più di un attacco: chiedere, scriverla sempre o mai
+        const ex = document.createElement('label');
+        ex.className = 'tiroCrit tiroEstra';
+        ex.title = tr('Se un attacco ha una descrizione oltre al tiro e ai danni (per esempio la maledizione di un morso): chiedere se scriverla in chat dopo l\'attacco, scriverla sempre o mai.');
+        ex.innerHTML = `${tr('Testo extra dell\'attacco')} <select data-f="testoExtra"><option value="">${tr('Chiedi')}</option><option value="sempre">${tr('Sempre')}</option><option value="mai">${tr('Mai')}</option></select>`;
+        b.append(ex);
+        bindField(ex.querySelector('select'), w._body, sh);
+      }
       if (sh.tpl !== 'simple' && sh.tpl !== 'generica') {
         const av = document.createElement('button');
         av.type = 'button'; av.className = 'btn ghost tiroAvanzate'; av.textContent = tr('⚙ Avanzate');

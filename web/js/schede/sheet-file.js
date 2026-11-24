@@ -83,7 +83,7 @@ function contenutoDa(j) {
   }
   const imm = j.immagini || {};
   for (const k of ['img_portrait', 'img_symbol']) if (dataImg(imm[k])) f[k] = imm[k];
-  const tpl = ['standard', 'dnd5e', 'simple'].includes(j.scheda.modello) ? j.scheda.modello : 'dnd5e';
+  const tpl = ['standard', 'dnd5e', 'simple', 'mostro'].includes(j.scheda.modello) ? j.scheda.modello : 'dnd5e';
   return { name: String(j.scheda.nome || 'Personaggio').slice(0, 40), tpl, f, icon: dataImg(imm.icona) ? { url: imm.icona } : null };
 }
 
@@ -314,7 +314,7 @@ $('sheetImport').addEventListener('click', async () => {
   let j;
   try { j = leggiScheda(scelto.testo); } catch (err) { alert(err.message); return; }
   daImportare = { j, e: scelto.e };
-  const c = contenutoDa(j), modello = { standard: 'Standard', dnd5e: 'Open 5e', simple: 'Open semplice' }[c.tpl];
+  const c = contenutoDa(j), modello = { standard: 'Standard', dnd5e: 'Open 5e', simple: 'Open semplice', mostro: 'Mostro' }[c.tpl];
   const quando = j.salvata ? new Date(j.salvata).toLocaleString(window.LIBRE_I18N ? LIBRE_I18N.lingua : 'it', { dateStyle: 'short', timeStyle: 'short' }) : '';
   $('importSheetInfo').textContent = `«${c.name}» · scheda ${modello}` + (c.f.class ? ` · ${c.f.class}${c.f.level ? ' ' + c.f.level : ''}` : '') + (quando ? ` · salvata il ${quando}` : '');
   const puo = !!scelto.e;

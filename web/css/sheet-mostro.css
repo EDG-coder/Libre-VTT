@@ -1,0 +1,40 @@
+/* ---------- Scheda «Mostro» (sheet-mostro.js): due colonne, i colori sono quelli dello stile delle schede (--sh-*) ---------- */
+.mzWin .sbody { padding: 0; position: relative; }
+.mzWin .mzScheda { padding: 14px 22px 22px; }
+.mzWin .mzCols { display: flex; flex-wrap: wrap; gap: 8px 40px; align-items: flex-start; }
+.mzWin .mzSx { flex: 1 1 340px; min-width: 0; }
+.mzWin .mzDx { flex: 1.15 1 340px; min-width: 0; }
+.mzWin input.mzNome[type=text] { width: 100%; box-sizing: border-box; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--sh-accent);
+  font: inherit; font-variant: small-caps; font-weight: 700; font-size: 2em; line-height: 1.15; padding: 0 4px; margin-left: -4px; }
+.mzWin input.mzNome[type=text]:hover, .mzWin input.mzNome[type=text]:focus { border-color: var(--sh-line); background: var(--sh-field, transparent); outline: 0; }
+.mzWin .mzSott { margin: 0 0 2px; font-style: italic; opacity: .85; }
+.mzWin .mzBar { border: 0; height: 5px; margin: 8px 0; border-radius: 3px; background: linear-gradient(90deg, var(--sh-accent), transparent); }
+.mzWin .mzRiga { margin: 4px 0; line-height: 1.45; }
+.mzWin .mzRiga > b { color: var(--sh-accent); }
+.mzWin .mzCar { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; margin: 6px 0; }
+.mzWin .mzCar button.mzAb { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 2px; border: 1px solid var(--sh-line); border-radius: 14px; background: var(--sh-soft); }
+.mzWin .mzAb b { font-variant: small-caps; color: var(--sh-accent); font-size: 1.1em; }
+.mzWin .mzAb span { font-size: .95em; white-space: nowrap; }
+.mzWin .mzTit { margin: 4px 0 6px; font-variant: small-caps; font-weight: 700; font-size: 1.55em; color: var(--sh-accent); border-bottom: 2px solid var(--sh-accent); }
+.mzWin .mzTit:not(:first-child) { margin-top: 18px; }
+.mzWin .mzVoce { margin: 10px 0; }
+.mzWin .mzIn { margin: 1px 0; line-height: 1.4; }
+/* ciò che si può cliccare: si illumina del colore della scheda al passaggio del mouse (o del dito) */
+.mzWin .mzClick { border: 0; background: none; color: inherit; font: inherit; padding: 0 3px; margin: 0 -3px; border-radius: 6px; cursor: pointer; text-align: inherit;
+  transition: background .12s, box-shadow .12s; }
+.mzWin .mzClick:hover, .mzWin .mzClick:focus-visible, .mzWin .mzClick:active {
+  background: color-mix(in srgb, var(--sh-accent) 28%, transparent);
+  box-shadow: 0 0 0 1px var(--sh-accent), 0 0 10px color-mix(in srgb, var(--sh-accent) 55%, transparent); outline: 0; }
+.mzWin .mzNomeV { font-weight: 700; display: inline-block; margin-bottom: 1px; }
+.mzWin .mzCar button.mzAb.mzClick { padding: 4px 2px; margin: 0; }
+/* la domanda dopo un attacco con descrizione in più */
+.mzWin .mzAsk { position: absolute; right: 14px; bottom: 14px; width: min(400px, calc(100% - 28px)); box-sizing: border-box; z-index: 6;
+  padding: 12px 14px; border: 1px solid var(--sh-accent); border-radius: 10px; background: var(--sh-bg); color: var(--sh-fg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+.mzWin .mzAsk p { margin: 0 0 6px; }
+.mzWin .mzAsk blockquote { margin: 0 0 8px; padding-left: 8px; border-left: 3px solid var(--sh-line); opacity: .85; font-size: .93em; }
+.mzWin .mzAskBtn { display: flex; flex-wrap: wrap; gap: 6px; }
+.tiroEstra { display: inline-flex; align-items: center; gap: 6px; }
+.ui-touch .mzWin .mzClick { padding: 3px 5px; }
+.mzWin .mzCar button.mzAb:hover, .mzWin .mzCar button.mzAb:focus-visible, .mzWin .mzCar button.mzAb:active {
+  background: color-mix(in srgb, var(--sh-accent) 28%, var(--sh-soft)); border-color: var(--sh-accent); }
