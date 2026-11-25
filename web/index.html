@@ -64,6 +64,11 @@
     <div class="dRow dSeg" id="diceVis" role="radiogroup" aria-label="Tiro pubblico o segreto">
       <button type="button" role="radio" data-vis="public">Tutti</button><button type="button" role="radio" data-vis="secret" title="Sussurro al master: il risultato lo vedete solo tu e il master, gli altri lo vedono censurato">🤫 Sussurro</button><button type="button" role="radio" data-vis="cieco" title="Tiro segreto: il risultato lo vede solo il master, anche tu lo vedi censurato. Il master può mostrarlo a tutti">🔒 Segreto</button>
     </div>
+    <div class="dLabel">Dadi 3D</div>
+    <div class="dRow dOpz">
+      <label class="check" title="I dadi rotolano sullo schermo e si fermano sul risultato già tirato. Un solo tiro in chat: «/r 1d20+3 3d»"><input type="checkbox" id="dice3d"> Tira con i dadi 3D</label>
+      <label class="check" title="Mostra anche i dadi 3D tirati dagli altri"><input type="checkbox" id="dice3dAltri"> Vedi quelli degli altri</label>
+    </div>
     <div class="dLabel">Dado (un clic tira)</div>
     <div class="dRow" id="diceTypes"></div>
     <div class="dRow">Personalizzato&nbsp;d<input id="customSides" type="number" min="2" max="1000" value="7"><button id="customRoll" type="button">Tira</button></div>
@@ -440,6 +445,7 @@
 </dialog>
 <div id="ctx" hidden><button type="button">🗑 Elimina</button></div>
 <script src="condiviso/animazione.js"></script>
+<script src="js/strumenti/dadi3d.js"></script>
 <script src="js/mappa/sfondo-animato.js"></script>
 <script src="js/mappa/griglia-forme.js"></script>
 <script src="js/base/script.js"></script>

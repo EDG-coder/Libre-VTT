@@ -619,3 +619,7 @@ html.graficaLeggera *, html.graficaLeggera *::before, html.graficaLeggera *::aft
 html.graficaLeggera ::backdrop { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 html.graficaLeggera :is(.glass, #dice, #zoomBox, #sceneBtn, #layerSwitch, #targetSwitch) { background-color: rgba(18, 21, 28, .88); }
 html.graficaLeggera .photo:not(.selected) img { filter: none; }
+
+/* dadi 3D: un canvas sopra al tavolo, che non prende i clic (web/js/strumenti/dadi3d.js) */
+#dadi3dCanvas { position: fixed; inset: 0; z-index: 2000000000; pointer-events: none; }
+#dice .dOpz { flex-direction: column; align-items: flex-start; gap: 4px; }

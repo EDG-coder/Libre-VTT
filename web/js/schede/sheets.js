@@ -24,7 +24,7 @@ const DEXPR_RE = new RegExp('^[+-]?' + DTERM + '(?:[+-]' + DTERM + ')*$');
 function parseExpr(str) {
   const s = String(str || '').replace(/\s+/g, '').toLowerCase();
   if (s.length > 80 || !DEXPR_RE.test(s)) return null;
-  const rolls = [], drop = []; let mod = 0, sides = 0, mixed = false, count = 0, adv = '';
+  const rolls = [], drop = []; let mod = 0, sides = 0, mixed = false, count = 0, adv = ''; const fc = [];
   for (const tkn of s.match(new RegExp('[+-]?' + DTERM, 'g'))) {
     const neg = tkn[0] === '-', body = tkn.replace(/^[+-]/, '');
     const dm = body.match(/^(\d*)d(\d+)(?:k([hl])(\d+))?$/);
@@ -35,7 +35,7 @@ function parseExpr(str) {
       if (sides && sides !== faces) mixed = true;
       sides = faces;
       const start = rolls.length, vals = [];
-      for (let i = 0; i < cnt; i++) { const v = rnd(faces); vals.push(v); rolls.push((neg ? -1 : 1) * v); }
+      for (let i = 0; i < cnt; i++) { const v = rnd(faces); vals.push(v); rolls.push((neg ? -1 : 1) * v); fc.push(faces); }
       if (dm[3]) {
         const k = parseInt(dm[4], 10);
         if (!(k >= 1 && k <= cnt)) return null;
@@ -53,6 +53,7 @@ function parseExpr(str) {
   if (!rolls.length || Math.abs(mod) > 10000) return null;
   const total = rolls.reduce((a, b, i) => drop.includes(i) ? a : a + b, 0) + mod;
   const out = { rolls, mod, sides: mixed ? 0 : sides, total };
+  if (mixed) out.fc = fc;                                           // le facce di ogni dado (servono ai dadi 3D)
   if (drop.length) out.drop = drop.sort((a, b) => a - b);
   if (adv) out.adv = adv;
   return out;
@@ -68,8 +69,10 @@ function rollExpr(expr, label) {
   if (window.tiroDoppio && r.rolls && r.rolls.length === 2) m.doppio = true;
   if (window.tiroCritico >= 15 && window.tiroCritico <= 19) m.crit = window.tiroCritico;
   if (window.tiroRif) m.rif = { ...window.tiroRif };
+  if (d.d3) m.d3 = true;                                  // dadi 3D: solo l'animazione, il risultato è già in m
   addChat(m);
   diceShowLast(m);
+  if (m.d3 && window.Dadi3D) Dadi3D.mostra(m, true);
   return m;
 }
 // in chat: /r 2d6+3  (oppure /roll ...)
@@ -99,7 +102,12 @@ function chatCommand(text) {
   if (sussurro(text)) return true;
   const m = text.match(/^\/(?:r|roll)\s+(.+)$/i);
   if (!m) return false;
-  if (!rollExpr(m[1])) addChat({ kind: 'text', text: 'Tiro non valido: ' + m[1] });
+  // «/r 1d20+3 3d»: l'attributo «3d» in fondo fa rotolare i dadi 3D solo per questo tiro
+  const t3 = /^(.*\S)\s+(?:-{0,2}3d)$/i.exec(m[1]);
+  const espr = t3 ? t3[1] : m[1];
+  window.tiro3dUna = !!t3;
+  try { if (!rollExpr(espr)) addChat({ kind: 'text', text: 'Tiro non valido: ' + espr }); }
+  finally { window.tiro3dUna = false; }
   return true;
 }
 

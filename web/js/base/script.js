@@ -2454,7 +2454,7 @@ function fitDice() { if (dice.classList.contains('open')) dice.style.setProperty
 // Vantaggio e svantaggio toccano solo il d20 del tiro (1d20+5 → 2d20kh1+5): i danni restano uguali.
 // Maiusc+clic = vantaggio, Alt+clic = svantaggio, solo per quel tiro.
 // secret: «sussurro al master» (lo vedete tu e il master); cieco: tiro segreto (lo vede solo il master)
-const diceMode = { adv: 'none', secret: false, cieco: false };
+const diceMode = { adv: 'none', secret: false, cieco: false, d3: !!(window.Dadi3D && Dadi3D.pref.miei) };
 let diceKeys = { adv: false, dis: false, at: 0 };
 addEventListener('pointerdown', e => { diceKeys = { adv: e.shiftKey, dis: e.altKey && !e.shiftKey, at: performance.now() }; }, true);
 function diceAdvNow() {
@@ -2469,7 +2469,7 @@ function diceApply(expr) {
     // il primo d20 singolo («d20», «1d20») diventa due d20 di cui si tiene il migliore (o il peggiore)
     e = e.replace(/(^|[+-])1?d20(?![\dk])/i, (_, sign) => sign + '2d20' + (adv === 'adv' ? 'kh1' : 'kl1'));
   }
-  return { expr: e, secret: diceMode.secret || diceMode.cieco, cieco: diceMode.cieco || undefined, adv };
+  return { expr: e, secret: diceMode.secret || diceMode.cieco, cieco: diceMode.cieco || undefined, adv, d3: (diceMode.d3 || window.tiro3dUna) || undefined };
 }
 const tagNascosto = m => m.cieco ? ' · ' + tr('🔒 segreto') : m.secret ? ' · ' + tr('🤫 sussurro') : '';
 /** Riassunto dell'ultimo tiro sotto ai dadi. */
@@ -2491,6 +2491,9 @@ let dicePopTimer = 0;
 function diceMostraGrande(m, tag) {
   const chatVista = document.body.classList.contains('menu-open') && $('tab-chat') && $('tab-chat').classList.contains('active');
   if (chatVista) return;
+  // con i dadi 3D il totale grande aspetta che i dadi si fermino
+  const ritardo = m.d3 && window.Dadi3D ? Dadi3D.ritardo(m) : 0;
+  if (ritardo && !m.d3Atteso) { m.d3Atteso = true; setTimeout(() => { try { diceMostraGrande(m, tag); } finally { delete m.d3Atteso; } }, ritardo); return; }
   let pop = $('dicePop');
   if (!pop) {
     pop = document.createElement('div'); pop.id = 'dicePop'; pop.setAttribute('role', 'status');
@@ -2545,6 +2548,14 @@ $('diceVis').addEventListener('click', e => {
   diceMode.secret = b.dataset.vis === 'secret'; diceMode.cieco = b.dataset.vis === 'cieco'; diceSyncModes();
 });
 diceSyncModes();
+{
+  const c3 = $('dice3d'), ca = $('dice3dAltri');
+  if (c3 && ca && window.Dadi3D) {
+    c3.checked = !!diceMode.d3; ca.checked = !!Dadi3D.pref.altri;
+    c3.addEventListener('change', () => { diceMode.d3 = c3.checked; Dadi3D.imposta('miei', c3.checked); });
+    ca.addEventListener('change', () => Dadi3D.imposta('altri', ca.checked));
+  }
+}
 $('customRoll').addEventListener('click', () => {
   const n = Math.floor(+$('customSides').value);
   if (n >= 2 && n <= 1000) rollDice(n);
