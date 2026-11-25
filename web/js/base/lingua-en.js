@@ -1130,6 +1130,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "non puoi caricare immagini": "you can't upload images",
 "troppi caricamenti insieme": "too many uploads at once",
 "immagine troppo grande (max 12 MB)": "image too large (max 12 MB)",
+"immagine troppo grande (max 50 megapixel)": "image too large (max 50 megapixels)",
 "non so cosa sia": "I don't know what this is",
 "Ti sei ricollegato da un'altra parte.": "You reconnected from somewhere else.",
 "Non sei più ammesso a questa sessione.": "You're no longer allowed in this session.",

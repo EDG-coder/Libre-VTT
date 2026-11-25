@@ -21,6 +21,7 @@ const http = require('http'), net = require('net'), fs = require('fs'), path = r
 const LUCE = require('../condiviso/luce-calcolo.js');
 const VERS = require('../condiviso/versioni.js');
 const CALCOLO = require('../condiviso/calcolo.js');
+const { dimensioniImmagine } = require('./dimensioni-immagine.js');
 
 const MODE = (process.argv[2] || 'host').toLowerCase();
 const DEDICATO = MODE === 'host' && process.env.LIBRE_DEDICATO === '1';
@@ -971,6 +972,25 @@ function isTheirs(c, sc, ph) {
   return !!(sh && sheetVisible(c, sh) === 'rw');
 }
 const findScene = id => (world.scenes || []).find(s => s.id === id);
+/** L'id di una scena da mostrare a tutti: una stringa che sia l'id di una scena che c'è, oppure null
+ *  (nessuna scena mostrata). Qualunque altra cosa (oggetti, numeri, stringhe di scene che non esistono) → undefined. */
+const scenaMostrabile = id => (id == null || id === '') ? null : (typeof id === 'string' && findScene(id) ? id : undefined);
+/** Dove può stare un segnalino e quanto può essere grande: oltre, copre la mappa a tutti e rallenta luce,
+ *  nebbia e righello. Gli stessi limiti dell'host dell'app per telefono. Un valore non numerico vale 0 (posizione). */
+const POS_MAX = 1e7, MISURA_MAX = 1e5;
+const posizioneLimitata = v => Number.isFinite(+v) ? Math.max(-POS_MAX, Math.min(POS_MAX, +v)) : 0;
+const misuraLimitata = v => Math.min(MISURA_MAX - 1, +v);
+/** La posizione mandata con token.move, con l/t nei limiti e w/h solo se numeri positivi (e sotto il limite). */
+function posLimitata(x) {
+  const o = x && typeof x === 'object' ? x : {};
+  const q = Object.assign({}, o, { l: posizioneLimitata(o.l), t: posizioneLimitata(o.t) });
+  q.w = +o.w > 0 ? misuraLimitata(o.w) : undefined;
+  q.h = +o.h > 0 ? misuraLimitata(o.h) : undefined;
+  return q;
+}
+/** Un'immagine con più di 50 megapixel (letti dall'intestazione, senza decodificarla). Se non si capisce, si lascia passare. */
+const PIXEL_MAX = 50e6;
+const troppiPixel = buf => { const d = dimensioniImmagine(buf); return !!d && d.w * d.h > PIXEL_MAX; };
 
 function handleIntent(c, m) {
   const p = permsFor(c);
@@ -1045,7 +1065,7 @@ function handleIntent(c, m) {
       const mine = isTheirs(c, sc, ph);
       if (!(p.moveAnyToken || (p.moveOwnTokens && mine))) return deny(c, m.op, 'non è un tuo segnalino');
       if ((ph.layer || 'tokens') === 'hidden' && !p.seeHiddenLayer) return deny(c, m.op, 'non puoi');
-      const pos = m.pos || {};
+      const pos = posLimitata(m.pos);                     // già nei limiti prima dei muri e della velocità
       // il movimento di un giocatore: muri non attraversabili e, nelle scene di battaglia, la velocità
       const mov = p.moveAnyToken ? { ok: true } : controllaMovimento(sc, ph, pos);
       if (!mov.ok) { schedulePush(); return deny(c, m.op, mov.perche); }
@@ -1053,9 +1073,9 @@ function handleIntent(c, m) {
       else if (mov.caselle > 0 && ph.scatta === true) delete ph.scatta;                 // senza turni lo scatto vale per un movimento
       // passato per un passaggio (le scale fra due piani): esce dall'altra parte
       const sl = saltoDi(sc, ph, pos);
-      ph.l = sl ? sl.l : +pos.l || 0; ph.t = sl ? sl.t : +pos.t || 0;
-      if (pos.w > 0) ph.w = +pos.w;
-      if (pos.h > 0) ph.h = +pos.h;
+      ph.l = sl ? posizioneLimitata(sl.l) : pos.l; ph.t = sl ? posizioneLimitata(sl.t) : pos.t;
+      if (pos.w > 0) ph.w = pos.w;
+      if (pos.h > 0) ph.h = pos.h;
       // la rotazione dell'immagine (gradi, 0-359): solo un numero, 0 = dritto
       if ('rot' in pos && !ph.shape) { const g = gradiRotazione(pos.rot); if (g) ph.rot = g; else delete ph.rot; }
       if (sl) c.send({ t: 'salto', id: ph.id, x: sl.x, y: sl.y });
@@ -1077,7 +1097,7 @@ function handleIntent(c, m) {
       const sc = findScene(m.scene) || findScene(world.active);
       const ph = sc && (sc.photos || []).find(x => x.id === m.id);
       if (!ph || !(p.moveAnyToken || (p.moveOwnTokens && isTheirs(c, sc, ph)))) return;
-      const r = p.moveAnyToken ? { ok: true } : controllaMovimento(sc, ph, m.pos || {});
+      const r = p.moveAnyToken ? { ok: true } : controllaMovimento(sc, ph, posLimitata(m.pos));
       c.send({ t: 'percorso', id: ph.id, ok: !!r.ok, perche: r.ok ? '' : r.perche, n: m.n });
       return;
     }
@@ -1188,7 +1208,9 @@ function handleIntent(c, m) {
     // --- scena mostrata ---
     case 'scene.show': {
       if (!p.editScene) return deny(c, m.op, 'solo chi conduce');
-      world.publicScene = m.id || null;
+      const idMostrata = scenaMostrabile(m.id);
+      if (idMostrata === undefined) return deny(c, m.op, 'scena sconosciuta');
+      world.publicScene = idMostrata;
       scheduleSave(); schedulePush();
       panelPush({ t: 'scene', id: world.publicScene });
       return;
@@ -1465,7 +1487,10 @@ function handleIntent(c, m) {
       job.parts.push(chunk);
       if (!m.last) return;
       box.delete(id);
-      const hash = storeAsset(Buffer.concat(job.parts), job.mime, job.name);
+      const tutto = Buffer.concat(job.parts);
+      // troppi pixel: un telefono collegato chiuderebbe l'app (o non la disegnerebbe) a decodificarla
+      if (c.role !== 'master' && troppiPixel(tutto)) return deny(c, m.op, 'immagine troppo grande (max 50 megapixel)');
+      const hash = storeAsset(tutto, job.mime, job.name);
       c.send({ t: 'asset.ok', id, hash });
       if (hash) logAction(c, 'asset.put', true, job.name + ' · ' + Math.round(job.got / 1024) + ' kB');
       return;
@@ -2763,10 +2788,13 @@ function apiPannello(p, m, chi) {
       const r = decidiOff(str(m.id, 40), m.scelti === 'tutti' ? 'tutti' : m.scelti, chi);
       return { codice: r.ok ? 200 : 404, dati: r };
     }
-    case '/api/scene':
-      world.publicScene = m.id || null;
+    case '/api/scene': {
+      const idMostrata = scenaMostrabile(m.id);
+      if (idMostrata === undefined) return { codice: 404, dati: { ok: false } };
+      world.publicScene = idMostrata;
       scheduleSave(); pushWorldAll(); panelPush({ t: 'scene', id: world.publicScene });
       return { codice: 200, dati: { ok: true } };
+    }
     case '/api/mod': {
       const rec = roster[m.token];
       if (!rec) return { codice: 404, dati: { ok: false } };
