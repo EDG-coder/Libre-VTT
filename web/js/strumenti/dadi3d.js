@@ -203,13 +203,131 @@
       d.rimbalzi = 2 + Math.floor(Math.random() * 2);
       d.parti = d.cs.map(c => ({ c, fin: verso(c.sagoma.fs[c.bersaglio]) }));
     });
-    const fine = corpi.reduce((m, d) => Math.max(m, d.ritardo), 0) + (moto ? TEMPO_VOLO : 0);
-    return { corpi, moto, fine, durata: fine + TENUTA + DISSOLVENZA, t0: 0, msg };
+    let fine = corpi.reduce((m, d) => Math.max(m, d.ritardo), 0) + (moto ? TEMPO_VOLO : 0), fisica = false;
+    if (moto && !leggera()) { const nf = simula(corpi, S, w, h); fisica = true; fine = nf * 1000 / 60; }
+    return { corpi, moto, fisica, fine, durata: fine + TENUTA + DISSOLVENZA, t0: 0, msg };
+  }
+
+  // ---------- la fisica (grafica normale): i dadi si lanciano, rimbalzano a caso e si scontrano ----------
+  // Si simula tutto prima (cerchi che si urtano, attrito, rimbalzi in altezza con piccoli calci casuali) e poi si
+  // riproduce il percorso. Il dado però finisce sempre sulla faccia già decisa: negli ultimi istanti, quando va
+  // piano, l'orientamento si assesta su quella faccia.
+  const transp = M => [M[0], M[3], M[6], M[1], M[4], M[7], M[2], M[5], M[8]];
+  function inAsse(M) {                                              // asse e angolo di una rotazione
+    const c = Math.max(-1, Math.min(1, (M[0] + M[4] + M[8] - 1) / 2)), a = Math.acos(c);
+    const v = [M[7] - M[5], M[2] - M[6], M[3] - M[1]], l = len(v);
+    return l < 1e-6 ? { a: 0, v: [0, 0, 1] } : { a, v: [v[0] / l, v[1] / l, v[2] / l] };
+  }
+  const R_ = (a, b) => a + Math.random() * (b - a);
+  function simula(corpi, S, w, h) {
+    const FPS = 60, SUB = 2, dt = 1 / (FPS * SUB), G = 3200;
+    const xmin = Math.max(w * 0.1, 76), xmax = w - Math.max(w * 0.06, 14);
+    let ymin = h * 0.2, ymax = h * 0.68;
+    const D = corpi.map((d, k) => {
+      const r = S * (d.cs.length > 1 ? 1.45 : 1.0);
+      const lato = Math.random() < .5 ? -1 : 1;
+      const x0 = lato < 0 ? xmin - r * 2.5 : xmax + r * 2.5, y0 = R_(ymin, ymax);
+      const dir = Math.atan2((ymin + ymax) / 2 - y0 + R_(-90, 90), (xmin + xmax) / 2 - x0 + R_(-w * .15, w * .15));
+      const sp = R_(900, 1500) * Math.min(1.2, w / 900 + 0.3);
+      return { r, x: x0, y: y0, vx: Math.cos(dir) * sp, vy: Math.sin(dir) * sp, hz: R_(60, 160), vz: R_(150, 420), e: R_(.38, .62),
+        R: asse(norm([R_(-1, 1), R_(-1, 1), R_(-1, 1)]), R_(0, 6.28)), wf: [R_(-9, 9), R_(-9, 9), R_(-9, 9)],
+        t0: k * 0.07 + R_(0, 0.06), dentro: false, fr: [] };
+    });
+    const maxT = 2.7; let nf = 0;
+    for (let st = 0; st < maxT * FPS * SUB; st++) {
+      const t = st * dt;
+      for (const q of D) {
+        if (t < q.t0) continue;
+        q.vz -= G * dt; q.hz += q.vz * dt;
+        if (q.hz <= 0) {
+          q.hz = 0;
+          if (Math.abs(q.vz) > 70) {                                   // rimbalzo: un calcio a caso in avanti e di lato, e un giro
+            q.vz = -q.vz * q.e;
+            const sp = Math.hypot(q.vx, q.vy);
+            q.vx += R_(-1, 1) * (90 + sp * .28); q.vy += R_(-1, 1) * (90 + sp * .28);
+            q.wf = [R_(-1, 1) * 11, R_(-1, 1) * 11, R_(-1, 1) * 11];
+          } else q.vz = 0;
+        }
+        const aria = q.hz > 0;
+        const k = aria ? 0.25 : 1.5 + 2.6 * t + (t > 2.1 ? 12 : 0);
+        const f = Math.exp(-k * dt); q.vx *= f; q.vy *= f;
+        q.x += q.vx * dt; q.y += q.vy * dt;
+        // pareti (solo dopo essere entrati nel tavolo)
+        if (!q.dentro && q.x > xmin + q.r && q.x < xmax - q.r) q.dentro = true;
+        if (q.dentro) {
+          if (q.x < xmin + q.r) { q.x = xmin + q.r; q.vx = Math.abs(q.vx) * .62; q.vy += R_(-1, 1) * 60; }
+          if (q.x > xmax - q.r) { q.x = xmax - q.r; q.vx = -Math.abs(q.vx) * .62; q.vy += R_(-1, 1) * 60; }
+        }
+        if (q.y < ymin + q.r) { q.y = ymin + q.r; q.vy = Math.abs(q.vy) * .62; q.vx += R_(-1, 1) * 60; }
+        if (q.y > ymax - q.r) { q.y = ymax - q.r; q.vy = -Math.abs(q.vy) * .62; q.vx += R_(-1, 1) * 60; }
+      }
+      // scontri fra dadi: cerchi uguali, urto quasi elastico, un po' di giro a caso
+      for (let i = 0; i < D.length; i++) for (let j = i + 1; j < D.length; j++) {
+        const a = D[i], b = D[j];
+        if (st * dt < a.t0 || st * dt < b.t0) continue;
+        const dx = b.x - a.x, dy = b.y - a.y, dist = Math.hypot(dx, dy) || 1e-3, min = a.r + b.r;
+        if (dist >= min) continue;
+        const nx = dx / dist, ny = dy / dist, ov = (min - dist) / 2;
+        a.x -= nx * ov; a.y -= ny * ov; b.x += nx * ov; b.y += ny * ov;
+        const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+        if (rv < 0) {
+          const imp = -(1 + 0.78) * rv / 2;
+          a.vx -= imp * nx; a.vy -= imp * ny; b.vx += imp * nx; b.vy += imp * ny;
+          if (-rv > 120) { a.wf = [R_(-1, 1) * 10, R_(-1, 1) * 10, R_(-1, 1) * 10]; b.wf = [R_(-1, 1) * 10, R_(-1, 1) * 10, R_(-1, 1) * 10]; a.vz += 120; b.vz += 120; a.hz += 1; b.hz += 1; }
+        }
+      }
+      // rotazione: rotola in base a come si muove, più un giro libero che si smorza
+      for (const q of D) {
+        if (st * dt < q.t0) continue;
+        const sp = Math.hypot(q.vx, q.vy);
+        if (sp > 1) { q.R = mul(asse([q.vy / sp, q.vx / sp, 0], sp / q.r * dt * (q.hz > 0 ? .4 : 1)), q.R); }
+        const wl = len(q.wf);
+        if (wl > 1e-3) { q.R = mul(asse([q.wf[0] / wl, q.wf[1] / wl, q.wf[2] / wl], wl * dt), q.R); const g = Math.exp(-2.4 * dt); q.wf = [q.wf[0] * g, q.wf[1] * g, q.wf[2] * g]; }
+      }
+      if (st % SUB === SUB - 1) {
+        nf++;
+        for (const q of D) q.fr.push({ x: q.x, y: q.y, hz: q.hz, R: q.R, on: st * dt >= q.t0 });
+        // finito quando tutti sono entrati e fermi
+        if (nf > 20 && D.every(q => st * dt >= q.t0 && q.hz === 0 && Math.hypot(q.vx, q.vy) < 6)) break;
+      }
+    }
+    corpi.forEach((d, k) => {
+      const q = D[k], fr = q.fr;
+      let sf = fr.length - 1;
+      while (sf > 0 && Math.hypot(fr[sf].x - fr[sf - 1].x, fr[sf].y - fr[sf - 1].y) < 0.15 && fr[sf].hz === 0) sf--;
+      sf = Math.min(fr.length - 1, sf + 1);
+      d.fr = fr; d.sf = sf; d.r = q.r;
+      d.f0 = Math.max(1, Math.floor(sf * 0.5));
+      d.corr = d.parti.map(pt => inAsse(mul(pt.fin, transp(fr[sf].R))));
+    });
+    return nf;
   }
   const indovina = v => [4, 6, 8, 10, 12, 20].find(s => s >= v) || 100;
   const ease = t => 1 - Math.pow(1 - t, 3);
+  const leggera = () => document.documentElement.classList.contains('graficaLeggera');
 
+  function disegnaFisica(d, t, alfa) {
+    const f = Math.min(d.fr.length - 1, Math.floor(t * 0.06));       // 60 immagini al secondo
+    const fr = d.fr[f];
+    if (!fr.on) return;
+    const sm = x => x * x * (3 - 2 * x);
+    const wgt = f >= d.sf ? 1 : f <= d.f0 ? 0 : sm((f - d.f0) / (d.sf - d.f0));
+    const alto = fr.hz, sc0 = d.S * (1 + alto / 480);
+    ctx.save();
+    ctx.globalAlpha = alfa * (0.42 - Math.min(0.25, alto / 900));
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(fr.x + d.S * 0.1 + alto * 0.1, fr.y + d.S * 0.92, d.S * (0.95 + alto / 700), d.S * 0.28, 0, 0, 7); ctx.fill();
+    ctx.restore();
+    const n = d.parti.length;
+    d.parti.forEach((pt, q) => {
+      const c = d.corr[q];
+      const M = mul(asse(c.v, c.a * wgt), f >= d.sf ? d.fr[d.sf].R : fr.R);
+      const ox = n > 1 ? (q ? -1 : 1) * d.S * 0.62 : 0;
+      disegnaCorpo(pt.c, n > 1 ? mul(M, [1, 0, 0, 0, 1, 0, 0, 0, 1]) : M, fr.x + ox, fr.y - alto, n > 1 ? sc0 * 0.82 : sc0, d.scartato && f >= d.sf ? alfa * 0.4 : alfa);
+    });
+  }
   function disegnaDado(d, t, alfa) {
+    if (corrente.fisica) return disegnaFisica(d, t, alfa);
     const { w } = dimensioni();
     void w;
     const lt = d.parti.length ? Math.max(0, Math.min(1, (t - d.ritardo) / TEMPO_VOLO)) : 1;
@@ -315,6 +433,7 @@
     /** Quanto ci mette il primo dado a fermarsi (il riquadro con il totale aspetta un po'). */
     ritardo(msg) {
       if (!msg || !msg.d3 || !prefersMoto()) return 0;
+      if (!leggera()) return 1900;                       // con la fisica i dadi si fermano dopo un paio di secondi
       return Math.min(TEMPO_VOLO + 70 * Math.min(11, (msg.rolls || []).length) , 2000);
     },
     imposta(chiave, valore) { pref[chiave] = !!valore; scriviPref(pref); },
