@@ -2078,7 +2078,16 @@ let ctxStack = [];
 const closeCtx = () => { ctx.hidden = true; ctxStack = []; };
 function menuBtn(it) {
   const b = document.createElement('button');
-  b.type = 'button'; b.textContent = it.label + (it.items ? '  ›' : '');
+  b.type = 'button';
+  // l'icona iniziale (emoji o simbolo) in una colonna sua, così i testi partono tutti dallo stesso punto;
+  // la freccia dei sottomenu a destra. Si traduce qui, prima di separare l'icona dal testo.
+  const testo = typeof window.tr === 'function' ? window.tr(it.label) : it.label;
+  const m = /^((?:\p{Extended_Pictographic}|[✂⚔✎←⬚＋+])\uFE0F?)\s+/u.exec(testo);
+  const ic = document.createElement('span'); ic.className = 'ctxIc'; ic.setAttribute('aria-hidden', 'true'); ic.textContent = m ? m[1] : '';
+  const lab = document.createElement('span'); lab.className = 'ctxLab'; lab.textContent = m ? testo.slice(m[0].length) : testo;
+  b.append(ic, lab);
+  if (it.items) { const a = document.createElement('span'); a.className = 'ctxSub'; a.setAttribute('aria-hidden', 'true'); a.textContent = '›'; b.append(a); }
+  b.dataset.noi18n = '';
   b.classList.toggle('danger', !!it.danger); b.disabled = !!it.off;
   b.addEventListener('click', () => {
     if (it.items) { ctxStack.push(it.items); drawMenu(); return; }
@@ -2094,6 +2103,7 @@ function drawMenu() {
     if (it === '-') { const d = document.createElement('div'); d.className = 'sep'; rows.push(d); } else rows.push(menuBtn(it));
   }
   ctx.replaceChildren(...rows);
+  ctx.classList.toggle('conIcone', rows.some(r => r.querySelector && r.querySelector('.ctxIc')?.textContent));
 }
 function showMenu(x, y, items) {
   if (!items || !items.length) return;

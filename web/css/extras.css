@@ -1427,3 +1427,23 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; gap:
 .tiroBar .tiroAvanzate { font-size: 12.5px; }
 .tiroBar .tiroSeg button { padding-inline: 8px; }
 .sheetWin .mVuoto { padding: 16px 18px; }
+/* Menu del clic destro: icone in colonna, testi allineati, freccia dei sottomenu a destra */
+#ctx button { display: flex; align-items: center; gap: 8px; }
+#ctx .ctxIc { flex: none; width: 1.25em; text-align: center; }
+#ctx:not(.conIcone) .ctxIc { display: none; }
+#ctx .ctxLab { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#ctx .ctxSub { flex: none; margin-left: 10px; opacity: .65; }
+/* ---------- Finestre di dialogo: stesso aspetto per «Nuova scena» e «Nuova scheda» ---------- */
+dialog .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); font: inherit; font-size: 14px; }
+dialog .btn.ghost:hover { background: var(--panel-3); }
+dialog .dialogBtns .btn { white-space: nowrap; }
+.field select { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; font-size: 14px; }
+.field input[type=file]::file-selector-button { margin-right: 10px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-3); color: var(--text); font: inherit; cursor: pointer; }
+/* Nuova scheda: i modelli sono schede da scegliere come i tipi di scena; gli import su una riga, Annulla e Crea sotto */
+#sheetDialog .types { border: 0; padding: 0; gap: 8px; }
+#sheetDialog .types legend { padding: 0; margin-bottom: 8px; font-size: 13px; color: var(--muted); }
+#sheetDialog .types label.opt { padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+#sheetDialog .types label.opt:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent); }
+#sheetForm .dialogBtns { flex-wrap: wrap; }
+#sheetForm .dialogBtns > span { flex: 1 0 100% !important; height: 0; }
+#sheetForm .dialogBtns > .btn.ghost:not(#sheetCancel) { flex: 1 1 0; min-width: 0; font-size: 13px; padding-inline: 8px; overflow: hidden; text-overflow: ellipsis; }
