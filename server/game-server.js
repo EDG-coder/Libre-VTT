@@ -320,7 +320,7 @@ let session = Object.assign({ locked: false, approval: !DEDICATO, maxPlayers: 0,
 
 // Le cose che cambiano il mondo: chi è congelato o in pausa non le può fare.
 const MUTATING = new Set(['board', 'token.move', 'scatta', 'token.add', 'token.del', 'fog.set', 'luce.dimentica', 'luce.porta', 'scene.show',
-  'sheet.add', 'sheet.save', 'sheet.del', 'music', 'asset.put', 'notes.save', 'notes.edit']);
+  'sheet.add', 'sheet.save', 'sheet.del', 'music', 'sound', 'soundboard', 'asset.put', 'notes.save', 'notes.edit']);
 
 let saveTimer = 0;
 function scheduleSave() {
@@ -1109,9 +1109,10 @@ function handleIntent(c, m) {
         if (!sc) return deny(c, m.op, 'scena sconosciuta');
         const sh = formaPulita(m.token.shape);
         if (!sh) return deny(c, m.op, 'disegno non valido');
-        const n = v => Number.isFinite(+v) ? +v : 0;
+        // stessi limiti di token.move: un disegno enorme o a coordinate assurde coprirebbe la mappa a tutti
+        const mis = v => Math.max(1, Math.min(MISURA_MAX - 1, Number.isFinite(+v) ? +v : 0));
         const tk = { id: newId('tk'), shape: sh, layer: c.role === 'master' && ['map', 'hidden'].includes(m.token.layer) ? m.token.layer : 'tokens',
-          l: n(m.token.l), t: n(m.token.t), w: Math.max(1, n(m.token.w)), h: Math.max(1, n(m.token.h)), owner: c.role === 'master' ? null : c.token };
+          l: posizioneLimitata(m.token.l), t: posizioneLimitata(m.token.t), w: mis(m.token.w), h: mis(m.token.h), owner: c.role === 'master' ? null : c.token };
         sc.photos = (sc.photos || []).concat(tk);
         changed();
         return;
@@ -1123,7 +1124,7 @@ function handleIntent(c, m) {
       if (typeof dato.url === 'string' && dato.url.length > 320000) return deny(c, m.op, 'immagine del segnalino troppo pesante');
       // solo i campi che un segnalino ha davvero, e controllati uno per uno
       const n = v => Number.isFinite(+v) ? Math.max(-1e7, Math.min(1e7, +v)) : 0;
-      const tk = { l: n(dato.l), t: n(dato.t), w: Math.max(1, n(dato.w) || 1), h: Math.max(1, n(dato.h) || 1) };
+      const tk = { l: n(dato.l), t: n(dato.t), w: Math.min(MISURA_MAX - 1, Math.max(1, n(dato.w) || 1)), h: Math.min(MISURA_MAX - 1, Math.max(1, n(dato.h) || 1)) };
       if (dato.url != null) {
         const u = urlImmagine(dato.url);
         if (!u) return deny(c, m.op, 'immagine del segnalino non permessa');
