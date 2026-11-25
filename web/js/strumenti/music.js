@@ -62,7 +62,7 @@ const musicBox = mk('div', 'tool glass',
      <div class="trow mVol"><button id="musicMute" type="button" title="Silenzia (solo per te)" aria-label="Silenzia (solo per te)" aria-pressed="false">🔊</button><label for="musicVol">Volume</label> <input id="musicVol" type="range" min="0" max="100" step="1"> <output id="musicVolOut"></output></div>
      <p class="tnote">Il volume è tuo: non cambia quello degli altri.</p>
      <div class="mMaster" id="musicMaster">
-       <div class="trow"><input id="musicUrl" type="text" placeholder="Incolla un link di YouTube" autocomplete="off"><button id="musicAdd" type="button">Aggiungi</button></div>
+       <div class="trow"><input id="musicUrl" type="text" placeholder="Link di YouTube" aria-label="Incolla un link di YouTube" autocomplete="off"><button id="musicAdd" type="button">Aggiungi</button></div>
        <div class="trow"><button id="musicFromPc" type="button" class="mPc">📁 Canzoni dal computer…</button></div>
        <input id="musicFile" type="file" accept="audio/*,.mp3,.ogg,.oga,.opus,.wav,.m4a,.aac,.flac" multiple hidden>
        <div id="musicList" class="mList"></div>

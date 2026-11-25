@@ -133,7 +133,7 @@
    dentro): pulsanti più compatti e, se proprio non ci stanno, si va a capo. */
 .ui-tel #dock {
   left: calc(8px + env(safe-area-inset-left)); right: calc(8px + env(safe-area-inset-right)); bottom: 8px; transform: none;
-  justify-content: flex-start; align-items: flex-end; flex-wrap: wrap-reverse; gap: 6px; padding: 2px; pointer-events: none;
+  justify-content: center; align-items: flex-end; flex-wrap: wrap-reverse; gap: 6px; padding: 2px; pointer-events: none;   /* al centro, sotto la linguetta */
 }
 .ui-tel #dock > * { pointer-events: auto; }
 .ui-tel #toolDrawer::-webkit-scrollbar { display: none; }

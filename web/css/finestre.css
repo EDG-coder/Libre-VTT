@@ -15,6 +15,8 @@ html.finestre .finW:popover-open {
   -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4);
   overscroll-behavior: contain; scrollbar-width: thin;
 }
+/* altezza che segue il contenuto (finché non la si ridimensiona dalla maniglia), mai oltre il fondo dello schermo */
+html.finestre .finW:popover-open.finAuto { height: auto !important; min-height: 110px !important; max-height: calc(100vh - var(--fy) - 6px) !important; }
 html.finestre .finW:popover-open.finMuove { user-select: none; box-shadow: 0 14px 40px rgba(0, 0, 0, .65), 0 0 22px rgba(124, 92, 255, .5); }
 .finBar {
   position: sticky; top: 0; z-index: 3; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px;

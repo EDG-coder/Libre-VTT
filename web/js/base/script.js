@@ -284,9 +284,26 @@ function zoomBy(f, cx = innerWidth / 2, cy = innerHeight / 2) {
   setView({ s, x: cx - (cx - from.x) * k, y: cy - (cy - from.y) * k }, true);
 }
 // centra tutto lo sfondo alla massima dimensione possibile, senza tagliarlo (margin < 1 lascia un po' d'aria)
+// La parte dello schermo che la mappa può usare: senza la colonna degli strumenti a sinistra, il pannello
+// aperto a destra (sul computer) e i pulsanti in basso. Così «Centra la mappa» non la mette sotto i pulsanti.
+function areaVista() {
+  const tutto = { L: 0, T: 0, R: innerWidth, B: innerHeight };
+  const vis = el => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && r.right > 1 && r.left < innerWidth - 1 && r.bottom > 1 && r.top < innerHeight - 1 && getComputedStyle(el).visibility !== 'hidden' ? r : null;
+  };
+  let { L, T, R, B } = tutto;
+  const td = vis($('toolDrawer')); if (td && td.left < 24 && td.width < innerWidth * .3) L = td.right;
+  const sd = vis($('side')); if (sd && sd.left > innerWidth * .45) R = sd.left;
+  const dk = vis($('dock')); if (dk && dk.top > innerHeight * .6) B = dk.top;
+  L += 8; T += 8; R -= 8; B -= 8;
+  return R - L < innerWidth * .4 || B - T < innerHeight * .4 ? tutto : { L, T, R, B };
+}
 function fitView(anim, margin = 1) {
-  const r = baseRect(), s = fitScale(r) * margin;
-  setView({ s, x: (innerWidth - r.w * s) / 2 - r.x * s, y: (innerHeight - r.h * s) / 2 - r.y * s }, anim);
+  const r = baseRect(), a = areaVista(), W = a.R - a.L, H = a.B - a.T;
+  const s = Math.min(W / r.w, H / r.h) * margin;
+  setView({ s, x: a.L + (W - r.w * s) / 2 - r.x * s, y: a.T + (H - r.h * s) / 2 - r.y * s }, anim);
 }
 // una vista salvata su uno schermo di un'altra misura (il master sul computer, il telefono girato):
 // si tiene lo stesso punto della mappa al centro e si scala nella stessa proporzione

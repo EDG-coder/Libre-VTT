@@ -1236,6 +1236,7 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Le canzoni dal computer si copiano nella cartella «musica» della campagna; in rete arrivano anche ai giocatori (al massimo 40 MB l'una).": "Songs from the computer are copied into the campaign's «musica» folder; online they reach the players too (40 MB each at most).",
 "Eliminare «{n}» dalla cartella della campagna? Le scene che la usano restano senza musica.": "Delete «{n}» from the campaign folder? The scenes that use it will have no music.",
 "Incolla un link di YouTube": "Paste a YouTube link",
+"Link di YouTube": "YouTube link",
 "Niente in riproduzione": "Nothing playing",
 "Volume": "Volume",
 "Il volume è tuo: non cambia quello degli altri.": "The volume is yours: it doesn't change anyone else's.",
