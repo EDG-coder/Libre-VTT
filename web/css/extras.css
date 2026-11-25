@@ -1404,7 +1404,7 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; gap:
 .pane .row:has(> .swatches) input[type=color] { flex: none; width: 30px; height: 26px; }
 /* campi numerici dei moduli (griglia, ping…): etichetta a sinistra, campo di larghezza fissa a destra, tutti in colonna */
 .pane .gridForm label.row:has(> input[type=number]) { display: grid; grid-template-columns: minmax(0, 1fr) 92px auto; align-items: center; gap: 8px; white-space: normal; }
-.pane .gridForm label.row > input[type=number] { width: 100%; }
+.pane .gridForm label.row > input[type=number] { width: 100%; box-sizing: border-box; }
 /* Penna e Segnalini: i colori sono pallini come nelle impostazioni (erano rettangoli 34×26 che mandavano a capo «Altro colore») */
 .tool.glass .trow > .sw { flex: none; width: 26px; min-width: 26px; height: 26px; padding: 0; border-radius: 50%; }
 .tool.glass .trow:has(> .sw) { flex-wrap: nowrap; }
@@ -1447,3 +1447,5 @@ dialog .dialogBtns .btn { white-space: nowrap; }
 #sheetForm .dialogBtns { flex-wrap: wrap; }
 #sheetForm .dialogBtns > span { flex: 1 0 100% !important; height: 0; }
 #sheetForm .dialogBtns > .btn.ghost:not(#sheetCancel) { flex: 1 1 0; min-width: 0; font-size: 13px; padding-inline: 8px; overflow: hidden; text-overflow: ellipsis; }
+/* Strumenti a sinistra su una finestra bassa (computer): più colonne invece di uscire dallo schermo (mobile.js) */
+html:not(.ui-tel) #toolDrawer.colonne .slots { display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--righe, 20), 52px); grid-auto-columns: 52px; gap: 10px; }

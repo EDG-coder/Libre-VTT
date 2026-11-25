@@ -59,7 +59,17 @@
       const el = c.firstElementChild;
       c.classList.toggle('spento', !c.classList.contains('hole') && !!el && getComputedStyle(el).display === 'none');
     }
-    if (!R.classList.contains('ui-tel')) { dr.style.removeProperty('--k'); dr.style.removeProperty('--righe'); return; }
+    if (!R.classList.contains('ui-tel')) {
+      // sul computer gli strumenti restano grandi; se la finestra è bassa (portatile con lo schermo da 768,
+      // finestra stretta in altezza) invece di uscire sotto lo schermo vanno su due o più colonne
+      dr.style.removeProperty('--k');
+      const n = Math.max(1, [...sl.children].filter(c => getComputedStyle(c).display !== 'none').length);
+      const righe = Math.max(1, Math.floor((innerHeight - 24 - 20 + 10) / 62));
+      dr.classList.toggle('colonne', righe < n);
+      if (righe < n) dr.style.setProperty('--righe', Math.ceil(n / Math.ceil(n / righe))); else dr.style.removeProperty('--righe');
+      return;
+    }
+    dr.classList.remove('colonne');
     const n = Math.max(1, [...sl.children].filter(c => getComputedStyle(c).display !== 'none').length);
     const cs = getComputedStyle(dr), sotto = parseFloat(cs.bottom) || 76;
     const sopra = 12 + (parseFloat(getComputedStyle(R).getPropertyValue('--sa-top')) || 0);
