@@ -348,7 +348,10 @@
       return `<label>${esc(tr('Critico da'))} <select data-f="critDa">${['', '19', '18', '17', '16', '15'].map(v => `<option value="${v}">${v ? v + '-20' : '20'}</option>`).join('')}</select></label>
         <p class="note">${esc(tr('Da che numero il d20 di un attacco è un critico. Per una sola arma scrivi «19-20» nel suo nome o nel bonus.'))}</p>
         <div class="creaRiga"><label>${esc(tr('Bonus iniziativa'))} <input type="number" data-f="initb" style="width:70px"></label>
-        <label>${esc(tr('Sempre con'))} <select data-f="iniVant"><option value="">${esc(tr('Normale'))}</option><option value="adv">${esc(tr('Vantaggio'))}</option><option value="dis">${esc(tr('Svantaggio'))}</option></select></label></div>`;
+        <label>${esc(tr('Sempre con'))} <select data-f="iniVant"><option value="">${esc(tr('Normale'))}</option><option value="adv">${esc(tr('Vantaggio'))}</option><option value="dis">${esc(tr('Svantaggio'))}</option></select></label></div>
+          <h4>${esc(tr('Dadi'))}</h4>
+          <label class="check"><input type="checkbox" data-f="dadi3d"> <b>${esc(tr('Tira con i dadi 3D'))}</b></label>
+          <p class="note">${esc(tr('I tiri di questa scheda fanno rotolare dadi 3D sullo schermo, che si fermano sul risultato già tirato. Il numero non cambia, è solo l\'animazione.'))}</p>`;
     };
     const disegna = () => {
       d.innerHTML = `<h3>⚙ ${esc(tr('Avanzate'))} · <span data-noi18n>${esc(s.name)}</span></h3>

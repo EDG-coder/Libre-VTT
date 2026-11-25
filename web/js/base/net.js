@@ -442,7 +442,11 @@ function netHandle(m) {
     case 'plugins.offerta': case 'plugins.pezzo': case 'plugins.no':     // i plugin che il master condivide
       if (window.LIBRE && window.LIBRE.condivisi) window.LIBRE.condivisi.ricevi(m);
       return;
-    case 'chat': netChat(m.msg); return;
+    case 'chat':
+      netChat(m.msg);
+      // dadi 3D: solo un tiro appena arrivato (non la chat ripresa) e solo se chi tira li ha chiesti
+      if (m.msg && m.msg.kind === 'roll' && m.msg.d3 && window.Dadi3D) Dadi3D.mostra(m.msg, !!(NET.me && m.msg.byId === NET.me.token));
+      return;
     case 'chat.upd': if (m.msg && m.msg.id) updateChat(m.msg); return;
     case 'chat.del': netFromServer = true; try { deleteChat(m.id); } finally { netFromServer = false; } return;
     case 'ping': {
@@ -1046,7 +1050,7 @@ var rollExpr = (prev => function (expr, label) {
   if (!can('roll')) { netSay('Non puoi tirare i dadi.', 'warn'); return true; }
   const d = diceApply(expr);
   if (!parseExpr(d.expr)) return false;                     // si vede subito se è scritto male
-  intent('roll', { expr: d.expr, label: label || String(expr).replace(/\s+/g, ''), secret: d.secret, cieco: d.cieco, doppio: !!window.tiroDoppio, crit: window.tiroCritico || undefined, rif: window.tiroRif || undefined });
+  intent('roll', { expr: d.expr, label: label || String(expr).replace(/\s+/g, ''), secret: d.secret, cieco: d.cieco, d3: d.d3, doppio: !!window.tiroDoppio, crit: window.tiroCritico || undefined, rif: window.tiroRif || undefined });
   diceLast.textContent = 'Tiro mandato al server…';
   return true;
 })(rollExpr);

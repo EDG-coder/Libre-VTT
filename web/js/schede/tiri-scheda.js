@@ -87,11 +87,14 @@
   const prima = rollExpr;
   rollExpr = function (expr, label) {                    // eslint-disable-line no-global-assign
     if (!finestra || typeof diceMode === 'undefined') return prima.apply(this, arguments);
-    const m = modoDi(finestra.dataset.id), salvo = { adv: diceMode.adv, secret: diceMode.secret, cieco: diceMode.cieco };
+    const m = modoDi(finestra.dataset.id), salvo = { adv: diceMode.adv, secret: diceMode.secret, cieco: diceMode.cieco, d3: diceMode.d3 };
     diceMode.adv = m.adv; diceMode.secret = !!m.segreto && m.segreto !== 'cieco'; diceMode.cieco = m.segreto === 'cieco';
+    // dadi 3D: li chiede la scheda (⚙ Avanzate › Dadi), non il vassoio dei dadi
+    const sh = typeof sheets !== 'undefined' && sheets.find(x => x.id === finestra.dataset.id);
+    diceMode.d3 = !!(sh && sh.f && sh.f.dadi3d);
     window.tiroDoppio = m.adv !== 'none' && d20.test(String(expr).replace(/\s+/g, ''));
     try { return prima.apply(this, arguments); }
-    finally { diceMode.adv = salvo.adv; diceMode.secret = salvo.secret; diceMode.cieco = salvo.cieco; window.tiroDoppio = false; }
+    finally { diceMode.adv = salvo.adv; diceMode.secret = salvo.secret; diceMode.cieco = salvo.cieco; diceMode.d3 = salvo.d3; window.tiroDoppio = false; }
   };
   // ---------- ⚙ Avanzate: il primo pezzo del menu avanzato della scheda ----------
   // Abilità (Tuttofare, mezza competenza per abilità), Attacchi (intervallo critico), Iniziativa (bonus,
