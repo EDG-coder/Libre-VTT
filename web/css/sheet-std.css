@@ -97,7 +97,7 @@
 .zsBox { display: flex; flex-direction: column; align-items: center; justify-content: space-between; gap: 3px; min-width: 0; padding: 6px 4px 5px; text-align: center; border: 1px solid var(--sh-line); border-radius: 9px; background: color-mix(in srgb, var(--sh-soft, var(--sh-fg)) 40%, transparent); }
 .zsBox > .zsLab { display: flex; align-items: center; justify-content: center; min-height: 2.4em; font-size: .7em; }
 .sheetWin .zsPage .zsBox .zsScore { width: 100%; background: transparent; }
-.sheetWin .zsPage .zsBox .zsRoll.zsScore { border: 0; border-radius: 6px; }
+.sheetWin .zsPage .zsBox .zsRoll.zsScore { border: 0; border-radius: 6px; font-size: 1.3em; min-height: 28px; }   /* l'Iniziativa grande come CA e Velocità */
 .zsRiga { display: flex; align-items: center; gap: 4px; width: 100%; }
 
 /* ---------- Le colonne: 3, 2 o 1 a seconda della larghezza ---------- */

@@ -1421,3 +1421,9 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; gap:
 #luceNuova label.trow > input[type=color] { width: 30px; height: 26px; }
 /* Dadi: quantità e dadi su quattro colonne uguali, allineate tra loro (prima 6+2 e 5+2) */
 #diceQty, #diceTypes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+/* Barra dei tiri della scheda: stessi caratteri e stessa altezza per tutti (Avanzate era più grande), un po' più compatta */
+.tiroBar { align-items: center; gap: 6px; }
+.tiroBar > :is(.tiroSeg, .btn, .tiroCrit, .tiroNome, .scattaBtn) { min-height: 30px; box-sizing: border-box; }
+.tiroBar .tiroAvanzate { font-size: 12.5px; }
+.tiroBar .tiroSeg button { padding-inline: 8px; }
+.sheetWin .mVuoto { padding: 16px 18px; }

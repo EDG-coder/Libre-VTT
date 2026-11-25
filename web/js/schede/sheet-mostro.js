@@ -55,7 +55,7 @@
   }
   function mostroHtml(s) {
     const m = dati(s);
-    if (!m) return `<p class="note">${esc(tr('I dati di questo mostro non ci sono più.'))}</p>`;
+    if (!m) return `<p class="note mVuoto">${esc(tr('I dati di questo mostro non ci sono più.'))}</p>`;
     const car = m.car || {};
     const pf = esc(m.pf) +
       (m.dadiPf ? ` <button type="button" class="mzClick" data-pf="1" title="${esc(tr('Tira i dadi vita'))}">(${esc(String(m.dadiPf).replace(/([+-])/g, ' $1 '))})</button>` : '');
