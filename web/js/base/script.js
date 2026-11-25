@@ -1514,7 +1514,7 @@ const sects = [...document.querySelectorAll('#tab-settings .sect')].map(sec => {
 {
   const pane = $('tab-settings');
   const testa = document.createElement('div'); testa.id = 'impTesta';
-  testa.innerHTML = '<div class="impRiga"><input id="impCerca" type="search" placeholder="Cerca nelle impostazioni…" aria-label="Cerca nelle impostazioni" autocomplete="off"><button id="impChiudi" type="button" class="btn ghost" title="Chiudi tutte le sezioni">Chiudi tutte</button></div><select id="impIndice" aria-label="Vai a una sezione"></select><p class="note" id="impVuoto" hidden>Nessuna impostazione con questa parola.</p>';
+  testa.innerHTML = '<input id="impCerca" type="search" placeholder="Cerca nelle impostazioni…" aria-label="Cerca nelle impostazioni" autocomplete="off"><div class="impRiga"><select id="impIndice" aria-label="Vai a una sezione"></select><button id="impChiudi" type="button" class="btn ghost" title="Chiudi tutte le sezioni">Chiudi tutte</button></div><p class="note" id="impVuoto" hidden>Nessuna impostazione con questa parola.</p>';
   pane.prepend(testa);
   const tutte = () => [...pane.querySelectorAll(':scope > .sect')];
   const visibile = sec => getComputedStyle(sec).display !== 'none' || sec.classList.contains('impNascosta');
