@@ -69,6 +69,7 @@
     const m = { t: n(cs.paddingTop), r: n(cs.paddingRight), b: n(cs.paddingBottom), l: n(cs.paddingLeft) };
     R.style.setProperty('--sa-top', m.t + 'px'); R.style.setProperty('--sa-right', m.r + 'px');
     R.style.setProperty('--sa-bottom', m.b + 'px'); R.style.setProperty('--sa-left', m.l + 'px');
+    R.classList.toggle('sa-lati', m.l > 0 || m.r > 0);              // tacca a lato: telefono in orizzontale
     return m;
   }
   function dimensionaStrumenti() {
