@@ -189,8 +189,14 @@
     header { margin-bottom: 18px; }
     .logo { font-size: 1.7rem; }
     .cards { grid-template-columns: 1fr; }
-    .card { flex-direction: row; align-items: center; gap: 14px; padding: 14px; }
-    .card .ic { font-size: 1.9rem; }
+    /* sul telefono: icona a sinistra, titolo sopra e spiegazione sotto (come il Tutorial): il titolo non va più a capo */
+    .card { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 14px; row-gap: 2px; padding: 14px; text-align: left; }
+    .card .ic { font-size: 1.9rem; grid-row: span 2; width: 2.4rem; text-align: center; }
+    .cards .card.tutCard { padding: 14px; }
+    /* i pulsanti sotto l'elenco delle campagne: due colonne uguali invece di quattro larghezze diverse */
+    .row:has(> #campNuova) { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .row:has(> #campNuova) > .sp { display: none; }
+    .row:has(> #campNuova) > button { width: 100%; justify-content: center; text-align: center; }
     .card b { display: block; }
     #prontoRighe input { min-width: 0; width: 100%; }
   }
@@ -826,7 +832,8 @@ const quando = t => {
   const g = Math.floor((Date.now() - t) / 86400000);
   return g <= 0 ? 'modificata oggi' : g === 1 ? 'modificata ieri' : g < 30 ? `modificata ${g} giorni fa` : 'modificata il ' + new Date(t).toLocaleDateString(window.LIBRE_I18N ? LIBRE_I18N.lingua : 'it');
 };
-const conta = (n, uno, tanti) => (n === 1 ? '1 ' + uno : n + ' ' + tanti);
+// tradotto con il numero come segnaposto («{n} scene» → «{n} scenes»): «2 scene» intero non è nel dizionario
+const conta = (n, uno, tanti) => { const tr = window.tr || ((x, v) => x.replace('{n}', v ? v.n : '')); return n === 1 ? tr('1 ' + uno) : tr('{n} ' + tanti, { n }); };
 const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 const campErr = el('p', 'err hide'); $('campLista').after(campErr);
 const erroreCamp = t => { campErr.textContent = t || ''; campErr.classList.toggle('hide', !t); if (t) infoCamp(''); };

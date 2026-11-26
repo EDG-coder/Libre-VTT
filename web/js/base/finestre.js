@@ -29,7 +29,7 @@
     const salvata = leggi()[t.id];
     const maxW = innerWidth - 2 * MARGINE, maxH = innerHeight - 2 * MARGINE;
     let w, h, x, y;
-    if (salvata && isFinite(salvata.w) && isFinite(salvata.h)) { w = salvata.w; h = salvata.h; }
+    if (salvata && isFinite(salvata.w) && isFinite(salvata.h) && !salvata.auto) { w = salvata.w; h = salvata.h; }
     else {
       const tw = parseFloat(getComputedStyle(t.el).getPropertyValue('--tw')) || (t.id === 'dice' ? 296 : 240);
       w = tw + 4;
@@ -45,15 +45,27 @@
     }
     x = dentro(x, MARGINE, Math.max(MARGINE, innerWidth - w - MARGINE));
     y = dentro(y, MARGINE, Math.max(MARGINE, innerHeight - h - MARGINE));
-    return { x, y, w, h };
+    // finché non la si ridimensiona dalla maniglia, l'altezza segue il contenuto (auto): un testo che arriva dopo
+    // (la musica che non trova YouTube, un tiro nei dadi) non resta tagliato in fondo
+    const auto = !(salvata && isFinite(salvata.h) && !salvata.auto);
+    return { x, y, w, h, auto };
   }
   function metti(corpo, g) {
     corpo.style.setProperty('--fx', g.x + 'px'); corpo.style.setProperty('--fy', g.y + 'px');
     corpo.style.setProperty('--fw', g.w + 'px'); corpo.style.setProperty('--fh', g.h + 'px');
+    corpo.classList.toggle('finAuto', !!g.auto);
   }
   const leggiG = corpo => ({ x: parseFloat(corpo.style.getPropertyValue('--fx')), y: parseFloat(corpo.style.getPropertyValue('--fy')),
-    w: parseFloat(corpo.style.getPropertyValue('--fw')), h: parseFloat(corpo.style.getPropertyValue('--fh')) });
+    w: parseFloat(corpo.style.getPropertyValue('--fw')),
+    h: corpo.classList.contains('finAuto') ? Math.round(corpo.getBoundingClientRect().height) : parseFloat(corpo.style.getPropertyValue('--fh')),
+    auto: corpo.classList.contains('finAuto') });
 
+  // altezza automatica: se il contenuto cresce (un avviso, un tiro) e la finestra uscirebbe in fondo, sale
+  function alza(corpo) {
+    if (!corpo.classList.contains('finAuto') || !corpo.matches(':popover-open') || corpo.classList.contains('finMuove')) return;
+    const g = leggiG(corpo), serve = Math.min(corpo.scrollHeight, innerHeight - 2 * MARGINE);
+    if (g.y + serve > innerHeight - MARGINE) metti(corpo, { ...g, y: Math.max(MARGINE, innerHeight - MARGINE - serve) });
+  }
   function portaInCima(corpo) {                      // l'ultima finestra mostrata sta sopra le altre
     try { corpo.hidePopover(); corpo.showPopover(); ultima = corpo; } catch {}   // ricordarla: sopra(w) la scambia con una scheda
   }
@@ -105,7 +117,7 @@
     });
     maniglia.addEventListener('pointermove', e => {
       if (!largo || e.pointerId !== largo.id) return;
-      const g = { ...largo.g };
+      const g = { ...largo.g, auto: false };            // ridimensionata a mano: da qui in poi l'altezza è quella scelta
       g.w = dentro(largo.g.w + e.clientX - largo.sx, MIN_W, innerWidth - g.x - MARGINE);
       g.h = dentro(largo.g.h + e.clientY - largo.sy, MIN_H, innerHeight - g.y - MARGINE);
       metti(corpo, g);
@@ -169,6 +181,9 @@
     corpo.setAttribute('popover', 'manual');
     try { corpo.showPopover(); } catch { chiudiTecnico(t); return; }
     ultima = corpo;
+    // altezza automatica: misurata ora, dentro la finestra vera (prima, dentro il pulsante, il testo andava a capo
+    // in un altro modo), e la finestra si alza se non ci starebbe sotto
+    if (g.auto) { alza(corpo); if (!corpo._alza) { corpo._alza = new MutationObserver(() => requestAnimationFrame(() => alza(corpo))); corpo._alza.observe(corpo, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'class'] }); } }
     // se il contenuto cambia misura la finestra resta com'è: si scorre
   }
   function chiudiTecnico(t) {                        // toglie la finestra, lasciando lo strumento com'è
@@ -177,7 +192,7 @@
     aperte.delete(t);
     const c = f.corpo;
     try { c.hidePopover(); } catch {}
-    c.removeAttribute('popover'); c.classList.remove('finW', 'finMuove');
+    c.removeAttribute('popover'); c.classList.remove('finW', 'finMuove', 'finAuto');
     t.el.classList.remove('finAperta');
     if (ultima === c) ultima = null;
     if (!aperte.size) { R.classList.remove('finestre'); riportaGiu(); }

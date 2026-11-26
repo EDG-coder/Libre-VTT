@@ -422,8 +422,8 @@
     #voceChat[aria-pressed="false"] { opacity: .55; }
     .voceSect .row output { min-width: 2.5em; text-align: right; }
     .voceSect .voceTasti { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
-    .voceSeg { display: flex; flex-wrap: wrap; gap: 6px; }
-    .voceSeg button[aria-pressed="true"] { outline: 2px solid currentColor; }`;
+    .voceSeg:not(.seg) { display: flex; flex-wrap: wrap; gap: 6px; }
+    .voceSeg:not(.seg) button[aria-pressed="true"] { outline: 2px solid currentColor; }`;
   const stile = document.createElement('style'); stile.textContent = STILE; document.head.append(stile);
 
   function domanda() {
@@ -517,6 +517,13 @@
       nota.textContent = tr('Alt+Maiusc+L legge lo schermo · Alt+Maiusc+S la selezione · Alt+Maiusc+P pausa · Esc ferma. In chat: /leggi e /silenzio.');
       if (prima) prima.before(h, box, nota); else (dlg.querySelector('.piede') || dlg).before(h, box, nota);
       bottoniModo(box);
+      // la lingua della home arriva dopo (dalle impostazioni dell'app) o si cambia dalla rotellina: si rifanno le scritte
+      addEventListener('lingua', () => {
+        h.textContent = tr('Voce');
+        nota.textContent = tr('Alt+Maiusc+L legge lo schermo · Alt+Maiusc+S la selezione · Alt+Maiusc+P pausa · Esc ferma. In chat: /leggi e /silenzio.');
+        const voci = { schermo: 'Lettore dello schermo', chat: 'Solo chat', no: 'Niente voce' };
+        box.querySelectorAll('button[data-v]').forEach(b => { b.textContent = tr(voci[b.dataset.v]); });
+      });
     }
   }
 
@@ -527,7 +534,7 @@
     const box = document.createElement('div'); box.className = 'voceSect';
     (sect.querySelector('.sectContent') || sect).append(box);
     const el = (tag, props = {}, ...figli) => { const n = Object.assign(document.createElement(tag), props); figli.forEach(f => f != null && n.append(f)); return n; };
-    const modo = el('div', { className: 'voceSeg' }); bottoniModo(modo);
+    const modo = el('div', { className: 'seg voceSeg', role: 'group' }); modo.setAttribute('aria-label', tr('Voce')); bottoniModo(modo);
     const spunta = (k, testo) => {
       const i = el('input', { type: 'checkbox', checked: !!imp[k] });
       i.addEventListener('change', () => { imp[k] = i.checked; scrivi(); listeners.forEach(f => f()); });

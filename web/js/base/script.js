@@ -284,9 +284,26 @@ function zoomBy(f, cx = innerWidth / 2, cy = innerHeight / 2) {
   setView({ s, x: cx - (cx - from.x) * k, y: cy - (cy - from.y) * k }, true);
 }
 // centra tutto lo sfondo alla massima dimensione possibile, senza tagliarlo (margin < 1 lascia un po' d'aria)
+// La parte dello schermo che la mappa può usare: senza la colonna degli strumenti a sinistra, il pannello
+// aperto a destra (sul computer) e i pulsanti in basso. Così «Centra la mappa» non la mette sotto i pulsanti.
+function areaVista() {
+  const tutto = { L: 0, T: 0, R: innerWidth, B: innerHeight };
+  const vis = el => {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && r.right > 1 && r.left < innerWidth - 1 && r.bottom > 1 && r.top < innerHeight - 1 && getComputedStyle(el).visibility !== 'hidden' ? r : null;
+  };
+  let { L, T, R, B } = tutto;
+  const td = vis($('toolDrawer')); if (td && td.left < 24 && td.width < innerWidth * .3) L = td.right;
+  const sd = vis($('side')); if (sd && sd.left > innerWidth * .45) R = sd.left;
+  const dk = vis($('dock')); if (dk && dk.top > innerHeight * .6) B = dk.top;
+  L += 8; T += 8; R -= 8; B -= 8;
+  return R - L < innerWidth * .4 || B - T < innerHeight * .4 ? tutto : { L, T, R, B };
+}
 function fitView(anim, margin = 1) {
-  const r = baseRect(), s = fitScale(r) * margin;
-  setView({ s, x: (innerWidth - r.w * s) / 2 - r.x * s, y: (innerHeight - r.h * s) / 2 - r.y * s }, anim);
+  const r = baseRect(), a = areaVista(), W = a.R - a.L, H = a.B - a.T;
+  const s = Math.min(W / r.w, H / r.h) * margin;
+  setView({ s, x: a.L + (W - r.w * s) / 2 - r.x * s, y: a.T + (H - r.h * s) / 2 - r.y * s }, anim);
 }
 // una vista salvata su uno schermo di un'altra misura (il master sul computer, il telefono girato):
 // si tiene lo stesso punto della mappa al centro e si scala nella stessa proporzione
@@ -1146,7 +1163,7 @@ function renderSceneUI() {
     const pick = document.createElement('button');
     pick.type = 'button'; pick.className = 'pick';
     const ic = document.createElement('span'); ic.textContent = sc.type === 'map' ? '🗺' : '🎬';
-    const nm = document.createElement('span'); nm.textContent = sc.name;
+    const nm = document.createElement('span'); nm.textContent = sc.name; nm.title = sc.name; nm.dataset.noi18n = '';   // il nome intero anche quando si taglia
     pick.append(ic, nm);
     pick.addEventListener('click', () => switchScene(sc.id));
     const ren = document.createElement('button');
@@ -1514,7 +1531,7 @@ const sects = [...document.querySelectorAll('#tab-settings .sect')].map(sec => {
 {
   const pane = $('tab-settings');
   const testa = document.createElement('div'); testa.id = 'impTesta';
-  testa.innerHTML = '<div class="impRiga"><input id="impCerca" type="search" placeholder="Cerca nelle impostazioni…" aria-label="Cerca nelle impostazioni" autocomplete="off"><button id="impChiudi" type="button" class="btn ghost" title="Chiudi tutte le sezioni">Chiudi tutte</button></div><select id="impIndice" aria-label="Vai a una sezione"></select><p class="note" id="impVuoto" hidden>Nessuna impostazione con questa parola.</p>';
+  testa.innerHTML = '<input id="impCerca" type="search" placeholder="Cerca nelle impostazioni…" aria-label="Cerca nelle impostazioni" autocomplete="off"><div class="impRiga"><select id="impIndice" aria-label="Vai a una sezione"></select><button id="impChiudi" type="button" class="btn ghost" title="Chiudi tutte le sezioni">Chiudi tutte</button></div><p class="note" id="impVuoto" hidden>Nessuna impostazione con questa parola.</p>';
   pane.prepend(testa);
   const tutte = () => [...pane.querySelectorAll(':scope > .sect')];
   const visibile = sec => getComputedStyle(sec).display !== 'none' || sec.classList.contains('impNascosta');
@@ -2061,7 +2078,16 @@ let ctxStack = [];
 const closeCtx = () => { ctx.hidden = true; ctxStack = []; };
 function menuBtn(it) {
   const b = document.createElement('button');
-  b.type = 'button'; b.textContent = it.label + (it.items ? '  ›' : '');
+  b.type = 'button';
+  // l'icona iniziale (emoji o simbolo) in una colonna sua, così i testi partono tutti dallo stesso punto;
+  // la freccia dei sottomenu a destra. Si traduce qui, prima di separare l'icona dal testo.
+  const testo = typeof window.tr === 'function' ? window.tr(it.label) : it.label;
+  const m = /^((?:\p{Extended_Pictographic}|[✂⚔✎←⬚＋+])\uFE0F?)\s+/u.exec(testo);
+  const ic = document.createElement('span'); ic.className = 'ctxIc'; ic.setAttribute('aria-hidden', 'true'); ic.textContent = m ? m[1] : '';
+  const lab = document.createElement('span'); lab.className = 'ctxLab'; lab.textContent = m ? testo.slice(m[0].length) : testo;
+  b.append(ic, lab);
+  if (it.items) { const a = document.createElement('span'); a.className = 'ctxSub'; a.setAttribute('aria-hidden', 'true'); a.textContent = '›'; b.append(a); }
+  b.dataset.noi18n = '';
   b.classList.toggle('danger', !!it.danger); b.disabled = !!it.off;
   b.addEventListener('click', () => {
     if (it.items) { ctxStack.push(it.items); drawMenu(); return; }
@@ -2077,6 +2103,7 @@ function drawMenu() {
     if (it === '-') { const d = document.createElement('div'); d.className = 'sep'; rows.push(d); } else rows.push(menuBtn(it));
   }
   ctx.replaceChildren(...rows);
+  ctx.classList.toggle('conIcone', rows.some(r => r.querySelector && r.querySelector('.ctxIc')?.textContent));
 }
 function showMenu(x, y, items) {
   if (!items || !items.length) return;

@@ -1085,10 +1085,10 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 #impTesta { position: sticky; top: -14px; z-index: 2; display: flex; flex-direction: column; gap: 6px; padding: 14px 0 8px; margin: -14px 0 2px; background: var(--panel); box-shadow: 0 6px 8px -6px rgba(0, 0, 0, .35); }
 #impTesta .impRiga { display: flex; gap: 6px; }
 .ui-tel #impTesta { top: -10px; padding-top: 10px; margin-top: -10px; }
-#impCerca { flex: 1; min-width: 0; box-sizing: border-box; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; font-size: 14px; }
+#impCerca { flex: none; width: 100%; min-width: 0; box-sizing: border-box; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; font-size: 14px; }
 #impCerca:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 #impTesta #impChiudi { flex: none; padding: 6px 10px; font-size: 12.5px; }
-#impTesta #impIndice { flex: none; width: 100%; padding: 8px 10px; }
+#impTesta #impIndice { flex: 1 1 auto; min-width: 0; width: auto; padding: 8px 10px; }
 #impVuoto { margin: 4px 2px; }
 .sect.impNascosta { display: none; }
 
@@ -1096,7 +1096,7 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 .sectContent { font-size: 14px; color: var(--text); line-height: 1.35; gap: 10px; }
 .sectContent .note { font-size: 12.5px; line-height: 1.45; color: var(--text-soft); }
 .sectContent .row { flex-wrap: wrap; gap: 6px 10px; }
-.sectContent .row > select, .sectContent .row > input:not([type=checkbox]):not([type=color]) { flex: 1 1 140px; }
+.pane .sectContent .row > select, .pane .sectContent .row > input:not([type=checkbox]):not([type=color]):not([type=range]) { flex: 1 1 140px; }   /* sotto i 140px il campo va a capo invece di tagliare il testo */
 .sectContent .check { align-items: flex-start; gap: 10px; }
 .sectContent input[type=checkbox] { flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--accent); cursor: pointer; }
 .sectContent .row input[type=checkbox] { margin: 0; }
@@ -1372,3 +1372,108 @@ html.ui-tel #turniBarra .tbTesta span { max-width: 100%; }
 .sbThumb { flex: none; width: 40px; height: 40px; border-radius: 8px; background: var(--panel-2) center / cover no-repeat; border: 1px solid var(--line); display: grid; place-items: center; }
 #sbForm .sbOk { background: var(--accent); color: #fff; border-color: transparent; }
 #soundBox .mVol button.on { background: var(--accent); color: #fff; border-color: transparent; }
+
+/* ---------- Ritocchi della revisione grafica ---------- */
+a.btn, a.btn:hover { text-decoration: none; }
+a.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+/* Voce: la scelta del modo ha lo stesso aspetto delle altre scelte; spunte e cursori allineati */
+.voceSect { display: flex; flex-direction: column; gap: 10px; }
+.seg button[aria-pressed="true"] { background: color-mix(in srgb, var(--aura, #2ee6a6) 35%, var(--panel-3)); color: var(--text); }
+.seg button:disabled { opacity: .45; cursor: default; }
+.voceSect label.row { display: grid; grid-template-columns: 5.2em minmax(0, 1fr) 2.4em; align-items: center; gap: 10px; white-space: nowrap; }
+.voceSect label.row > select { grid-column: span 2; width: 100%; min-width: 0; }
+.voceSect .voceTasti { margin: 0; }
+.voceSect .voceTasti .btn { flex: 1 1 auto; }
+/* Caselle dei segnalini: i tre campi partono dallo stesso punto */
+#caselleSect label.row { display: grid; grid-template-columns: 12px 3.6em minmax(0, 1fr); align-items: center; gap: 10px; }
+/* Nebbia: «Automatico» non si taglia */
+#fogColorSeg button { flex: 1 1 auto; white-space: nowrap; }
+/* etichetta lunga + campo: il campo va sotto, largo quanto la sezione, invece di restare di pochi pixel e tagliare il testo */
+.pane .sectContent label.row:has(> #netNameIn, > #netPortIn, > #compLingua, > #scMusBrano) { flex-wrap: wrap; }
+.pane .sectContent label.row > :is(#netNameIn, #netPortIn, #compLingua, #scMusBrano) { flex-basis: 100%; }
+/* Compendio: la ricerca ha la sua riga, i quattro pulsanti sono una griglia 2×2 uguale */
+#tab-comp:not(.compatto) .compCerca { flex-wrap: wrap; }
+#tab-comp:not(.compatto) .compCerca #compQ { flex: 1 1 100%; }
+#tab-comp:not(.compatto) .compCerca #compTipo { flex: 1 1 auto; }
+.compAzioni { display: grid; grid-template-columns: 1fr 1fr; }
+.compAzioni .btn { justify-content: center; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Colore della griglia, del bordo, del ping: i sei pallini e «Altro colore» stanno sulla stessa riga (col mouse) */
+:root:not(.ui-touch) .pane .sectContent .row:has(> .swatches) { flex-wrap: nowrap; }
+:root:not(.ui-touch) .pane .swatches { gap: 5px; min-width: 0; }
+:root:not(.ui-touch) .pane .swatches button { flex: 0 1 26px; height: auto; aspect-ratio: 1; min-width: 16px; }
+.pane .row:has(> .swatches) input[type=color] { flex: none; width: 30px; height: 26px; }
+/* campi numerici dei moduli (griglia, ping…): etichetta a sinistra, campo di larghezza fissa a destra, tutti in colonna */
+.pane .gridForm label.row:has(> input[type=number]) { display: grid; grid-template-columns: minmax(0, 1fr) 92px auto; align-items: center; gap: 8px; white-space: normal; }
+.pane .gridForm label.row > input[type=number] { width: 100%; box-sizing: border-box; }
+/* Penna e Segnalini: i colori sono pallini come nelle impostazioni (erano rettangoli 34×26 che mandavano a capo «Altro colore») */
+.tool.glass .trow > .sw { flex: none; width: 26px; min-width: 26px; height: 26px; padding: 0; border-radius: 50%; }
+.tool.glass .trow:has(> .sw) { flex-wrap: nowrap; }
+.tool.glass .trow:has(> .sw) > input[type=color] { flex: none; width: 30px; height: 26px; margin-left: 2px; }
+/* Visibilità › Luci: i due campi delle misure e il colore partono dallo stesso punto */
+#luceNuova { display: flex; flex-direction: column; gap: 6px; }
+#luceNuova label.trow { display: grid; grid-template-columns: minmax(0, 1fr) 72px 2.2em; align-items: center; gap: 8px; }
+#luceNuova label.trow > input { width: 100%; box-sizing: border-box; }
+/* Aree degli incantesimi: le quattro forme sono una griglia 2×2 uguale */
+#areaForme { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#areaForme > button { justify-content: center; }
+/* Soundboard vuota: niente riquadro alto e vuoto prima della spiegazione */
+.sbGrid:not(:has(.sbTile)) { min-height: 0; margin: 0; }
+#luceNuova label.trow > input[type=color] { width: 30px; height: 26px; }
+/* Dadi: quantità e dadi su quattro colonne uguali, allineate tra loro (prima 6+2 e 5+2) */
+#diceQty, #diceTypes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+/* Barra dei tiri della scheda: stessi caratteri e stessa altezza per tutti (Avanzate era più grande), un po' più compatta */
+.tiroBar { align-items: center; gap: 6px; }
+.tiroBar > :is(.tiroSeg, .btn, .tiroCrit, .tiroNome, .scattaBtn) { min-height: 30px; box-sizing: border-box; }
+.tiroBar .tiroAvanzate { font-size: 12.5px; }
+.tiroBar .tiroSeg button { padding-inline: 8px; }
+.sheetWin .mVuoto { padding: 16px 18px; }
+/* Menu del clic destro: icone in colonna, testi allineati, freccia dei sottomenu a destra */
+#ctx button { display: flex; align-items: center; gap: 8px; }
+#ctx .ctxIc { flex: none; width: 1.25em; text-align: center; }
+#ctx:not(.conIcone) .ctxIc { display: none; }
+#ctx .ctxLab { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#ctx .ctxSub { flex: none; margin-left: 10px; opacity: .65; }
+/* ---------- Finestre di dialogo: stesso aspetto per «Nuova scena» e «Nuova scheda» ---------- */
+dialog .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); font: inherit; font-size: 14px; }
+dialog .btn.ghost:hover { background: var(--panel-3); }
+dialog .dialogBtns .btn { white-space: nowrap; }
+.field select { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font: inherit; font-size: 14px; }
+.field input[type=file]::file-selector-button { margin-right: 10px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-3); color: var(--text); font: inherit; cursor: pointer; }
+/* Nuova scheda: i modelli sono schede da scegliere come i tipi di scena; gli import su una riga, Annulla e Crea sotto */
+#sheetDialog .types { border: 0; padding: 0; gap: 8px; }
+#sheetDialog .types legend { padding: 0; margin-bottom: 8px; font-size: 13px; color: var(--muted); }
+#sheetDialog .types label.opt { padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+#sheetDialog .types label.opt:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent); }
+#sheetForm .dialogBtns { flex-wrap: wrap; }
+#sheetForm .dialogBtns > span { flex: 1 0 100% !important; height: 0; }
+#sheetForm .dialogBtns > .btn.ghost:not(#sheetCancel) { flex: 1 1 0; min-width: 0; font-size: 13px; padding-inline: 8px; overflow: hidden; text-overflow: ellipsis; }
+/* Strumenti a sinistra su una finestra bassa (computer): più colonne invece di uscire dallo schermo (mobile.js) */
+html:not(.ui-tel) #toolDrawer.colonne .slots { display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--righe, 20), 52px); grid-auto-columns: 52px; gap: 10px; }
+/* Menu delle scene: un nome lunghissimo non lo allarga fino a metà schermo (si taglia con «…», il nome intero è nel title) */
+html:not(.ui-tel) #sceneMenu { max-width: min(380px, calc(100vw - 24px)); }
+/* Contrasto (WCAG AA, 4,5:1): testo scuro sul pulsante arancione degli Assets; nel tema chiaro arancione e rosso più scuri */
+#tab-assets .btn:not(.ghost) { color: #1d1203; }
+:root[data-theme="light"] #tab-assets .btn.ghost { color: #a55300; border-color: color-mix(in srgb, #a55300 50%, transparent); }
+:root[data-theme="light"] .pane .btn.ghost.danger { color: #c42b2b; }
+.pane :is(input, textarea)::placeholder { color: var(--muted); opacity: 1; }
+/* Tema chiaro: sotto i pulsanti del dock c'è la mappa chiara e il vetro scuro al 55% diventa grigio medio, con il testo bianco sotto 4,5:1. Un po' più coprente */
+:root[data-theme="light"]:not(.graficaLeggera) :is(#sceneBtn, #layerSwitch, #targetSwitch) { background-color: rgba(18, 21, 28, .7); }
+/* Calcolatrice: «Invia il risultato in chat» largo come il tasto «=» sopra */
+#calcSend { flex: 1 1 auto; }
+/* Sali di livello: «Punti ferita:» in linea con i suoi pulsanti, e un po' d'aria prima della nota sull'aumento delle caratteristiche */
+.creaRiga:has(> [data-a=tiraPf]) { align-items: center; }
+.creaDlg .creaRiga + p.note { margin-top: 14px; }
+/* Pacchetti del compendio: su uno schermo stretto i pulsanti vanno sotto invece di uscire dalla finestra; la descrizione si taglia a fine riga, non a metà */
+.compP { flex-wrap: wrap; }
+.compP > div:first-child { flex: 1 1 220px; min-width: 0; }
+.compP .compLic { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; max-height: none; }
+/* Finestre del compendio: i pulsanti in fondo non attaccati all'ultima nota */
+.compDlg > .dialogBtns { margin-top: 14px; }
+/* Pannello di destra aperto su una finestra stretta (tablet in verticale, ~810px): la barra in basso
+   non ci sta fra gli strumenti e il pannello e copriva il campo della chat. Ora resta in quello spazio:
+   il nome della scena si accorcia e, se non basta, i pulsanti vanno su due righe */
+html:not(.ui-tel) body.menu-open #dock { width: max-content; max-width: calc(100vw - min(var(--side-w, 340px), 92vw) - 84px - 24px); flex-wrap: wrap; justify-content: center; row-gap: 8px; }
+html:not(.ui-tel) body.menu-open #sceneWrap { min-width: 0; flex: 0 1 auto; max-width: calc(100vw - min(var(--side-w, 340px), 92vw) - 84px - 24px - 54px); }   /* sulla prima riga accanto al pulsante di selezione */
+html:not(.ui-tel) body.menu-open #dockZone:not(.collapsed) { bottom: calc(var(--dock-h, 44px) + 22px); }   /* la linguetta sopra la barra anche quando va su due righe */
+html:not(.ui-tel) body.menu-open #sceneBtn { max-width: calc(100vw - min(var(--side-w, 340px), 92vw) - 84px - 24px - 54px); min-width: 0; }
+html:not(.ui-tel) body.menu-open #sceneName { min-width: 0; }
