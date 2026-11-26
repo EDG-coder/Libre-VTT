@@ -69,7 +69,14 @@
     const m = { t: n(cs.paddingTop), r: n(cs.paddingRight), b: n(cs.paddingBottom), l: n(cs.paddingLeft) };
     R.style.setProperty('--sa-top', m.t + 'px'); R.style.setProperty('--sa-right', m.r + 'px');
     R.style.setProperty('--sa-bottom', m.b + 'px'); R.style.setProperty('--sa-left', m.l + 'px');
-    R.classList.toggle('sa-lati', m.l > 0 || m.r > 0);              // tacca a lato: telefono in orizzontale
+    // Telefono in orizzontale: iOS dà lo stesso margine a destra e a sinistra, ma la tacca sta da una parte
+    // sola. Dall'angolo di rotazione si sa quale: girato a sinistra (90°) la tacca è a sinistra, girato a
+    // destra (270° o -90°) è a destra. Solo la linguetta da quel lato si stacca dal bordo; se non si sa, tutte e due.
+    const lati = m.l > 0 || m.r > 0;
+    let ang = screen.orientation && typeof screen.orientation.angle === 'number' ? screen.orientation.angle : (typeof window.orientation === 'number' ? window.orientation : null);
+    if (ang != null) ang = ((ang % 360) + 360) % 360;
+    const sx = lati && (ang === 90 || (ang !== 270 && m.l > 0)), dx = lati && (ang === 270 || (ang !== 90 && m.r > 0));
+    R.classList.toggle('tacca-sx', sx); R.classList.toggle('tacca-dx', dx);
     return m;
   }
   function dimensionaStrumenti() {
@@ -113,6 +120,7 @@
     R.style.setProperty('--dr-c', Math.round((sopra + sotto) / 2) + 'px');
   }
   addEventListener('resize', () => requestAnimationFrame(dimensionaStrumenti));
+  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', () => requestAnimationFrame(dimensionaStrumenti));
   addEventListener('load', dimensionaStrumenti);
   document.addEventListener('DOMContentLoaded', () => {
     const sl = document.querySelector('#toolDrawer .slots');

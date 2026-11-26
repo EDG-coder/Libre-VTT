@@ -20,16 +20,16 @@
 
 /* Le due linguette con le dita: stessa misura, stessa forma, stesso colore, una di fronte all'altra
    (su telefono all'altezza del centro del menu, --dr-c da mobile.js). Sempre larghe 34 px: col telefono
-   in orizzontale, da chiuse, si staccano dal bordo quanto basta a uscire dalla tacca (sa-lati, mobile.js)
-   e diventano pillole arrotondate da tutti i lati. */
+   in orizzontale, da chiusa, quella dal lato della tacca (tacca-sx / tacca-dx, mobile.js) si stacca dal
+   bordo quanto basta a uscirne e diventa una pillola arrotondata; l'altra resta attaccata al bordo. */
 .ui-touch #toolDrawer .dhandle { width: 34px; height: 60px; border-radius: 0 16px 16px 0; box-sizing: border-box; }
-.sa-lati.ui-touch #toolDrawer.closed .dhandle { transform: translate(var(--sa-left, 0px), -50%); border-radius: 16px; border-left: 1px solid rgba(255, 255, 255, .18); }
+.tacca-sx.ui-touch #toolDrawer.closed .dhandle { transform: translate(var(--sa-left, 0px), -50%); border-radius: 16px; border-left: 1px solid rgba(255, 255, 255, .18); }
 .ui-touch #sideToggle {
   width: 34px; height: 60px; border-radius: 16px 0 0 16px; opacity: 1; color: #fff;
   background: rgba(18, 21, 28, .6); border: 1px solid rgba(255, 255, 255, .18); border-right: 0;
   -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: none;
 }
-.sa-lati.ui-touch body:not(.menu-open) #sideToggle { right: var(--sa-right, 0px); border-radius: 16px; border-right: 1px solid rgba(255, 255, 255, .18); }
+.tacca-dx.ui-touch body:not(.menu-open) #sideToggle { right: var(--sa-right, 0px); border-radius: 16px; border-right: 1px solid rgba(255, 255, 255, .18); }
 .ui-tel #sideToggle { top: var(--dr-c, 50%); }
 
 /* ======================= Con le dita ======================= */
