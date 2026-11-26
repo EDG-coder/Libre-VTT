@@ -832,7 +832,8 @@ const quando = t => {
   const g = Math.floor((Date.now() - t) / 86400000);
   return g <= 0 ? 'modificata oggi' : g === 1 ? 'modificata ieri' : g < 30 ? `modificata ${g} giorni fa` : 'modificata il ' + new Date(t).toLocaleDateString(window.LIBRE_I18N ? LIBRE_I18N.lingua : 'it');
 };
-const conta = (n, uno, tanti) => (n === 1 ? '1 ' + uno : n + ' ' + tanti);
+// tradotto con il numero come segnaposto («{n} scene» → «{n} scenes»): «2 scene» intero non è nel dizionario
+const conta = (n, uno, tanti) => { const tr = window.tr || ((x, v) => x.replace('{n}', v ? v.n : '')); return n === 1 ? tr('1 ' + uno) : tr('{n} ' + tanti, { n }); };
 const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 const campErr = el('p', 'err hide'); $('campLista').after(campErr);
 const erroreCamp = t => { campErr.textContent = t || ''; campErr.classList.toggle('hide', !t); if (t) infoCamp(''); };

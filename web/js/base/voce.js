@@ -517,6 +517,13 @@
       nota.textContent = tr('Alt+Maiusc+L legge lo schermo · Alt+Maiusc+S la selezione · Alt+Maiusc+P pausa · Esc ferma. In chat: /leggi e /silenzio.');
       if (prima) prima.before(h, box, nota); else (dlg.querySelector('.piede') || dlg).before(h, box, nota);
       bottoniModo(box);
+      // la lingua della home arriva dopo (dalle impostazioni dell'app) o si cambia dalla rotellina: si rifanno le scritte
+      addEventListener('lingua', () => {
+        h.textContent = tr('Voce');
+        nota.textContent = tr('Alt+Maiusc+L legge lo schermo · Alt+Maiusc+S la selezione · Alt+Maiusc+P pausa · Esc ferma. In chat: /leggi e /silenzio.');
+        const voci = { schermo: 'Lettore dello schermo', chat: 'Solo chat', no: 'Niente voce' };
+        box.querySelectorAll('button[data-v]').forEach(b => { b.textContent = tr(voci[b.dataset.v]); });
+      });
     }
   }
 
