@@ -297,6 +297,8 @@ function areaVista() {
   const td = vis($('toolDrawer')); if (td && td.left < 24 && td.width < innerWidth * .3) L = td.right;
   const sd = vis($('side')); if (sd && sd.left > innerWidth * .45) R = sd.left;
   const dk = vis($('dock')); if (dk && dk.top > innerHeight * .6) B = dk.top;
+  // con le dita la linguetta della barra si vede sempre: la mappa non ci finisce sotto
+  const dh = document.documentElement.classList.contains('ui-touch') && vis($('dockHandle')); if (dh && dh.top > innerHeight * .6) B = Math.min(B, dh.top);
   L += 8; T += 8; R -= 8; B -= 8;
   return R - L < innerWidth * .4 || B - T < innerHeight * .4 ? tutto : { L, T, R, B };
 }
@@ -316,7 +318,27 @@ function adattaVista(v) {
 }
 let vistaW = innerWidth, vistaH = innerHeight;
 addEventListener('resize', () => {
-  // cambia la larghezza (telefono girato, finestra ridimensionata): stesso centro. Se cambia solo
+  // Telefono (o tablet) girato: si tiene la stessa parte di mappa che si vedeva, la più grande possibile
+  // nella parte di schermo libera. Prima si teneva la scala in proporzione al lato più corto e, girando
+  // da verticale a orizzontale, la mappa diventava piccola e restava spostata.
+  const girato = innerWidth !== vistaW && (vistaW > vistaH) !== (innerWidth > innerHeight) && vistaW > 0 && vistaH > 0;
+  if (girato) {
+    const b = baseRect(), s = view.s;
+    const x0 = Math.max(b.x, -view.x / s), x1 = Math.min(b.x + b.w, (vistaW - view.x) / s);
+    const y0 = Math.max(b.y, -view.y / s), y1 = Math.min(b.y + b.h, (vistaH - view.y) / s);
+    if (x1 > x0 && y1 > y0) {
+      vistaW = innerWidth; vistaH = innerHeight;
+      applyView();
+      // un fotogramma dopo: il menu degli strumenti e la barra in basso si sono già sistemati (areaVista)
+      requestAnimationFrame(() => {
+        const a = areaVista(), W = a.R - a.L, H = a.B - a.T, k = Math.min(W / (x1 - x0), H / (y1 - y0));
+        Object.assign(view, { s: k, x: a.L + (W - (x1 - x0) * k) / 2 - x0 * k, y: a.T + (H - (y1 - y0) * k) / 2 - y0 * k });
+        applyView();
+      });
+      return;
+    }
+  }
+  // cambia la larghezza (finestra ridimensionata): stesso centro. Se cambia solo
   // l'altezza (la tastiera del telefono che si apre) la mappa resta dov'è.
   if (innerWidth !== vistaW) { const v = adattaVista({ x: view.x, y: view.y, s: view.s, w: vistaW, h: vistaH }); if (v) Object.assign(view, { x: v.x, y: v.y, s: v.s }); }
   vistaW = innerWidth; vistaH = innerHeight;
@@ -353,7 +375,7 @@ for (const t of ['gesturestart', 'gesturechange']) addEventListener(t, e => e.pr
 // ---------- Griglia (disegnata a schermo ma solo dentro il rettangolo, con linee sempre sottili) ----------
 function paintGrid() {
   const gc = gridPreview ? '#ff2bd6' : `color-mix(in srgb, ${grid.color} ${grid.opacity}%, transparent)`, dk = 'rgba(0, 0, 0, .4)';
-  gridEl.style.backgroundImage = !GRIGLIA_FORME.semplice(grid) ? 'none' :
+  gridEl.style.backgroundImage = !GRIGLIA_FORME.semplice(grid) || TELA ? 'none' :
     `linear-gradient(to right, ${gc} 1px, transparent 0), linear-gradient(to bottom, ${gc} 1px, transparent 0),` +
     `linear-gradient(to right, ${dk} 3px, transparent 0), linear-gradient(to bottom, ${dk} 3px, transparent 0)`;
   placeGrid();
@@ -368,10 +390,12 @@ function placeGrid() {
   const visible = (!!grid.show && !grid.hideLines || gridPreview) && rr > l && bb > t;
   gridEl.classList.toggle('on', visible);
   const semplice = GRIGLIA_FORME.semplice(grid);
-  if (gridTela) gridTela.hidden = !visible || semplice;
+  // con le dita anche i quadrati si disegnano sul canvas (vedi grigliaQuadrati)
+  const suTela = !semplice || !!TELA;
+  if (gridTela) gridTela.hidden = !visible || !suTela;
   if (!visible) return;
   Object.assign(gridEl.style, { left: l + 'px', top: t + 'px', width: rr - l + 'px', height: bb - t + 'px' });
-  if (!semplice) {
+  if (suTela) {
     if (!gridTela) { gridTela = document.createElement('canvas'); gridTela.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%'; gridEl.appendChild(gridTela); }
     const dpr = dprTela(), W = rr - l, H = bb - t;
     if (gridTela.width !== Math.round(W * dpr) || gridTela.height !== Math.round(H * dpr)) { gridTela.width = Math.round(W * dpr); gridTela.height = Math.round(H * dpr); }
@@ -379,13 +403,31 @@ function placeGrid() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
     const colore = gridPreview ? '#ff2bd6' : grid.color, alfa = gridPreview ? 1 : (+grid.opacity || 85) / 100;
     ctx.globalAlpha = alfa;
-    GRIGLIA_FORME.disegna(ctx, grid, o, view, l, t, W, H, colore, 'rgba(0, 0, 0, .4)');
+    if (semplice) grigliaQuadrati(ctx, dpr, Math.max(3, grid.size * s), view.x + o.x * s - l, view.y + o.y * s - t, W, H, colore);
+    else GRIGLIA_FORME.disegna(ctx, grid, o, view, l, t, W, H, colore, 'rgba(0, 0, 0, .4)');
     ctx.globalAlpha = 1;
     return;
   }
   const c = Math.max(3, grid.size * s), px = view.x + o.x * s - l, py = view.y + o.y * s - t;
   Object.assign(gridEl.style, { backgroundSize: `${c}px ${c}px` });
   gridEl.style.backgroundPosition = `${px}px ${py}px, ${px}px ${py}px, ${px - 1}px ${py - 1}px, ${px - 1}px ${py - 1}px`;
+}
+// I quadrati sui dispositivi touch. Con lo sfondo CSS (sul computer) Safari dell'iPhone, mentre si
+// trascina la mappa, ridisegnava il motivo a ogni frazione di pixel: le linee cambiavano spessore e
+// posizione da un fotogramma all'altro e la griglia «tremava». Qui ogni linea cade sempre su un pixel
+// intero dello schermo, larga 1 px con l'ombra scura di 3 px sotto, come quella del computer.
+function grigliaQuadrati(ctx, dpr, c, px, py, W, H, colore) {
+  const pix = v => Math.round(v * dpr) / dpr;
+  const xs = [], ys = [];
+  for (let x = px - Math.ceil((px + 3) / c) * c; x <= W + 3; x += c) xs.push(pix(x));
+  for (let y = py - Math.ceil((py + 3) / c) * c; y <= H + 3; y += c) ys.push(pix(y));
+  const a = ctx.globalAlpha;
+  ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(0, 0, 0, .4)';
+  for (const x of xs) ctx.fillRect(x - 1, 0, 3, H);
+  for (const y of ys) ctx.fillRect(0, y - 1, W, 3);
+  ctx.globalAlpha = a; ctx.fillStyle = colore;
+  for (const x of xs) ctx.fillRect(x, 0, 1, H);
+  for (const y of ys) ctx.fillRect(0, y, W, 1);
 }
 // Le celle partono dall'angolo in alto a sinistra del rettangolo, spostate di grid.ox, grid.oy
 // (per farle combaciare con la griglia disegnata sulla mappa). Tutti passano da queste funzioni.

@@ -33,6 +33,10 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>LIBRE VTT usa la fotocamera solo quando scegli «Scatta foto o registra video» per caricare un'immagine o un video (mappe, segnalini, schede).</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>LIBRE VTT usa il microfono solo per l'audio dei video che registri con la fotocamera.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>LIBRE VTT cerca gli altri giocatori sulla tua rete per collegarvi più in fretta.</string>
 	<key>UIApplicationSceneManifest</key>

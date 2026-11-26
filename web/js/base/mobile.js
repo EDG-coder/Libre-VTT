@@ -52,14 +52,43 @@
   // Devono starci tutti senza scorrere (vedi mobile.css), in una sola colonna: se non entrano si
   // rimpiccioliscono (fino a 32 px; solo sotto si va su più colonne). Le caselle degli strumenti che chi
   // gioca non può usare (penna, nebbia… nascosti dai permessi) spariscono anche loro, senza lasciare buchi.
+  // I margini dello schermo che non si possono usare (tacca, isola dinamica, barra della home, bordi
+  // arrotondati): env(safe-area-inset-*) letti da un elemento invisibile, in pixel. Vanno anche in
+  // --sa-top/-right/-bottom/-left sulla radice, per chi li deve usare da script.
+  let sonda = null;
+  function margini() {
+    if (!sonda && document.body) {
+      sonda = document.createElement('div');
+      sonda.setAttribute('aria-hidden', 'true');
+      sonda.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;' +
+        'padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+      document.body.appendChild(sonda);
+    }
+    if (!sonda) return { t: 0, r: 0, b: 0, l: 0 };
+    const cs = getComputedStyle(sonda), n = v => parseFloat(v) || 0;
+    const m = { t: n(cs.paddingTop), r: n(cs.paddingRight), b: n(cs.paddingBottom), l: n(cs.paddingLeft) };
+    R.style.setProperty('--sa-top', m.t + 'px'); R.style.setProperty('--sa-right', m.r + 'px');
+    R.style.setProperty('--sa-bottom', m.b + 'px'); R.style.setProperty('--sa-left', m.l + 'px');
+    // Telefono in orizzontale: iOS dà lo stesso margine a destra e a sinistra, ma la tacca sta da una parte
+    // sola. Dall'angolo di rotazione si sa quale: girato a sinistra (90°) la tacca è a sinistra, girato a
+    // destra (270° o -90°) è a destra. Solo la linguetta da quel lato si stacca dal bordo; se non si sa, tutte e due.
+    const lati = m.l > 0 || m.r > 0;
+    let ang = screen.orientation && typeof screen.orientation.angle === 'number' ? screen.orientation.angle : (typeof window.orientation === 'number' ? window.orientation : null);
+    if (ang != null) ang = ((ang % 360) + 360) % 360;
+    const sx = lati && (ang === 90 || (ang !== 270 && m.l > 0)), dx = lati && (ang === 270 || (ang !== 90 && m.r > 0));
+    R.classList.toggle('tacca-sx', sx); R.classList.toggle('tacca-dx', dx);
+    return m;
+  }
   function dimensionaStrumenti() {
     const dr = document.getElementById('toolDrawer'), sl = dr && dr.querySelector('.slots');
     if (!sl) return;
+    const m = margini();
     for (const c of sl.children) {
       const el = c.firstElementChild;
       c.classList.toggle('spento', !c.classList.contains('hole') && !!el && getComputedStyle(el).display === 'none');
     }
     if (!R.classList.contains('ui-tel')) {
+      R.style.removeProperty('--dr-c');
       // sul computer gli strumenti restano grandi; se la finestra è bassa (portatile con lo schermo da 768,
       // finestra stretta in altezza) invece di uscire sotto lo schermo vanno su due o più colonne
       dr.style.removeProperty('--k');
@@ -71,20 +100,37 @@
     }
     dr.classList.remove('colonne');
     const n = Math.max(1, [...sl.children].filter(c => getComputedStyle(c).display !== 'none').length);
-    const cs = getComputedStyle(dr), sotto = parseFloat(cs.bottom) || 76;
-    const sopra = 12 + (parseFloat(getComputedStyle(R).getPropertyValue('--sa-top')) || 0);
-    const alto = innerHeight - sotto - sopra - 22;                  // 22: il bordo e il padding del menu
+    // Il menu sta al centro della parte di schermo libera: mai sotto la tacca o l'isola dinamica (sopra)
+    // né sopra la barra della home (sotto). Sale sopra la barra in basso solo se questa, al centro,
+    // arriva fin sotto il menu (schermi molto stretti). La linguetta della chat a destra si mette alla
+    // stessa altezza (--dr-c), così le due frecce sono una di fronte all'altra.
+    let sopra = m.t + 12, sotto = innerHeight - m.b - 12;
+    const dock = document.getElementById('dock');
+    if (dock) {
+      let sx = Infinity;
+      for (const c of dock.children) { const r = c.getBoundingClientRect(); if (r.width > 0 && getComputedStyle(c).display !== 'none') sx = Math.min(sx, r.left); }
+      if (sx < m.l + 8 + 52 + 10 + 8) sotto = Math.min(sotto, innerHeight - m.b - 8 - (parseFloat(getComputedStyle(R).getPropertyValue('--dock-h')) || 48) - 30);
+    }
+    const alto = sotto - sopra - 22;                                // 22: il bordo e il padding del menu
     const passo = k => 60 * k;                                      // casella 52 + spazio 8, in scala
     let k = Math.min(1, (alto + 8) / (n * 60)), righe = n;
     if (k < 32 / 52) { k = 32 / 52; righe = Math.max(1, Math.floor((alto + 8 * k) / passo(k))); }
     dr.style.setProperty('--k', k.toFixed(3));
     dr.style.setProperty('--righe', Math.ceil(n / Math.ceil(n / righe)));
+    R.style.setProperty('--dr-c', Math.round((sopra + sotto) / 2) + 'px');
   }
   addEventListener('resize', () => requestAnimationFrame(dimensionaStrumenti));
+  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', () => requestAnimationFrame(dimensionaStrumenti));
   addEventListener('load', dimensionaStrumenti);
   document.addEventListener('DOMContentLoaded', () => {
     const sl = document.querySelector('#toolDrawer .slots');
     if (sl) new MutationObserver(dimensionaStrumenti).observe(sl, { childList: true });
+    // la barra in basso cambia larghezza (nome della scena, livelli del master): si ricontrolla se tocca il menu
+    const dk = document.getElementById('dock');
+    if (dk && typeof ResizeObserver === 'function') {
+      const ro = new ResizeObserver(() => requestAnimationFrame(dimensionaStrumenti));
+      ro.observe(dk); for (const c of dk.children) ro.observe(c);
+    }
     // i permessi (classi «no-…») cambiano mentre si gioca: le caselle nascoste si ricontano
     const mo = new MutationObserver(() => requestAnimationFrame(dimensionaStrumenti));
     mo.observe(R, { attributes: true, attributeFilter: ['class'] });
