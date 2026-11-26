@@ -189,8 +189,14 @@
     header { margin-bottom: 18px; }
     .logo { font-size: 1.7rem; }
     .cards { grid-template-columns: 1fr; }
-    .card { flex-direction: row; align-items: center; gap: 14px; padding: 14px; }
-    .card .ic { font-size: 1.9rem; }
+    /* sul telefono: icona a sinistra, titolo sopra e spiegazione sotto (come il Tutorial): il titolo non va più a capo */
+    .card { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 14px; row-gap: 2px; padding: 14px; text-align: left; }
+    .card .ic { font-size: 1.9rem; grid-row: span 2; width: 2.4rem; text-align: center; }
+    .cards .card.tutCard { padding: 14px; }
+    /* i pulsanti sotto l'elenco delle campagne: due colonne uguali invece di quattro larghezze diverse */
+    .row:has(> #campNuova) { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .row:has(> #campNuova) > .sp { display: none; }
+    .row:has(> #campNuova) > button { width: 100%; justify-content: center; text-align: center; }
     .card b { display: block; }
     #prontoRighe input { min-width: 0; width: 100%; }
   }
