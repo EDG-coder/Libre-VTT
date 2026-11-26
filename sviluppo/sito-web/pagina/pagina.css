@@ -99,13 +99,13 @@ h3 { font-size: 18px; margin: 0 0 8px; }
 a.altro { color: var(--accent-2); }
 
 .piede { border-top: 1px solid var(--line); margin-top: 30px; padding: 24px 16px 40px; text-align: center; color: var(--muted); font-size: 14px; }
-.piede .piccolo { max-width: 820px; margin: 10px auto 0; font-size: 12px; }
+.piede .piccolo { max-width: 820px; margin: 10px auto 0; font-size: 12px; overflow-wrap: anywhere; }
 
 @media (max-width: 900px) {
   .eroe { grid-template-columns: 1fr; }
   .griglia { grid-template-columns: 1fr 1fr; }
   .tre { grid-template-columns: 1fr; }
-  .gioca { grid-template-columns: 1fr; padding: 20px; }
+  .gioca { grid-template-columns: minmax(0, 1fr); padding: 20px; }
 }
 @media (max-width: 560px) {
   .griglia, .foto-doppie { grid-template-columns: 1fr; }

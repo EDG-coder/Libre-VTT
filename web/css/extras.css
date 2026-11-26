@@ -1456,3 +1456,16 @@ html:not(.ui-tel) #sceneMenu { max-width: min(380px, calc(100vw - 24px)); }
 :root[data-theme="light"] #tab-assets .btn.ghost { color: #a55300; border-color: color-mix(in srgb, #a55300 50%, transparent); }
 :root[data-theme="light"] .pane .btn.ghost.danger { color: #c42b2b; }
 .pane :is(input, textarea)::placeholder { color: var(--muted); opacity: 1; }
+/* Tema chiaro: sotto i pulsanti del dock c'è la mappa chiara e il vetro scuro al 55% diventa grigio medio, con il testo bianco sotto 4,5:1. Un po' più coprente */
+:root[data-theme="light"]:not(.graficaLeggera) :is(#sceneBtn, #layerSwitch, #targetSwitch) { background-color: rgba(18, 21, 28, .7); }
+/* Calcolatrice: «Invia il risultato in chat» largo come il tasto «=» sopra */
+#calcSend { flex: 1 1 auto; }
+/* Sali di livello: «Punti ferita:» in linea con i suoi pulsanti, e un po' d'aria prima della nota sull'aumento delle caratteristiche */
+.creaRiga:has(> [data-a=tiraPf]) { align-items: center; }
+.creaDlg .creaRiga + p.note { margin-top: 14px; }
+/* Pacchetti del compendio: su uno schermo stretto i pulsanti vanno sotto invece di uscire dalla finestra; la descrizione si taglia a fine riga, non a metà */
+.compP { flex-wrap: wrap; }
+.compP > div:first-child { flex: 1 1 220px; min-width: 0; }
+.compP .compLic { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; max-height: none; }
+/* Finestre del compendio: i pulsanti in fondo non attaccati all'ultima nota */
+.compDlg > .dialogBtns { margin-top: 14px; }
