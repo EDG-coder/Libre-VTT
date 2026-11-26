@@ -1469,3 +1469,11 @@ html:not(.ui-tel) #sceneMenu { max-width: min(380px, calc(100vw - 24px)); }
 .compP .compLic { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; max-height: none; }
 /* Finestre del compendio: i pulsanti in fondo non attaccati all'ultima nota */
 .compDlg > .dialogBtns { margin-top: 14px; }
+/* Pannello di destra aperto su una finestra stretta (tablet in verticale, ~810px): la barra in basso
+   non ci sta fra gli strumenti e il pannello e copriva il campo della chat. Ora resta in quello spazio:
+   il nome della scena si accorcia e, se non basta, i pulsanti vanno su due righe */
+html:not(.ui-tel) body.menu-open #dock { width: max-content; max-width: calc(100vw - min(var(--side-w, 340px), 92vw) - 84px - 24px); flex-wrap: wrap; justify-content: center; row-gap: 8px; }
+html:not(.ui-tel) body.menu-open #sceneWrap { min-width: 0; flex: 0 1 auto; max-width: calc(100vw - min(var(--side-w, 340px), 92vw) - 84px - 24px - 54px); }   /* sulla prima riga accanto al pulsante di selezione */
+html:not(.ui-tel) body.menu-open #dockZone:not(.collapsed) { bottom: calc(var(--dock-h, 44px) + 22px); }   /* la linguetta sopra la barra anche quando va su due righe */
+html:not(.ui-tel) body.menu-open #sceneBtn { max-width: calc(100vw - min(var(--side-w, 340px), 92vw) - 84px - 24px - 54px); min-width: 0; }
+html:not(.ui-tel) body.menu-open #sceneName { min-width: 0; }
