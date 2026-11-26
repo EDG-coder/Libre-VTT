@@ -3022,4 +3022,12 @@ Object.assign(window.LIBRE_LINGUE.en, {
 "Sempre": "Always",
 "Mai": "Never",
 "Se un attacco ha una descrizione oltre al tiro e ai danni (per esempio la maledizione di un morso): chiedere se scriverla in chat dopo l'attacco, scriverla sempre o mai.": "If an attack has a description besides the roll and the damage (for example the curse of a bite): ask whether to write it in the chat after the attack, always write it, or never.",
+
+// ---------- dadi 3D ----------
+"Dadi 3D": "3D dice",
+"Tira con i dadi 3D": "Roll with 3D dice",
+"Vedi quelli degli altri": "See other players' dice",
+"I dadi rotolano sullo schermo e si fermano sul risultato già tirato. Un solo tiro in chat: «/r 1d20+3 3d»": "The dice tumble on screen and stop on the result already rolled. For a single roll in chat: «/r 1d20+3 3d»",
+"Mostra anche i dadi 3D tirati dagli altri": "Also show the 3D dice rolled by others",
+"I tiri di questa scheda fanno rotolare dadi 3D sullo schermo, che si fermano sul risultato già tirato. Il numero non cambia, è solo l'animazione.": "Rolls from this sheet tumble 3D dice on screen, which stop on the result already rolled. The number doesn't change, it is only the animation.",
 });

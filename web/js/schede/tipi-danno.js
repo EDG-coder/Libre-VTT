@@ -87,15 +87,17 @@
     if (typeof NET !== 'undefined' && NET.on) {
       if (NET.retrying || NET.hostDown) return prima.call(this, parti[0].expr, lab);   // lo stesso avviso di sempre
       if (!can('roll')) { netSay('Non puoi tirare i dadi.', 'warn'); return true; }
-      intent('roll', { expr: parti[0].expr, parti: parti.map(p => ({ expr: p.expr, tipo: p.tipo })), label: lab, secret: d.secret, cieco: d.cieco });
+      intent('roll', { expr: parti[0].expr, parti: parti.map(p => ({ expr: p.expr, tipo: p.tipo })), label: lab, secret: d.secret, cieco: d.cieco, d3: d.d3 });
       if (typeof diceLast !== 'undefined') diceLast.textContent = 'Tiro mandato al server…';
       return true;
     }
     const m = unisci(parti.map(p => ({ tipo: p.tipo, ...parseExpr(p.expr) })), lab);
     if (d.secret) m.secret = true;
     if (d.cieco) m.cieco = true;
+    if (d.d3) m.d3 = true;
     addChat(m);
     if (typeof diceShowLast === 'function') diceShowLast(m);
+    if (m.d3 && window.Dadi3D) Dadi3D.mostra(m, true);
     return m;
   };
 
