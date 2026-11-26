@@ -1,4 +1,4 @@
-// ---------- Strumenti come finestre mobili (solo con il mouse, non su telefono e tablet) ----------
+// ---------- Strumenti come finestre mobili (con il mouse e con le dita, anche su telefono e tablet) ----------
 // Quando uno strumento del menu si apre (classe «open» sul suo pulsante) il pannello non si allarga
 // dentro il pulsante: compare accanto, come una finestra. Il pulsante resta dov'è (si sposta solo se
 // lo trascina l'utente). La finestra si sposta tenendo la sua barra, si ridimensiona dalla maniglia ◢,
@@ -19,15 +19,19 @@
   const salva = (id, g) => {
     try { const v = leggi(); v[id] = g; localStorage.setItem(PREF, JSON.stringify(v)); } catch {}
   };
-  const permesso = () => ok && !R.classList.contains('ui-touch') && !R.classList.contains('ui-tel') && !document.getElementById('tutGuida');
+  const permesso = () => ok && !document.getElementById('tutGuida');
+  // la parte di schermo dove una finestra può stare: dentro i margini, e su telefono fuori da tacca, isola
+  // dinamica, angoli arrotondati e barra della home (--sa-*, misurati da mobile.js)
+  const sa = k => parseFloat(getComputedStyle(R).getPropertyValue('--sa-' + k)) || 0;
+  const bordi = () => ({ L: MARGINE + sa('left'), T: MARGINE + sa('top'), R: innerWidth - MARGINE - sa('right'), B: innerHeight - MARGINE - sa('bottom') });
   const attivo = () => permesso();
 
   const corpoDi = t => t.el.querySelector('.tbody') || t.el.querySelector('#diceBody');
   const dentro = (v, a, b) => Math.max(a, Math.min(b, v));
 
   function geometria(t, corpo) {
-    const salvata = leggi()[t.id];
-    const maxW = innerWidth - 2 * MARGINE, maxH = innerHeight - 2 * MARGINE;
+    const salvata = leggi()[t.id], z = bordi();
+    const maxW = z.R - z.L, maxH = z.B - z.T;
     let w, h, x, y;
     if (salvata && isFinite(salvata.w) && isFinite(salvata.h) && !salvata.auto) { w = salvata.w; h = salvata.h; }
     else {
@@ -40,11 +44,11 @@
     else {                                           // accanto al pulsante: a destra, o a sinistra se non c'è posto
       const r = t.grip.getBoundingClientRect();   // l'icona, non il pulsante (che per un attimo può ancora essere largo)
       x = r.right + 12;
-      if (x + w > innerWidth - MARGINE) x = r.left - 12 - w;
+      if (x + w > z.R) x = r.left - 12 - w;
       y = r.top;
     }
-    x = dentro(x, MARGINE, Math.max(MARGINE, innerWidth - w - MARGINE));
-    y = dentro(y, MARGINE, Math.max(MARGINE, innerHeight - h - MARGINE));
+    x = dentro(x, z.L, Math.max(z.L, z.R - w));
+    y = dentro(y, z.T, Math.max(z.T, z.B - h));
     // finché non la si ridimensiona dalla maniglia, l'altezza segue il contenuto (auto): un testo che arriva dopo
     // (la musica che non trova YouTube, un tiro nei dadi) non resta tagliato in fondo
     const auto = !(salvata && isFinite(salvata.h) && !salvata.auto);
@@ -63,8 +67,8 @@
   // altezza automatica: se il contenuto cresce (un avviso, un tiro) e la finestra uscirebbe in fondo, sale
   function alza(corpo) {
     if (!corpo.classList.contains('finAuto') || !corpo.matches(':popover-open') || corpo.classList.contains('finMuove')) return;
-    const g = leggiG(corpo), serve = Math.min(corpo.scrollHeight, innerHeight - 2 * MARGINE);
-    if (g.y + serve > innerHeight - MARGINE) metti(corpo, { ...g, y: Math.max(MARGINE, innerHeight - MARGINE - serve) });
+    const z = bordi(), g = leggiG(corpo), serve = Math.min(corpo.scrollHeight, z.B - z.T);
+    if (g.y + serve > z.B) metti(corpo, { ...g, y: Math.max(z.T, z.B - serve) });
   }
   function portaInCima(corpo) {                      // l'ultima finestra mostrata sta sopra le altre
     try { corpo.hidePopover(); corpo.showPopover(); ultima = corpo; } catch {}   // ricordarla: sopra(w) la scambia con una scheda
@@ -95,9 +99,9 @@
     });
     barra.addEventListener('pointermove', e => {
       if (!mossa || e.pointerId !== mossa.id) return;
-      const g = { ...mossa.g };
-      g.x = dentro(mossa.g.x + e.clientX - mossa.sx, MARGINE - g.w + 80, innerWidth - 80);
-      g.y = dentro(mossa.g.y + e.clientY - mossa.sy, 0, innerHeight - 34);
+      const g = { ...mossa.g }, z = bordi();
+      g.x = dentro(mossa.g.x + e.clientX - mossa.sx, z.L - g.w + 80, z.R - 80);
+      g.y = dentro(mossa.g.y + e.clientY - mossa.sy, z.T - MARGINE, z.B - 34);   // la barra mai sotto la tacca
       metti(corpo, g);
     });
     const fineMossa = e => {
@@ -117,9 +121,9 @@
     });
     maniglia.addEventListener('pointermove', e => {
       if (!largo || e.pointerId !== largo.id) return;
-      const g = { ...largo.g, auto: false };            // ridimensionata a mano: da qui in poi l'altezza è quella scelta
-      g.w = dentro(largo.g.w + e.clientX - largo.sx, MIN_W, innerWidth - g.x - MARGINE);
-      g.h = dentro(largo.g.h + e.clientY - largo.sy, MIN_H, innerHeight - g.y - MARGINE);
+      const g = { ...largo.g, auto: false }, z = bordi();   // ridimensionata a mano: da qui in poi l'altezza è quella scelta
+      g.w = dentro(largo.g.w + e.clientX - largo.sx, Math.min(MIN_W, z.R - g.x), z.R - g.x);
+      g.h = dentro(largo.g.h + e.clientY - largo.sy, Math.min(MIN_H, z.B - g.y), z.B - g.y);
       metti(corpo, g);
     });
     const fineLargo = e => {
@@ -211,17 +215,19 @@
     sync();
   }
 
-  // se la finestra del programma si stringe fino a diventare «telefono», si torna al pannello nel pulsante
-  addEventListener('resize', () => {
+  // finestra del programma ridimensionata, telefono girato: le finestre restano dentro lo schermo (aspettando
+  // un fotogramma, perché i margini della tacca, misurati da mobile.js, cambino anche loro)
+  addEventListener('resize', () => requestAnimationFrame(() => {
     if (!permesso()) { for (const t of [...aperte.keys()]) chiudiTecnico(t); return; }
-    for (const [t, f] of aperte) {                   // e le finestre restano dentro lo schermo
+    const z = bordi();
+    for (const [t, f] of aperte) {
       const g = leggiG(f.corpo);
-      g.w = Math.min(g.w, innerWidth - 2 * MARGINE); g.h = Math.min(g.h, innerHeight - 2 * MARGINE);
-      g.x = dentro(g.x, MARGINE, Math.max(MARGINE, innerWidth - g.w - MARGINE));
-      g.y = dentro(g.y, MARGINE, Math.max(MARGINE, innerHeight - g.h - MARGINE));
+      g.w = Math.min(g.w, z.R - z.L); g.h = Math.min(g.h, z.B - z.T);
+      g.x = dentro(g.x, z.L, Math.max(z.L, z.R - g.w));
+      g.y = dentro(g.y, z.T, Math.max(z.T, z.B - g.h));
       metti(f.corpo, g);
     }
-  });
+  }));
   // Esc chiude la finestra su cui si sta lavorando
   addEventListener('keydown', e => {
     if (e.key !== 'Escape' || e.defaultPrevented) return;
