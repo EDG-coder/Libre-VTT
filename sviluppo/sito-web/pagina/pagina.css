@@ -87,6 +87,15 @@ h3 { font-size: 18px; margin: 0 0 8px; }
 .sistemi .req { color: var(--muted); font-size: 14px; margin: 0; }
 .sistemi .btn { text-align: center; }
 .sistemi .altro { font-size: 13px; color: var(--muted); }
+/* cinque sistemi: 5 colonne, poi 3+2, poi una sola (prima a 1024 px restava l'iPhone da solo sotto a quattro) */
+.sistemi { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 1060px) { .sistemi { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .sistemi { grid-template-columns: 1fr; } }
+/* le cinque schede allineate tra loro: titoli, requisiti, pulsanti (stessa altezza) e note sulla stessa riga */
+@supports (grid-template-rows: subgrid) {
+  .sistemi article { display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 10px; align-items: start; }
+  .sistemi .btn { align-self: stretch; display: flex; align-items: center; justify-content: center; }
+}
 a.altro { color: var(--accent-2); }
 
 .piede { border-top: 1px solid var(--line); margin-top: 30px; padding: 24px 16px 40px; text-align: center; color: var(--muted); font-size: 14px; }

@@ -1449,3 +1449,10 @@ dialog .dialogBtns .btn { white-space: nowrap; }
 #sheetForm .dialogBtns > .btn.ghost:not(#sheetCancel) { flex: 1 1 0; min-width: 0; font-size: 13px; padding-inline: 8px; overflow: hidden; text-overflow: ellipsis; }
 /* Strumenti a sinistra su una finestra bassa (computer): più colonne invece di uscire dallo schermo (mobile.js) */
 html:not(.ui-tel) #toolDrawer.colonne .slots { display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--righe, 20), 52px); grid-auto-columns: 52px; gap: 10px; }
+/* Menu delle scene: un nome lunghissimo non lo allarga fino a metà schermo (si taglia con «…», il nome intero è nel title) */
+html:not(.ui-tel) #sceneMenu { max-width: min(380px, calc(100vw - 24px)); }
+/* Contrasto (WCAG AA, 4,5:1): testo scuro sul pulsante arancione degli Assets; nel tema chiaro arancione e rosso più scuri */
+#tab-assets .btn:not(.ghost) { color: #1d1203; }
+:root[data-theme="light"] #tab-assets .btn.ghost { color: #a55300; border-color: color-mix(in srgb, #a55300 50%, transparent); }
+:root[data-theme="light"] .pane .btn.ghost.danger { color: #c42b2b; }
+.pane :is(input, textarea)::placeholder { color: var(--muted); opacity: 1; }

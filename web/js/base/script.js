@@ -1163,7 +1163,7 @@ function renderSceneUI() {
     const pick = document.createElement('button');
     pick.type = 'button'; pick.className = 'pick';
     const ic = document.createElement('span'); ic.textContent = sc.type === 'map' ? '🗺' : '🎬';
-    const nm = document.createElement('span'); nm.textContent = sc.name;
+    const nm = document.createElement('span'); nm.textContent = sc.name; nm.title = sc.name; nm.dataset.noi18n = '';   // il nome intero anche quando si taglia
     pick.append(ic, nm);
     pick.addEventListener('click', () => switchScene(sc.id));
     const ren = document.createElement('button');
